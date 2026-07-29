@@ -342,3 +342,15 @@ export function tenureSeasons(p: Principal, rosterId?: number): Set<string> {
     rosterId == null ? p.tenures : p.tenures.filter((t) => t.rosterId === rosterId);
   return new Set(ts.flatMap((t) => t.seasons));
 }
+
+/**
+ * "2022-2024" for a departed principal, undefined for a current one (nothing to
+ * date-range). Shared rather than reimplemented per caller - awards, dossiers and the
+ * trade web all need to print the same span for the same principal.
+ */
+export function tenureLabel(p: Principal): string | undefined {
+  if (!p.isFormer || p.seasons.length === 0) return undefined;
+  const first = p.seasons[0];
+  const last = p.seasons[p.seasons.length - 1];
+  return first === last ? first : `${first}-${last}`;
+}

@@ -22,7 +22,7 @@
  */
 import { deriveManagerProfile, type ManagerProfile } from "../derive/manager";
 import type { LeagueHistory } from "../history";
-import { getPrincipals, tenureSeasons, type Principal } from "../principals";
+import { getPrincipals, tenureLabel, tenureSeasons, type Principal } from "../principals";
 import { leagueFragility, type FragilityProfile } from "../metrics/fragility";
 import {
   performanceMetrics,
@@ -118,14 +118,6 @@ interface Row {
 
 function labelFor(p: ManagerProfile): string {
   return p.teamName ?? p.displayName;
-}
-
-/** "2022-2024", or null for a manager who still holds the team. */
-function tenureLabel(pr: Principal): string | undefined {
-  if (!pr.isFormer || pr.seasons.length === 0) return undefined;
-  const first = pr.seasons[0];
-  const last = pr.seasons[pr.seasons.length - 1];
-  return first === last ? first : `${first}-${last}`;
 }
 
 function entrant(
