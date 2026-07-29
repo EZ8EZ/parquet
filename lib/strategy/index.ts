@@ -229,10 +229,14 @@ function buildFindings(h: LeagueHistory, p: ManagerProfile): string[] {
     f.push(`Your most frequent trade partner is ${top.displayName} (${top.count} deals).`);
   }
   if (p.deadline.buys || p.deadline.sells) {
+    // An even split is not a tendency - claiming one would be exactly the kind
+    // of overreach the analyst exists to catch.
     f.push(
       p.deadline.buys > p.deadline.sells
         ? `At the deadline you tend to buy (${p.deadline.buys} buy-side vs ${p.deadline.sells} sell-side).`
-        : `At the deadline you tend to sell (${p.deadline.sells} sell-side vs ${p.deadline.buys} buy-side).`,
+        : p.deadline.sells > p.deadline.buys
+          ? `At the deadline you tend to sell (${p.deadline.sells} sell-side vs ${p.deadline.buys} buy-side).`
+          : `At the deadline you're an even split (${p.deadline.buys} buy-side, ${p.deadline.sells} sell-side) - no lean either way yet.`,
     );
   }
   return f;

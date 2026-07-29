@@ -3,7 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, Lightbulb } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildDossier } from "@/lib/dossier";
-import { Tag, DeltaValue } from "@/components/ui";
+import { Tag, DeltaValue, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { BarChart } from "@/components/charts";
 import { cn, signed } from "@/lib/ui";
@@ -11,17 +11,6 @@ import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
 
-/** Tight section rule. The shared SectionHeader carries mt-8; a dossier can't afford it. */
-function Rail({ title, action }: { title: string; action?: ReactNode }) {
-  return (
-    <div className="mb-1.5 mt-4 flex items-baseline justify-between gap-3">
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-        {title}
-      </h2>
-      {action}
-    </div>
-  );
-}
 
 function Metric({
   label,
@@ -152,7 +141,7 @@ export default async function ManagerDetailPage({
         {d.read}
       </p>
 
-      <Rail title="How to approach them" />
+      <SectionHeader title="How to approach them" />
       {/* Bullets, not boxes: hierarchy from weight and the gold marker. */}
       <ul className="space-y-1.5">
         {d.approachTips.map((t, i) => (
@@ -167,7 +156,7 @@ export default async function ManagerDetailPage({
         ))}
       </ul>
 
-      <Rail title="The numbers" />
+      <SectionHeader title="The numbers" />
       <div className="grid grid-cols-2 gap-1.5">
         <Metric
           label="Trades"
@@ -212,7 +201,7 @@ export default async function ManagerDetailPage({
 
       {p.postureBySeason.length > 0 && (
         <>
-          <Rail title="Posture by season" />
+          <SectionHeader title="Posture by season" />
           <div className="flex flex-wrap gap-1">
             {p.postureBySeason.map((s) => (
               <span
@@ -234,7 +223,7 @@ export default async function ManagerDetailPage({
 
       {tradesData.length > 0 && (
         <>
-          <Rail
+          <SectionHeader
             title="Trade activity"
             action={
               <span className="font-mono text-[11px] tnum text-faint">
@@ -250,7 +239,7 @@ export default async function ManagerDetailPage({
 
       {p.tradePartners.length > 0 && (
         <>
-          <Rail
+          <SectionHeader
             title="Favorite trade partners"
             action={
               <Link

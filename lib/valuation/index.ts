@@ -161,6 +161,14 @@ export interface PickSlotContext {
   teams?: number;
   /** Rounds in the rookie draft. Defaults to 3. */
   rounds?: number;
+  /**
+   * How many teams make the playoffs. Everyone who misses is lottery-eligible, so
+   * this sets the lottery size (teams - playoffTeams). Omit to skip lottery modelling
+   * and treat the order as strict reverse standings.
+   */
+  playoffTeams?: number;
+  /** The draft class this pick belongs to, for class-strength adjustment. */
+  season?: string;
 }
 
 /**
@@ -207,6 +215,85 @@ export function estimateOverallPick(
  * `ctx` it falls back to the middle of the round, which is the honest answer when
  * nothing is known about the order.
  */
+/** Raw value of one specific overall pick slot, before class and time adjustments. */
+export function slotValue(
+  overall: number,
+  cfg: ValuationConfig = VALUATION_CONFIG,
+): number {
+  const { topPickValue, slotDecay, floor } = cfg.pick;
+  return floor + (topPickValue - floor) * Math.exp(-slotDecay * (overall - 1));
+}
+
+/**
+ * Class-strength multiplier for a given slot.
+ *
+ * A class can be strong in two different ways and they are NOT interchangeable. A
+ * generational talent at the top lifts the 1.01 and almost nothing else; a deep class
+ * lifts the middle and late picks while the top is unremarkable. `top` and `depth` are
+ * interpolated geometrically by where the pick sits, so a class can be both, neither,
+ * or one without the other.
+ */
+export function classMultiplier(
+  overall: number,
+  season: string | undefined,
+  cfg: ValuationConfig = VALUATION_CONFIG,
+): number {
+  const cs = season ? cfg.classStrength[season] : undefined;
+  const top = cs?.top ?? 1;
+  const depth = cs?.depth ?? 1;
+  if (top === 1 && depth === 1) return 1;
+  const topWeight = Math.exp(-cfg.pick.classShapeDecay * (overall - 1));
+  return Math.pow(top, topWeight) * Math.pow(depth, 1 - topWeight);
+}
+
+/**
+ * Probability distribution over the slots a pick could land in.
+ *
+ * This is the part naive slot estimation gets wrong. This league runs a LOTTERY: every
+ * non-playoff team is eligible, so a bad team's first is not a fixed slot, it is a
+ * spread over the lottery range. Because the value curve is convex, the expected VALUE
+ * of that spread is higher than the value at the expected slot. Averaging over the
+ * distribution captures that; picking one slot does not.
+ *
+ * Playoff teams draft after the lottery in reverse standings order, champion last.
+ */
+export function slotDistribution(
+  round: number,
+  ctx: PickSlotContext = {},
+  cfg: ValuationConfig = VALUATION_CONFIG,
+): Array<{ slot: number; p: number }> {
+  const teams = ctx.teams ?? 12;
+  if (ctx.slot != null) {
+    return [{ slot: Math.min(teams, Math.max(1, ctx.slot)), p: 1 }];
+  }
+  const rank = ctx.originalTeamRank;
+  if (rank == null) return [{ slot: (teams + 1) / 2, p: 1 }];
+
+  const playoffTeams = ctx.playoffTeams;
+  const lotterySize = playoffTeams != null ? teams - playoffTeams : 0;
+  const missedPlayoffs = playoffTeams != null && rank > playoffTeams;
+
+  if (missedPlayoffs && lotterySize > 1) {
+    // Lottery-eligible: spread across slots 1..lotterySize.
+    const w = cfg.pick.lotteryWeighting;
+    // Worst team (highest rank number) gets the most weight when weighting > 0.
+    const seedFromWorst = teams - rank; // 0 = worst team
+    const raw: number[] = [];
+    for (let i = 0; i < lotterySize; i++) {
+      // Flat when w = 0. As w rises, mass concentrates near the team's own seed.
+      const distance = Math.abs(i - seedFromWorst);
+      raw.push((1 - w) / lotterySize + w * Math.exp(-distance));
+    }
+    const sum = raw.reduce((a, b) => a + b, 0) || 1;
+    return raw.map((r, i) => ({ slot: i + 1, p: r / sum }));
+  }
+
+  // Playoff team: deterministic, after the lottery, reverse standings.
+  // rank 1 (best/champion) picks last.
+  const slot = lotterySize + (playoffTeams != null ? playoffTeams - rank + 1 : teams - rank + 1);
+  return [{ slot: Math.min(teams, Math.max(1, slot)), p: 1 }];
+}
+
 export function pickValue(
   round: number,
   seasonsOut: number,
@@ -219,12 +306,30 @@ export function pickValue(
   const cfg = maybeCfg ?? (isCfg(ctxOrCfg) ? ctxOrCfg : VALUATION_CONFIG);
   const ctx: PickSlotContext = isCfg(ctxOrCfg) ? {} : (ctxOrCfg ?? {});
 
-  const { topPickValue, slotDecay, floor, discountPerYear } = cfg.pick;
-  const overall = estimateOverallPick(round, seasonsOut, ctx, cfg);
-  const slotted =
-    floor + (topPickValue - floor) * Math.exp(-slotDecay * (overall - 1));
-  const discount = Math.pow(discountPerYear, Math.max(0, seasonsOut));
-  return Math.round(slotted * discount);
+  const teams = ctx.teams ?? 12;
+  const offset = (round - 1) * teams;
+
+  // Expected value across the slot distribution, not value at the expected slot.
+  const dist = slotDistribution(round, ctx, cfg);
+  let expected = 0;
+  for (const { slot, p } of dist) {
+    const overall = offset + slot;
+    expected += p * slotValue(overall, cfg) * classMultiplier(overall, ctx.season, cfg);
+  }
+
+  // Regress toward a neutral mid-round pick as the class moves further out, because
+  // a team's future finish is progressively unknowable.
+  const midOverall = offset + (teams + 1) / 2;
+  const neutral =
+    slotValue(midOverall, cfg) * classMultiplier(midOverall, ctx.season, cfg);
+  const trust = Math.max(
+    0,
+    1 - cfg.pick.slotUncertaintyPerYear * Math.max(0, seasonsOut),
+  );
+  const blended = neutral + (expected - neutral) * trust;
+
+  const discount = Math.pow(cfg.pick.discountPerYear, Math.max(0, seasonsOut));
+  return Math.round(blended * discount);
 }
 
 /** Coarse display tier from a value. */

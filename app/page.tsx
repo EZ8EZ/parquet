@@ -16,7 +16,7 @@ import { getLeagueHistory } from "@/lib/history";
 import { getStrategyReport } from "@/lib/strategy";
 import { getLedgerSummary } from "@/lib/ledger";
 import { Wordmark } from "@/components/Brand";
-import { Card, Tag, DeltaValue } from "@/components/ui";
+import { Card, Tag, DeltaValue, SectionHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -178,7 +178,7 @@ export default async function HomePage() {
       {/* Findings */}
       {report.findings.length > 0 && (
         <>
-          <SectionTitle title="What your record shows" />
+          <SectionHeader title="What your record shows" />
           <ul className="space-y-1.5">
             {report.findings.map((f, i) => (
               <li key={i} className="flex gap-2 text-[13px] leading-snug">
@@ -196,7 +196,7 @@ export default async function HomePage() {
       {/* Trade partners - the people behind the numbers, each a dossier. */}
       {partners.length > 0 && (
         <>
-          <SectionTitle title="Who you deal with" href="/managers" cta="all dossiers" />
+          <SectionHeader title="Who you deal with" href="/managers" cta="all dossiers" />
           <div className="scroll-x flex gap-1.5">
             {partners.map((tp) => (
               <Link
@@ -217,7 +217,7 @@ export default async function HomePage() {
       )}
 
       {/* Explore */}
-      <SectionTitle title="Go deeper" />
+      <SectionHeader title="Go deeper" />
       <div className="grid grid-cols-2 gap-1.5">
         <HomeLink href="/plan" icon={<Target size={15} />} title="Game plan" sub="How to improve this team" />
         <HomeLink href="/analyst" icon={<MessageSquareText size={15} />} title="The Analyst" sub="Audit your thinking" />
@@ -237,32 +237,6 @@ export default async function HomePage() {
   );
 }
 
-function SectionTitle({
-  title,
-  href,
-  cta,
-}: {
-  title: string;
-  href?: string;
-  cta?: string;
-}) {
-  return (
-    <div className="mb-1.5 mt-4 flex items-center justify-between gap-2">
-      <h2 className="text-[12px] font-semibold uppercase tracking-[0.16em] text-muted">
-        {title}
-      </h2>
-      {href && cta && (
-        <Link
-          href={href}
-          className="-mr-2 inline-flex min-h-11 items-center gap-0.5 px-2 text-[11px] font-semibold text-accent"
-        >
-          {cta}
-          <ChevronRight size={13} aria-hidden="true" />
-        </Link>
-      )}
-    </div>
-  );
-}
 
 function Figure({
   href,

@@ -65,7 +65,23 @@ export interface ValuationConfig {
      * 2029's. At 1.0 the estimate is fully discarded after one season.
      */
     slotUncertaintyPerYear: number;
+    /**
+     * Lottery odds shape for non-playoff teams, 0..1.
+     * 0 = flat odds (every lottery team equally likely to land any lottery slot).
+     * 1 = fully weighted by record (worst team most likely to pick first).
+     * OPEN QUESTION for the owner (QUESTIONS.md): this league's exact odds are
+     * unconfirmed, so it defaults to flat, which is the assumption that adds the
+     * least unearned precision.
+     */
+    lotteryWeighting: number;
+    /**
+     * How quickly a class's `top` premium gives way to its `depth` effect across the
+     * board. Higher = the premium is concentrated in the first few picks only.
+     */
+    classShapeDecay: number;
   };
+  /** Per-season class strength. Missing seasons are neutral (1.0 / 1.0). */
+  classStrength: Record<string, { top?: number; depth?: number }>;
 }
 
 export interface CanonicalLine {
@@ -118,5 +134,21 @@ export const VALUATION_CONFIG: ValuationConfig = {
     floor: 70,
     discountPerYear: 0.9,
     slotUncertaintyPerYear: 0.45,
+    lotteryWeighting: 0,
+    classShapeDecay: 0.2,
+  },
+  /**
+   * Per-class strength. `top` scales the very top of a class, `depth` scales the
+   * tail. Both default to 1.0 (a neutral class) for any season not listed.
+   *
+   * These are SUBJECTIVE and that is the point: converting consensus opinion about a
+   * draft class into value is a real part of dynasty pick trading, and pretending
+   * otherwise would make the model quietly wrong every single year. They are exposed
+   * here so they can be argued with rather than buried.
+   */
+  classStrength: {
+    // 2026 is regarded as a deeper class, so value extends further down the board
+    // without an outlier at the very top.
+    "2026": { top: 1.0, depth: 1.15 },
   },
 };

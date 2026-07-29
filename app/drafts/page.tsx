@@ -6,24 +6,12 @@ import {
   getDraftSeasons,
   getTradedPickLineages,
 } from "@/lib/lineage";
-import { EmptyState, Tag } from "@/components/ui";
+import { EmptyState, SectionHeader, Tag } from "@/components/ui";
 import { cn } from "@/lib/ui";
 import { LineageCard, SeasonTile, boardHref } from "./parts";
-import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
 
-/** Tight section rule (the shared SectionHeader carries mt-8). */
-function Rail({ title, action }: { title: string; action?: ReactNode }) {
-  return (
-    <div className="mb-1.5 mt-4 flex items-baseline justify-between gap-3">
-      <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-        {title}
-      </h2>
-      {action}
-    </div>
-  );
-}
 
 export default async function DraftsPage() {
   const h = await getLeagueHistory();
@@ -76,7 +64,7 @@ export default async function DraftsPage() {
       {noDrafts ? (
         <EmptyState icon={<Layers size={28} />} title="No draft data">
           {!index.supported
-            ? "The active data source doesn't expose drafts. Switch to the Sleeper or fixture provider to trace pick lineage."
+            ? "The active data source doesn't expose drafts, so pick lineage can't be traced right now."
             : "This league has no drafts on record yet."}
         </EmptyState>
       ) : (
@@ -121,7 +109,7 @@ export default async function DraftsPage() {
 
           {/* Boards first: this is the page's navigation, and each tile carries its
               own counts so the shortcut costs no information. */}
-          <Rail
+          <SectionHeader
             title="Draft boards"
             action={
               <span className="font-mono text-[11px] tnum text-faint">
@@ -143,7 +131,7 @@ export default async function DraftsPage() {
             ))}
           </div>
 
-          <Rail
+          <SectionHeader
             title="Picks you traded away"
             action={
               gaveResolved.length > 0 ? (
@@ -172,7 +160,7 @@ export default async function DraftsPage() {
 
           {gotResolved.length > 0 && (
             <>
-              <Rail
+              <SectionHeader
                 title="Picks you acquired"
                 action={
                   <span className="font-mono text-[11px] tnum text-positive">
@@ -194,7 +182,7 @@ export default async function DraftsPage() {
 
           {mineOpen.length > 0 && (
             <>
-              <Rail
+              <SectionHeader
                 title="Still in flight"
                 action={
                   <Tag tone="warn">
@@ -217,7 +205,7 @@ export default async function DraftsPage() {
 
           {leagueResolved.length > 0 && (
             <>
-              <Rail
+              <SectionHeader
                 title="Around the league"
                 action={
                   <span className="font-mono text-[11px] tnum text-faint">

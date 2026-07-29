@@ -182,6 +182,8 @@ export function pickCapital(h: LeagueHistory, rosterId: number): PickCapital {
           originalTeamRank: ranks.get(original),
           teams,
           rounds,
+          playoffTeams: h.currentLeague.settings.playoff_teams,
+          season,
         });
         picks.push({
           season,

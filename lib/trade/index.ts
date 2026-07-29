@@ -93,6 +93,8 @@ function valueSide(
         pk.originalRosterId != null ? ranks.get(pk.originalRosterId) : undefined,
       teams,
       rounds,
+      playoffTeams: h.currentLeague.settings.playoff_teams,
+      season: pk.season,
     });
     const via =
       pk.originalRosterId != null ? ` (via ${rosterName(h, pk.originalRosterId)})` : "";

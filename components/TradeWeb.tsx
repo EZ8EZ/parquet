@@ -127,6 +127,7 @@ function WebMode({ graph }: { graph: TradeGraph }) {
   const [season, setSeason] = useState<string>(ALL);
   const [sel, setSel] = useState<Selection>(null);
   const [focused, setFocused] = useState<number | null>(null);
+  const [focusedEdge, setFocusedEdge] = useState<string | null>(null);
 
   const view = useMemo(() => {
     const trades =
@@ -176,8 +177,10 @@ function WebMode({ graph }: { graph: TradeGraph }) {
     ? view.edges.find((e) => e.key === activeEdge)
     : undefined;
 
-  // A strand is lit when it is the selected strand, or touches the focused manager.
+  // A strand is lit when it is selected, keyboard-focused, or touches the
+  // focused manager.
   const isLit = (a: number, b: number, key: string) => {
+    if (key === focusedEdge) return true;
     if (activeEdge) return key === activeEdge;
     if (activeNode != null) return a === activeNode || b === activeNode;
     return false;
@@ -206,10 +209,13 @@ function WebMode({ graph }: { graph: TradeGraph }) {
       </div>
 
       <div className="rounded-[--radius] border border-border bg-surface/60 p-1">
+        {/* role="group", not "img": an img role would collapse the whole SVG into
+            one atomic node for assistive tech and hide the interactive managers
+            and strands inside it. */}
         <svg
           viewBox={`0 0 ${RING.size} ${RING.size}`}
           className="mx-auto block w-full max-w-[460px]"
-          role="img"
+          role="group"
           aria-label={label}
         >
           {/* Tapping the field clears the selection. */}
@@ -250,14 +256,34 @@ function WebMode({ graph }: { graph: TradeGraph }) {
                     : r2(0.26 + 0.4 * (e.count / view.maxCount));
                 return (
                   <g key={e.key}>
-                    {/* Wide invisible stroke so a 1.5-unit strand is tappable. */}
+                    {/* Wide invisible stroke so a 1.5-unit strand is tappable -
+                        and a real button, so the strand is keyboard-reachable.
+                        Focus indication is the strand itself lighting up (isLit),
+                        so the default outline box is suppressed. */}
                     <path
                       d={d}
                       fill="none"
                       stroke="transparent"
                       strokeWidth={16}
-                      style={{ pointerEvents: "stroke" }}
+                      role="button"
+                      tabIndex={0}
+                      aria-pressed={activeEdge === e.key}
+                      aria-label={`${a.name} and ${b.name}: ${e.count} ${e.count === 1 ? "deal" : "deals"}`}
+                      className="cursor-pointer"
+                      style={{ pointerEvents: "stroke", outline: "none" }}
                       onClick={() => setSel({ kind: "edge", key: e.key })}
+                      onFocus={() => setFocusedEdge(e.key)}
+                      onBlur={() => setFocusedEdge(null)}
+                      onKeyDown={(ev) => {
+                        if (ev.key === "Enter" || ev.key === " ") {
+                          ev.preventDefault();
+                          setSel(
+                            activeEdge === e.key
+                              ? null
+                              : { kind: "edge", key: e.key },
+                          );
+                        }
+                      }}
                     />
                     <path
                       d={d}

@@ -192,8 +192,14 @@ export function rulesFallback(h: LeagueHistory, question: string): string {
     out.push(`First, the uncomfortable part: ${report.contradictions[0].narrative}`);
     out.push("");
   } else {
+    // Count only annotations that match a transaction in THIS corpus - the raw
+    // table can hold rows from other providers (fixture seeds), and quoting a
+    // number the ledger page contradicts would undermine the audit's authority.
+    const annotatedCount = h.transactions.filter((t) =>
+      h.annotations.has(t.transactionId),
+    ).length;
     out.push(
-      `No stated-vs-revealed contradiction yet - but that's partly because you've annotated ${h.annotations.size} decision(s). Annotate more and I can hold you to your own words.`,
+      `No stated-vs-revealed contradiction yet - but that's partly because you've annotated ${annotatedCount === 0 ? "nothing" : `only ${annotatedCount} decision${annotatedCount === 1 ? "" : "s"}`}. Annotate more and I can hold you to your own words.`,
     );
     out.push("");
   }

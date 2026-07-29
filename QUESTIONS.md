@@ -36,3 +36,42 @@ DECISIONS.md. This is the decision queue for when Eric is back.
 8. **Notable non-trade decisions.** The ledger auto-prompts on trades. Should it
    also prompt on big waiver claims (FAAB over some threshold) and drops of
    rostered starters? Default: trades + FAAB claims above the league-median bid.
+
+## 9. Lottery odds: flat or weighted by record? (MATERIAL to pick values)
+Confirmed with Eric: all non-playoff teams are lottery-eligible, then reverse standings
+order, champion picks last. With 8 of 14 making the playoffs that means picks 1-6 are
+lottery and 7-14 are the playoff teams in reverse order.
+
+What is NOT confirmed is the ODDS. The model currently assumes FLAT odds
+(`pick.lotteryWeighting: 0`), which has one consequence worth knowing: under flat odds
+every lottery team's first is worth exactly the same, because they all share the same
+distribution. Finishing dead last buys you nothing over finishing 9th.
+
+If the lottery is weighted toward the worst record, set `lotteryWeighting` above 0 and
+the worst team's first becomes the most valuable pick in the league. This is a real
+fork in how rebuilding is valued, so it is worth answering.
+
+## 10. Lock-in scoring is not yet reflected in the valuation model
+Eric confirmed this is a LOCK-IN league, not a traditional weekly-total league
+(`game_mode: 1` in the league settings, which the app can detect).
+
+That should change valuation, and currently does not:
+- Lock-in rewards GAMES PLAYED volume and availability, so durability and schedule
+  matter more than in a weekly-total format.
+- Roster DEPTH is worth more, because you need bodies playing on any given night. The
+  current rank decay (`rankDecay: 0.021`) is arguably too steep in the tail for a
+  lock-in league: it prices the ~200th-ranked player at roughly 150 against 10,000 for
+  the top asset.
+
+This is deliberately NOT tuned by guesswork. Doing it properly needs per-player
+games-played and minutes data, which is exactly the gap the `StatsProvider` interface
+exists to fill (see #4). Tuning `rankDecay` by feel would be a fake fix that made the
+numbers look considered while resting on nothing.
+
+## 11. Ranking sources and custom rankings (Eric's idea, worth building)
+Eric proposed ingesting ranking sources plus letting the user build their OWN ranking,
+compare it against consensus, and have the difference feed back into values. The model
+is well positioned for this: player value already keys off a single rank input, so a
+rank override map is a small change rather than a rewrite. Open questions: which public
+sources are acceptable to use, and whether a user ranking should REPLACE consensus or be
+blended with it (blending is the more defensible default, with the weight exposed).

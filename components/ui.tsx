@@ -1,27 +1,36 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
+import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/ui";
 
 export function PageHeader({
   kicker,
   title,
   subtitle,
+  action,
 }: {
   kicker?: string;
   title: string;
   subtitle?: string;
+  /** Optional right-aligned control (e.g. a Sleeper link or methodology pill). */
+  action?: ReactNode;
 }) {
   return (
-    <header className="mb-5">
+    <header className="mb-3">
       {kicker && (
-        <p className="mb-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
           {kicker}
         </p>
       )}
-      <h1 className="font-display text-3xl font-semibold leading-tight text-ink">
-        {title}
-      </h1>
-      {subtitle && <p className="mt-1.5 text-sm text-muted">{subtitle}</p>}
+      <div className="flex items-center justify-between gap-3">
+        <h1 className="min-w-0 font-display text-[26px] font-semibold leading-tight text-ink">
+          {title}
+        </h1>
+        {action && <div className="shrink-0">{action}</div>}
+      </div>
+      {subtitle && (
+        <p className="mt-0.5 text-xs leading-snug text-muted">{subtitle}</p>
+      )}
     </header>
   );
 }
@@ -50,16 +59,31 @@ export function Card({
 export function SectionHeader({
   title,
   action,
+  href,
+  cta,
 }: {
   title: string;
+  /** Arbitrary right-side control. For the common "link with chevron" case,
+   *  pass `href` + `cta` instead. */
   action?: ReactNode;
+  href?: string;
+  cta?: string;
 }) {
   return (
-    <div className="mb-3 mt-8 flex items-baseline justify-between">
-      <h2 className="text-[12px] font-semibold uppercase tracking-[0.16em] text-muted">
+    <div className="mb-1.5 mt-4 flex items-center justify-between gap-2">
+      <h2 className="min-w-0 text-[12px] font-semibold uppercase tracking-[0.16em] text-muted">
         {title}
       </h2>
       {action}
+      {href && cta && (
+        <Link
+          href={href}
+          className="-mr-2 inline-flex min-h-11 shrink-0 items-center gap-0.5 px-2 text-[11px] font-semibold text-accent"
+        >
+          {cta}
+          <ChevronRight size={13} aria-hidden="true" />
+        </Link>
+      )}
     </div>
   );
 }
@@ -188,7 +212,7 @@ export function ButtonLink({
     <Link
       href={href}
       className={cn(
-        "inline-flex items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
+        "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-sm font-semibold transition-colors",
         variant === "primary"
           ? "bg-accent text-accent-ink hover:bg-accent/90"
           : "border border-border text-ink hover:bg-surface-2",

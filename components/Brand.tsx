@@ -3,7 +3,12 @@ import Link from "next/link";
 export function Wordmark({ tagline }: { tagline?: string }) {
   return (
     <div className="mb-5 flex items-center gap-3">
-      <Link href="/" aria-label="Parquet home" className="shrink-0">
+      {/* -m-1 keeps the 36px mark visually in place while the hit area meets 44px. */}
+      <Link
+        href="/"
+        aria-label="Parquet home"
+        className="-m-1 flex min-h-11 min-w-11 shrink-0 items-center justify-center"
+      >
         {/* Inline logo mark (matches public/icon.svg) */}
         <svg width="36" height="36" viewBox="0 0 512 512" aria-hidden="true">
           <defs>

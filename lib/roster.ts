@@ -16,6 +16,15 @@ export interface ValuedPlayer {
   value: number;
   tier: string;
   espnId: string | null;
+  /** The multiplier chain behind `value`, so rows can explain their own number
+   *  without callers re-running the whole valuation pass. */
+  breakdown: {
+    base: number;
+    age: number;
+    injury: number;
+    role: number;
+    position: number;
+  };
 }
 
 export interface RosterAnalysis {
@@ -57,6 +66,13 @@ export function analyzeRoster(h: LeagueHistory, rosterId: number): RosterAnalysi
         value: v.value,
         tier: tierOf(v.value),
         espnId: p.espnId,
+        breakdown: {
+          base: v.base,
+          age: v.ageMultiplier,
+          injury: v.injuryMultiplier,
+          role: v.roleMultiplier,
+          position: v.positionMultiplier,
+        },
       };
     })
     .filter(Boolean) as ValuedPlayer[];

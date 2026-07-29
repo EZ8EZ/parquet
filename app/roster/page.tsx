@@ -2,8 +2,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { analyzeRoster } from "@/lib/roster";
-import { valuePlayers } from "@/lib/valuation";
-import { Card, Tag } from "@/components/ui";
+import { Card, SectionHeader, Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { ValueAssetRow } from "@/components/ValuesList";
 import { AgeStrip, BarChart } from "@/components/charts";
@@ -45,10 +44,6 @@ export default async function RosterPage() {
   const ages = a.valued.map((v) => v.age).filter((x): x is number => x != null);
   const posData = a.byPosition.map((p) => ({ label: p.pos, value: Math.round(p.value) }));
   const posCounts = a.byPosition.map((p) => `${p.pos} ${p.count}`).join(" · ");
-
-  // The multiplier chain per player, so every roster row can explain its own number
-  // without a round trip. Same call analyzeRoster makes; memoised by Next's cache.
-  const breakdowns = valuePlayers([...h.players.values()], h.currentLeague.scoringSettings);
 
   const user = h.rostersById.get(rosterId)?.ownerId
     ? h.usersById.get(h.rostersById.get(rosterId)!.ownerId!)
@@ -141,7 +136,7 @@ export default async function RosterPage() {
 
       {/* Pick capital - in dynasty, picks are assets, so they get real estate.
           One row per season instead of one card per season. */}
-      <SectionTitle
+      <SectionHeader
         title={`Draft capital - ${a.picks.picks.length} picks`}
         href="/drafts"
         cta="lineage"
@@ -197,7 +192,7 @@ export default async function RosterPage() {
 
       {/* Both shape charts in one card - two section headers and two card
           paddings for the same information was pure vertical cost. */}
-      <SectionTitle title="Roster shape" />
+      <SectionHeader title="Roster shape" />
       <Card className="p-3">
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-[11px] font-semibold uppercase tracking-wide text-faint">
@@ -223,7 +218,7 @@ export default async function RosterPage() {
         <BarChart data={posData} height={112} format={(n) => fmtValue(n)} />
       </Card>
 
-      <SectionTitle
+      <SectionHeader
         title="Roster - by value"
         href="/values"
         cta="all values"
@@ -233,65 +228,26 @@ export default async function RosterPage() {
         value · tap for multipliers
       </p>
       <ul className="space-y-1">
-        {a.valued.map((v) => {
-          const b = breakdowns.get(v.playerId);
-          return (
-            <ValueAssetRow
-              key={v.playerId}
-              name={v.name}
-              team={v.team}
-              position={v.position}
-              age={v.age}
-              value={v.value}
-              tier={v.tier}
-              playerId={v.playerId}
-              injuryStatus={v.injuryStatus}
-              share={a.playerValue ? v.value / a.playerValue : 0}
-              breakdown={
-                b
-                  ? {
-                      base: b.base,
-                      age: b.ageMultiplier,
-                      injury: b.injuryMultiplier,
-                      role: b.roleMultiplier,
-                      position: b.positionMultiplier,
-                    }
-                  : undefined
-              }
-            />
-          );
-        })}
+        {a.valued.map((v) => (
+          <ValueAssetRow
+            key={v.playerId}
+            name={v.name}
+            team={v.team}
+            position={v.position}
+            age={v.age}
+            value={v.value}
+            tier={v.tier}
+            playerId={v.playerId}
+            injuryStatus={v.injuryStatus}
+            share={a.playerValue ? v.value / a.playerValue : 0}
+            breakdown={v.breakdown}
+          />
+        ))}
       </ul>
     </div>
   );
 }
 
-function SectionTitle({
-  title,
-  href,
-  cta,
-}: {
-  title: string;
-  href?: string;
-  cta?: string;
-}) {
-  return (
-    <div className="mb-1.5 mt-4 flex items-center justify-between gap-2">
-      <h2 className="text-[12px] font-semibold uppercase tracking-[0.16em] text-muted">
-        {title}
-      </h2>
-      {href && cta && (
-        <Link
-          href={href}
-          className="-mr-2 inline-flex min-h-11 items-center gap-0.5 px-2 text-[11px] font-semibold text-accent"
-        >
-          {cta}
-          <ChevronRight size={13} aria-hidden="true" />
-        </Link>
-      )}
-    </div>
-  );
-}
 
 function StatCell({
   href,

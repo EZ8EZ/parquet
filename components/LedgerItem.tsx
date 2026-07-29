@@ -31,6 +31,10 @@ export function LedgerItem({
   const [posture, setPosture] = useState<string | null>(initialPosture);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // The API degrades gracefully without a database (persisted: false). That is
+  // fine for the server - but silently losing a note would betray the whole
+  // premise of the ledger, so the user gets told the truth about it.
+  const [notPersisted, setNotPersisted] = useState(false);
 
   async function save() {
     if (!reasoning.trim()) return;
@@ -43,8 +47,10 @@ export function LedgerItem({
         body: JSON.stringify({ transactionId, reasoning: reasoning.trim(), posture }),
       });
       if (!res.ok) throw new Error("save failed");
+      const data: { persisted?: boolean } = await res.json();
+      setNotPersisted(data.persisted === false);
       setEditing(false);
-      router.refresh();
+      if (data.persisted !== false) router.refresh();
     } catch {
       setError("Couldn't save. Try again.");
     } finally {
@@ -133,6 +139,12 @@ export function LedgerItem({
           <p className="text-sm italic leading-relaxed text-muted">
             &ldquo;{reasoning}&rdquo;
           </p>
+          {notPersisted && (
+            <p className="mt-1.5 text-[11px] leading-snug text-warn">
+              Held for this session only - no database is connected, so this note
+              will not survive a reload.
+            </p>
+          )}
           <button
             type="button"
             onClick={() => setEditing(true)}
