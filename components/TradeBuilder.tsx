@@ -1,8 +1,8 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeftRight, Check, Copy, Loader2, Plus, X } from "lucide-react";
-import type { TradeEvaluation, PickInput } from "@/lib/trade";
+import type { TradeEvaluation } from "@/lib/trade";
 import { cn, fmtValue } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTradeUrl } from "@/lib/sleeperLinks";
@@ -17,60 +17,161 @@ export interface PlayerOption {
   owner?: string;
 }
 
-type SelPick = PickInput & { key: string };
+/**
+ * A REAL owned pick, not a season/round guess. `originalRosterId` is what lets the
+ * evaluator price the pick by who owes it - the whole point of slot-aware valuation.
+ */
+export interface PickOption {
+  id: string;
+  season: string;
+  round: number;
+  originalRosterId: number;
+  /** e.g. "2027 1st (via Old Man Ball)" */
+  label: string;
+  value: number;
+  /** Current owner's team name (for the other side's picker). */
+  owner?: string;
+}
+
+interface ModalItem {
+  id: string;
+  name: string;
+  meta: string;
+  value: number;
+}
+
+/** Fold diacritics so "jokic" finds Jokić and "sengun" finds Şengün. */
+function fold(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
 
 function PickerModal({
   title,
-  options,
+  items,
+  searchLabel,
+  emptyText,
   onPick,
   onClose,
 }: {
   title: string;
-  options: PlayerOption[];
-  onPick: (p: PlayerOption) => void;
+  items: ModalItem[];
+  searchLabel: string;
+  emptyText: string;
+  onPick: (id: string) => void;
   onClose: () => void;
 }) {
   const [q, setQ] = useState("");
   const filtered = useMemo(() => {
-    const s = q.toLowerCase();
-    return options
-      .filter((o) => !s || o.name.toLowerCase().includes(s))
+    const s = fold(q.trim());
+    return items
+      .filter((o) => !s || fold(`${o.name} ${o.meta}`).includes(s))
       .slice(0, 60);
-  }, [q, options]);
+  }, [q, items]);
+
+  // Escape closes; the page behind must not scroll while the sheet is up.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+    document.addEventListener("keydown", onKey);
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.removeEventListener("keydown", onKey);
+      document.body.style.overflow = prev;
+    };
+  }, [onClose]);
+
   return (
-    <div className="fixed inset-0 z-[60] flex flex-col bg-bg/95 backdrop-blur">
-      <div className="mx-auto flex h-full w-full max-w-2xl flex-col p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="font-display text-lg font-semibold">{title}</h3>
-          <button onClick={onClose} className="rounded-full border border-border p-2 text-muted">
-            <X size={18} />
+    <div
+      role="dialog"
+      aria-modal="true"
+      aria-label={title}
+      className="fixed inset-0 z-[60] flex flex-col bg-bg/95 backdrop-blur"
+    >
+      <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-4 pb-4 pt-3">
+        <div className="mb-2 flex items-center justify-between gap-2">
+          <h3 className="min-w-0 truncate font-display text-lg font-semibold text-ink">
+            {title}
+          </h3>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-muted transition-colors hover:border-border-strong hover:text-ink"
+          >
+            <X size={18} aria-hidden="true" />
           </button>
         </div>
         <input
           autoFocus
           value={q}
           onChange={(e) => setQ(e.target.value)}
-          placeholder="Search players…"
-          className="mb-3 w-full rounded-[--radius-sm] border border-border bg-surface p-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+          placeholder={searchLabel}
+          aria-label={searchLabel}
+          className="mb-2 h-11 w-full rounded-full border border-border bg-surface px-4 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
         />
-        <div className="flex-1 space-y-1.5 overflow-y-auto pb-4">
+        <p className="mb-1 font-mono text-[11px] tnum text-faint">
+          {filtered.length} shown · esc to close
+        </p>
+        <div className="flex-1 space-y-1 overflow-y-auto pb-4">
+          {filtered.length === 0 && (
+            <p className="py-6 text-center text-sm text-muted">{emptyText}</p>
+          )}
           {filtered.map((o) => (
             <button
               key={o.id}
-              onClick={() => onPick(o)}
-              className="flex w-full items-center justify-between rounded-[--radius-sm] border border-border bg-surface/60 px-3 py-2.5 text-left hover:border-accent"
+              onClick={() => onPick(o.id)}
+              className="flex min-h-11 w-full items-center justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 text-left transition-colors hover:border-border-strong hover:bg-surface-2"
             >
-              <div className="min-w-0">
-                <div className="truncate text-sm font-semibold text-ink">{o.name}</div>
-                <div className="text-[11px] text-faint">
-                  {o.position ?? "-"}{o.age != null ? ` · ${o.age}y` : ""}{o.owner ? ` · ${o.owner}` : ""}
-                </div>
-              </div>
-              <span className="font-mono text-sm text-muted">{fmtValue(o.value)}</span>
+              <span className="min-w-0">
+                <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+                  {o.name}
+                </span>
+                <span className="block truncate font-mono text-[11px] tnum leading-tight text-faint">
+                  {o.meta}
+                </span>
+              </span>
+              <span className="shrink-0 font-mono text-[13px] font-semibold tnum text-muted">
+                {fmtValue(o.value)}
+              </span>
             </button>
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function AssetRow({
+  label,
+  meta,
+  value,
+  onRemove,
+}: {
+  label: string;
+  meta?: string;
+  value: number;
+  onRemove: () => void;
+}) {
+  return (
+    <div className="flex min-h-11 items-center justify-between gap-1.5 rounded-[--radius-sm] bg-elevated px-2 py-1">
+      <span className="min-w-0">
+        <span className="block truncate text-[13px] leading-tight text-ink">{label}</span>
+        <span className="block truncate font-mono text-[11px] tnum leading-tight text-faint">
+          {meta ? `${meta} · ` : ""}
+          {fmtValue(value)}
+        </span>
+      </span>
+      <button
+        onClick={onRemove}
+        aria-label={`Remove ${label}`}
+        className="-mr-1 flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-faint transition-colors hover:text-negative"
+      >
+        <X size={14} aria-hidden="true" />
+      </button>
     </div>
   );
 }
@@ -87,46 +188,61 @@ function SideColumn({
 }: {
   label: string;
   players: PlayerOption[];
-  picks: SelPick[];
+  picks: PickOption[];
   onAddPlayer: () => void;
   onRemovePlayer: (id: string) => void;
   onAddPick: () => void;
-  onRemovePick: (key: string) => void;
+  onRemovePick: (id: string) => void;
   total: number;
 }) {
   return (
-    <div className="rounded-[--radius] border border-border bg-surface/60 p-3">
-      <div className="mb-2 flex items-center justify-between">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">{label}</span>
-        <span className="font-mono text-sm font-semibold text-ink">{fmtValue(total)}</span>
+    <div className="rounded-[--radius] border border-border bg-surface/60 p-2">
+      <div className="mb-1.5 flex items-center justify-between px-0.5">
+        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+          {label}
+        </span>
+        <span className="font-mono text-[13px] font-semibold tnum text-ink">
+          {fmtValue(total)}
+        </span>
       </div>
-      <div className="space-y-1.5">
+      <div className="space-y-1">
         {players.map((p) => (
-          <div key={p.id} className="flex items-center justify-between rounded-[--radius-sm] bg-elevated px-2.5 py-2">
-            <span className="min-w-0 truncate text-sm text-ink">{p.name}</span>
-            <div className="flex items-center gap-2">
-              <span className="font-mono text-xs text-faint">{fmtValue(p.value)}</span>
-              <button onClick={() => onRemovePlayer(p.id)} className="text-faint hover:text-negative">
-                <X size={14} />
-              </button>
-            </div>
-          </div>
+          <AssetRow
+            key={p.id}
+            label={p.name}
+            meta={[p.position, p.age != null ? `${p.age}y` : null]
+              .filter(Boolean)
+              .join(" · ")}
+            value={p.value}
+            onRemove={() => onRemovePlayer(p.id)}
+          />
         ))}
         {picks.map((pk) => (
-          <div key={pk.key} className="flex items-center justify-between rounded-[--radius-sm] bg-elevated px-2.5 py-2">
-            <span className="text-sm text-ink">{pk.season} Round {pk.round}</span>
-            <button onClick={() => onRemovePick(pk.key)} className="text-faint hover:text-negative">
-              <X size={14} />
-            </button>
-          </div>
+          <AssetRow
+            key={pk.id}
+            label={pk.label}
+            value={pk.value}
+            onRemove={() => onRemovePick(pk.id)}
+          />
         ))}
+        {players.length + picks.length === 0 && (
+          <p className="px-0.5 py-2 text-[11px] leading-snug text-faint">
+            Nothing yet - add a player or a pick.
+          </p>
+        )}
       </div>
-      <div className="mt-2 flex gap-2">
-        <button onClick={onAddPlayer} className="flex flex-1 items-center justify-center gap-1 rounded-full border border-border py-2 text-xs font-medium text-muted hover:border-accent hover:text-accent">
-          <Plus size={14} /> player
+      <div className="mt-1.5 flex gap-1.5">
+        <button
+          onClick={onAddPlayer}
+          className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-full border border-border text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+        >
+          <Plus size={14} aria-hidden="true" /> player
         </button>
-        <button onClick={onAddPick} className="flex flex-1 items-center justify-center gap-1 rounded-full border border-border py-2 text-xs font-medium text-muted hover:border-accent hover:text-accent">
-          <Plus size={14} /> pick
+        <button
+          onClick={onAddPick}
+          className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-full border border-border text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+        >
+          <Plus size={14} aria-hidden="true" /> pick
         </button>
       </div>
     </div>
@@ -136,103 +252,185 @@ function SideColumn({
 export function TradeBuilder({
   myPlayers,
   otherPlayers,
-  seasons,
+  myPicks,
+  otherPicks,
   leagueId,
 }: {
   myPlayers: PlayerOption[];
   otherPlayers: PlayerOption[];
-  seasons: string[];
-  /** Current Sleeper league id — used to link out to the trade centre. */
+  /** Picks YOU actually own, valued and labelled by who owes them. */
+  myPicks: PickOption[];
+  /** Picks the rest of the league owns. */
+  otherPicks: PickOption[];
+  /** Current Sleeper league id - used to link out to the trade centre. */
   leagueId?: string | null;
 }) {
   const [give, setGive] = useState<PlayerOption[]>([]);
   const [get, setGet] = useState<PlayerOption[]>([]);
-  const [givePicks, setGivePicks] = useState<SelPick[]>([]);
-  const [getPicks, setGetPicks] = useState<SelPick[]>([]);
-  const [picker, setPicker] = useState<null | "give" | "get">(null);
+  const [givePicks, setGivePicks] = useState<PickOption[]>([]);
+  const [getPicks, setGetPicks] = useState<PickOption[]>([]);
+  const [picker, setPicker] = useState<null | {
+    side: "give" | "get";
+    kind: "player" | "pick";
+  }>(null);
   const [result, setResult] = useState<TradeEvaluation | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const resultRef = useRef<HTMLDivElement>(null);
 
   const giveTotal =
-    give.reduce((s, p) => s + p.value, 0) + givePicks.length * 0; // picks valued server-side
-  const getTotal = get.reduce((s, p) => s + p.value, 0);
+    give.reduce((s, p) => s + p.value, 0) + givePicks.reduce((s, p) => s + p.value, 0);
+  const getTotal =
+    get.reduce((s, p) => s + p.value, 0) + getPicks.reduce((s, p) => s + p.value, 0);
 
   async function evaluate() {
     setLoading(true);
     setResult(null);
+    setError(null);
     try {
+      const pickBody = (pks: PickOption[]) =>
+        pks.map(({ round, season, originalRosterId }) => ({
+          round,
+          season,
+          originalRosterId,
+        }));
       const res = await fetch("/api/trade", {
         method: "POST",
         headers: { "content-type": "application/json" },
         body: JSON.stringify({
-          give: { playerIds: give.map((p) => p.id), picks: givePicks.map(({ round, season }) => ({ round, season })) },
-          get: { playerIds: get.map((p) => p.id), picks: getPicks.map(({ round, season }) => ({ round, season })) },
+          give: { playerIds: give.map((p) => p.id), picks: pickBody(givePicks) },
+          get: { playerIds: get.map((p) => p.id), picks: pickBody(getPicks) },
         }),
       });
-      setResult(await res.json());
+      if (!res.ok) throw new Error(`evaluation failed (${res.status})`);
+      setResult((await res.json()) as TradeEvaluation);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "evaluation failed");
     } finally {
       setLoading(false);
     }
   }
 
-  function addPick(side: "give" | "get") {
-    const season = seasons[0];
-    const key = `${side}-${season}-1-${Date.now()}`;
-    const pk = { round: 1, season, key };
-    if (side === "give") setGivePicks((x) => [...x, pk]);
-    else setGetPicks((x) => [...x, pk]);
-  }
+  // Bring the verdict into view once it exists - on a phone it renders below the fold.
+  useEffect(() => {
+    if (result) resultRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  }, [result]);
 
   const hasSomething = give.length + get.length + givePicks.length + getPicks.length > 0;
 
+  const modal = useMemo(() => {
+    if (!picker) return null;
+    const giving = picker.side === "give";
+    if (picker.kind === "player") {
+      const chosen = new Set((giving ? give : get).map((p) => p.id));
+      const source = giving ? myPlayers : otherPlayers;
+      return {
+        title: giving ? "Add a player you'll send" : "Add a player you'll get",
+        searchLabel: "Search players",
+        emptyText: "No players match.",
+        items: source
+          .filter((o) => !chosen.has(o.id))
+          .map((o) => ({
+            id: o.id,
+            name: o.name,
+            meta: [o.position ?? "-", o.age != null ? `${o.age}y` : null, o.owner]
+              .filter(Boolean)
+              .join(" · "),
+            value: o.value,
+          })),
+        pick: (id: string) => {
+          const o = source.find((x) => x.id === id);
+          if (!o) return;
+          if (giving) setGive((x) => [...x, o]);
+          else setGet((x) => [...x, o]);
+          setPicker(null);
+        },
+      };
+    }
+    const chosen = new Set((giving ? givePicks : getPicks).map((p) => p.id));
+    const source = giving ? myPicks : otherPicks;
+    return {
+      title: giving ? "Add a pick you'll send" : "Add a pick you'll get",
+      searchLabel: "Search picks (year, round, team)",
+      emptyText: giving
+        ? "You own no tradeable picks."
+        : "No picks match.",
+      items: source
+        .filter((o) => !chosen.has(o.id))
+        .map((o) => ({
+          id: o.id,
+          name: o.label,
+          meta: o.owner ? `owned by ${o.owner}` : "your pick",
+          value: o.value,
+        })),
+      pick: (id: string) => {
+        const o = source.find((x) => x.id === id);
+        if (!o) return;
+        if (giving) setGivePicks((x) => [...x, o]);
+        else setGetPicks((x) => [...x, o]);
+        setPicker(null);
+      },
+    };
+  }, [picker, give, get, givePicks, getPicks, myPlayers, otherPlayers, myPicks, otherPicks]);
+
   return (
     <div>
-      <div className="grid grid-cols-2 gap-2.5">
+      <div className="grid grid-cols-2 gap-2">
         <SideColumn
           label="You give"
           players={give}
           picks={givePicks}
           total={giveTotal}
-          onAddPlayer={() => setPicker("give")}
+          onAddPlayer={() => setPicker({ side: "give", kind: "player" })}
           onRemovePlayer={(id) => setGive((x) => x.filter((p) => p.id !== id))}
-          onAddPick={() => addPick("give")}
-          onRemovePick={(k) => setGivePicks((x) => x.filter((p) => p.key !== k))}
+          onAddPick={() => setPicker({ side: "give", kind: "pick" })}
+          onRemovePick={(id) => setGivePicks((x) => x.filter((p) => p.id !== id))}
         />
         <SideColumn
           label="You get"
           players={get}
           picks={getPicks}
           total={getTotal}
-          onAddPlayer={() => setPicker("get")}
+          onAddPlayer={() => setPicker({ side: "get", kind: "player" })}
           onRemovePlayer={(id) => setGet((x) => x.filter((p) => p.id !== id))}
-          onAddPick={() => addPick("get")}
-          onRemovePick={(k) => setGetPicks((x) => x.filter((p) => p.key !== k))}
+          onAddPick={() => setPicker({ side: "get", kind: "pick" })}
+          onRemovePick={(id) => setGetPicks((x) => x.filter((p) => p.id !== id))}
         />
       </div>
 
       <button
         onClick={evaluate}
         disabled={!hasSomething || loading}
-        className="mt-4 flex w-full items-center justify-center gap-2 rounded-full bg-accent py-3 text-sm font-semibold text-accent-ink disabled:opacity-40"
+        className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-accent py-3 text-sm font-semibold text-accent-ink transition-opacity disabled:opacity-40"
       >
-        {loading ? <Loader2 size={16} className="animate-spin" /> : <ArrowLeftRight size={16} />}
+        {loading ? (
+          <Loader2 size={16} aria-hidden="true" className="animate-spin" />
+        ) : (
+          <ArrowLeftRight size={16} aria-hidden="true" />
+        )}
         Evaluate trade
       </button>
 
-      {result && (
-        <TradeResult r={result} copied={copied} setCopied={setCopied} leagueId={leagueId} />
+      {error && (
+        <p role="alert" className="mt-2 text-center text-[12px] text-negative">
+          Couldn&apos;t evaluate: {error}. Try again.
+        </p>
       )}
 
-      {picker && (
+      <div ref={resultRef} className="scroll-mt-4">
+        {result && (
+          <TradeResult r={result} copied={copied} setCopied={setCopied} leagueId={leagueId} />
+        )}
+      </div>
+
+      {picker && modal && (
         <PickerModal
-          title={picker === "give" ? "Add a player you'll send" : "Add a player you'll get"}
-          options={picker === "give" ? myPlayers : otherPlayers}
-          onPick={(p) => {
-            if (picker === "give") setGive((x) => (x.find((q) => q.id === p.id) ? x : [...x, p]));
-            else setGet((x) => (x.find((q) => q.id === p.id) ? x : [...x, p]));
-            setPicker(null);
-          }}
+          title={modal.title}
+          items={modal.items}
+          searchLabel={modal.searchLabel}
+          emptyText={modal.emptyText}
+          onPick={modal.pick}
           onClose={() => setPicker(null)}
         />
       )}
@@ -254,14 +452,39 @@ function TradeResult({
   const dirTone =
     r.direction === "buying" ? "text-accent" : r.direction === "selling" ? "text-info" : "text-muted";
   return (
-    <div className="mt-5 space-y-3">
-      <div className="rounded-[--radius] border border-border bg-surface/60 p-4 text-center">
+    <div className="mt-4 space-y-2">
+      <div className="rounded-[--radius] border border-border bg-surface/60 p-3 text-center">
         <div className="text-[11px] uppercase tracking-wide text-faint">Value to you</div>
-        <div className={cn("font-mono text-3xl font-semibold", r.delta >= 0 ? "text-positive" : "text-negative")}>
+        <div className={cn("font-mono text-3xl font-semibold tnum", r.delta >= 0 ? "text-positive" : "text-negative")}>
           {r.delta >= 0 ? "+" : ""}{fmtValue(r.delta)}
         </div>
-        <div className="mt-1 text-xs text-muted">
+        <div className="mt-0.5 text-xs text-muted">
           You&apos;re <span className={cn("font-semibold", dirTone)}>{r.direction}</span>. Value is a guide, not the verdict - read below.
+        </div>
+        {/* Both sides as the evaluator priced them - picks labelled by who owes them. */}
+        <div className="mt-2 grid grid-cols-2 gap-1.5 text-left">
+          {([["send", r.give] as const, ["get", r.get] as const]).map(([k, side]) => (
+            <div key={k} className="rounded-[--radius-sm] border border-border bg-bg/40 px-2 py-1.5">
+              <div className="flex items-baseline justify-between gap-1">
+                <span className={cn("text-[11px] uppercase tracking-wide", k === "send" ? "text-negative/80" : "text-positive/80")}>
+                  you {k}
+                </span>
+                <span className="font-mono text-[11px] font-semibold tnum text-ink">
+                  {fmtValue(side.total)}
+                </span>
+              </div>
+              <ul className="mt-0.5 space-y-0.5">
+                {side.assets.map((a) => (
+                  <li key={a.id} className="flex items-baseline justify-between gap-1 text-[11.5px] leading-snug">
+                    <span className="min-w-0 truncate text-ink/85">{a.label}</span>
+                    <span className="shrink-0 font-mono text-[11px] tnum text-faint">
+                      {fmtValue(a.value)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          ))}
         </div>
       </div>
 
@@ -272,7 +495,7 @@ function TradeResult({
       {r.consolidationNote && <Block title="Consolidation">{r.consolidationNote}</Block>}
 
       <div className="rounded-[--radius] border border-border bg-bg/70 p-3">
-        <div className="mb-2 flex items-center justify-between">
+        <div className="mb-1.5 flex items-center justify-between">
           <span className="text-[11px] uppercase tracking-wide text-faint">Copyable summary</span>
           <button
             onClick={() => {
@@ -280,20 +503,19 @@ function TradeResult({
               setCopied(true);
               setTimeout(() => setCopied(false), 1500);
             }}
-            className="inline-flex items-center gap-1 text-xs font-semibold text-accent"
+            className="inline-flex items-center gap-1 px-2 text-xs font-semibold text-accent"
           >
-            {copied ? <Check size={13} /> : <Copy size={13} />} {copied ? "copied" : "copy"}
+            {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}{" "}
+            {copied ? "copied" : "copy"}
           </button>
         </div>
         <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-muted">{r.copyable}</pre>
         {/* Sleeper has no write API, so we can't send the proposal - but copy above
-            then tap here and the trade centre is one screen away. Sits under the
-            summary rather than beside the copy button so three controls never
-            compete for one 390px row. */}
+            then tap here and the trade centre is one screen away. */}
         <OpenInSleeper
           href={sleeperTradeUrl(leagueId)}
           label="Open Sleeper to send"
-          className="mt-3 w-full"
+          className="mt-2.5 w-full"
         />
       </div>
     </div>
@@ -314,9 +536,9 @@ function Block({
   const head =
     tone === "accent" ? "text-accent" : tone === "warn" ? "text-warn" : "text-muted";
   return (
-    <div className={cn("rounded-[--radius] border bg-surface/60 p-4", border)}>
+    <div className={cn("rounded-[--radius] border bg-surface/60 p-3", border)}>
       <div className={cn("mb-1 text-[11px] font-semibold uppercase tracking-wide", head)}>{title}</div>
-      <p className="text-sm leading-relaxed text-ink/90">{children}</p>
+      <p className="text-[13px] leading-relaxed text-ink/90">{children}</p>
     </div>
   );
 }

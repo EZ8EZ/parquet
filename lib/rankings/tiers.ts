@@ -21,7 +21,7 @@ export interface Tier {
   /** 1-based tier number, 1 = best. */
   tier: number;
   label: string;
-  /** Indices into the sorted-desc value array. */
+  /** Indices into the sorted-desc value array (above-floor pool when a floor is set). */
   startIndex: number;
   endIndex: number;
   minValue: number;
@@ -68,11 +68,19 @@ export function computeTiers(
 ): Tier[] {
   const tierCount = Math.max(1, opts.tierCount ?? 8);
   const minTierSize = Math.max(1, opts.minTierSize ?? 2);
-  const n = valuesDesc.length;
+  // The floor bounds the population the cliffs are searched in. Without it the
+  // deep tail dominates: relative drops between two junk values (300 -> 240) score
+  // higher than the genuine gap under the elite tier, and every break lands among
+  // assets nobody tiers by hand. Below-floor values still resolve - tierResolver
+  // sends anything under the last tier's minValue to the final tier.
+  const pool =
+    opts.floor != null ? valuesDesc.filter((v) => v >= opts.floor!) : valuesDesc;
+  const values = pool.length > 0 ? pool : valuesDesc;
+  const n = values.length;
   if (n === 0) return [];
   if (n <= tierCount) {
     // Too few assets to tier meaningfully: one tier each, in order.
-    return valuesDesc.map((v, i) => ({
+    return values.map((v, i) => ({
       tier: i + 1,
       label: labelFor(i + 1),
       startIndex: i,
@@ -87,8 +95,8 @@ export function computeTiers(
   // does not automatically outrank a proportionally larger fall further down.
   const candidates: Array<{ index: number; score: number }> = [];
   for (let i = 1; i < n; i++) {
-    const above = valuesDesc[i - 1];
-    const below = valuesDesc[i];
+    const above = values[i - 1];
+    const below = values[i];
     const denom = Math.max(1, below);
     candidates.push({ index: i, score: (above - below) / denom });
   }
@@ -118,8 +126,8 @@ export function computeTiers(
       label: labelFor(t + 1),
       startIndex: start,
       endIndex: end,
-      minValue: valuesDesc[end],
-      maxValue: valuesDesc[start],
+      minValue: values[end],
+      maxValue: values[start],
       count: end - start + 1,
     });
   }

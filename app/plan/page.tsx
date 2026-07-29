@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight, ChevronRight, Target } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildGamePlan } from "@/lib/gameplan";
+import { leagueTimelines } from "@/lib/metrics/duration";
 import { Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { CopyBlock } from "@/components/CopyBlock";
@@ -37,6 +38,18 @@ export default async function PlanPage() {
   const dx = plan.diagnosis;
   const dir = DIR_LABEL[dx.direction];
   const myUser = h.usersById.get(h.me.userId);
+
+  // Timeline check: does the roster's actual value timing agree with the plan?
+  const tl = leagueTimelines(h).find((t) => t.rosterId === rosterId);
+  const DIR_TO_POSTURE: Record<string, string> = {
+    contend: "contending",
+    ascend: "ascending",
+    rebuild: "rebuilding",
+  };
+  const timelineAgrees =
+    tl != null &&
+    tl.posture !== "straddling" &&
+    (dx.direction === "retool" || DIR_TO_POSTURE[dx.direction] === tl.posture);
 
   /** Team identity for a partner roster, for the target row's logo. */
   const teamOf = (id: number) => {
@@ -131,6 +144,47 @@ export default async function PlanPage() {
           </div>
         ))}
       </div>
+
+      {/* Timeline check - "your assets disagree about when you win" is directly
+          actionable here, so it sits next to the diagnosis it qualifies. */}
+      {tl && (
+        <div
+          className={`mt-1.5 rounded-[--radius-sm] border px-2.5 py-2 ${
+            tl.posture === "straddling"
+              ? "border-negative/30 bg-negative/[0.06]"
+              : timelineAgrees
+                ? "border-border bg-surface/60"
+                : "border-warn/30 bg-warn/[0.05]"
+          }`}
+        >
+          <div className="flex items-baseline justify-between gap-2">
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              Timeline check
+            </span>
+            <Link
+              href="/league"
+              className="font-mono text-[11px] tnum text-faint underline-offset-2 hover:text-accent hover:underline"
+            >
+              TCI {tl.tci} · value ~{tl.rosterDuration.toFixed(1)}s out
+            </Link>
+          </div>
+          <p className="mt-0.5 text-[12px] leading-snug text-ink/85">
+            {tl.posture === "straddling"
+              ? `Your assets do not agree about when you win: ${Math.round(
+                  tl.nowShare * 100,
+                )}% of your value pays off inside two seasons while ${Math.round(
+                  tl.laterShare * 100,
+                )}% arrives four or more out. Every move below should pull the roster onto ONE timeline - a move that adds value but widens the spread makes this worse.`
+              : timelineAgrees
+                ? `Your assets already agree with the ${dir.label.toLowerCase()} call - value is concentrated around ${tl.rosterDuration.toFixed(
+                    1,
+                  )} seasons out. Protect that alignment: do not add pieces dated far from it.`
+                : `The plan says ${dir.label.toLowerCase()}, but your value is dated like a ${tl.posture} roster (${tl.rosterDuration.toFixed(
+                    1,
+                  )} seasons out, TCI ${tl.tci}). One of them is wrong. Each move below should shift the timeline toward the plan, or the plan should change.`}
+          </p>
+        </div>
+      )}
 
       {(dx.weakPositions.length > 0 || dx.strengthPositions.length > 0) && (
         <div className="mt-1.5 flex flex-wrap gap-1">

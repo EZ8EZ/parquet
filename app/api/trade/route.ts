@@ -5,7 +5,16 @@ import { evaluateTrade } from "@/lib/trade";
 
 export const dynamic = "force-dynamic";
 
-const Pick = z.object({ round: z.number().int(), season: z.string() });
+// originalRosterId is what lets the evaluator price a pick by WHO OWES IT
+// ("2027 1st (via Old Man Ball)") instead of as a generic round; slot covers the
+// case where the draft order is already set. Zod strips unknown keys, so these
+// must be declared or the client's pick attribution silently disappears.
+const Pick = z.object({
+  round: z.number().int(),
+  season: z.string(),
+  originalRosterId: z.number().int().optional(),
+  slot: z.number().int().optional(),
+});
 const Side = z.object({
   playerIds: z.array(z.string()).default([]),
   picks: z.array(Pick).default([]),

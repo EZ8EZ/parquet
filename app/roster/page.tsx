@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { analyzeRoster } from "@/lib/roster";
+import { leagueTimelines } from "@/lib/metrics/duration";
 import { Card, SectionHeader, Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { ValueAssetRow } from "@/components/ValuesList";
@@ -33,6 +34,13 @@ const WINDOW_COPY: Record<
   },
 };
 
+const POSTURE_TONE = {
+  contending: "accent",
+  ascending: "positive",
+  rebuilding: "info",
+  straddling: "negative",
+} as const;
+
 export default async function RosterPage() {
   const h = await getLeagueHistory();
   const rosterId = h.me.rosterId;
@@ -52,6 +60,13 @@ export default async function RosterPage() {
   const top5 = a.valued.slice(0, 5).reduce((s, v) => s + v.value, 0);
   const top5Share = a.playerValue ? Math.round((top5 / a.playerValue) * 100) : 0;
   const injured = a.valued.filter((v) => v.injuryStatus).length;
+
+  // Timeline profile, classified against the whole league (posture is relative).
+  const timelines = leagueTimelines(h);
+  const tl = timelines.find((t) => t.rosterId === rosterId);
+  const tciRank = timelines.findIndex((t) => t.rosterId === rosterId) + 1;
+  const longest = tl?.assets.slice(0, 3) ?? [];
+  const shortest = tl ? [...tl.assets].slice(-3).reverse() : [];
 
   return (
     <div>
@@ -133,6 +148,109 @@ export default async function RosterPage() {
           sub="of player value"
         />
       </div>
+
+      {/* Timeline: WHEN this roster's value arrives, and whether the assets agree.
+          The read is written to be useful, not flattering - do not soften it. */}
+      {tl && (
+        <>
+          <SectionHeader
+            title="Your timeline"
+            href="/methodology"
+            cta="how TCI works"
+          />
+          <Card className="p-3">
+            <div className="flex items-center justify-between gap-2">
+              <div className="flex items-baseline gap-3">
+                <span>
+                  <span className="font-mono text-lg font-semibold tnum text-ink">
+                    {tl.rosterDuration.toFixed(1)}s
+                  </span>
+                  <span className="ml-1 text-[11px] uppercase tracking-wide text-faint">
+                    duration
+                  </span>
+                </span>
+                <span>
+                  <span className="font-mono text-lg font-semibold tnum text-ink">
+                    {tl.tci}
+                  </span>
+                  <span className="ml-1 text-[11px] uppercase tracking-wide text-faint">
+                    TCI · {tciRank}/{timelines.length}
+                  </span>
+                </span>
+              </div>
+              <Tag tone={POSTURE_TONE[tl.posture]}>{tl.posture}</Tag>
+            </div>
+            <p className="mt-1 font-mono text-[11px] tnum text-faint">
+              {Math.round(tl.nowShare * 100)}% of value pays off inside 2 seasons ·{" "}
+              {Math.round(tl.laterShare * 100)}% arrives 4+ out · dispersion{" "}
+              {tl.dispersion.toFixed(2)}s
+            </p>
+            <p className="mt-1.5 text-[12.5px] leading-snug text-ink/85">{tl.read}</p>
+            <div className="rule my-2.5" />
+            <div className="grid grid-cols-2 gap-2">
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-wide text-info">
+                  Longest-dated
+                </p>
+                <ul className="mt-0.5 space-y-0.5">
+                  {longest.map((as) => (
+                    <li
+                      key={as.id}
+                      className="flex items-baseline justify-between gap-1.5 text-[11.5px] leading-snug"
+                    >
+                      <span className="min-w-0 truncate text-ink/85">{as.label}</span>
+                      <span className="shrink-0 font-mono text-[11px] tnum text-muted">
+                        {as.duration.toFixed(1)}s
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+              <div className="min-w-0">
+                <p className="text-[11px] uppercase tracking-wide text-accent">
+                  Shortest-dated
+                </p>
+                <ul className="mt-0.5 space-y-0.5">
+                  {shortest.map((as) => (
+                    <li
+                      key={as.id}
+                      className="flex items-baseline justify-between gap-1.5 text-[11.5px] leading-snug"
+                    >
+                      <span className="min-w-0 truncate text-ink/85">{as.label}</span>
+                      <span className="shrink-0 font-mono text-[11px] tnum text-muted">
+                        {as.duration.toFixed(1)}s
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            </div>
+            <details className="group mt-1.5">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-accent">
+                <ChevronRight
+                  size={13}
+                  aria-hidden="true"
+                  className="transition-transform group-open:rotate-90"
+                />
+                Every asset, by duration
+              </summary>
+              <ul className="space-y-0.5 pb-1">
+                {tl.assets.map((as) => (
+                  <li
+                    key={as.id}
+                    className="flex items-baseline justify-between gap-2 text-[11.5px] leading-snug"
+                  >
+                    <span className="min-w-0 truncate text-ink/85">{as.label}</span>
+                    <span className="shrink-0 font-mono text-[11px] tnum text-muted">
+                      {as.duration.toFixed(1)}s · {fmtValue(as.value)}
+                    </span>
+                  </li>
+                ))}
+              </ul>
+            </details>
+          </Card>
+        </>
+      )}
 
       {/* Pick capital - in dynasty, picks are assets, so they get real estate.
           One row per season instead of one card per season. */}

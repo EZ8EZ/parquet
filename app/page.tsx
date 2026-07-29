@@ -163,9 +163,10 @@ export default async function HomePage() {
           <Micro label="moves" value={`${p.totalTransactions}`} />
           <Micro label="waivers" value={`${p.waivers}`} />
           <Micro label="free ag." value={`${p.freeAgents}`} />
+          {/* "0b/0s" was cryptic even for a prosumer; spell out the flow. */}
           <Micro
             label="deadline"
-            value={`${p.deadline.buys}b/${p.deadline.sells}s`}
+            value={`${p.deadline.buys} in/${p.deadline.sells} out`}
           />
         </div>
         <p className="mt-1 truncate font-mono text-[11px] tnum text-faint">

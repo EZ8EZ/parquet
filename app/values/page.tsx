@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { getLeagueHistory } from "@/lib/history";
-import { tierOf, valuePlayers } from "@/lib/valuation";
+import { valuePlayers } from "@/lib/valuation";
+import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
 import { ValuesList, type ValueRow } from "@/components/ValuesList";
 import { fmtValue } from "@/lib/ui";
 
@@ -10,6 +11,17 @@ export default async function ValuesPage() {
   const h = await getLeagueHistory();
   const scoring = h.currentLeague.scoringSettings;
   const values = valuePlayers([...h.players.values()], scoring);
+
+  // Tiers break where the value distribution actually cliffs, not at hardcoded
+  // thresholds. The floor (10% of the top asset) bounds the cliff search to assets
+  // anyone actually tiers - without it the biggest relative drops all sit between
+  // junk values in the tail. Same recipe as /roster, so labels agree everywhere.
+  const valuesDesc = [...values.values()]
+    .map((v) => v.value)
+    .filter((v) => v > 0)
+    .sort((a, b) => b - a);
+  const tiers = computeTiers(valuesDesc, { floor: (valuesDesc[0] ?? 0) * 0.1 });
+  const tierFor = tierResolver(tiers);
 
   const rows: ValueRow[] = [...h.players.values()]
     .map((p) => {
@@ -21,7 +33,7 @@ export default async function ValuesPage() {
         position: p.position,
         age: p.age,
         value: v.value,
-        tier: tierOf(v.value),
+        tier: tierFor(v.value)?.label ?? "Fringe",
         espnId: p.espnId,
         injuryStatus: p.injuryStatus,
         // The whole reason a row is tappable: the exact chain that produced the number.
@@ -62,7 +74,8 @@ export default async function ValuesPage() {
         </div>
         <p className="mt-0.5 text-xs leading-snug text-muted">
           A transparent, tunable model - not a scraped market. Computed from this
-          league&apos;s own scoring settings. Tap any row for its multipliers.
+          league&apos;s own scoring settings. Tiers break where the value
+          distribution actually cliffs. Tap any row for its multipliers.
         </p>
         <dl className="mt-2 grid grid-cols-3 divide-x divide-border rounded-[--radius-sm] border border-border bg-surface/60">
           <Figure label="ranked" value={`${rows.length}`} />

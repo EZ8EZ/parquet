@@ -209,6 +209,14 @@ function Factor({
 const FILTERS = ["All", "PG", "SG", "SF", "PF", "C"];
 const PAGE = 60;
 
+/** Fold diacritics so "jokic" finds Jokić and "doncic" finds Dončić. */
+function fold(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}
+
 type Sort = "value" | "age";
 
 export function ValuesList({ rows }: { rows: ValueRow[] }) {
@@ -227,11 +235,11 @@ export function ValuesList({ rows }: { rows: ValueRow[] }) {
   }, [rows]);
 
   const filtered = useMemo(() => {
-    const s = q.trim().toLowerCase();
+    const s = fold(q.trim());
     const out = rows.filter(
       (r) =>
         (pos === "All" || r.position === pos) &&
-        (!s || r.name.toLowerCase().includes(s)),
+        (!s || fold(r.name).includes(s)),
     );
     if (sort === "age") {
       out.sort((a, b) => (a.age ?? 99) - (b.age ?? 99) || b.value - a.value);

@@ -79,6 +79,23 @@ describe("computeTiers", () => {
     expect(computeTiers([500, 400], { tierCount: 8 })).toHaveLength(2);
   });
 
+  it("floor bounds the cliff search; below-floor values resolve to the final tier", () => {
+    // A genuine gap under the elite group, then a tail whose junk drops (60 -> 30,
+    // 30 -> 12) would out-score it if the tail were allowed into the search.
+    const values = [9000, 8800, 8600, 5000, 4800, 60, 30, 12, 5];
+    const tiers = computeTiers(values, { tierCount: 2, minTierSize: 2, floor: 1000 });
+    expect(tiers).toHaveLength(2);
+    expect(tiers[0].count).toBe(3); // the break lands at the real cliff
+    expect(tiers[1].minValue).toBe(4800);
+    const resolve = tierResolver(tiers);
+    expect(resolve(30)!.tier).toBe(2); // tail still resolves, into the last tier
+  });
+
+  it("falls back to the full population when the floor excludes everything", () => {
+    const tiers = computeTiers([90, 80, 8, 6], { tierCount: 2, floor: 1000 });
+    expect(tiers.reduce((s, t) => s + t.count, 0)).toBe(4);
+  });
+
   it("resolves a value to its tier", () => {
     const values = [9000, 8800, 400, 380];
     const resolve = tierResolver(computeTiers(values, { tierCount: 2, minTierSize: 2 }));

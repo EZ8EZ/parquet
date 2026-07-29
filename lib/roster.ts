@@ -3,7 +3,8 @@
  * contend/rebuild window. Provider-agnostic (works off history.players + rosters).
  */
 import type { LeagueHistory } from "./history";
-import { tierOf, valuePlayers, type ValueBreakdown } from "./valuation";
+import { valuePlayers, type ValueBreakdown } from "./valuation";
+import { computeTiers, tierResolver } from "./rankings/tiers";
 import { pickCapital, type PickCapital } from "./picks";
 
 export interface ValuedPlayer {
@@ -51,6 +52,18 @@ export function analyzeRoster(h: LeagueHistory, rosterId: number): RosterAnalysi
     [...h.players.values()],
     scoring,
   );
+  // Tiers break at natural cliffs in the LEAGUE-WIDE value distribution (not at
+  // hardcoded thresholds, and not per-roster - a "Franchise" label has to mean the
+  // same thing on every team's page). The floor (10% of the top asset) bounds the
+  // cliff search to assets anyone actually tiers; same recipe as /values, so the
+  // labels agree everywhere.
+  const leagueValuesDesc = [...valuesMap.values()]
+    .map((v) => v.value)
+    .filter((v) => v > 0)
+    .sort((a, b) => b - a);
+  const tierFor = tierResolver(
+    computeTiers(leagueValuesDesc, { floor: (leagueValuesDesc[0] ?? 0) * 0.1 }),
+  );
   const valued: ValuedPlayer[] = (roster?.players ?? [])
     .map((pid) => {
       const p = h.players.get(pid);
@@ -64,7 +77,7 @@ export function analyzeRoster(h: LeagueHistory, rosterId: number): RosterAnalysi
         age: p.age,
         injuryStatus: p.injuryStatus,
         value: v.value,
-        tier: tierOf(v.value),
+        tier: tierFor(v.value)?.label ?? "Fringe",
         espnId: p.espnId,
         breakdown: {
           base: v.base,

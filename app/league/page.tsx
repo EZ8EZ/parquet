@@ -2,8 +2,10 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { leagueValueRanking } from "@/lib/roster";
-import { DeltaValue } from "@/components/ui";
+import { leagueTimelines } from "@/lib/metrics/duration";
+import { DeltaValue, SectionHeader, Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
+import { TimelineQuadrant } from "@/components/TimelineChart";
 import { fmtValue } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperLeagueUrl } from "@/lib/sleeperLinks";
@@ -25,9 +27,17 @@ const DEEPER = [
   { href: "/ledger", label: "Ledger" },
 ] as const;
 
+const POSTURE_TONE = {
+  contending: "accent",
+  ascending: "positive",
+  rebuilding: "info",
+  straddling: "negative",
+} as const;
+
 export default async function LeaguePage() {
   const h = await getLeagueHistory();
   const ranked = leagueValueRanking(h);
+  const timelines = leagueTimelines(h);
   const meId = h.me.rosterId;
 
   const contenders = ranked.filter((r) => r.window === "win-now").length;
@@ -96,6 +106,68 @@ export default async function LeaguePage() {
           </Link>
         ))}
       </nav>
+
+      {/* Timelines: WHEN each roster's value arrives, and whether its assets agree.
+          Sorted most coherent first, so the straddlers - the league's most motivated
+          trade partners - sit at the bottom where the negative tags pool. */}
+      <SectionHeader
+        title="Timelines - duration x coherence"
+        href="/methodology"
+        cta="how TCI works"
+      />
+      <div className="rounded-[--radius] border border-border bg-surface/60 p-2.5">
+        <TimelineQuadrant
+          points={timelines.map((t, i) => ({
+            n: i + 1,
+            duration: t.rosterDuration,
+            tci: t.tci,
+            isMe: t.rosterId === meId,
+          }))}
+        />
+        <p className="mt-1 text-[11px] leading-snug text-faint">
+          Duration = seasons until a roster&apos;s value arrives, value-weighted. TCI =
+          do its assets agree about when. Below the dashed line a roster is straddling
+          two timelines at once - it has to pick a direction eventually, which makes it
+          the most motivated trade partner on this board.
+        </p>
+      </div>
+      <ul className="mt-1.5 divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface/60">
+        {timelines.map((t, i) => {
+          const isMe = t.rosterId === meId;
+          return (
+            <li key={t.rosterId}>
+              <Link
+                href={`/managers/${t.rosterId}`}
+                className={`flex min-h-11 items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-surface-2 ${
+                  isMe ? "bg-accent/[0.06]" : ""
+                }`}
+              >
+                <span className="w-4 shrink-0 text-center font-mono text-[11px] tnum text-faint">
+                  {i + 1}
+                </span>
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+                    {t.teamName ?? t.ownerName}
+                    {isMe && <span className="ml-1.5 font-mono text-[11px] text-accent">you</span>}
+                  </span>
+                  <span className="block truncate font-mono text-[11px] tnum text-faint">
+                    ~{t.rosterDuration.toFixed(1)}s · disp{" "}
+                    {t.dispersion.toFixed(1)}s
+                  </span>
+                </span>
+                <Tag tone={POSTURE_TONE[t.posture]}>{t.posture}</Tag>
+                <span className="w-12 shrink-0 text-right">
+                  <span className="block font-mono text-[13px] font-semibold leading-tight tnum text-ink">
+                    {t.tci}
+                  </span>
+                  <span className="block text-[11px] leading-tight text-faint">TCI</span>
+                </span>
+                <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-faint" />
+              </Link>
+            </li>
+          );
+        })}
+      </ul>
 
       <h2 className="mb-1.5 mt-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-muted">
         Power ranking - by roster value
