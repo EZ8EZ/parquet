@@ -1,10 +1,11 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, Target } from "lucide-react";
+import { AlertTriangle, ArrowRight, ChevronRight, Target } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildGamePlan } from "@/lib/gameplan";
-import { PageHeader, Card, SectionHeader, Tag, Stat } from "@/components/ui";
+import { Tag } from "@/components/ui";
+import { TeamAvatar } from "@/components/TeamAvatar";
 import { CopyBlock } from "@/components/CopyBlock";
-import { fmtValue } from "@/lib/ui";
+import { cn, fmtValue } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -35,49 +36,104 @@ export default async function PlanPage() {
   const plan = buildGamePlan(h, rosterId);
   const dx = plan.diagnosis;
   const dir = DIR_LABEL[dx.direction];
+  const myUser = h.usersById.get(h.me.userId);
+
+  /** Team identity for a partner roster, for the target row's logo. */
+  const teamOf = (id: number) => {
+    const r = h.rostersById.get(id);
+    const u = r?.ownerId ? h.usersById.get(r.ownerId) : undefined;
+    return { name: u?.teamName ?? u?.displayName ?? `Roster ${id}`, user: u };
+  };
 
   return (
     <div>
-      <PageHeader
-        kicker="Game plan"
-        title="How to improve this team"
-        subtitle={`${h.me.teamName ?? h.me.displayName} - ranked ${dx.valueRank} of ${dx.teams} by total asset value.`}
-      />
+      <header className="mb-2 flex items-start gap-2.5">
+        <TeamAvatar
+          name={h.me.teamName ?? h.me.displayName}
+          avatarId={myUser?.avatar}
+          teamLogoUrl={myUser?.teamLogoUrl}
+          size="md"
+          isMe
+        />
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center justify-between gap-3">
+            <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+              Game plan
+            </p>
+            <Link
+              href="/roster"
+              className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+            >
+              your roster
+              <ChevronRight size={12} aria-hidden="true" />
+            </Link>
+          </div>
+          <h1 className="font-display text-[24px] font-semibold leading-[1.12] text-ink">
+            How to improve this team
+          </h1>
+          <div className="flex flex-wrap items-center gap-x-2 font-mono text-[11px] tnum text-faint">
+            <span className="truncate">{h.me.teamName ?? h.me.displayName}</span>
+            <span aria-hidden="true">·</span>
+            <span>
+              #{dx.valueRank} of {dx.teams} by asset value
+            </span>
+          </div>
+        </div>
+      </header>
 
-      {/* The verdict, up top. */}
-      <Card className="mb-4">
-        <div className="mb-2 flex items-center gap-2">
+      {/* The verdict, up top - the one thing that must be readable on landing. */}
+      <section className="rounded-[--radius] border border-border bg-surface/80 p-2.5">
+        <div className="mb-1 flex items-center gap-2">
           <Tag tone={dir.tone}>{dir.label}</Tag>
           <span className="text-[11px] uppercase tracking-wide text-faint">
             recommended direction
           </span>
         </div>
-        <h2 className="font-display text-2xl font-semibold leading-tight text-ink">
+        <h2 className="font-display text-[20px] font-semibold leading-tight text-ink">
           {dx.headline}
         </h2>
-        <ul className="mt-3 space-y-1.5">
+        <ul className="mt-1.5 space-y-1">
           {dx.because.map((b, i) => (
-            <li key={i} className="flex gap-2 text-sm leading-relaxed">
-              <span className="mt-1.5 h-1 w-1 shrink-0 rounded-full bg-accent" />
+            <li key={i} className="flex gap-1.5 text-[12.5px] leading-snug">
+              <span
+                aria-hidden="true"
+                className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-accent"
+              />
               <span className="text-ink/85">{b}</span>
             </li>
           ))}
         </ul>
-      </Card>
+      </section>
 
-      <div className="grid grid-cols-3 gap-2.5">
-        <Stat label="Stars" value={dx.starCount} sub="cornerstone+" />
-        <Stat
-          label="Pick value"
-          value={fmtValue(dx.pickTotal)}
-          sub={dx.extraFirsts >= 0 ? `+${dx.extraFirsts} extra 1sts` : `${dx.extraFirsts} 1sts`}
-          tone={dx.extraFirsts >= 0 ? "positive" : "negative"}
-        />
-        <Stat label="Fringe" value={dx.deadWeight} sub="roster clogs" />
+      {/* Diagnosis figures as one strip, with the position reads folded in. */}
+      <div className="mt-1.5 flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface/60">
+        {[
+          { v: dx.starCount, l: "stars", s: "cornerstone+", tone: "text-ink" },
+          {
+            v: fmtValue(dx.pickTotal),
+            l: "pick value",
+            s: dx.extraFirsts >= 0 ? `+${dx.extraFirsts} extra 1sts` : `${dx.extraFirsts} 1sts`,
+            tone: dx.extraFirsts >= 0 ? "text-positive" : "text-negative",
+          },
+          { v: dx.deadWeight, l: "fringe", s: "roster clogs", tone: "text-ink" },
+        ].map((s) => (
+          <div key={s.l} className="flex-1 px-1.5 py-1.5 text-center">
+            <div
+              className={cn(
+                "font-mono text-[17px] font-semibold leading-tight tnum",
+                s.tone,
+              )}
+            >
+              {s.v}
+            </div>
+            <div className="text-[11px] uppercase tracking-wide text-faint">{s.l}</div>
+            <div className="text-[11px] leading-tight text-muted">{s.s}</div>
+          </div>
+        ))}
       </div>
 
       {(dx.weakPositions.length > 0 || dx.strengthPositions.length > 0) && (
-        <div className="mt-3 flex flex-wrap gap-1.5">
+        <div className="mt-1.5 flex flex-wrap gap-1">
           {dx.strengthPositions.map((p) => (
             <Tag key={`s-${p}`} tone="positive">
               strong at {p}
@@ -92,88 +148,154 @@ export default async function PlanPage() {
       )}
 
       {/* The moves - the actual point of the page. */}
-      <SectionHeader title={`${plan.moves.length} moves to consider`} />
-      <div className="space-y-3">
-        {plan.moves.map((m, i) => (
-          <article
-            key={m.id}
-            className="rounded-[--radius] border border-border bg-surface/70 p-4"
-          >
-            <div className="mb-2 flex items-start gap-2.5">
-              <span className="mt-0.5 flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-accent/15 font-mono text-[11px] font-semibold text-accent">
-                {i + 1}
-              </span>
-              <h3 className="font-display text-lg font-semibold leading-snug text-ink">
-                {m.title}
-              </h3>
-            </div>
-            <p className="text-sm leading-relaxed text-ink/85">{m.detail}</p>
+      <div className="mb-1.5 mt-4 flex items-baseline justify-between gap-3">
+        <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+          {plan.moves.length} moves to consider
+        </h2>
+        <Link
+          href="/trade"
+          className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-accent"
+        >
+          price one out
+          <ChevronRight size={12} aria-hidden="true" />
+        </Link>
+      </div>
 
-            <div className="mt-3 grid gap-2 sm:grid-cols-2">
-              <div className="rounded-[--radius-sm] border border-border bg-bg/40 p-2.5">
-                <div className="text-[10px] uppercase tracking-wide text-faint">
-                  You send
-                </div>
-                <div className="mt-0.5 text-sm text-ink">{m.give.join(", ") || "-"}</div>
+      <div className="space-y-2">
+        {plan.moves.map((m, i) => {
+          const partner = m.partnerRosterId != null ? teamOf(m.partnerRosterId) : null;
+          return (
+            <article
+              key={m.id}
+              className="rounded-[--radius] border border-border bg-surface/70 p-2.5"
+            >
+              <div className="flex items-baseline gap-2">
+                <span
+                  aria-hidden="true"
+                  className="shrink-0 font-mono text-[11px] font-semibold text-accent"
+                >
+                  {String(i + 1).padStart(2, "0")}
+                </span>
+                <h3 className="min-w-0 flex-1 font-display text-[17px] font-semibold leading-tight text-ink">
+                  {m.title}
+                </h3>
               </div>
-              <div className="rounded-[--radius-sm] border border-border bg-bg/40 p-2.5">
-                <div className="text-[10px] uppercase tracking-wide text-faint">
-                  You target
-                </div>
-                <div className="mt-0.5 text-sm text-ink">{m.get.join(", ") || "-"}</div>
-              </div>
-            </div>
+              <p className="mt-1 text-[12.5px] leading-snug text-ink/85">{m.detail}</p>
 
-            {m.partnerName && (
-              <Link
-                href={`/managers/${m.partnerRosterId}`}
-                className="mt-3 flex items-start gap-2 rounded-[--radius-sm] border border-info/25 bg-info/[0.06] p-2.5 transition-colors hover:border-info/50"
-              >
-                <Target size={14} className="mt-0.5 shrink-0 text-info" />
-                <div className="min-w-0 flex-1">
-                  <div className="text-xs font-semibold text-ink">
-                    Try {m.partnerName}
+              {/* Send / target side by side even at 390px: the comparison is the point. */}
+              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
+                <div className="rounded-[--radius-sm] border border-border bg-bg/40 px-2 py-1.5">
+                  <div className="text-[11px] uppercase tracking-wide text-negative/80">
+                    You send
                   </div>
-                  {m.partnerRationale && (
-                    <div className="mt-0.5 text-[11px] leading-relaxed text-muted">
-                      {m.partnerRationale}
-                    </div>
-                  )}
+                  <div className="text-[12px] leading-snug text-ink">
+                    {m.give.join(", ") || "-"}
+                  </div>
                 </div>
-                <ArrowRight size={13} className="mt-0.5 shrink-0 text-info" />
-              </Link>
-            )}
+                <div className="rounded-[--radius-sm] border border-border bg-bg/40 px-2 py-1.5">
+                  <div className="text-[11px] uppercase tracking-wide text-positive/80">
+                    You target
+                  </div>
+                  <div className="text-[12px] leading-snug text-ink">
+                    {m.get.join(", ") || "-"}
+                  </div>
+                </div>
+              </div>
 
-            <div className="mt-3 flex items-start gap-2 text-[11px] leading-relaxed text-warn">
-              <AlertTriangle size={13} className="mt-0.5 shrink-0" />
-              <span>
-                <span className="font-semibold">The cost:</span> {m.cost}
-              </span>
-            </div>
+              {m.partnerName && m.partnerRosterId != null && partner && (
+                <Link
+                  href={`/managers/${m.partnerRosterId}`}
+                  aria-label={`Dossier: ${m.partnerName}`}
+                  className="mt-1.5 flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-info/25 bg-info/[0.06] px-2 py-1.5 transition-colors hover:border-info/50 hover:bg-info/[0.1]"
+                >
+                  <Target size={13} aria-hidden="true" className="shrink-0 text-info" />
+                  <TeamAvatar
+                    name={partner.name}
+                    avatarId={partner.user?.avatar}
+                    teamLogoUrl={partner.user?.teamLogoUrl}
+                    size="xs"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="block truncate text-[12px] font-semibold text-ink">
+                      Try {m.partnerName}
+                    </span>
+                    {m.partnerRationale && (
+                      <span className="block truncate text-[11px] leading-tight text-muted">
+                        {m.partnerRationale}
+                      </span>
+                    )}
+                  </span>
+                  <ArrowRight
+                    size={13}
+                    aria-hidden="true"
+                    className="shrink-0 text-info"
+                  />
+                </Link>
+              )}
 
-            <div className="mt-3">
-              <CopyBlock text={m.copyable} />
-            </div>
-          </article>
-        ))}
+              <p className="mt-1.5 flex items-start gap-1.5 text-[11px] leading-snug text-warn">
+                <AlertTriangle size={12} aria-hidden="true" className="mt-0.5 shrink-0" />
+                <span>
+                  <span className="font-semibold">The cost:</span> {m.cost}
+                </span>
+              </p>
+
+              {/* Collapsed by default: the pitch text is ~90px of monospace that most
+                  visits never need, but it is one tap away and unchanged. */}
+              <details className="group mt-1.5">
+                <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-accent">
+                  <ChevronRight
+                    size={13}
+                    aria-hidden="true"
+                    className="transition-transform group-open:rotate-90"
+                  />
+                  Pitch text for Sleeper
+                </summary>
+                <div className="pb-0.5">
+                  <CopyBlock text={m.copyable} />
+                </div>
+              </details>
+            </article>
+          );
+        })}
       </div>
 
       {plan.caveats.length > 0 && (
         <>
-          <SectionHeader title="Read this before you act" />
-          <div className="space-y-2">
+          <h2 className="mb-1.5 mt-4 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+            Read this before you act
+          </h2>
+          <ul className="space-y-1">
             {plan.caveats.map((c, i) => (
-              <Card key={i} className="border-warn/25 bg-warn/[0.05]">
-                <p className="text-sm leading-relaxed text-ink/85">{c}</p>
-              </Card>
+              <li
+                key={i}
+                className="rounded-[--radius-sm] border border-warn/25 bg-warn/[0.05] px-2.5 py-1.5 text-[12px] leading-snug text-ink/85"
+              >
+                {c}
+              </li>
             ))}
-          </div>
+          </ul>
         </>
       )}
 
-      <p className="mt-8 text-center text-[11px] leading-relaxed text-faint">
-        Parquet can&apos;t execute trades - Sleeper has no write API. Copy a summary
-        and send it from Sleeper.
+      <div className="mt-3 flex flex-wrap gap-1.5">
+        {[
+          { href: "/trade", label: "Price a trade" },
+          { href: "/values", label: "Asset values" },
+          { href: "/managers", label: "Scout managers" },
+        ].map((a) => (
+          <Link
+            key={a.href}
+            href={a.href}
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-[12px] font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+          >
+            {a.label}
+          </Link>
+        ))}
+      </div>
+
+      <p className="mt-2 text-[11px] leading-relaxed text-faint">
+        Parquet can&apos;t execute trades - copy a pitch and send it from Sleeper.
       </p>
     </div>
   );

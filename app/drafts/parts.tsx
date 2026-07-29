@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, Hourglass, MoveRight } from "lucide-react";
+import { ChevronRight, Hourglass, MoveRight } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { Tag } from "@/components/ui";
 import { cn } from "@/lib/ui";
@@ -13,11 +13,11 @@ export function boardHref(season: string, pickNo?: number | null): string {
 /** "Team A -> Team B" with the arrow as the visual spine of the trade. */
 function Hop({ from, to }: { from: string; to: string }) {
   return (
-    <div className="flex items-center gap-1.5 text-[11px] text-faint">
+    <span className="flex min-w-0 items-center gap-1 text-[11px] text-faint">
       <span className="truncate">{from}</span>
-      <MoveRight size={12} className="shrink-0 text-accent/70" aria-hidden="true" />
+      <MoveRight size={11} className="shrink-0 text-accent/70" aria-hidden="true" />
       <span className="truncate font-medium text-muted">{to}</span>
-    </div>
+    </span>
   );
 }
 
@@ -30,10 +30,20 @@ export type Perspective = "gave" | "got" | null;
 
 const PERSPECTIVE: Record<
   "gave" | "got",
-  { label: string; tone: "negative" | "positive"; border: string }
+  { label: string; tone: "negative" | "positive"; border: string; rail: string }
 > = {
-  gave: { label: "You gave up", tone: "negative", border: "border-negative/30" },
-  got: { label: "You acquired", tone: "positive", border: "border-positive/30" },
+  gave: {
+    label: "You gave up",
+    tone: "negative",
+    border: "border-negative/30",
+    rail: "text-negative",
+  },
+  got: {
+    label: "You acquired",
+    tone: "positive",
+    border: "border-positive/30",
+    rail: "text-positive",
+  },
 };
 
 function roundLabel(round: number): string {
@@ -45,8 +55,11 @@ function roundLabel(round: number): string {
 
 /**
  * The headline card: a pick that was traded, and the player it turned into.
- * Unresolved picks (future / undrafted) render the same frame with a reason
- * instead of a player, so the list never has holes.
+ *
+ * The whole card is one tap target that lands on the pick's own board row (or the
+ * board itself while the pick is still in flight), so nothing here is inert text.
+ * Unresolved picks render the same frame with a reason instead of a player, so the
+ * list never has holes.
  */
 export function LineageCard({
   l,
@@ -57,78 +70,84 @@ export function LineageCard({
 }) {
   const p = perspective ? PERSPECTIVE[perspective] : null;
   return (
-    <article
+    <Link
+      href={boardHref(l.season, l.pickNo)}
+      aria-label={
+        l.resolved
+          ? `${l.season} ${roundLabel(l.round)}: ${l.playerName}, pick ${l.pickNo}. Open the ${l.season} board.`
+          : `${l.season} ${roundLabel(l.round)}: still in flight. Open the ${l.season} board.`
+      }
       className={cn(
-        "rounded-[--radius] border bg-surface/70 p-3.5",
+        "block rounded-[--radius] border bg-surface/70 px-2.5 py-2 transition-colors hover:bg-surface-2",
         p ? p.border : "border-border",
       )}
     >
-      <div className="mb-2 flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <div className="font-mono text-sm font-semibold tnum text-ink">
-            {l.season} {roundLabel(l.round)}
-          </div>
-          <div className="mt-0.5 text-[11px] text-faint">
-            orig. {l.originalRosterName}
-          </div>
-        </div>
-        {p && <Tag tone={p.tone}>{p.label}</Tag>}
+      <div className="flex items-baseline gap-2">
+        <span className="shrink-0 font-mono text-[12px] font-semibold tnum text-ink">
+          {l.season} {roundLabel(l.round)}
+        </span>
+        {p && (
+          <span className={cn("shrink-0 text-[11px] font-semibold", p.rail)}>
+            {p.label}
+          </span>
+        )}
+        <span className="min-w-0 flex-1 overflow-hidden">
+          <Hop from={l.fromName} to={l.toName} />
+        </span>
       </div>
 
-      <Hop from={l.fromName} to={l.toName} />
-
-      <div className="rule my-3" />
-
       {l.resolved ? (
-        <Link
-          href={boardHref(l.season, l.pickNo)}
-          className="-mx-1.5 flex items-center gap-3 rounded-[--radius-sm] px-1.5 py-1.5 transition-colors hover:bg-surface-2"
-        >
+        <div className="mt-1 flex items-center gap-2">
           <PlayerAvatar
             name={l.playerName ?? "?"}
             team={l.team}
             playerId={l.playerId}
-            size="md"
+            size="sm"
           />
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-sm font-semibold text-ink">
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
               {l.playerName}
-            </div>
-            <div className="text-[11px] text-faint">
+            </span>
+            <span className="block truncate text-[11px] leading-tight text-faint">
               {l.position ?? "-"}
               {l.team ? ` · ${l.team}` : ""}
               {l.age != null ? ` · ${l.age}y` : ""}
-            </div>
-            {/* Multi-hop picks can end up somewhere other than the last recorded
-                trade partner - name whoever actually spent it. */}
-            {l.usedByName && l.usedByName !== l.toName && (
-              <div className="mt-0.5 truncate text-[11px] text-muted">
-                drafted by {l.usedByName}
-              </div>
-            )}
-          </div>
-          <div className="shrink-0 text-right">
-            <div className="font-mono text-sm font-semibold tnum text-accent">
-              #{l.pickNo}
-            </div>
-            <div className="text-[10px] text-faint">board</div>
-          </div>
-          <ArrowRight size={14} className="shrink-0 text-faint" aria-hidden="true" />
-        </Link>
+              {" · orig. "}
+              {l.originalRosterName}
+              {/* Multi-hop picks can end up somewhere other than the last recorded
+                  trade partner - name whoever actually spent it. */}
+              {l.usedByName && l.usedByName !== l.toName
+                ? ` · drafted by ${l.usedByName}`
+                : ""}
+            </span>
+          </span>
+          <span className="shrink-0 font-mono text-[13px] font-semibold tnum text-accent">
+            #{l.pickNo}
+          </span>
+          <ChevronRight size={13} className="shrink-0 text-faint" aria-hidden="true" />
+        </div>
       ) : (
-        <div className="flex items-start gap-2 text-[12px] text-muted">
-          <Hourglass size={14} className="mt-0.5 shrink-0 text-warn" aria-hidden="true" />
-          <span>{l.reasonText}</span>
+        <div className="mt-1 flex items-start gap-1.5">
+          <Hourglass
+            size={12}
+            className="mt-0.5 shrink-0 text-warn"
+            aria-hidden="true"
+          />
+          <span className="min-w-0 flex-1 text-[11.5px] leading-snug text-muted">
+            {l.reasonText}{" "}
+            <span className="text-faint">orig. {l.originalRosterName}</span>
+          </span>
+          <ChevronRight size={13} className="shrink-0 text-faint" aria-hidden="true" />
         </div>
       )}
-    </article>
+    </Link>
   );
 }
 
 /**
- * One row of a draft board. Stacked card, never a table cell — the board has to
- * stay readable at 390px, and "surrounding picks" only works if scanning down the
- * column is effortless.
+ * One row of a draft board. Stacked row, never a table cell - the board has to stay
+ * readable at 390px, and "surrounding picks" only works if scanning down the column
+ * is effortless. The row links to the dossier of whoever made the pick.
  */
 export function BoardPickRow({
   p,
@@ -137,32 +156,22 @@ export function BoardPickRow({
   p: BoardPick;
   highlighted: boolean;
 }) {
-  return (
-    <li
-      id={`pick-${p.pickNo}`}
-      className={cn(
-        "scroll-mt-20 flex items-center gap-3 rounded-[--radius-sm] border px-2.5 py-2",
-        highlighted
-          ? "border-accent bg-accent/[0.08]"
-          : p.isMine
-            ? "border-accent/30 bg-surface-2/70"
-            : "border-border bg-surface/50",
-      )}
-    >
+  const inner = (
+    <>
       {/* Pick number is the anchor for the eye when scanning surrounding picks. */}
-      <div className="w-9 shrink-0 text-center">
-        <div
+      <span className="w-8 shrink-0 text-center">
+        <span
           className={cn(
-            "font-mono text-sm font-semibold tnum",
+            "block font-mono text-[13px] font-semibold leading-tight tnum",
             p.isMine || highlighted ? "text-accent" : "text-muted",
           )}
         >
           {p.pickNo}
-        </div>
-        <div className="font-mono text-[9px] tnum text-faint">
+        </span>
+        <span className="block font-mono text-[11px] leading-tight tnum text-faint">
           {p.round}.{String(p.draftSlot).padStart(2, "0")}
-        </div>
-      </div>
+        </span>
+      </span>
 
       <PlayerAvatar
         name={p.playerName ?? "?"}
@@ -171,31 +180,107 @@ export function BoardPickRow({
         size="sm"
       />
 
-      <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-semibold text-ink">
+      <span className="min-w-0 flex-1">
+        <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
           {p.playerName ?? "-"}
-        </div>
-        <div className="truncate text-[11px] text-faint">
+        </span>
+        <span className="block truncate text-[11px] leading-tight text-faint">
           {p.position ?? "-"}
           {p.team ? ` · ${p.team}` : ""}
           {p.age != null ? ` · ${p.age}y` : ""}
-        </div>
-        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-          <span
-            className={cn(
-              "truncate text-[11px]",
-              p.isMine ? "font-semibold text-accent" : "text-muted",
-            )}
-          >
-            {p.usedByName ?? "-"}
-          </span>
-          {p.wasTraded && (
-            <Tag tone="info" className="px-1.5 py-0">
-              via {p.originalRosterName}
-            </Tag>
+        </span>
+      </span>
+
+      <span className="max-w-[34%] shrink-0 text-right">
+        <span
+          className={cn(
+            "block truncate text-[11px] leading-tight",
+            p.isMine ? "font-semibold text-accent" : "text-muted",
           )}
-        </div>
-      </div>
+        >
+          {p.usedByName ?? "-"}
+        </span>
+        {p.wasTraded && (
+          <span className="block truncate text-[11px] leading-tight text-info">
+            via {p.originalRosterName}
+          </span>
+        )}
+      </span>
+    </>
+  );
+
+  const frame = cn(
+    "flex min-h-11 items-center gap-2 rounded-[--radius-sm] border px-2 py-1",
+    highlighted
+      ? "border-accent bg-accent/[0.08]"
+      : p.isMine
+        ? "border-accent/30 bg-surface-2/70"
+        : "border-border bg-surface/50",
+  );
+
+  return (
+    <li id={`pick-${p.pickNo}`} className="scroll-mt-16">
+      {p.usedByRoster != null ? (
+        <Link
+          href={`/managers/${p.usedByRoster}`}
+          aria-label={`Pick ${p.pickNo}: ${p.playerName ?? "no player"}, taken by ${p.usedByName ?? "unknown"}. Open their dossier.`}
+          className={cn(frame, "transition-colors hover:bg-surface-2")}
+        >
+          {inner}
+        </Link>
+      ) : (
+        <div className={frame}>{inner}</div>
+      )}
     </li>
+  );
+}
+
+/** Compact season tile for the board index. Whole tile is the tap target. */
+export function SeasonTile({
+  season,
+  rounds,
+  teams,
+  pickCount,
+  tradedCount,
+  mineCount,
+}: {
+  season: string;
+  rounds: number;
+  teams: number;
+  pickCount: number;
+  tradedCount: number;
+  mineCount: number;
+}) {
+  return (
+    <Link
+      href={`/drafts/${season}`}
+      aria-label={`${season} draft board`}
+      className="flex min-h-11 flex-col justify-center rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
+    >
+      <span className="flex items-baseline gap-1.5">
+        <span className="font-display text-[17px] font-semibold leading-none text-ink">
+          {season}
+        </span>
+        {pickCount === 0 ? (
+          <Tag tone="warn">upcoming</Tag>
+        ) : (
+          <span className="font-mono text-[11px] tnum text-muted">
+            {pickCount} picks
+          </span>
+        )}
+        <ChevronRight
+          size={13}
+          aria-hidden="true"
+          className="ml-auto shrink-0 text-faint"
+        />
+      </span>
+      <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 font-mono text-[11px] tnum text-faint">
+        <span>
+          {rounds} rd · {teams} tm
+        </span>
+        {tradedCount > 0 && <span className="text-info">{tradedCount} traded</span>}
+        {mineCount > 0 && <span className="text-accent">{mineCount} yours</span>}
+      </span>
+    </Link>
   );
 }

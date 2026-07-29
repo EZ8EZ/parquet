@@ -1,9 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, Hourglass } from "lucide-react";
+import { ArrowLeft, ChevronRight, Hourglass } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildDraftIndex, getDraftBoard, getDraftSeasons } from "@/lib/lineage";
-import { EmptyState, PageHeader, SectionHeader, Stat, Tag } from "@/components/ui";
+import { EmptyState } from "@/components/ui";
 import { cn } from "@/lib/ui";
 import { BoardPickRow } from "../parts";
 
@@ -28,7 +28,10 @@ export default async function DraftBoardPage({
   ]);
 
   // Unknown season with no draft AND not in the chain -> a real 404.
-  if (board.reason === "no-draft" && !h.chain.some((l) => l.season === season)) {
+  if (
+    board.reason === "no-draft" &&
+    !h.chain.some((l) => l.season === season)
+  ) {
     notFound();
   }
 
@@ -42,32 +45,68 @@ export default async function DraftBoardPage({
 
   const mine = board.picks.filter((p) => p.isMine);
   const traded = board.picks.filter((p) => p.wasTraded);
+  const highlighted = board.picks.find((p) => p.pickNo === highlight);
 
   return (
     <div>
       {/* Negative margin keeps the 44px tap target from adding visual space. */}
       <Link
         href="/drafts"
-        className="-ml-1 -mt-2 mb-1 inline-flex min-h-[44px] items-center gap-1.5 px-1 text-[12px] font-medium text-muted transition-colors hover:text-ink"
+        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
       >
-        <ArrowLeft size={14} aria-hidden="true" />
+        <ArrowLeft size={13} aria-hidden="true" />
         Pick lineage
       </Link>
 
-      <PageHeader
-        kicker="Draft board"
-        title={`${season} draft`}
-        subtitle={
-          board.draftId
-            ? `${board.type} · ${board.rounds} rounds · ${board.teams} teams`
-            : "No draft on record for this season."
-        }
-      />
+      <header className="mb-2">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+            Draft board
+          </p>
+          <Link
+            href="/values"
+            className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+          >
+            pick values
+            <ChevronRight size={12} aria-hidden="true" />
+          </Link>
+        </div>
+        <h1 className="font-display text-[26px] font-semibold leading-[1.1] text-ink">
+          {season} draft
+        </h1>
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[11px] tnum text-faint">
+          {board.draftId ? (
+            <>
+              <span className="uppercase tracking-wide">{board.type}</span>
+              <span aria-hidden="true">·</span>
+              <span>{board.rounds} rounds</span>
+              <span aria-hidden="true">·</span>
+              <span>{board.teams} teams</span>
+              <span aria-hidden="true">·</span>
+              <span>{board.picks.length} picks</span>
+              {mine.length > 0 && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="text-accent">{mine.length} yours</span>
+                </>
+              )}
+              {traded.length > 0 && (
+                <>
+                  <span aria-hidden="true">·</span>
+                  <span className="text-info">{traded.length} traded in</span>
+                </>
+              )}
+            </>
+          ) : (
+            <span>No draft on record for this season.</span>
+          )}
+        </div>
+      </header>
 
       {/* Season switcher - 44px tap targets, horizontal only for these pills. */}
       {seasons.length > 1 && (
-        <nav aria-label="Draft season" className="scroll-x -mx-4 mb-5 px-4">
-          <ul className="flex gap-2">
+        <nav aria-label="Draft season" className="scroll-x -mx-4 mb-2 px-4">
+          <ul className="flex gap-1.5">
             {seasons.map((s) => {
               const active = s.season === season;
               return (
@@ -76,19 +115,38 @@ export default async function DraftBoardPage({
                     href={`/drafts/${s.season}`}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "inline-flex min-h-[44px] items-center rounded-full border px-4 font-mono text-sm font-semibold tnum transition-colors",
+                      "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 font-mono text-[13px] font-semibold tnum transition-colors",
                       active
                         ? "border-accent bg-accent/12 text-accent"
                         : "border-border text-muted hover:bg-surface-2",
                     )}
                   >
                     {s.season}
+                    <span
+                      className={cn(
+                        "text-[11px] font-normal",
+                        active ? "text-accent/80" : "text-faint",
+                      )}
+                    >
+                      {s.pickCount === 0 ? "soon" : s.pickCount}
+                    </span>
                   </Link>
                 </li>
               );
             })}
           </ul>
         </nav>
+      )}
+
+      {highlighted && (
+        <p className="mb-2 rounded-[--radius-sm] border border-accent/40 bg-accent/[0.07] px-2.5 py-1.5 text-[11.5px] leading-snug text-muted">
+          <span className="font-semibold text-ink">
+            Pick #{highlighted.pickNo}
+          </span>{" "}
+          highlighted below: {highlighted.playerName ?? "no player"}
+          {highlighted.usedByName ? `, taken by ${highlighted.usedByName}` : ""}
+          .
+        </p>
       )}
 
       {board.picks.length === 0 ? (
@@ -110,39 +168,37 @@ export default async function DraftBoardPage({
         </EmptyState>
       ) : (
         <>
-          <div className="grid grid-cols-3 gap-2.5">
-            <Stat label="Picks" value={board.picks.length} />
-            <Stat
-              label="Yours"
-              value={mine.length}
-              tone={mine.length ? "accent" : "neutral"}
-            />
-            <Stat label="Traded in" value={traded.length} sub="changed hands" />
-          </div>
-
-          {[...rounds.entries()].map(([round, picks]) => (
-            <section key={round}>
-              <SectionHeader
-                title={`Round ${round}`}
-                action={
-                  picks.some((p) => p.isMine) ? (
-                    <Tag tone="accent">
-                      {picks.filter((p) => p.isMine).length} yours
-                    </Tag>
-                  ) : undefined
-                }
-              />
-              <ul className="space-y-1.5">
-                {picks.map((p) => (
-                  <BoardPickRow
-                    key={p.pickNo}
-                    p={p}
-                    highlighted={p.pickNo === highlight}
-                  />
-                ))}
-              </ul>
-            </section>
-          ))}
+          {[...rounds.entries()].map(([round, picks]) => {
+            const yours = picks.filter((p) => p.isMine).length;
+            return (
+              <section key={round}>
+                <div className="mb-1 mt-2.5 flex items-baseline justify-between gap-3">
+                  <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                    Round {round}
+                  </h2>
+                  <span className="font-mono text-[11px] tnum text-faint">
+                    {picks.length} picks
+                    {yours > 0 && (
+                      <span className="text-accent"> · {yours} yours</span>
+                    )}
+                  </span>
+                </div>
+                <ul className="space-y-1">
+                  {picks.map((p) => (
+                    <BoardPickRow
+                      key={p.pickNo}
+                      p={p}
+                      highlighted={p.pickNo === highlight}
+                    />
+                  ))}
+                </ul>
+              </section>
+            );
+          })}
+          <p className="mt-3 text-[11px] leading-relaxed text-faint">
+            Rows link to the dossier of the manager who made the pick.
+            &ldquo;via&rdquo; names the roster the slot originally belonged to.
+          </p>
         </>
       )}
     </div>

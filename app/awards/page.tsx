@@ -8,90 +8,117 @@ import {
   type Award,
   type AwardEntrant,
 } from "@/lib/superlatives";
-import { PageHeader, Card, SectionHeader, Tag, EmptyState } from "@/components/ui";
+import { Tag, EmptyState } from "@/components/ui";
+import { TeamAvatar } from "@/components/TeamAvatar";
+import type { LeagueUser } from "@/lib/providers/types";
 import { cn } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
 const PLACE = ["2nd", "3rd", "4th"];
 
-function AwardCard({ award, meRosterId }: { award: Award; meRosterId: number | null }) {
+/** Roster -> the league user behind it, for team imagery. */
+type UserLookup = (rosterId: number) => LeagueUser | undefined;
+
+function AwardCard({
+  award,
+  meRosterId,
+  userOf,
+}: {
+  award: Award;
+  meRosterId: number | null;
+  userOf: UserLookup;
+}) {
   const w = award.winner;
   const isMe =
     meRosterId != null &&
     (w.rosterId === meRosterId || w.partnerRosterId === meRosterId);
+  const user = userOf(w.rosterId);
 
   return (
-    <Card
-      as="article"
+    <article
       className={cn(
-        "transition-colors",
-        isMe ? "border-accent/40 bg-accent/[0.06]" : "bg-surface/70",
+        "rounded-[--radius] border p-2.5",
+        isMe ? "border-accent/40 bg-accent/[0.06]" : "border-border bg-surface/70",
       )}
     >
-      <div className="flex items-start gap-2.5">
-        <Trophy
-          size={16}
-          aria-hidden
-          className={cn("mt-1 shrink-0", isMe ? "text-accent" : "text-faint")}
-        />
-        <div className="min-w-0">
-          <h3 className="font-display text-xl font-semibold leading-tight text-ink">
-            {award.title}
-          </h3>
-          <p className="mt-1 text-xs leading-relaxed text-muted">{award.subtitle}</p>
-        </div>
+      {/* Title and the winning number share a line: the figure is the headline. */}
+      <div className="flex items-baseline gap-2">
+        <h3 className="min-w-0 flex-1 font-display text-[17px] font-semibold leading-tight text-ink">
+          {award.title}
+        </h3>
+        <span className="shrink-0 font-mono text-[12px] font-semibold tnum text-accent">
+          {award.statLine}
+        </span>
       </div>
+      <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-muted">
+        {award.subtitle}
+      </p>
 
       <Link
         href={`/managers/${w.rosterId}`}
-        data-tap
+        aria-label={`Dossier: ${w.label}`}
         className={cn(
-          "mt-3 flex items-center gap-3 rounded-[--radius-sm] border px-3 py-3 transition-colors",
+          "mt-1.5 flex min-h-11 items-center gap-2 rounded-[--radius-sm] border px-2 py-1.5 transition-colors",
           isMe
             ? "border-accent/40 bg-accent/[0.07] hover:bg-accent/[0.11]"
             : "border-border-strong bg-surface-2 hover:bg-elevated",
         )}
       >
-        <div className="min-w-0 flex-1">
-          <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
-            <span className="text-sm font-semibold text-ink">{w.label}</span>
-            {isMe && <Tag tone="accent">that&rsquo;s you</Tag>}
-          </div>
-          <div className="mt-0.5 text-[11px] text-faint">{w.displayName}</div>
-          <div className="mt-1.5 font-mono text-sm font-semibold tnum text-accent">
-            {award.statLine}
-          </div>
-        </div>
-        <ChevronRight size={16} aria-hidden className="shrink-0 text-faint" />
+        <Trophy
+          size={13}
+          aria-hidden="true"
+          className={cn("shrink-0", isMe ? "text-accent" : "text-faint")}
+        />
+        <TeamAvatar
+          name={w.label}
+          avatarId={user?.avatar}
+          teamLogoUrl={user?.teamLogoUrl}
+          size="xs"
+          isMe={isMe}
+        />
+        <span className="min-w-0 flex-1">
+          <span className="flex items-baseline gap-1.5">
+            <span className="min-w-0 truncate text-[13px] font-semibold text-ink">
+              {w.label}
+            </span>
+            {isMe ? (
+              <Tag tone="accent">you</Tag>
+            ) : (
+              <span className="shrink-0 truncate text-[11px] text-faint">
+                {w.displayName}
+              </span>
+            )}
+          </span>
+        </span>
+        <ChevronRight size={13} aria-hidden="true" className="shrink-0 text-faint" />
       </Link>
 
       {w.partnerRosterId != null && (
         <Link
           href={`/managers/${w.partnerRosterId}`}
-          data-tap
-          className="mt-1.5 flex items-center gap-1.5 px-3 text-[11px] font-semibold text-accent"
+          className="-my-1 flex min-h-11 items-center gap-1 px-2 text-[11px] font-semibold text-accent"
         >
           also see {w.partnerLabel}
-          <ChevronRight size={12} aria-hidden />
+          <ChevronRight size={12} aria-hidden="true" />
         </Link>
       )}
 
       {award.runnersUp.length > 0 && (
-        <>
-          <h4 className="mt-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-faint">
-            Runners-up
-          </h4>
-          <ol className="mt-0.5 divide-y divide-border">
-            {award.runnersUp.map((r, i) => (
-              <li key={`${r.rosterId}-${r.partnerRosterId ?? ""}`}>
-                <RunnerUpRow entrant={r} place={PLACE[i] ?? `${i + 2}th`} meRosterId={meRosterId} />
-              </li>
-            ))}
-          </ol>
-        </>
+        <ol className="mt-1 divide-y divide-border/70">
+          {award.runnersUp.map((r, i) => (
+            <li key={`${r.rosterId}-${r.partnerRosterId ?? ""}`}>
+              <RunnerUpRow
+                entrant={r}
+                place={PLACE[i] ?? `${i + 2}th`}
+                meRosterId={meRosterId}
+                user={userOf(r.rosterId)}
+              />
+            </li>
+          ))}
+        </ol>
       )}
-    </Card>
+    </article>
   );
 }
 
@@ -99,10 +126,12 @@ function RunnerUpRow({
   entrant,
   place,
   meRosterId,
+  user,
 }: {
   entrant: AwardEntrant;
   place: string;
   meRosterId: number | null;
+  user: LeagueUser | undefined;
 }) {
   const isMe =
     meRosterId != null &&
@@ -110,21 +139,34 @@ function RunnerUpRow({
   return (
     <Link
       href={`/managers/${entrant.rosterId}`}
-      data-tap
-      className="flex min-h-11 items-center gap-2.5 py-2 transition-colors hover:bg-surface-2/60"
+      aria-label={`${place}: ${entrant.label}, ${entrant.stat}`}
+      className={cn(
+        "flex min-h-11 items-center gap-2 rounded-[--radius-sm] px-1.5 transition-colors",
+        isMe ? "bg-accent/[0.05]" : "hover:bg-surface-2",
+      )}
     >
-      <span className="w-6 shrink-0 font-mono text-[10px] uppercase text-faint">
-        {place}
+      <span
+        aria-hidden="true"
+        className="w-3 shrink-0 font-mono text-[11px] tnum text-faint"
+      >
+        {place.replace(/\D/g, "")}
       </span>
+      <TeamAvatar
+        name={entrant.label}
+        avatarId={user?.avatar}
+        teamLogoUrl={user?.teamLogoUrl}
+        size="xs"
+        isMe={isMe}
+      />
       <span
         className={cn(
-          "min-w-0 flex-1 truncate text-xs",
+          "min-w-0 flex-1 truncate text-[12px]",
           isMe ? "font-semibold text-accent" : "text-muted",
         )}
       >
         {entrant.label}
       </span>
-      <span className="shrink-0 font-mono text-[11px] tnum text-faint">
+      <span className="shrink-0 truncate font-mono text-[11px] tnum text-faint">
         {entrant.stat}
       </span>
     </Link>
@@ -137,19 +179,44 @@ export default async function AwardsPage() {
   const summary = awardsSummary(h);
   const meRosterId = h.me.rosterId;
 
+  const userOf: UserLookup = (rosterId) => {
+    const r = h.rostersById.get(rosterId);
+    return r?.ownerId ? h.usersById.get(r.ownerId) : undefined;
+  };
+
   const mine = awards.filter(
     (a) =>
       meRosterId != null &&
       (a.winner.rosterId === meRosterId || a.winner.partnerRosterId === meRosterId),
   );
 
+  const groups = AWARD_GROUPS.map((g) => ({
+    ...g,
+    items: awards.filter((a) => a.group === g.id),
+  })).filter((g) => g.items.length > 0);
+
   return (
     <div>
-      <PageHeader
-        kicker="League awards"
-        title="The Superlatives"
-        subtitle={`Every award below is earned, not voted. ${summary.managers} managers, ${summary.seasons} seasons, judged purely on what they actually did.`}
-      />
+      <header className="mb-2">
+        <div className="flex items-center justify-between gap-3">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+            League awards
+          </p>
+          <Link
+            href="/league"
+            className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+          >
+            the league
+            <ChevronRight size={12} aria-hidden="true" />
+          </Link>
+        </div>
+        <h1 className="font-display text-[26px] font-semibold leading-[1.1] text-ink">
+          The Superlatives
+        </h1>
+        <p className="mt-0.5 text-[12px] leading-snug text-muted">
+          Earned, not voted. Judged purely on what they actually did.
+        </p>
+      </header>
 
       {awards.length === 0 ? (
         <EmptyState
@@ -162,61 +229,76 @@ export default async function AwardsPage() {
         </EmptyState>
       ) : (
         <>
-          <div className="mb-1 grid grid-cols-3 gap-2.5">
-            <Card className="text-center">
-              <div className="font-mono text-2xl font-semibold tnum text-accent">
-                {awards.length}
+          {/* Figures inline, hairline-separated: three cards cost 90px for four numbers. */}
+          <div className="flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface/60">
+            {[
+              { v: awards.length, l: "awards" },
+              { v: summary.managers, l: "managers" },
+              { v: summary.trades, l: "trades" },
+              { v: summary.moves.toLocaleString(), l: "moves" },
+            ].map((s, i) => (
+              <div key={s.l} className="flex-1 px-1 py-1.5 text-center">
+                <div
+                  className={cn(
+                    "font-mono text-[17px] font-semibold leading-tight tnum",
+                    i === 0 ? "text-accent" : "text-ink",
+                  )}
+                >
+                  {s.v}
+                </div>
+                <div className="text-[11px] uppercase tracking-wide text-faint">
+                  {s.l}
+                </div>
               </div>
-              <div className="text-[11px] uppercase tracking-wide text-faint">
-                awards
-              </div>
-            </Card>
-            <Card className="text-center">
-              <div className="font-mono text-2xl font-semibold tnum text-ink">
-                {summary.trades}
-              </div>
-              <div className="text-[11px] uppercase tracking-wide text-faint">
-                trades
-              </div>
-            </Card>
-            <Card className="text-center">
-              <div className="font-mono text-2xl font-semibold tnum text-ink">
-                {summary.moves}
-              </div>
-              <div className="text-[11px] uppercase tracking-wide text-faint">
-                moves
-              </div>
-            </Card>
+            ))}
           </div>
 
+          {/* Jump rail: 13 awards is a long page - let people land on a category. */}
+          <nav aria-label="Award categories" className="mt-2 flex flex-wrap gap-1.5">
+            {groups.map((g) => (
+              <a
+                key={g.id}
+                href={`#${g.id}`}
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface/60 px-2.5 text-[12px] font-medium text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+              >
+                {g.label}
+                <span className="font-mono text-[11px] tnum text-faint">
+                  {g.items.length}
+                </span>
+              </a>
+            ))}
+          </nav>
+
           {mine.length > 0 && (
-            <Card className="mt-2.5 border-accent/30 bg-accent/[0.06]">
-              <p className="text-xs leading-relaxed text-muted">
-                <span className="font-semibold text-ink">Your mantel:</span>{" "}
-                {mine.map((a) => a.title).join(", ")}.
-              </p>
-            </Card>
+            <p className="mt-2 rounded-[--radius] border border-accent/30 bg-accent/[0.06] px-2.5 py-1.5 text-[11.5px] leading-snug text-muted">
+              <span className="font-semibold text-ink">Your mantel:</span>{" "}
+              {mine.map((a) => a.title).join(", ")}.
+            </p>
           )}
 
-          {AWARD_GROUPS.map((group) => {
-            const inGroup = awards.filter((a) => a.group === group.id);
-            if (inGroup.length === 0) return null;
-            return (
-              <section key={group.id}>
-                <SectionHeader title={group.label} />
-                <div className="space-y-2.5">
-                  {inGroup.map((a) => (
-                    <AwardCard key={a.id} award={a} meRosterId={meRosterId} />
-                  ))}
-                </div>
-              </section>
-            );
-          })}
+          {groups.map((g) => (
+            <section key={g.id} id={g.id} className="scroll-mt-3">
+              <h2 className="mb-1.5 mt-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                {g.label}
+              </h2>
+              <div className="space-y-1.5">
+                {g.items.map((a) => (
+                  <AwardCard
+                    key={a.id}
+                    award={a}
+                    meRosterId={meRosterId}
+                    userOf={userOf}
+                  />
+                ))}
+              </div>
+            </section>
+          ))}
 
-          <p className="mt-8 text-[11px] leading-relaxed text-faint">
-            Derived from {summary.moves} recorded transactions across{" "}
-            {summary.seasons} seasons. Ties break to the lower roster number.
-            Awards with no real signal behind them are left unawarded.
+          <p className="mt-4 text-[11px] leading-relaxed text-faint">
+            Derived from {summary.moves.toLocaleString()} recorded transactions across{" "}
+            {summary.seasons} seasons. Ties break to the lower roster number. Awards
+            with no real signal behind them are left unawarded. Tap any team for their
+            dossier.
           </p>
         </>
       )}
