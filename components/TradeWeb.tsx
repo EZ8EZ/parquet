@@ -240,12 +240,14 @@ function WebMode({ graph }: { graph: TradeGraph }) {
                 const b = nodeById.get(e.b)!;
                 const d = bowedPath(a.x, a.y, b.x, b.y);
                 const lit = isLit(e.a, e.b, e.key);
-                const w = 0.8 + 3.0 * Math.pow(e.count / view.maxCount, 0.65);
+                const w = r2(
+                  0.8 + 3.0 * Math.pow(e.count / view.maxCount, 0.65),
+                );
                 const opacity = lit
                   ? 0.95
                   : dimming
                     ? 0.07
-                    : 0.26 + 0.4 * (e.count / view.maxCount);
+                    : r2(0.26 + 0.4 * (e.count / view.maxCount));
                 return (
                   <g key={e.key}>
                     {/* Wide invisible stroke so a 1.5-unit strand is tappable. */}
@@ -253,7 +255,7 @@ function WebMode({ graph }: { graph: TradeGraph }) {
                       d={d}
                       fill="none"
                       stroke="transparent"
-                      strokeWidth={13}
+                      strokeWidth={16}
                       style={{ pointerEvents: "stroke" }}
                       onClick={() => setSel({ kind: "edge", key: e.key })}
                     />
@@ -261,7 +263,7 @@ function WebMode({ graph }: { graph: TradeGraph }) {
                       d={d}
                       fill="none"
                       stroke="var(--color-accent)"
-                      strokeWidth={lit ? w + 0.8 : w}
+                      strokeWidth={lit ? r2(w + 0.8) : w}
                       strokeLinecap="round"
                       opacity={opacity}
                       className="transition-opacity duration-200 motion-reduce:transition-none"
@@ -276,8 +278,9 @@ function WebMode({ graph }: { graph: TradeGraph }) {
           <g>
             {graph.nodes.map((n) => {
               const trades = view.nodeTrades.get(n.rosterId) ?? 0;
-              const r =
-                11 + 6 * Math.pow(trades / view.maxTrades, 0.6) * (trades ? 1 : 0);
+              const r = r2(
+                13 + 6 * Math.pow(trades / view.maxTrades, 0.6) * (trades ? 1 : 0),
+              );
               const isSel = activeNode === n.rosterId;
               const onLitEdge =
                 selectedEdge != null &&
@@ -350,7 +353,7 @@ function WebMode({ graph }: { graph: TradeGraph }) {
                     y={n.y}
                     textAnchor="middle"
                     dominantBaseline="central"
-                    fontSize={9}
+                    fontSize={11.5}
                     fontWeight={700}
                     className="font-mono"
                     fill={isSel ? "var(--color-accent-ink)" : "var(--color-ink)"}
@@ -361,9 +364,9 @@ function WebMode({ graph }: { graph: TradeGraph }) {
                   {n.isMe && !isSel && (
                     <text
                       x={n.x}
-                      y={n.y + r + 8}
+                      y={r2(n.y + r + 9)}
                       textAnchor="middle"
-                      fontSize={6.5}
+                      fontSize={8}
                       letterSpacing="0.12em"
                       className="font-mono"
                       fill="var(--color-accent)"
@@ -377,22 +380,54 @@ function WebMode({ graph }: { graph: TradeGraph }) {
             })}
           </g>
 
-          {/* Name label for the focused manager only — 14 at once is unreadable. */}
+          {/*
+            The focused manager's name goes in the middle of the ring, not beside
+            their node: 14 labels around a 350px circle is unreadable, and a label
+            beside the rightmost node would run off the viewBox.
+          */}
           {activeNode != null &&
             (() => {
               const n = nodeById.get(activeNode)!;
-              const right = n.x >= RING.cx;
+              const deals = view.nodeTrades.get(activeNode) ?? 0;
+              const partners = view.partnersOf.get(activeNode)?.size ?? 0;
+              const label = truncate(n.name, 20);
+              // Sized from the label so the plate hugs the text at any name length.
+              const plateW = r2(Math.max(112, label.length * 7.6 + 18));
               return (
-                <text
-                  x={n.x + (right ? 26 : -26)}
-                  y={n.y + 3}
-                  textAnchor={right ? "start" : "end"}
-                  fontSize={10}
-                  fontWeight={600}
-                  fill="var(--color-accent)"
-                >
-                  {truncate(n.name, 14)}
-                </text>
+                <g style={{ pointerEvents: "none" }}>
+                  {/* Backing plate: the ring centre is crossed by strands. */}
+                  <rect
+                    x={r2(RING.cx - plateW / 2)}
+                    y={RING.cy - 22}
+                    width={plateW}
+                    height={40}
+                    rx={9}
+                    fill="var(--color-bg)"
+                    opacity={0.82}
+                  />
+                  <text
+                    x={RING.cx}
+                    y={RING.cy - 4}
+                    textAnchor="middle"
+                    fontSize={15}
+                    fontWeight={600}
+                    className="font-display"
+                    fill="var(--color-accent)"
+                  >
+                    {label}
+                  </text>
+                  <text
+                    x={RING.cx}
+                    y={RING.cy + 12}
+                    textAnchor="middle"
+                    fontSize={9.5}
+                    className="font-mono"
+                    fill="var(--color-muted)"
+                  >
+                    {deals} {deals === 1 ? "deal" : "deals"} · {partners}{" "}
+                    {partners === 1 ? "partner" : "partners"}
+                  </text>
+                </g>
               );
             })()}
         </svg>
@@ -648,7 +683,7 @@ function NodePanel({
                   <span
                     aria-hidden
                     className="h-1.5 rounded-full bg-accent"
-                    style={{ width: `${18 + (p.count / max) * 54}px` }}
+                    style={{ width: `${r2(18 + (p.count / max) * 54)}px` }}
                   />
                   <span className="w-5 shrink-0 text-right font-mono text-[12px] tnum text-accent">
                     {p.count}
@@ -1039,7 +1074,18 @@ function bowedPath(
   const ny = dx / len;
   const sign = nx * (RING.cx - mx) + ny * (RING.cy - my) >= 0 ? 1 : -1;
   const bow = 0.16 * len;
-  return `M${ax},${ay} Q${mx + nx * sign * bow},${my + ny * sign * bow} ${bx},${by}`;
+  const qx = r2(mx + nx * sign * bow);
+  const qy = r2(my + ny * sign * bow);
+  return `M${ax},${ay} Q${qx},${qy} ${bx},${by}`;
+}
+
+/**
+ * Round to 2dp. Every computed SVG number goes through this: unrounded floats
+ * serialize differently on the server than in the browser, which React reports as a
+ * hydration mismatch.
+ */
+function r2(v: number): number {
+  return Math.round(v * 100) / 100;
 }
 
 function truncate(s: string, n: number): string {

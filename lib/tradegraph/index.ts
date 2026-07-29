@@ -42,12 +42,15 @@ export const RING = {
   size: 400,
   cx: 200,
   cy: 200,
-  /** Ring radius. Leaves room for the outer tap ring and the abbreviation. */
-  r: 128,
-  /** Drawn node radius. */
-  nodeR: 15,
-  /** Invisible tap radius: 23 units ~ 45px at 390px, clearing the 44px minimum. */
-  tapR: 23,
+  /**
+   * Ring radius. Sized so the drawing fills ~90% of the box: at 390px the column
+   * gives the SVG ~350px, and anything smaller makes the node tags unreadable.
+   */
+  r: 150,
+  /** Largest drawn node radius (the busiest trader). */
+  nodeR: 19,
+  /** Invisible tap radius: 26 units ~ 46px wide at 390px, over the 44px minimum. */
+  tapR: 26,
 } as const;
 
 // ---------------------------------------------------------------- types
