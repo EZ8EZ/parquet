@@ -1,36 +1,173 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Parquet — Dynasty Memory
 
-## Getting Started
+A mobile-first dynasty **fantasy basketball** companion. Most fantasy tools sell
+_information_ (rankings, grades). Parquet sells **memory and self-knowledge**: it
+remembers the reasoning behind your decisions, audits your stated strategy against
+what you actually did, and scouts how your leaguemates behave.
 
-First, run the development server:
+> Repo name: **`parquet`** (the Celtics floor + a nod to columnar data). It was
+> available, so the fallbacks `hardwood-ledger` / `glasshouse-hoops` were not used.
+
+Live against your own Sleeper league, or run instantly on realistic synthetic data
+with zero setup.
+
+## What makes it different
+
+Table-stakes features (roster view, asset values, trade evaluator, league view)
+exist because the product isn't credible without them. The reason to use it is the
+four things **no competitor builds** (see [RESEARCH.md](RESEARCH.md)):
+
+1. **Decision Ledger** — capture your reasoning at the moment of conviction. New
+   transactions surface as an "unannotated decisions" badge; two taps from badge to
+   typed thought. Backfill historical moves newest-first.
+2. **Revealed vs Stated Strategy** — your actual strategy is _derived from your
+   transaction history_ and contrasted with what you said. When they disagree, the
+   home screen says so first. (e.g. _"You said rebuild. You bought win-now."_)
+3. **Manager Dossiers** — behavioral profiles of every leaguemate (who trades most,
+   who panics after losses, who overpays for names, who hoards picks, who never
+   responds) with a plain-language read on how to approach them. Private to you.
+4. **The Analyst** — an LLM over your full annotated corpus, prompted to be an
+   **adversarial auditor**, not a cheerleader. It leads with the case against you
+   and cites your own moves. Degrades to a deterministic audit with no API key.
+
+> **Anti-sycophancy is the core design constraint.** Every analytical surface is
+> tuned to disagree with you when the record warrants it. See
+> `lib/analyst/system-prompt.ts` — sycophancy is named there as the product's
+> primary failure mode.
+
+## Quick start
 
 ```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
+pnpm install
+pnpm setup        # prisma db push + seed a demo annotation (fixture data)
+pnpm dev          # http://localhost:3000
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+That's it — the app runs end to end on the **fixture provider** (a deterministic,
+realistic 5-season synthetic league) with **zero external dependencies**. No API
+keys required.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Point it at your real Sleeper league
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+# .env.local
+LEAGUE_PROVIDER=sleeper
+SLEEPER_USERNAME=EZ8
+SLEEPER_LEAGUE_ID=1347007735815766016   # NSL Fantasy Hoops (resolved; see API_NOTES.md)
+```
 
-## Learn More
+Then pull the full multi-season history:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+pnpm ingest       # walks previous_league_id back to the start; idempotent, re-runnable
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+### Enable the conversational analyst (optional)
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```bash
+# .env.local
+ANTHROPIC_API_KEY=sk-ant-...
+ANALYST_MODEL=claude-sonnet-5
+```
 
-## Deploy on Vercel
+Without a key, the Analyst still works — it falls back to a deterministic,
+rules-based audit. The rest of the app never needs a key.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Environment variables
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+All documented in [`.env.example`](.env.example):
+
+| Var | Default | Purpose |
+|---|---|---|
+| `LEAGUE_PROVIDER` | `fixture` | `fixture` \| `sleeper` \| `csv` |
+| `DATABASE_URL` | `file:./dev.db` | SQLite locally; swap to `postgres://` for prod |
+| `SLEEPER_USERNAME` | `EZ8` | resolves your roster ("you") |
+| `SLEEPER_LEAGUE_ID` | — | current-season league id (Sleeper mode) |
+| `ANTHROPIC_API_KEY` | — | enables the LLM analyst; optional |
+| `ANALYST_MODEL` | `claude-sonnet-5` | analyst model |
+| `NEXT_PUBLIC_USE_PLAYER_PHOTOS` | `false` | real NBA headshots (licensing caveat, see DECISIONS D8) |
+| `CSV_DIR` | — | directory of CSVs when `LEAGUE_PROVIDER=csv` |
+
+## Scripts
+
+| Command | What it does |
+|---|---|
+| `pnpm dev` | Next dev server |
+| `pnpm build` | `prisma generate` + production build |
+| `pnpm typecheck` | `tsc --noEmit` |
+| `pnpm test` | Vitest (valuation, strategy, dossier, trade, Sleeper + CSV parsers) |
+| `pnpm db:push` | apply the Prisma schema to SQLite |
+| `pnpm ingest [leagueId]` | full historical pull, idempotent upserts |
+| `pnpm seed` | seed the demo ledger annotation (fixture) |
+| `pnpm gen:icons` | regenerate the PWA icon set from `public/icon.svg` |
+
+## Architecture
+
+```
+app/                      Next.js App Router (all data pages force-dynamic)
+  page.tsx                Home — revealed strategy + contradiction + ledger badge
+  roster/ league/ trade/  table-stakes surfaces
+  managers/[rosterId]/    manager dossiers
+  ledger/ analyst/ values/ methodology/
+  api/{annotations,analyst,trade}/route.ts
+
+lib/
+  providers/              PLATFORM-AGNOSTIC data layer
+    types.ts              LeagueProvider + StatsProvider interfaces, domain model
+    sleeper/              real provider — Zod-validated (schemas.ts)
+    csv/                  documented CSV importer (Fantrax fallback)
+    fixture/              deterministic 5-season synthetic corpus (the default)
+    stats/                StatsProvider (fixture + balldontlie stub)
+  valuation/              transparent model; every weight in config.ts
+  derive/                 shared per-manager behavioral derivation + descriptions
+  strategy/               revealed-vs-stated engine (contradiction detection)
+  dossier/                manager dossiers
+  trade/                  trade evaluator (thesis, not a grade)
+  analyst/                system-prompt.ts (adversarial) + corpus builder + runner
+  history.ts              LeagueHistory: the corpus object every engine consumes
+  ingest.ts               chain walk + idempotent persistence + ensureIngested()
+  ledger.ts  roster.ts    ledger + roster/league analysis
+prisma/schema.prisma      Postgres-portable (no SQLite-only types)
+scripts/                  ingest, seed, gen-icons
+```
+
+**Data flow.** A provider normalizes any platform into the domain model. `ingest`
+walks the `previous_league_id` chain to assemble the full multi-season corpus and
+upserts it to the DB (idempotent). Pages build a `LeagueHistory` (transactions +
+annotations from the DB, current league state live from the provider) and the pure
+derivation engines run over it. `ensureIngested()` lazily populates the DB on first
+read, so a fresh clone works with no manual ingest against fixtures.
+
+**The Analyst is a prompt over a text corpus — not fine-tuning, not a vector DB.**
+~20–40 transactions/season × a few seasons of annotated history fits comfortably in
+one context window (see DECISIONS D7).
+
+**No write access.** Sleeper is read-only; Parquet advises but can't act. Every
+recommendation ends in a copyable summary you paste into Sleeper yourself.
+
+## Stack
+Next.js 16 (App Router, TS strict) · Tailwind v4 · Prisma 6 (SQLite → Postgres) ·
+Zod 4 · Vitest · Anthropic SDK · deployable to Vercel · installable PWA.
+
+## Deploy (Vercel)
+Set the env vars above (swap `DATABASE_URL` to a hosted Postgres and change
+`provider = "postgresql"` in `prisma/schema.prisma`). `pnpm build` runs
+`prisma generate` first. Run `pnpm ingest` once (or let `ensureIngested` handle it)
+to populate the corpus.
+
+## Project docs
+- [RESEARCH.md](RESEARCH.md) — competitor teardown, feature matrix, the "is there a
+  KTC-for-NBA?" verdict, ranked v1 features, and what we deliberately did NOT build.
+- [DECISIONS.md](DECISIONS.md) — every non-obvious choice, with rejected alternatives.
+- [API_NOTES.md](API_NOTES.md) — empirically observed Sleeper API behavior/shapes.
+- [DESIGN.md](DESIGN.md) — the design system and tokens.
+- [QUESTIONS.md](QUESTIONS.md) — decisions only the owner can make.
+- [PROGRESS.md](PROGRESS.md) — build log; what works / what's stubbed / next steps.
+
+## Current state
+v1 is feature-complete and runs end to end on fixtures with zero external deps.
+Build, typecheck, lint, and 37 tests are green. See PROGRESS.md for the honest
+what-works / what's-stubbed / next-steps rundown.
+
+## License
+MIT — see [LICENSE](LICENSE).

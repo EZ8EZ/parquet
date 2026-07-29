@@ -94,6 +94,27 @@ decisions" badge.
 NBA fantasy weeks empirically run ~1–22. Sweeping to 25 with empty-tolerance is
 safely idempotent and future-proofs longer seasons/play-in weeks.
 
+## D15. Design system — dark editorial "parquet", not default shadcn
+Committed to a specific aesthetic (financial terminal × sports magazine): near-black
+surfaces, one sharp gold accent, Fraunces serif display + Inter + JetBrains Mono for
+data. Fixed bottom tab bar with icons+labels, no floating overlays, stacked cards
+(the exact opposite of the competitor's mobile mistakes catalogued in RESEARCH §2C).
+Full tokens in DESIGN.md. Rejected: installing shadcn's default component look
+(generic SaaS); a chart library (hand-rolled SVG instead, D3). Note: shadcn's utility
+deps (cva/clsx/tailwind-merge/lucide) are used, but the visual system is bespoke.
+
+## D16. Lazy `ensureIngested()` so a fresh clone needs no manual ingest
+The app reads the corpus from the DB, but `ensureIngested()` populates it on first
+read if empty. Against fixtures this means `pnpm dev` alone works (no ingest step);
+`pnpm ingest` remains the explicit, idempotent path for real Sleeper data. Rejected:
+requiring a manual ingest before the UI works (violates "runs end to end with zero
+external dependencies"); reading the corpus live from the provider on every request
+(a call storm for Sleeper).
+
+## D17. Analyst model default = claude-sonnet-5
+Cost/latency-appropriate default for a chat surface; Opus available via ANALYST_MODEL.
+The analyst is optional entirely — absent a key it degrades to a deterministic audit.
+
 ## D14. Season labeling
 Sleeper labels the league by the calendar year the season ends is ambiguous; Sleeper
 uses the start-year convention we mirror verbatim from the `season` field. We never
