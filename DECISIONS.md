@@ -8,8 +8,16 @@ order: `hardwood-ledger`, `glasshouse-hoops`. Final name recorded in README.md.
 
 ## D2. Stack confirmed as briefed, versions pinned by scaffold
 Next 16.2.12 (App Router), React 19, TypeScript strict, Tailwind v4,
-Prisma 7 (SQLite dev), Zod 4, Vitest 4, `@anthropic-ai/sdk`. No deviations.
+Zod 4, Vitest 4, `@anthropic-ai/sdk`.
 Tailwind v4 uses CSS-first config (`@theme` in globals.css), not `tailwind.config.js`.
+
+**Pinned Prisma 6 (6.19), not the freshly-released Prisma 7.** Prisma 7 removed
+`url = env("DATABASE_URL")` from the datasource block, requiring a `prisma.config.ts`
+plus a driver adapter passed to the client. That directly contradicts the brief's
+"use a DATABASE_URL env var" + "trivial Postgres swap" requirements and adds
+setup/runtime risk for zero v1 benefit. Prisma 6 keeps the exact env-var model the
+brief specifies (swap `provider` + `DATABASE_URL` to move to Postgres). Rejected:
+adopting Prisma 7's adapter model (more moving parts, less battle-tested).
 
 ## D3. Charts hand-rolled as inline SVG (no chart library)
 The brief allows "a lightweight library or hand-rolled SVG." Chose hand-rolled.
@@ -29,11 +37,17 @@ accuracy, is the stated differentiator — every weight lives in `lib/valuation/
 Rejected: building on Sleeper stats (unreliable per brief); blocking on a stats API
 key (violates NEVER BLOCK).
 
-## D5. No consensus dynasty-basketball value market exists → build our own
-(Confirmed in RESEARCH.md — KeepTradeCut/FantasyCalc are football-only; no NBA
-crowdsourced dynasty value source with real coverage.) Therefore Phase 3 ships a
-**transparent internal model** with a published `/methodology` page, rather than
-aggregating a non-existent market.
+## D5. Build our own transparent value model (market exists but is thin)
+Research (RESEARCH.md §4) **refuted** the "no KTC-for-NBA exists" hypothesis:
+Court Consensus and Dynatyze are real crowdsourced NBA value sites — but every one
+of them is low-liquidity (Court Consensus showed "0 data points collected"), and
+the FantasyCalc "values from real executed trades" model is entirely unoccupied for
+the NBA. Aggregating a thin, unreliable market would inherit its noise. So Phase 3
+still ships a **transparent internal model** with a published `/methodology` page —
+now framed as "beat the thin incumbents on transparency," not "invent a category."
+KTC-style crowd voting is explicitly a post-v1 feature (needs user liquidity we
+can't bootstrap at launch). Rejected: scraping Court Consensus/Dynatyze values
+(proprietary, thin, and against project rules); blocking on building a crowd market.
 
 ## D6. Trade evaluator outputs a thesis, not a letter grade
 Per product thesis. Output = what each side is betting on, the single assumption

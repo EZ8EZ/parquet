@@ -1,0 +1,67 @@
+// Prisma schema. SQLite for local dev; Postgres-portable by design.
+// To move to Postgres: set provider = "postgresql" and a postgres:// DATABASE_URL.
+// No SQLite-only column types are used — JSON is stored as String, ids are String.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/// The user's captured reasoning for a transaction — the Decision Ledger.
+/// Keyed by the immutable Sleeper transaction_id so re-ingests never orphan it.
+model Annotation {
+  id            String   @id @default(cuid())
+  transactionId String   @unique
+  /// Free text — "what has to be true for this to work" reasoning.
+  reasoning     String
+  /// Optional one-tap posture tag captured alongside the free text.
+  posture       String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([createdAt])
+}
+
+/// Persisted copy of every ingested transaction. Enables (a) new-transaction
+/// detection by diffing ingests, (b) an offline/ fixture-backed ledger, and
+/// (c) re-derivation without re-fetching. Payload is the full domain Transaction
+/// as stringified JSON (Postgres-portable; swap to Json type on Postgres if wanted).
+model IngestedTransaction {
+  transactionId String   @id
+  leagueId      String
+  season        String
+  week          Int
+  type          String
+  createdMs     BigInt
+  creator       String?
+  /// Stringified domain Transaction.
+  payload       String
+  firstSeenAt   DateTime @default(now())
+
+  @@index([season])
+  @@index([type])
+}
+
+/// Cache of the players payload (Sleeper /players/nba is 2.3MB). One row per run.
+model PlayerCacheEntry {
+  playerId    String   @id
+  fullName    String
+  position    String?
+  team        String?
+  age         Int?
+  searchRank  Int?
+  /// Stringified domain Player.
+  payload     String
+  updatedAt   DateTime @updatedAt
+}
+
+/// Simple key/value bookkeeping (last ingest time, resolved league id, provider).
+model Meta {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}
