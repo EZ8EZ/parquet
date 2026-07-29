@@ -59,7 +59,7 @@ export function buildCorpus(h: LeagueHistory): string {
     .filter((t) => h.annotations.has(t.transactionId))
     .sort((a, b) => a.created - b.created);
   if (annotated.length === 0) {
-    lines.push(`(none yet — the user has annotated no decisions)`);
+    lines.push(`(none yet - the user has annotated no decisions)`);
   } else {
     for (const t of annotated) {
       const ann = h.annotations.get(t.transactionId)!;
@@ -100,7 +100,7 @@ export function buildCorpus(h: LeagueHistory): string {
         .sort((a, b) => b!.value - a!.value) as { name: string; age: number | null; value: number; tier: string }[];
       lines.push(`## YOUR CURRENT ROSTER (by value)`);
       for (const v of valued.slice(0, 12))
-        lines.push(`- ${v.name} (age ${v.age ?? "?"}) — ${v.value} [${v.tier}]`);
+        lines.push(`- ${v.name} (age ${v.age ?? "?"}) - ${v.value} [${v.tier}]`);
       lines.push("");
     }
   }
@@ -154,7 +154,7 @@ export async function runAnalyst(
     // Never error the UI — degrade to rules with a note.
     return {
       text:
-        `(Live analyst unavailable — showing the deterministic audit instead.)\n\n` +
+        `(Live analyst unavailable - showing the deterministic audit instead.)\n\n` +
         rulesFallback(h, question),
       mode: "rules",
     };
@@ -178,7 +178,7 @@ export function rulesFallback(h: LeagueHistory, question: string): string {
   );
   if (named) {
     return [
-      `${named.profile.displayName} — read:`,
+      `${named.profile.displayName} - read:`,
       named.read,
       "",
       "How to approach:",
@@ -193,7 +193,7 @@ export function rulesFallback(h: LeagueHistory, question: string): string {
     out.push("");
   } else {
     out.push(
-      `No stated-vs-revealed contradiction yet — but that's partly because you've annotated ${h.annotations.size} decision(s). Annotate more and I can hold you to your own words.`,
+      `No stated-vs-revealed contradiction yet - but that's partly because you've annotated ${h.annotations.size} decision(s). Annotate more and I can hold you to your own words.`,
     );
     out.push("");
   }
@@ -208,7 +208,7 @@ export function rulesFallback(h: LeagueHistory, question: string): string {
 
   out.push("");
   out.push(
-    "(This is the deterministic audit. Point LLM_BASE_URL at any OpenAI-compatible endpoint — a free hosted open model or a local Ollama — for the conversational analyst that reasons about specific hypotheticals.)",
+    "(This is the deterministic audit. Point LLM_BASE_URL at any OpenAI-compatible endpoint - a free hosted open model or a local Ollama - for the conversational analyst that reasons about specific hypotheticals.)",
   );
   return out.join("\n");
 }

@@ -19,7 +19,7 @@ export default async function LedgerPage() {
       <PageHeader
         kicker="Decision ledger"
         title="Capture the why"
-        subtitle="Record your reasoning at the moment of conviction — not later, when memory has already rewritten it."
+        subtitle="Record your reasoning at the moment of conviction - not later, when memory has already rewritten it."
       />
 
       <div className="grid grid-cols-3 gap-2.5">
@@ -28,7 +28,7 @@ export default async function LedgerPage() {
         <Stat label="Notable" value={summary.notable} />
       </div>
 
-      <SectionHeader title="To capture — newest first" />
+      <SectionHeader title="To capture - newest first" />
       {toCapture.length === 0 ? (
         <EmptyState icon={<CheckCircle2 size={28} />} title="All caught up">
           Every notable decision has your reasoning attached. Come back after your

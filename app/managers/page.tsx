@@ -15,7 +15,7 @@ export default async function ManagersPage() {
       <PageHeader
         kicker="Manager dossiers"
         title="Scout the managers"
-        subtitle="Behavioral profiles from transaction history. This is manager scouting — how they act — not roster scouting."
+        subtitle="Behavioral profiles from transaction history. This is manager scouting - how they act - not roster scouting."
       />
 
       <Card className="mb-5 border-warn/30 bg-warn/[0.06]">

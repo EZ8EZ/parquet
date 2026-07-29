@@ -80,6 +80,34 @@ Transactions are **paged by week** (`leg`). NBA weeks run ~1–20+. Empty weeks
 return `[]`. Ingest sweeps weeks 1..25 per season and stops safely on empties.
 Observed volume 2025: wk1=84, wk2=31, wk5=17, wk10=2, wk15=21.
 
+### ⚠️ `commissioner` transactions — a real-data trap (verified)
+`type` is NOT limited to trade/waiver/free_agent. The live league also emits
+**`commissioner`**, and it breaks two assumptions:
+
+1. **Multi-team trades are shredded.** Sleeper's UI can't express a 3-team trade, so
+   the commissioner executes it by hand and it lands as N separate `commissioner`
+   rows, one per player, with nothing linking them. Verified example — NSL Fantasy
+   Hoops, **2023-07-03**, four rows that are actually ONE three-team trade:
+   | tx | player | from → to |
+   |---|---|---|
+   | 981392875004981248 | Devin Booker | NSLKB → EZ8 |
+   | 981393045398618112 | Jordan Poole | EZ8 → NSLKB |
+   | 981396413038772224 | Klay Thompson | NSLKB → aidsnuge |
+   | 981392784131178496 | Deandre Ayton | aidsnuge → NSLKB |
+   All four share `creator: 882656931146457088` (the commissioner) and week/`leg` 1.
+   → Handled by `lib/derive/coalesce.ts` (time-window + roster union-find → one trade).
+
+2. **`draft_picks` is ALWAYS EMPTY on commissioner rows.** Confirmed: every
+   commissioner transaction in 2023 has `draft_picks: []` and `waiver_budget: []`.
+   Picks moved as part of a commissioner trade therefore have **no transaction record
+   whatsoever** — the only evidence is the `traded_picks` snapshot (which carries no
+   timestamp). → Handled by `lib/picks.ts` reconciliation: any pick ownership change
+   in `traded_picks` that no transaction's `draft_picks` explains is surfaced as an
+   unrecorded/commissioner-era transfer and attributed to the matching parties.
+
+Consequence for analytics: without both fixes, commissioner-era trades are invisible
+to strategy/dossier/ledger, and their pick components are lost entirely.
+
 ### Traded picks — `/league/{league_id}/traded_picks`
 90 entries for 2025. Shape:
 ```json
@@ -99,6 +127,110 @@ for optional headshot CDN behind a flag).
 ### Matchups — `/league/{league_id}/matchups/{week}`
 Not yet deep-probed; used for after-win/after-loss behavioral signals. Standard
 shape `{ roster_id, matchup_id, points, players, starters, players_points }`.
+
+### Drafts
+
+Probed empirically 2026-07-29 against all five leagues in the chain. **NBA drafts
+return full, usable pick data** — no NFL-only gaps. Every endpoint below returned
+`HTTP 200` for every real id in the chain.
+
+#### `/league/{league_id}/drafts` → `200`, array
+
+One draft per league season (14-team `NSL Fantasy Hoops`). Verified ids:
+
+| Season | league_id | draft_id | `status` | `type` | `rounds` | picks |
+|---|---|---|---|---|---|---|
+| 2026 | 1347007735815766016 | 1347007735828324352 | `pre_draft` | `linear` | 3 | **0** |
+| 2025 | 1240499656799039488 | 1240499656807424000 | `complete` | `linear` | 3 | 42 |
+| 2024 | 1120065345508716544 | 1120065345508716545 | `complete` | `linear` | 3 | 42 |
+| 2023 | 939559419015180288 | 939559419015180289 | `complete` | `linear` | 3 | 42 |
+| 2022 | 882658029521240064 | 882658030053965824 | `complete` | **`snake`** | **17** | **238** |
+
+Observed keys: `draft_id, league_id, season, season_type, sport ("nba"), status,
+type, created, start_time, last_picked, last_message_id, last_message_time,
+creators[], metadata{name,description,scoring_type}, settings{rounds, teams,
+pick_timer, reversal_round, player_type, slots_*, ...}, draft_order`.
+
+⚠️ **`slot_to_roster_id` is NOT on the list endpoint.** The `/drafts` array items
+carry `draft_order` but omit `slot_to_roster_id`. It only appears on
+`/draft/{draft_id}`. Since `slot_to_roster_id` is the *entire* basis of pick
+lineage, drafts must be re-fetched individually — the list alone is not enough.
+
+#### `/draft/{draft_id}` → `200`, object
+
+Same shape as the list item **plus** `slot_to_roster_id`:
+```json
+"slot_to_roster_id": { "1": 11, "2": 2, "3": 7, ... }   // draft slot -> roster_id
+"draft_order":       { "882695796544577536": 6, ... }    // user_id -> draft slot
+```
+Verified the two agree via `/league/{id}/rosters` (`owner_id` of
+`slot_to_roster_id[slot]` === the `draft_order` user at that slot) — 14/14 for 2025.
+
+Bad id → `HTTP 404`, body `null`.
+
+#### `/draft/{draft_id}/picks` → `200`, array
+
+All fields the feature needs are present for NBA. Observed keys (identical for all
+five seasons): `draft_id, pick_no, round, draft_slot, roster_id, picked_by,
+player_id, is_keeper, reactions, metadata`.
+
+```json
+{ "draft_id":"1240499656807424000", "draft_slot":1, "pick_no":1, "round":1,
+  "roster_id":6, "picked_by":"882695796544577536", "player_id":"4760",
+  "is_keeper":null, "reactions":null,
+  "metadata":{ "first_name":"Cooper","last_name":"Flagg","player_id":"4760",
+               "position":"SF","team":"DAL","status":"ACT","number":"32",
+               "sport":"nba","injury_status":"","years_exp":"0",
+               "news_updated":"1753899621158" } }
+```
+
+Data-quality checks across 2022–2025 (364 picks): **0** missing `player_id`, **0**
+null `picked_by`, `is_keeper` is `null` on every single pick.
+`picked_by` === the `owner_id` of `roster_id` in 364/364 cases.
+`metadata` numeric-ish fields are **strings** (`number`, `years_exp`,
+`news_updated`), so schemas must coerce, not assume numbers.
+`metadata.team_abbr` / `metadata.team_changed_at` appear in 2024 + 2025 but are
+**absent** in 2022 + 2023 → must be optional.
+
+A `pre_draft` draft returns `[]` with `HTTP 200` (2026), **not** a 404. Bad
+draft_id → `HTTP 404`, body `null`. A bad league_id on `/drafts` returns `[]` with
+`HTTP 200` (so "no drafts" and "no such league" are indistinguishable).
+
+#### ⭐ The lineage key — verified, not assumed
+
+Two different roster ids live on each pick and the distinction is the whole feature:
+
+- `slot_to_roster_id[draft_slot]` = the roster that **originally owned** that slot.
+- `pick.roster_id` = the roster that **actually made** the pick, after trades.
+
+Verified against `/draft/{draft_id}/traded_picks` for 2025:
+`traded_picks[(season, round, originalRoster)].owner_id ?? originalRoster`
+predicted `pick.roster_id` for **42/42 picks, 0 mismatches**. So a traded pick is
+resolved to its player by: original roster → slot (reverse `slot_to_roster_id`) →
+the pick at that `(round, slot)`.
+
+`/draft/{draft_id}/traded_picks` also exists (`200`) with the same shape as the
+league endpoint plus a numeric `draft_id`. Not needed by us — the chain-wide
+`h.tradedPicksHistory` already carries this.
+
+#### ⚠️ Do NOT compute `pick_no` from round + slot
+
+`pick_no === (round - 1) * teams + draft_slot` holds for the `linear` rookie drafts
+(2023–2026) but is **FALSE for the 2022 `snake` startup draft** — verified: round 2
+runs slot 14 → 1 (`pick_no` 15 = slot 14, 16 = slot 13, …). Always order the board
+by the API's own `pick_no` and never reconstruct it.
+
+#### Caveats worth remembering
+
+- Roster ids are stable across the chain here, but `slot_to_roster_id` is scoped to
+  its own season's league. The 2022→2024 owner swap
+  (`882785740399087616` → `866379005824217088`) changed the *user* on a roster, not
+  the `roster_id`, so per-season slot maps stay comparable.
+- 2022 is a 17-round startup snake draft, not a rookie draft — it has no traded
+  picks to trace, but it is still a legitimate, browsable board.
+- `metadata` is denormalized onto each pick, which makes the board renderable even
+  if a player later drops out of `/players/nba`. Prefer `h.players` for display and
+  fall back to `metadata`.
 
 ## Stats provider decision
 Sleeper stats/projections endpoints are unreliable; **not used** for valuation.

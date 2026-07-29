@@ -4,6 +4,7 @@
  */
 import type { LeagueHistory } from "./history";
 import { tierOf, valuePlayers, type ValueBreakdown } from "./valuation";
+import { pickCapital, type PickCapital } from "./picks";
 
 export interface ValuedPlayer {
   playerId: string;
@@ -22,10 +23,12 @@ export interface RosterAnalysis {
   ownerName: string;
   teamName: string | null;
   valued: ValuedPlayer[];
+  /** Players + picks. */
   totalValue: number;
+  playerValue: number;
+  picks: PickCapital;
   coreAge: number | null;
   byPosition: { pos: string; count: number; value: number }[];
-  firsts: { acquired: number; lost: number; net: number };
   window: "rebuilding" | "balanced" | "win-now";
   record: { wins: number; losses: number };
 }
@@ -59,7 +62,9 @@ export function analyzeRoster(h: LeagueHistory, rosterId: number): RosterAnalysi
     .filter(Boolean) as ValuedPlayer[];
   valued.sort((a, b) => b.value - a.value);
 
-  const totalValue = valued.reduce((s, v) => s + v.value, 0);
+  const playerValue = valued.reduce((s, v) => s + v.value, 0);
+  const picks = pickCapital(h, rosterId);
+  const totalValue = playerValue + picks.total;
 
   // Core age: value-weighted average of the top 8 by value.
   const top = valued.slice(0, 8).filter((v) => v.age != null);
@@ -83,14 +88,6 @@ export function analyzeRoster(h: LeagueHistory, rosterId: number): RosterAnalysi
     value: posMap.get(pos)!.value,
   }));
 
-  // Pick capital from the traded-picks snapshot.
-  let acquired = 0, lost = 0;
-  for (const tp of h.tradedPicks) {
-    if (tp.round !== 1) continue;
-    if (tp.ownerId === rosterId && tp.rosterId !== rosterId) acquired++;
-    if (tp.rosterId === rosterId && tp.ownerId !== rosterId) lost++;
-  }
-
   // Window read.
   let window: RosterAnalysis["window"] = "balanced";
   if (coreAge != null) {
@@ -106,9 +103,10 @@ export function analyzeRoster(h: LeagueHistory, rosterId: number): RosterAnalysi
     teamName: user?.teamName ?? null,
     valued,
     totalValue,
+    playerValue,
+    picks,
     coreAge,
     byPosition,
-    firsts: { acquired, lost, net: acquired - lost },
     window,
     record: { wins: roster?.settings.wins ?? 0, losses: roster?.settings.losses ?? 0 },
   };

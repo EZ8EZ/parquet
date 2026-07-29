@@ -14,6 +14,8 @@
  * Everything is seeded — same output every run, so tests are stable.
  */
 import type {
+  DraftMeta,
+  DraftPick,
   DraftPickRef,
   LeagueDetail,
   LeagueUser,
@@ -132,6 +134,21 @@ export interface FixtureCorpus {
   transactions: Record<string, Transaction[]>;
   matchups: Record<string, Matchup[]>;
   tradedPicks: Record<string, TradedPick[]>;
+  /** Keyed by leagueId. */
+  drafts: Record<string, DraftMeta[]>;
+  /** Keyed by draftId. */
+  draftPicks: Record<string, DraftPick[]>;
+}
+
+/**
+ * Seasons that get a rookie draft. Matches the pick ledger (which starts at 2023),
+ * so every traded pick in the fixture is traceable. 2022 was the startup, which in
+ * this narrative predates the ledger and has nothing to trace.
+ */
+const DRAFT_SEASONS = ["2023", "2024", "2025", "2026"] as const;
+const DRAFT_ROUNDS = 3;
+export function draftIdFor(season: string): string {
+  return `fx-draft-${season}`;
 }
 
 // ---------- Generator ----------
@@ -572,6 +589,91 @@ export function generateCorpus(): FixtureCorpus {
     tpOut[id] = tradedPickSnapshots[season];
   }
 
+  // ---------- Drafts (so pick lineage works fully offline) ----------
+  // Deterministic and self-consistent with the pick ledger above: a pick that was
+  // traded away resolves to the player the ACQUIRING roster actually drafted.
+  const draftsOut: Record<string, DraftMeta[]> = {};
+  const draftPicksOut: Record<string, DraftPick[]> = {};
+  const ownerUserId = (rosterId: number) => users[rosterId - 1]?.userId ?? null;
+
+  // The 126 lowest-ranked players stand in for three rookie classes. Some are on
+  // rosters today and some have washed out to free agency — realistic hit rate.
+  const rookiePool = ordered.slice(Math.max(0, ordered.length - 42 * DRAFT_ROUNDS));
+
+  const completeDraftSeasons = DRAFT_SEASONS.filter((s) => s !== CURRENT_SEASON);
+
+  for (const season of DRAFT_SEASONS) {
+    const leagueId = leagueIdFor(season);
+    const draftId = draftIdFor(season);
+    const isFuture = season === CURRENT_SEASON;
+
+    // Draft order = reverse prior-season standings (worst picks first), ties by
+    // roster id so the map is stable across runs.
+    const prior = SEASONS[SEASONS.indexOf(season as Season) - 1];
+    const wins = seasonWins[prior] ?? {};
+    const order = Array.from({ length: N_TEAMS }, (_, i) => i + 1).sort(
+      (a, b) => (wins[a] ?? 0) - (wins[b] ?? 0) || a - b,
+    );
+    const slotToRosterId: Record<number, number> = {};
+    const draftOrder: Record<string, number> = {};
+    order.forEach((rosterId, i) => {
+      const slot = i + 1;
+      slotToRosterId[slot] = rosterId;
+      const uid = ownerUserId(rosterId);
+      if (uid) draftOrder[uid] = slot;
+    });
+
+    draftsOut[leagueId] = [
+      {
+        draftId,
+        leagueId,
+        season,
+        sport: "nba",
+        status: isFuture ? "pre_draft" : "complete",
+        type: "linear",
+        rounds: DRAFT_ROUNDS,
+        teams: N_TEAMS,
+        startTime: Date.UTC(parseInt(season, 10), 8, 25),
+        created: Date.UTC(parseInt(season, 10), 8, 1),
+        slotToRosterId,
+        draftOrder,
+      },
+    ];
+
+    // A pre-draft season has no picks yet — the "future pick, unresolved" case.
+    if (isFuture) {
+      draftPicksOut[draftId] = [];
+      continue;
+    }
+
+    const classIndex = completeDraftSeasons.indexOf(season);
+    const made: DraftPick[] = [];
+    for (let round = 1; round <= DRAFT_ROUNDS; round++) {
+      for (let slot = 1; slot <= N_TEAMS; slot++) {
+        const pickNo = (round - 1) * N_TEAMS + slot; // linear, not snake
+        const original = slotToRosterId[slot];
+        const ledger = findPick(season, round, original);
+        const madeBy = ledger?.owner ?? original;
+        const player =
+          rookiePool[classIndex * 42 + pickNo - 1] ?? rookiePool[pickNo - 1];
+        made.push({
+          draftId,
+          pickNo,
+          round,
+          draftSlot: slot,
+          rosterId: madeBy,
+          pickedBy: ownerUserId(madeBy),
+          playerId: player?.playerId ?? null,
+          isKeeper: false,
+          playerName: player?.fullName ?? null,
+          position: player?.position ?? null,
+          team: player?.team ?? null,
+        });
+      }
+    }
+    draftPicksOut[draftId] = made;
+  }
+
   return {
     user: {
       userId: "u1",
@@ -586,6 +688,8 @@ export function generateCorpus(): FixtureCorpus {
     transactions: txOut,
     matchups: mOut,
     tradedPicks: tpOut,
+    drafts: draftsOut,
+    draftPicks: draftPicksOut,
   };
 
   // ----- inner helpers that close over state -----

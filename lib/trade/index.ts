@@ -107,23 +107,23 @@ export function evaluateTrade(h: LeagueHistory, input: TradeInput): TradeEvaluat
 
   const yourBet =
     direction === "buying"
-      ? `You're betting your window is now — that ${topGet} plus your current core can win before value ages out. You're converting future flexibility into present production.`
+      ? `You're betting your window is now - that ${topGet} plus your current core can win before value ages out. You're converting future flexibility into present production.`
       : direction === "selling"
-        ? `You're betting on the future — that ${topGet} and the draft capital will outproduce ${topGive} over the next 3+ seasons, and that you're not close enough to waste this asset now.`
-        : `You're making a lateral bet — swapping like value, likely for fit or need rather than a timeline shift.`;
+        ? `You're betting on the future - that ${topGet} and the draft capital will outproduce ${topGive} over the next 3+ seasons, and that you're not close enough to waste this asset now.`
+        : `You're making a lateral bet - swapping like value, likely for fit or need rather than a timeline shift.`;
 
   const theirBet =
     direction === "buying"
       ? `They're betting the opposite: that the youth and picks they're getting back are worth more than ${topGet}'s remaining prime.`
       : direction === "selling"
-        ? `They're betting they can win now with ${topGive} — paying a premium in youth/picks to do it.`
+        ? `They're betting they can win now with ${topGive} - paying a premium in youth/picks to do it.`
         : `They see the same rough parity and value what they're getting for their own roster's fit.`;
 
   const keyAssumption =
     direction === "buying"
       ? `This only works if you actually contend within ${topGet.includes("Round") ? "the next season or two" : "the prime window of " + topGet}. If you don't, you've paid future assets for a window that never opened.`
       : direction === "selling"
-        ? `This only works if the young assets hit. Picks and youth are probabilistic — you're trading a known quantity (${topGive}) for a distribution of outcomes.`
+        ? `This only works if the young assets hit. Picks and youth are probabilistic - you're trading a known quantity (${topGive}) for a distribution of outcomes.`
         : `The assumption is fit: that ${topGet} solves a real roster need better than ${topGive} did.`;
 
   // History check — tie into the revealed-vs-stated engine.
@@ -134,9 +134,9 @@ export function evaluateTrade(h: LeagueHistory, input: TradeInput): TradeEvaluat
   const giveCount = give.assets.length;
   const getCount = get.assets.length;
   if (getCount < giveCount && (get.assets[0]?.value ?? 0) > 3000) {
-    consolidationNote = `You're consolidating ${giveCount} assets into ${getCount}. Star scarcity is real — a single ${get.assets[0].tier} is usually worth a modest value discount because you can't start ${giveCount} of them. This is the good kind of consolidation.`;
+    consolidationNote = `You're consolidating ${giveCount} assets into ${getCount}. Star scarcity is real - a single ${get.assets[0].tier} is usually worth a modest value discount because you can't start ${giveCount} of them. This is the good kind of consolidation.`;
   } else if (getCount > giveCount && (give.assets[0]?.value ?? 0) > 3000) {
-    consolidationNote = `You're breaking up a ${give.assets[0].tier} into ${getCount} lesser pieces. Quantity rarely replaces a stud — make sure the depth actually cracks your lineup.`;
+    consolidationNote = `You're breaking up a ${give.assets[0].tier} into ${getCount} lesser pieces. Quantity rarely replaces a stud - make sure the depth actually cracks your lineup.`;
   }
 
   const copyable = buildCopyable(h, input, give, get, delta);
@@ -171,24 +171,24 @@ function buildHistoryCheck(
       (stated.posture === "contending" && direction === "selling");
     bits.push(
       conflict
-        ? `Your most recent stated intent was "${stated.posture}", and this is a ${direction} move — that's a reversal. Be honest about whether the plan changed or you're chasing.`
+        ? `Your most recent stated intent was "${stated.posture}", and this is a ${direction} move - that's a reversal. Be honest about whether the plan changed or you're chasing.`
         : `This lines up with your most recent stated intent ("${stated.posture}").`,
     );
   }
   if (report.contradictions.length) {
     bits.push(
-      `Heads up: your record already shows a stated-vs-revealed gap — ${report.contradictions[0].title.toLowerCase()} Don't repeat the pattern blindly.`,
+      `Heads up: your record already shows a stated-vs-revealed gap - ${report.contradictions[0].title.toLowerCase()} Don't repeat the pattern blindly.`,
     );
   }
   if (posture) {
     bits.push(`Your revealed posture lately reads as ${posture}.`);
   }
   if (report.profile.afterLoss && report.profile.afterLoss.afterLoss > report.profile.afterLoss.afterWin) {
-    bits.push(`You tend to trade after losses — if you just lost, sleep on this one.`);
+    bits.push(`You tend to trade after losses - if you just lost, sleep on this one.`);
   }
   return bits.length
     ? bits.join(" ")
-    : `Not enough of your history yet to judge this against your patterns — annotate a few more moves.`;
+    : `Not enough of your history yet to judge this against your patterns - annotate a few more moves.`;
 }
 
 function buildCopyable(
@@ -207,6 +207,6 @@ function buildCopyable(
     `You GET:`,
     ...get.assets.map(line),
     `Net value to you: ${dir}`,
-    `— Sleeper has no trade API; paste this into the app to send.`,
+    `- Sleeper has no trade API; paste this into the app to send.`,
   ].join("\n");
 }

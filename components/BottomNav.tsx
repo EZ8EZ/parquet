@@ -2,15 +2,17 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, ArrowLeftRight, Trophy, MessageSquareText } from "lucide-react";
+import { Home, Users, ArrowLeftRight, Trophy, Target } from "lucide-react";
 import { cn } from "@/lib/ui";
 
+// Five tabs max — the Plan replaces Analyst here because "how do I improve?" is the
+// job users come with; the Analyst stays one tap away from Home.
 const TABS = [
   { href: "/", label: "Home", icon: Home },
   { href: "/roster", label: "Roster", icon: Users },
-  { href: "/league", label: "League", icon: Trophy },
+  { href: "/plan", label: "Plan", icon: Target },
   { href: "/trade", label: "Trade", icon: ArrowLeftRight },
-  { href: "/analyst", label: "Analyst", icon: MessageSquareText },
+  { href: "/league", label: "League", icon: Trophy },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {

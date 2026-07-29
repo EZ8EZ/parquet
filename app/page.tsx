@@ -2,9 +2,12 @@ import Link from "next/link";
 import {
   AlertTriangle,
   ArrowRight,
+  Award,
   BookText,
   MessageSquareText,
+  Repeat,
   ScrollText,
+  Target,
   Users,
 } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
@@ -23,15 +26,27 @@ export default async function HomePage() {
 
   return (
     <div>
-      <Wordmark tagline="Dynasty memory" />
+      <div className="flex items-start justify-between gap-3">
+        <Wordmark tagline="Dynasty memory" />
+        {/* Who am I? - switch teams / enter a username. */}
+        <Link
+          href="/teams"
+          className="mt-1 inline-flex shrink-0 items-center gap-1.5 rounded-full border border-border px-3 py-2 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+        >
+          <Repeat size={13} />
+          <span className="max-w-[9rem] truncate">
+            {h.me.teamName ?? h.me.displayName}
+          </span>
+        </Link>
+      </div>
 
       {h.provider === "fixture" && (
         <div className="mb-4">
-          <Tag tone="info">Demo data — set LEAGUE_PROVIDER=sleeper for your league</Tag>
+          <Tag tone="info">Demo data - set LEAGUE_PROVIDER=sleeper for your league</Tag>
         </div>
       )}
 
-      {/* Unannotated decisions badge — a to-do to clear, not paperwork. */}
+      {/* Unannotated decisions badge - a to-do to clear, not paperwork. */}
       {ledger.unannotatedNotable > 0 && (
         <Link href="/ledger" className="mb-5 block">
           <div className="flex items-center justify-between rounded-[--radius] border border-accent/30 bg-accent/10 p-4">
@@ -45,7 +60,7 @@ export default async function HomePage() {
                   {ledger.unannotatedNotable > 1 ? "s" : ""} to capture
                 </div>
                 <div className="text-xs text-muted">
-                  Log why you made them — while you still remember.
+                  Log why you made them - while you still remember.
                 </div>
               </div>
             </div>
@@ -54,7 +69,7 @@ export default async function HomePage() {
         </Link>
       )}
 
-      {/* Revealed strategy — the headline, first thing on the screen. */}
+      {/* Revealed strategy - the headline, first thing on the screen. */}
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
         Revealed strategy
       </p>
@@ -105,7 +120,7 @@ export default async function HomePage() {
         />
         <Stat
           label="Avg acq. age"
-          value={p.acquisitions.avgAge ?? "—"}
+          value={p.acquisitions.avgAge ?? "-"}
           sub={p.overpaysForAge ? "leans veteran" : "leans young"}
         />
       </div>
@@ -128,14 +143,16 @@ export default async function HomePage() {
       {/* Explore */}
       <SectionHeader title="Go deeper" />
       <div className="grid grid-cols-2 gap-2.5">
+        <HomeLink href="/plan" icon={<Target size={18} />} title="Game plan" sub="How to improve this team" />
         <HomeLink href="/analyst" icon={<MessageSquareText size={18} />} title="The Analyst" sub="Audit your thinking" />
         <HomeLink href="/managers" icon={<Users size={18} />} title="Dossiers" sub="Scout your rivals" />
+        <HomeLink href="/awards" icon={<Award size={18} />} title="League awards" sub="Who's who, statistically" />
         <HomeLink href="/ledger" icon={<ScrollText size={18} />} title="Decision ledger" sub={`${ledger.annotated}/${ledger.notable} annotated`} />
-        <HomeLink href="/methodology" icon={<BookText size={18} />} title="Methodology" sub="How values work" />
+        <HomeLink href="/values" icon={<BookText size={18} />} title="Asset values" sub="Players + picks" />
       </div>
 
       <p className="mt-8 text-center text-[11px] leading-relaxed text-faint">
-        Parquet advises; it can&apos;t act. Sleeper has no write API — every
+        Parquet advises; it can&apos;t act. Sleeper has no write API - every
         recommendation ends in a copyable summary you paste yourself.
       </p>
     </div>

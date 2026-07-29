@@ -34,7 +34,7 @@ export default async function ValuesPage() {
       <PageHeader
         kicker="Dynasty values"
         title="Asset values"
-        subtitle="A transparent, tunable model — not a scraped market. Values are league-aware (computed from your scoring settings)."
+        subtitle="A transparent, tunable model - not a scraped market. Values are league-aware (computed from your scoring settings)."
       />
       <p className="mb-3 text-xs text-faint">
         Curious how these are built?{" "}

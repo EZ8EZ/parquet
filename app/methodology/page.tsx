@@ -63,7 +63,7 @@ export default async function MethodologyPage() {
         </p>
       </Card>
 
-      <SectionHeader title="3 · Positional value — from YOUR scoring" />
+      <SectionHeader title="3 · Positional value - from YOUR scoring" />
       <Card>
         <p className="mb-3 text-sm text-muted">
           Each position&apos;s canonical stat line is scored under this league&apos;s
@@ -124,7 +124,7 @@ export default async function MethodologyPage() {
       <p className="mt-6 text-center text-[11px] leading-relaxed text-faint">
         Every constant lives in <span className="font-mono">lib/valuation/config.ts</span>.
         A crowdsourced market (KTC-style voting) is intentionally deferred until there&apos;s
-        enough liquidity to trust it — see the research notes in the repo.
+        enough liquidity to trust it - see the research notes in the repo.
       </p>
     </div>
   );

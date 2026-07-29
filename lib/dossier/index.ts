@@ -36,7 +36,7 @@ export function buildDossier(h: LeagueHistory, rosterId: number): Dossier {
   if (p.trades === 0) {
     tags.push("Never trades");
     read.push(`${p.displayName} has not completed a single trade in the recorded history.`);
-    tips.push("Don't build your plan around dealing with them — they simply don't trade.");
+    tips.push("Don't build your plan around dealing with them - they simply don't trade.");
   } else if (tps >= 3) {
     tags.push("High-volume trader");
     read.push(`${p.displayName} is one of the most active traders in the league (~${tps} trades/season).`);
@@ -44,7 +44,7 @@ export function buildDossier(h: LeagueHistory, rosterId: number): Dossier {
   } else if (tps < 1) {
     tags.push("Rarely trades");
     read.push(`${p.displayName} trades sparingly (~${tps}/season).`);
-    tips.push("Bring your best offer first — you may only get one bite.");
+    tips.push("Bring your best offer first - you may only get one bite.");
   }
 
   // Initiator vs responder
@@ -55,55 +55,55 @@ export function buildDossier(h: LeagueHistory, rosterId: number): Dossier {
     } else if (initiateRatio <= 0.25) {
       tags.push("Responder");
       read.push(`They rarely initiate (${p.tradesInitiated}/${p.trades}); they wait for offers.`);
-      tips.push("You'll have to make the first move — they won't come to you.");
+      tips.push("You'll have to make the first move - they won't come to you.");
     }
   }
   if (p.totalTransactions <= 2) {
     tags.push("Ghost");
-    read.push(`Almost inactive overall (${p.totalTransactions} total transactions) — hard to engage.`);
+    read.push(`Almost inactive overall (${p.totalTransactions} total transactions) - hard to engage.`);
   }
 
   // Pick behavior
   if (p.picks.net >= 3) {
     tags.push("Pick hoarder");
     read.push(`A draft-capital collector: net +${p.picks.net} picks (${p.picks.firstsAcquired} firsts acquired).`);
-    tips.push("They value picks highly — a player-for-picks package plays into what they want.");
+    tips.push("They value picks highly - a player-for-picks package plays into what they want.");
   } else if (p.picks.net <= -3) {
     tags.push("Pick spender");
     read.push(`Spends future capital freely: net ${p.picks.net} picks.`);
-    tips.push("They'll give up picks — target their draft capital in your ask.");
+    tips.push("They'll give up picks - target their draft capital in your ask.");
   }
 
   // Age / name behavior
   if (p.overpaysForAge) {
     tags.push("Name chaser");
-    read.push(`Repeatedly acquires 30+ veterans via trade — pays for name recognition over dynasty value.`);
+    read.push(`Repeatedly acquires 30+ veterans via trade - pays for name recognition over dynasty value.`);
     tips.push("Shop your aging vets here first; they'll pay a premium the market won't.");
   }
   if (p.acquisitions.avgAge != null && p.acquisitions.avgAge <= 24) {
     tags.push("Youth builder");
-    read.push(`Skews young — average acquisition age ${p.acquisitions.avgAge}.`);
+    read.push(`Skews young - average acquisition age ${p.acquisitions.avgAge}.`);
     tips.push("They want upside and youth; dangle young players and rookie picks.");
   }
 
   // Tilt / timing
   if (p.afterLoss && p.afterLoss.total >= 2 && p.afterLoss.afterLoss > p.afterLoss.afterWin) {
     tags.push("Reactive after losses");
-    read.push(`Trades disproportionately after losses (${p.afterLoss.afterLoss}/${p.afterLoss.total}) — a tilt tell.`);
-    tips.push("Approach them right after a rough week — they're most movable on tilt.");
+    read.push(`Trades disproportionately after losses (${p.afterLoss.afterLoss}/${p.afterLoss.total}) - a tilt tell.`);
+    tips.push("Approach them right after a rough week - they're most movable on tilt.");
   }
   if (p.deadline.buys > p.deadline.sells && p.deadline.buys >= 2) {
     tags.push("Deadline buyer");
-    tips.push("They buy at the deadline — hold your sellable vets until then for max return.");
+    tips.push("They buy at the deadline - hold your sellable vets until then for max return.");
   } else if (p.deadline.sells > p.deadline.buys && p.deadline.sells >= 2) {
     tags.push("Deadline seller");
-    tips.push("They dump at the deadline — a good late-season source of talent for picks.");
+    tips.push("They dump at the deadline - a good late-season source of talent for picks.");
   }
 
   // Streaming
   if (p.freeAgents + p.waivers >= 20) {
     tags.push("Streamer");
-    read.push(`Heavy waiver/FA churn (${p.waivers + p.freeAgents} moves) — works the margins hard.`);
+    read.push(`Heavy waiver/FA churn (${p.waivers + p.freeAgents} moves) - works the margins hard.`);
   }
   if (p.faabAggression != null && p.faabAggression >= 25) {
     tags.push("Aggressive on FAAB");
@@ -113,7 +113,7 @@ export function buildDossier(h: LeagueHistory, rosterId: number): Dossier {
     read.push(`${p.displayName} is a balanced manager without a strong behavioral tell yet.`);
   }
   if (tips.length === 0) {
-    tips.push("No sharp edge to exploit yet — approach with a fair, straightforward offer.");
+    tips.push("No sharp edge to exploit yet - approach with a fair, straightforward offer.");
   }
 
   return {

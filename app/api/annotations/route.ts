@@ -41,7 +41,7 @@ export async function POST(req: Request) {
         ok: true,
         persisted: false,
         message:
-          "Saved for this session, but not persisted — connect a database (set DATABASE_URL to a Postgres store) to keep annotations.",
+          "Saved for this session, but not persisted - connect a database (set DATABASE_URL to a Postgres store) to keep annotations.",
       },
       { status: 200 },
     );

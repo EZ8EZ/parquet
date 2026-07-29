@@ -8,6 +8,8 @@
  */
 import { z } from "zod";
 import type {
+  DraftMeta,
+  DraftPick,
   DraftPickRef,
   League,
   LeagueDetail,
@@ -285,8 +287,97 @@ export function toPlayer(r: z.infer<typeof RawPlayer>): Player {
   };
 }
 
+// ---------- Draft (meta) ----------
+/**
+ * `slot_to_roster_id` is present on `/draft/{id}` but ABSENT from the
+ * `/league/{id}/drafts` list (verified — see API_NOTES), hence `.nullish()`. Keys
+ * arrive as strings and are re-keyed to numbers by the mapper.
+ */
+export const RawDraft = z.object({
+  draft_id: str,
+  league_id: str.nullish(),
+  season: str.nullish(),
+  sport: str.nullish(),
+  status: str.nullish(),
+  type: str.nullish(),
+  created: num.nullish(),
+  start_time: num.nullish(),
+  settings: z.record(str, num).nullish(),
+  metadata: z.record(str, z.unknown()).nullish(),
+  slot_to_roster_id: z.record(str, num).nullish(),
+  draft_order: z.record(str, num).nullish(),
+});
+export function toDraftMeta(r: z.infer<typeof RawDraft>): DraftMeta {
+  const settings = r.settings ?? {};
+  const slotToRosterId: Record<number, number> = {};
+  for (const [slot, rosterId] of Object.entries(r.slot_to_roster_id ?? {})) {
+    const n = Number(slot);
+    if (Number.isFinite(n)) slotToRosterId[n] = rosterId;
+  }
+  return {
+    draftId: r.draft_id,
+    leagueId: r.league_id ?? "",
+    season: r.season ?? "",
+    sport: r.sport ?? "nba",
+    status: r.status ?? "unknown",
+    type: r.type ?? "unknown",
+    rounds: settings.rounds ?? 0,
+    teams: settings.teams ?? 0,
+    startTime: r.start_time ?? null,
+    created: r.created ?? null,
+    slotToRosterId,
+    draftOrder: r.draft_order ?? {},
+  };
+}
+
+// ---------- Draft pick (actually made) ----------
+/**
+ * `metadata` numeric-ish fields come back as STRINGS (`number`, `years_exp`), and
+ * `team_abbr`/`team_changed_at` only exist in newer seasons — so the whole block is
+ * lenient and only the fields we display are read out.
+ */
+const RawDraftPickMetadata = z
+  .object({
+    first_name: str.nullish(),
+    last_name: str.nullish(),
+    position: str.nullish(),
+    team: str.nullish(),
+  })
+  .nullish();
+
+export const RawMadeDraftPick = z.object({
+  draft_id: str,
+  pick_no: num,
+  round: num,
+  draft_slot: num,
+  roster_id: num.nullish(),
+  picked_by: str.nullish(),
+  player_id: str.nullish(),
+  is_keeper: z.boolean().nullish(),
+  metadata: RawDraftPickMetadata,
+});
+export function toMadeDraftPick(r: z.infer<typeof RawMadeDraftPick>): DraftPick {
+  const m = r.metadata ?? {};
+  const name = `${m.first_name ?? ""} ${m.last_name ?? ""}`.trim();
+  return {
+    draftId: r.draft_id,
+    pickNo: r.pick_no,
+    round: r.round,
+    draftSlot: r.draft_slot,
+    rosterId: r.roster_id ?? null,
+    pickedBy: r.picked_by ?? null,
+    playerId: r.player_id ?? null,
+    isKeeper: r.is_keeper ?? false,
+    playerName: name || null,
+    position: m.position ?? null,
+    team: m.team ?? null,
+  };
+}
+
 // Array helpers
 export const RawUserArr = z.array(RawUser);
+export const RawDraftArr = z.array(RawDraft);
+export const RawMadeDraftPickArr = z.array(RawMadeDraftPick);
 export const RawLeagueArr = z.array(RawLeague);
 export const RawRosterArr = z.array(RawRoster);
 export const RawLeagueUserArr = z.array(RawLeagueUser);

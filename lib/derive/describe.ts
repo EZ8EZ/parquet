@@ -86,7 +86,7 @@ export function describeTransaction(h: LeagueHistory, t: Transaction): string {
       const sent = joinAssets(s.gave, s.gavePicks);
       return `${rosterName(h, rid)} sent ${sent}`;
     });
-    return `Trade — ${parts.join("; ")}`;
+    return `Trade - ${parts.join("; ")}`;
   }
   const adds = Object.keys(t.adds).map((pid) => playerName(h, pid));
   const drops = Object.keys(t.drops).map((pid) => playerName(h, pid));
@@ -94,7 +94,7 @@ export function describeTransaction(h: LeagueHistory, t: Transaction): string {
   const verb = t.type === "waiver" ? "claimed" : "added";
   const bid = t.waiverBid ? ` ($${t.waiverBid})` : "";
   const dropStr = drops.length ? `, dropped ${drops.join(", ")}` : "";
-  return `${who} ${verb} ${adds.join(", ") || "—"}${bid}${dropStr}`;
+  return `${who} ${verb} ${adds.join(", ") || "-"}${bid}${dropStr}`;
 }
 
 export function seasonYear(season: string): number {

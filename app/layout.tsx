@@ -20,7 +20,7 @@ const jetbrains = JetBrains_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Parquet — Dynasty Memory",
+  title: "Parquet - Dynasty Memory",
   description:
     "A dynasty fantasy basketball companion that remembers your decisions, audits your strategy, and scouts your leaguemates.",
   manifest: "/manifest.webmanifest",

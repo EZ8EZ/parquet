@@ -111,7 +111,7 @@ export function AnalystChat() {
         </div>
       )}
 
-      {/* Composer — fixed above the tab bar for thumb reach. */}
+      {/* Composer - fixed above the tab bar for thumb reach. */}
       <div
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/90 backdrop-blur"
         style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 64px)" }}

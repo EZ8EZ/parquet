@@ -42,6 +42,7 @@ export function buildFixtureHistory(
     players,
     transactions,
     tradedPicks: c.tradedPicks[FIXTURE_LEAGUE_ID],
+    tradedPicksHistory: SEASONS.flatMap((s) => c.tradedPicks[leagueIdFor(s)] ?? []),
     matchups,
     annotations,
     me: {

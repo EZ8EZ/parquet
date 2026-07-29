@@ -8,9 +8,14 @@
  */
 import { prisma } from "./db";
 import { activeLeagueId, getLeagueProvider } from "./providers";
-import type { LeagueDetail, LeagueProvider, Transaction } from "./providers/types";
+import type {
+  LeagueDetail,
+  LeagueProvider,
+  TradedPick,
+  Transaction,
+} from "./providers/types";
 
-const MAX_WEEKS = 25; // NBA fantasy weeks run ~1–22; sweep to 25 to be safe.
+const MAX_WEEKS = 25; // NBA fantasy weeks run ~1-22; sweep to 25 to be safe.
 
 /** Walk previous_league_id backward. Returns oldest → newest. */
 export async function assembleChain(
@@ -39,6 +44,36 @@ async function transactionsForWeek(
     return provider.getTransactionsForSeason(leagueId, week, season);
   }
   return provider.getTransactions(leagueId, week);
+}
+
+/**
+ * Traded picks across the WHOLE chain, de-duplicated.
+ *
+ * Each season's league keeps its own traded_picks snapshot covering roughly that
+ * season plus the next few. The current league therefore only knows about future
+ * picks (2026+), so historical pick movement — including picks moved in
+ * commissioner-executed trades years ago — is only recoverable by reading every
+ * league in the chain. Picks matter as much as players in dynasty, so we collect
+ * all of them.
+ */
+export async function collectTradedPicks(
+  provider: LeagueProvider,
+  chain: LeagueDetail[],
+): Promise<TradedPick[]> {
+  const seen = new Set<string>();
+  const out: TradedPick[] = [];
+  for (const league of chain) {
+    const picks = await provider.getTradedPicks(league.leagueId);
+    for (const p of picks) {
+      // Same pick can appear in several snapshots; keep the first (oldest league)
+      // occurrence keyed by identity + parties so distinct hops are preserved.
+      const key = `${p.season}|${p.round}|${p.rosterId}|${p.previousOwnerId}|${p.ownerId}`;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      out.push(p);
+    }
+  }
+  return out;
 }
 
 /**

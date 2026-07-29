@@ -22,7 +22,12 @@ import type {
   TradedPick,
   Transaction,
 } from "./providers/types";
-import { assembleChain, collectTransactions } from "./ingest";
+import {
+  assembleChain,
+  collectTradedPicks,
+  collectTransactions,
+} from "./ingest";
+import { attachInferredPicks, coalesceCommissionerTrades } from "./derive/coalesce";
 
 export interface Annotation {
   transactionId: string;
@@ -52,7 +57,10 @@ export interface LeagueHistory {
   rosters: Roster[];
   players: Map<string, Player>;
   transactions: Transaction[]; // chronological asc
+  /** Current-league snapshot: who owns which future pick right now. */
   tradedPicks: TradedPick[];
+  /** Pick movement across every season in the chain (incl. historical hops). */
+  tradedPicksHistory: TradedPick[];
   matchups: HistoryMatchup[];
   annotations: Map<string, Annotation>;
   me: Me;
@@ -68,7 +76,7 @@ const FIXTURE_SEED_ANNOTATIONS: Annotation[] = [
     transactionId: "fx-2022-rebuildA",
     reasoning:
       "Full rebuild. I'm getting younger and stockpiling first-round picks. " +
-      "Not chasing wins for the next 2-3 years — the goal is a young core that " +
+      "Not chasing wins for the next 2-3 years - the goal is a young core that " +
       "peaks together. Moving every veteran who isn't part of the future.",
     posture: "rebuild",
     createdAt: new Date(0),
@@ -129,15 +137,16 @@ function resolveMe(
   };
 }
 
-let cachedHistory: { at: number; value: LeagueHistory } | null = null;
-// Longer TTL because the Sleeper corpus assembly is many (cached) fetches.
-const HISTORY_TTL_MS = 5 * 60_000;
+/** The heavy, identity-independent corpus (shared across all "viewing as" teams). */
+type Corpus = Omit<LeagueHistory, "me"> & { defaultMeUserId: string };
 
-export async function getLeagueHistory(
-  opts: { fresh?: boolean } = {},
-): Promise<LeagueHistory> {
-  if (!opts.fresh && cachedHistory && Date.now() - cachedHistory.at < HISTORY_TTL_MS) {
-    return cachedHistory.value;
+let cachedCorpus: { at: number; value: Corpus } | null = null;
+// Longer TTL because the Sleeper corpus assembly is many (cached) fetches.
+const CORPUS_TTL_MS = 5 * 60_000;
+
+async function getCorpus(fresh = false): Promise<Corpus> {
+  if (!fresh && cachedCorpus && Date.now() - cachedCorpus.at < CORPUS_TTL_MS) {
+    return cachedCorpus.value;
   }
   const provider = getLeagueProvider();
   const leagueId = activeLeagueId();
@@ -152,22 +161,29 @@ export async function getLeagueHistory(
   const players = new Map<string, Player>(playerList.map((p) => [p.playerId, p]));
   const chain = await assembleChain(provider, leagueId);
 
-  // Corpus read live from the provider — no DB required (Sleeper fetches cached).
-  const transactions = await collectTransactions(provider, chain);
+  const rawTransactions = await collectTransactions(provider, chain);
+  // Pick movement across ALL seasons (the current league only knows future picks).
+  const tradedPicksHistory = await collectTradedPicks(provider, chain);
+  // Rebuild commissioner-executed (often multi-team) trades into real trades, then
+  // re-attach the pick movements those rows dropped (commissioner draft_picks is
+  // always empty — see API_NOTES), inferred from the chain-wide snapshots.
+  const { transactions } = attachInferredPicks(
+    coalesceCommissionerTrades(rawTransactions).transactions,
+    tradedPicksHistory,
+  );
   const annotations = await loadAnnotations(provider.name);
   const matchups = await loadMatchups(chain);
 
-  // Resolve "me": the provider's user (fixture=EZ8; sleeper via SLEEPER_USERNAME).
+  // Default "me" identity from the configured username (fixture=EZ8; sleeper env).
   const username = process.env.SLEEPER_USERNAME ?? "EZ8";
-  let meUserId = users[0]?.userId ?? "";
+  let defaultMeUserId = users[0]?.userId ?? "";
   try {
-    const u = await provider.getUser(username);
-    meUserId = u.userId;
+    defaultMeUserId = (await provider.getUser(username)).userId;
   } catch {
     // fall back to first user
   }
 
-  const value: LeagueHistory = {
+  const value: Corpus = {
     provider: provider.name,
     currentLeague,
     chain,
@@ -178,16 +194,55 @@ export async function getLeagueHistory(
     players,
     transactions,
     tradedPicks,
+    tradedPicksHistory,
     matchups,
     annotations,
-    me: resolveMe(meUserId, users, rosters),
     currentSeasonYear: parseInt(currentLeague.season, 10),
+    defaultMeUserId,
   };
-  cachedHistory = { at: Date.now(), value };
+  cachedCorpus = { at: Date.now(), value };
   return value;
 }
 
-/** Invalidate the in-process history cache (call after writing an annotation). */
+/** Read the "viewing as" roster from the cookie (request scope only). */
+async function readSelectedRosterId(): Promise<number | null> {
+  try {
+    const { cookies } = await import("next/headers");
+    const raw = (await cookies()).get("parquet_roster")?.value;
+    const n = raw ? parseInt(raw, 10) : NaN;
+    return Number.isFinite(n) ? n : null;
+  } catch {
+    return null; // not in a request scope (e.g. tests)
+  }
+}
+
+export async function getLeagueHistory(
+  opts: { fresh?: boolean; meRosterId?: number } = {},
+): Promise<LeagueHistory> {
+  const corpus = await getCorpus(opts.fresh);
+  const selected =
+    opts.meRosterId ?? (await readSelectedRosterId());
+
+  let me: Me;
+  if (selected != null && corpus.rostersById.has(selected)) {
+    const r = corpus.rostersById.get(selected)!;
+    const user = r.ownerId ? corpus.usersById.get(r.ownerId) : undefined;
+    me = {
+      userId: user?.userId ?? r.ownerId ?? "",
+      rosterId: selected,
+      displayName: user?.displayName ?? `Roster ${selected}`,
+      teamName: user?.teamName ?? null,
+    };
+  } else {
+    me = resolveMe(corpus.defaultMeUserId, corpus.users, corpus.rosters);
+  }
+
+  const { defaultMeUserId: _drop, ...rest } = corpus;
+  void _drop;
+  return { ...rest, me };
+}
+
+/** Invalidate the in-process corpus cache (call after writing an annotation). */
 export function invalidateHistory(): void {
-  cachedHistory = null;
+  cachedCorpus = null;
 }

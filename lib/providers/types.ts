@@ -171,6 +171,65 @@ export interface LeagueProvider {
   getMatchups(leagueId: string, week: number): Promise<Matchup[]>;
   getTradedPicks(leagueId: string): Promise<TradedPick[]>;
   getPlayers(): Promise<Player[]>;
+  /**
+   * Drafts for a league season. OPTIONAL so providers without draft data (CSV)
+   * keep compiling; callers must treat `undefined` as "no draft data".
+   */
+  getDrafts?(leagueId: string): Promise<DraftMeta[]>;
+  /** Picks actually made in a draft. Optional for the same reason. */
+  getDraftPicks?(draftId: string): Promise<DraftPick[]>;
+}
+
+/**
+ * A draft (one per league season). The `slotToRosterId` map is the load-bearing
+ * field for pick lineage — see API_NOTES "Drafts".
+ */
+export interface DraftMeta {
+  draftId: string;
+  leagueId: string;
+  season: string;
+  sport: string;
+  /** "pre_draft" | "drafting" | "complete" — widened, Sleeper may add more. */
+  status: string;
+  /** "linear" | "snake" | "auction" — widened. */
+  type: string;
+  rounds: number;
+  teams: number;
+  /** ms epoch, or null when unscheduled. */
+  startTime: number | null;
+  created: number | null;
+  /**
+   * Draft slot -> the roster that ORIGINALLY owns that slot. NOT who made the
+   * pick (trades move that). Only present on the single-draft endpoint.
+   */
+  slotToRosterId: Record<number, number>;
+  /** user_id -> draft slot. */
+  draftOrder: Record<string, number>;
+}
+
+/**
+ * A pick that was ACTUALLY MADE in a draft — distinct from `DraftPickRef`, which is
+ * a *tradeable* future pick. Closing the loop between the two is pick lineage.
+ */
+export interface DraftPick {
+  draftId: string;
+  /**
+   * Overall pick number, 1-based. AUTHORITATIVE for ordering — never recompute it
+   * from round/slot, which breaks on snake drafts (verified, see API_NOTES).
+   */
+  pickNo: number;
+  round: number;
+  draftSlot: number;
+  /** The roster that actually made the pick, i.e. who owned it at draft time. */
+  rosterId: number | null;
+  /** user_id of whoever made the pick. */
+  pickedBy: string | null;
+  playerId: string | null;
+  isKeeper: boolean;
+  /** Denormalized on the pick itself; a fallback when the player universe churns. */
+  playerName: string | null;
+  position: string | null;
+  team: string | null;
 }
 
 /** Per-season production line for a player. Provider-agnostic. */

@@ -3,6 +3,8 @@ import { getLeagueHistory } from "@/lib/history";
 import { leagueValueRanking } from "@/lib/roster";
 import { PageHeader, Card, SectionHeader, Tag, DeltaValue } from "@/components/ui";
 import { fmtValue } from "@/lib/ui";
+import { OpenInSleeper } from "@/components/OpenInSleeper";
+import { sleeperLeagueUrl } from "@/lib/sleeperLinks";
 
 export const dynamic = "force-dynamic";
 
@@ -22,11 +24,21 @@ export default async function LeaguePage() {
 
   return (
     <div>
-      <PageHeader
-        kicker={h.currentLeague.name}
-        title="The League"
-        subtitle={`${h.currentLeague.totalRosters} teams · ${h.chain.length} seasons of history · ${h.currentLeague.season} season`}
-      />
+      {/* Header + the escape hatch to this league on Sleeper. */}
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0 flex-1">
+          <PageHeader
+            kicker={h.currentLeague.name}
+            title="The League"
+            subtitle={`${h.currentLeague.totalRosters} teams · ${h.chain.length} seasons of history · ${h.currentLeague.season} season`}
+          />
+        </div>
+        <OpenInSleeper
+          href={sleeperLeagueUrl(h.currentLeague.leagueId)}
+          label="Sleeper"
+          className="mt-1 shrink-0"
+        />
+      </div>
 
       <div className="mb-5 grid grid-cols-3 gap-2.5">
         <Card className="text-center">
@@ -46,7 +58,7 @@ export default async function LeaguePage() {
       </div>
 
       <SectionHeader
-        title="Power ranking — by roster value"
+        title="Power ranking - by roster value"
         action={
           <Link href="/managers" className="text-xs font-semibold text-accent">
             dossiers →
@@ -84,7 +96,7 @@ export default async function LeaguePage() {
                   {fmtValue(r.totalValue)}
                 </div>
                 <div className="text-[10px] text-faint">
-                  1sts <DeltaValue n={r.firsts.net} />
+                  1sts <DeltaValue n={r.picks.extraFirsts} />
                 </div>
               </div>
             </Link>

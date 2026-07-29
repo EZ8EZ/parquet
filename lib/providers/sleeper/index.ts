@@ -5,6 +5,8 @@
  */
 import { z } from "zod";
 import type {
+  DraftMeta,
+  DraftPick,
   League,
   LeagueDetail,
   LeagueProvider,
@@ -17,18 +19,23 @@ import type {
   User,
 } from "../types";
 import {
+  RawDraft,
+  RawDraftArr,
   RawLeague,
   RawLeagueArr,
   RawLeagueUserArr,
+  RawMadeDraftPickArr,
   RawMatchupArr,
   RawPlayerMap,
   RawRosterArr,
   RawTradedPickArr,
   RawTransactionArr,
   RawUser,
+  toDraftMeta,
   toLeague,
   toLeagueDetail,
   toLeagueUser,
+  toMadeDraftPick,
   toMatchup,
   toPlayer,
   toRoster,
@@ -161,7 +168,66 @@ export class SleeperProvider implements LeagueProvider {
     playersCache = { at: now, data };
     return data;
   }
+
+  /**
+   * Drafts for a league season.
+   *
+   * The list endpoint OMITS `slot_to_roster_id` (verified — see API_NOTES), and that
+   * map is the entire basis of pick lineage, so each draft is re-fetched
+   * individually to hydrate it. Drafts are immutable once complete, so both steps
+   * are memoized aggressively.
+   */
+  async getDrafts(leagueId: string): Promise<DraftMeta[]> {
+    return memo(draftsCache, leagueId, DRAFTS_TTL_MS, async () => {
+      const raw = await getJson(`/league/${leagueId}/drafts`, RawDraftArr);
+      return Promise.all(
+        raw.map(async (d) => {
+          try {
+            return toDraftMeta(await getJson(`/draft/${d.draft_id}`, RawDraft));
+          } catch {
+            // Hydration failed — return the list shape. Lineage degrades to
+            // "no draft data" for this season rather than throwing.
+            return toDraftMeta(d);
+          }
+        }),
+      );
+    });
+  }
+
+  async getDraftPicks(draftId: string): Promise<DraftPick[]> {
+    return memo(draftPicksCache, draftId, DRAFTS_TTL_MS, async () => {
+      const raw = await getJson(
+        `/draft/${draftId}/picks`,
+        RawMadeDraftPickArr,
+      );
+      // Sleeper already returns these in order; sort defensively by the API's own
+      // pick_no (never recomputed — snake drafts break the round/slot formula).
+      return raw.map(toMadeDraftPick).sort((a, b) => a.pickNo - b.pickNo);
+    });
+  }
 }
 
 let playersCache: { at: number; data: Player[] } | null = null;
-const PLAYERS_TTL_MS = 6 * 60 * 60 * 1000; // 6h — the player universe is stable
+const PLAYERS_TTL_MS = 6 * 60 * 60 * 1000; // 6h - the player universe is stable
+
+/**
+ * Lightweight in-process memo (same intent as `playersCache`): drafts are read on
+ * every board render and one league season costs 1 + N requests to hydrate.
+ */
+const draftsCache = new Map<string, { at: number; data: DraftMeta[] }>();
+const draftPicksCache = new Map<string, { at: number; data: DraftPick[] }>();
+const DRAFTS_TTL_MS = 30 * 60 * 1000; // 30m - a live draft still refreshes
+
+async function memo<T>(
+  cache: Map<string, { at: number; data: T }>,
+  key: string,
+  ttlMs: number,
+  load: () => Promise<T>,
+): Promise<T> {
+  const now = Date.now();
+  const hit = cache.get(key);
+  if (hit && now - hit.at < ttlMs) return hit.data;
+  const data = await load();
+  cache.set(key, { at: now, data });
+  return data;
+}

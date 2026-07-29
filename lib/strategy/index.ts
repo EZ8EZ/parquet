@@ -136,8 +136,8 @@ export function getStrategyReport(h: LeagueHistory): StrategyReport {
           revealedTransactionId: t.transactionId,
           revealedSeason: t.season,
           narrative:
-            `In ${sp.season} you called your move a rebuild — “${sp.excerpt}”. ` +
-            `Then in ${t.season} you ${desc} — spending multiple first-round picks to add ${oldName}. ` +
+            `In ${sp.season} you called your move a rebuild - “${sp.excerpt}”. ` +
+            `Then in ${t.season} you ${desc} - spending multiple first-round picks to add ${oldName}. ` +
             `Your stated strategy and your revealed strategy disagree.`,
         });
         break;
@@ -153,8 +153,8 @@ export function getStrategyReport(h: LeagueHistory): StrategyReport {
           revealedTransactionId: t.transactionId,
           revealedSeason: t.season,
           narrative:
-            `In ${sp.season} you framed your plan as contending — “${sp.excerpt}”. ` +
-            `Then in ${t.season} you ${desc} — the trade of a seller, not a contender. ` +
+            `In ${sp.season} you framed your plan as contending - “${sp.excerpt}”. ` +
+            `Then in ${t.season} you ${desc} - the trade of a seller, not a contender. ` +
             `Your words and your transactions point in opposite directions.`,
         });
         break;
@@ -186,7 +186,7 @@ function buildHeadline(
     if (last.posture === "rebuilding")
       return "Your recent moves read as a rebuild. Are you sure that's the plan?";
     if (last.posture === "contending")
-      return "You're in win-now mode — the picks are going out the door.";
+      return "You're in win-now mode - the picks are going out the door.";
   }
   return "Your revealed strategy, straight from your transaction record.";
 }
@@ -201,8 +201,8 @@ function buildFindings(h: LeagueHistory, p: ManagerProfile): string[] {
     if (Math.abs(delta) >= 1.5) {
       f.push(
         delta < 0
-          ? `You're acquiring younger over time — avg acquisition age fell from ${first.avgAge} (${first.season}) to ${last.avgAge} (${last.season}).`
-          : `You're acquiring older over time — avg acquisition age rose from ${first.avgAge} (${first.season}) to ${last.avgAge} (${last.season}).`,
+          ? `You're acquiring younger over time - avg acquisition age fell from ${first.avgAge} (${first.season}) to ${last.avgAge} (${last.season}).`
+          : `You're acquiring older over time - avg acquisition age rose from ${first.avgAge} (${first.season}) to ${last.avgAge} (${last.season}).`,
       );
     }
   }
@@ -222,7 +222,7 @@ function buildFindings(h: LeagueHistory, p: ManagerProfile): string[] {
   if (p.afterLoss && p.afterLoss.total >= 2) {
     const { afterLoss, afterWin, total } = p.afterLoss;
     if (afterLoss > afterWin)
-      f.push(`You trade more after losses (${afterLoss} of ${total} self-initiated trades followed a loss) — watch for tilt.`);
+      f.push(`You trade more after losses (${afterLoss} of ${total} self-initiated trades followed a loss) - watch for tilt.`);
   }
   if (p.tradePartners.length) {
     const top = p.tradePartners[0];

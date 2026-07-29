@@ -69,8 +69,8 @@ const DAY = 86_400_000;
 function ageBand(age: number | null): string {
   if (age == null) return "unknown";
   if (age < 23) return "under 23";
-  if (age < 27) return "23–26";
-  if (age < 31) return "27–30";
+  if (age < 27) return "23-26";
+  if (age < 31) return "27-30";
   return "31+";
 }
 

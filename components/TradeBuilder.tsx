@@ -4,6 +4,8 @@ import { useMemo, useState } from "react";
 import { ArrowLeftRight, Check, Copy, Loader2, Plus, X } from "lucide-react";
 import type { TradeEvaluation, PickInput } from "@/lib/trade";
 import { cn, fmtValue } from "@/lib/ui";
+import { OpenInSleeper } from "@/components/OpenInSleeper";
+import { sleeperTradeUrl } from "@/lib/sleeperLinks";
 
 export interface PlayerOption {
   id: string;
@@ -61,7 +63,7 @@ function PickerModal({
               <div className="min-w-0">
                 <div className="truncate text-sm font-semibold text-ink">{o.name}</div>
                 <div className="text-[11px] text-faint">
-                  {o.position ?? "—"}{o.age != null ? ` · ${o.age}y` : ""}{o.owner ? ` · ${o.owner}` : ""}
+                  {o.position ?? "-"}{o.age != null ? ` · ${o.age}y` : ""}{o.owner ? ` · ${o.owner}` : ""}
                 </div>
               </div>
               <span className="font-mono text-sm text-muted">{fmtValue(o.value)}</span>
@@ -135,10 +137,13 @@ export function TradeBuilder({
   myPlayers,
   otherPlayers,
   seasons,
+  leagueId,
 }: {
   myPlayers: PlayerOption[];
   otherPlayers: PlayerOption[];
   seasons: string[];
+  /** Current Sleeper league id — used to link out to the trade centre. */
+  leagueId?: string | null;
 }) {
   const [give, setGive] = useState<PlayerOption[]>([]);
   const [get, setGet] = useState<PlayerOption[]>([]);
@@ -215,7 +220,9 @@ export function TradeBuilder({
         Evaluate trade
       </button>
 
-      {result && <TradeResult r={result} copied={copied} setCopied={setCopied} />}
+      {result && (
+        <TradeResult r={result} copied={copied} setCopied={setCopied} leagueId={leagueId} />
+      )}
 
       {picker && (
         <PickerModal
@@ -237,10 +244,12 @@ function TradeResult({
   r,
   copied,
   setCopied,
+  leagueId,
 }: {
   r: TradeEvaluation;
   copied: boolean;
   setCopied: (b: boolean) => void;
+  leagueId?: string | null;
 }) {
   const dirTone =
     r.direction === "buying" ? "text-accent" : r.direction === "selling" ? "text-info" : "text-muted";
@@ -252,7 +261,7 @@ function TradeResult({
           {r.delta >= 0 ? "+" : ""}{fmtValue(r.delta)}
         </div>
         <div className="mt-1 text-xs text-muted">
-          You&apos;re <span className={cn("font-semibold", dirTone)}>{r.direction}</span>. Value is a guide, not the verdict — read below.
+          You&apos;re <span className={cn("font-semibold", dirTone)}>{r.direction}</span>. Value is a guide, not the verdict - read below.
         </div>
       </div>
 
@@ -277,6 +286,15 @@ function TradeResult({
           </button>
         </div>
         <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-muted">{r.copyable}</pre>
+        {/* Sleeper has no write API, so we can't send the proposal - but copy above
+            then tap here and the trade centre is one screen away. Sits under the
+            summary rather than beside the copy button so three controls never
+            compete for one 390px row. */}
+        <OpenInSleeper
+          href={sleeperTradeUrl(leagueId)}
+          label="Open Sleeper to send"
+          className="mt-3 w-full"
+        />
       </div>
     </div>
   );

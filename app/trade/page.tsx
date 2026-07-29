@@ -42,9 +42,14 @@ export default async function TradePage() {
       <PageHeader
         kicker="Trade evaluator"
         title="Should you make this move?"
-        subtitle="We value both sides — but the answer isn't a grade. It's what each side is betting on, the assumption that must hold, and what your own history says."
+        subtitle="We value both sides - but the answer isn't a grade. It's what each side is betting on, the assumption that must hold, and what your own history says."
       />
-      <TradeBuilder myPlayers={myPlayers} otherPlayers={otherPlayers} seasons={seasons} />
+      <TradeBuilder
+        myPlayers={myPlayers}
+        otherPlayers={otherPlayers}
+        seasons={seasons}
+        leagueId={h.currentLeague.leagueId}
+      />
     </div>
   );
 }

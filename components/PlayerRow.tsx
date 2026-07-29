@@ -36,7 +36,7 @@ export function PlayerRow({
           )}
         </div>
         <div className="text-[11px] text-faint">
-          {position ?? "—"}
+          {position ?? "-"}
           {team ? ` · ${team}` : ""}
           {age != null ? ` · ${age}y` : ""}
         </div>

@@ -3,6 +3,8 @@
  * test is ever blocked on network/API access. It is the DEFAULT provider.
  */
 import type {
+  DraftMeta,
+  DraftPick,
   League,
   LeagueDetail,
   LeagueProvider,
@@ -82,6 +84,15 @@ export class FixtureProvider implements LeagueProvider {
 
   async getPlayers(): Promise<Player[]> {
     return corpus().players;
+  }
+
+  /** One synthetic rookie draft per season 2023–2026. 2026 is `pre_draft`/empty. */
+  async getDrafts(leagueId: string): Promise<DraftMeta[]> {
+    return corpus().drafts[leagueId] ?? [];
+  }
+
+  async getDraftPicks(draftId: string): Promise<DraftPick[]> {
+    return corpus().draftPicks[draftId] ?? [];
   }
 }
 

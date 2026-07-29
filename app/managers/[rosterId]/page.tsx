@@ -59,7 +59,7 @@ export default async function ManagerDetailPage({
       <div className="grid grid-cols-2 gap-2.5">
         <Stat label="Trades" value={p.trades} sub={`${p.tradesInitiated} initiated, ${p.tradesResponded} responded`} />
         <Stat label="Pick capital" value={<DeltaValue n={p.picks.net} />} sub={`${p.picks.firstsAcquired} firsts in / ${p.picks.firstsSpent} out`} tone={p.picks.net >= 0 ? "positive" : "negative"} />
-        <Stat label="Avg acq. age" value={p.acquisitions.avgAge ?? "—"} />
+        <Stat label="Avg acq. age" value={p.acquisitions.avgAge ?? "-"} />
         <Stat label="Waiver/FA moves" value={p.waivers + p.freeAgents} sub={p.faabAggression != null ? `~$${p.faabAggression} avg bid` : undefined} />
       </div>
 
@@ -68,7 +68,7 @@ export default async function ManagerDetailPage({
           <div className="text-[11px] uppercase tracking-wide text-faint">After a loss</div>
           <p className="mt-1 text-sm text-ink">
             {p.afterLoss.afterLoss} of {p.afterLoss.total} self-initiated trades came the week after a loss
-            {p.afterLoss.afterLoss > p.afterLoss.afterWin ? " — a possible tilt tell." : "."}
+            {p.afterLoss.afterLoss > p.afterLoss.afterWin ? " - a possible tilt tell." : "."}
           </p>
         </Card>
       )}
