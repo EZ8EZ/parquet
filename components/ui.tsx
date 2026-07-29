@@ -162,7 +162,9 @@ export function EmptyState({
       {cta && (
         <Link
           href={cta.href}
-          className="mt-4 inline-flex items-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-ink"
+          // min-h-11 (44px) explicitly: the global button rule keys off `button` /
+          // role="button", so a bare Link would fall short of the tap-target standard.
+          className="mt-4 inline-flex min-h-11 items-center rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-ink"
         >
           {cta.label}
         </Link>

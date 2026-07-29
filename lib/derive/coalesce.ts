@@ -166,16 +166,26 @@ export function attachInferredPicks(
   transactions: Transaction[],
   tradedPicks: TradedPick[],
 ): { transactions: Transaction[]; attached: number } {
+  // Key by the SPECIFIC HOP (which pick, from whom, to whom) — not just the pick's
+  // identity. Keying only on (season, round, originalRoster) was a real bug: a pick
+  // that later moved in a properly-recorded trade marked every OTHER hop of that
+  // same pick "explained", so genuinely unrecorded transfers were skipped while
+  // unrelated ones got attached.
   const explained = new Set<string>();
   for (const t of transactions) {
     for (const dp of t.draftPicks) {
-      explained.add(`${dp.season}|${dp.round}|${dp.rosterId}`);
+      explained.add(
+        `${dp.season}|${dp.round}|${dp.rosterId}|${dp.previousOwnerId}|${dp.ownerId}`,
+      );
     }
   }
   const orphans = tradedPicks.filter(
     (tp) =>
       tp.ownerId !== tp.rosterId &&
-      !explained.has(`${tp.season}|${tp.round}|${tp.rosterId}`),
+      tp.previousOwnerId !== tp.ownerId &&
+      !explained.has(
+        `${tp.season}|${tp.round}|${tp.rosterId}|${tp.previousOwnerId}|${tp.ownerId}`,
+      ),
   );
   if (!orphans.length) return { transactions, attached: 0 };
 
@@ -189,12 +199,18 @@ export function attachInferredPicks(
   let attached = 0;
   const byId = new Map(transactions.map((t) => [t.transactionId, t]));
   for (const tp of orphans) {
-    const match = candidates.find(
+    // Both parties to the hop must be in the deal, AND the deal must be a plausible
+    // cause: only picks for the trade's season or later can have moved in it.
+    const matches = candidates.filter(
       (t) =>
-        t.rosterIds.includes(tp.previousOwnerId) && t.rosterIds.includes(tp.ownerId),
+        t.rosterIds.includes(tp.previousOwnerId) &&
+        t.rosterIds.includes(tp.ownerId) &&
+        parseInt(tp.season, 10) >= parseInt(t.season, 10),
     );
-    if (!match) continue;
-    const target = byId.get(match.transactionId)!;
+    // Ambiguous attribution is worse than none: if several deals could explain the
+    // hop we cannot know which, so we leave it off rather than invent a trade.
+    if (matches.length !== 1) continue;
+    const target = byId.get(matches[0].transactionId)!;
     target.draftPicks = [
       ...target.draftPicks,
       {
@@ -203,6 +219,7 @@ export function attachInferredPicks(
         rosterId: tp.rosterId,
         ownerId: tp.ownerId,
         previousOwnerId: tp.previousOwnerId,
+        inferred: true,
       },
     ];
     attached++;

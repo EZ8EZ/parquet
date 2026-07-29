@@ -27,7 +27,7 @@ import {
   collectTradedPicks,
   collectTransactions,
 } from "./ingest";
-import { attachInferredPicks, coalesceCommissionerTrades } from "./derive/coalesce";
+import { coalesceCommissionerTrades } from "./derive/coalesce";
 
 export interface Annotation {
   transactionId: string;
@@ -164,13 +164,16 @@ async function getCorpus(fresh = false): Promise<Corpus> {
   const rawTransactions = await collectTransactions(provider, chain);
   // Pick movement across ALL seasons (the current league only knows future picks).
   const tradedPicksHistory = await collectTradedPicks(provider, chain);
-  // Rebuild commissioner-executed (often multi-team) trades into real trades, then
-  // re-attach the pick movements those rows dropped (commissioner draft_picks is
-  // always empty — see API_NOTES), inferred from the chain-wide snapshots.
-  const { transactions } = attachInferredPicks(
-    coalesceCommissionerTrades(rawTransactions).transactions,
-    tradedPicksHistory,
-  );
+  // Rebuild commissioner-executed (often multi-team) trades into single trades.
+  //
+  // We deliberately do NOT try to attach the pick component that commissioner rows
+  // drop (their `draft_picks` is always empty - see API_NOTES). The traded-picks
+  // snapshot has no timestamps, so the only available signal is "both parties to
+  // this pick hop are also in this trade" - which, tested against the real league,
+  // blamed six unrelated hops spanning three seasons on a single 2023 deal. Guessing
+  // trade contents is worse than admitting the data is gone, so unattributable hops
+  // are surfaced separately via `unrecordedPickMoves()` in lib/picks.ts instead.
+  const { transactions } = coalesceCommissionerTrades(rawTransactions);
   const annotations = await loadAnnotations(provider.name);
   const matchups = await loadMatchups(chain);
 

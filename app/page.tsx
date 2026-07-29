@@ -4,9 +4,11 @@ import {
   ArrowRight,
   Award,
   BookText,
+  GitBranch,
   MessageSquareText,
   Repeat,
   ScrollText,
+  Share2,
   Target,
   Users,
 } from "lucide-react";
@@ -148,7 +150,9 @@ export default async function HomePage() {
         <HomeLink href="/managers" icon={<Users size={18} />} title="Dossiers" sub="Scout your rivals" />
         <HomeLink href="/awards" icon={<Award size={18} />} title="League awards" sub="Who's who, statistically" />
         <HomeLink href="/ledger" icon={<ScrollText size={18} />} title="Decision ledger" sub={`${ledger.annotated}/${ledger.notable} annotated`} />
+        <HomeLink href="/drafts" icon={<GitBranch size={18} />} title="Draft history" sub="What your picks became" />
         <HomeLink href="/values" icon={<BookText size={18} />} title="Asset values" sub="Players + picks" />
+        <HomeLink href="/web" icon={<Share2 size={18} />} title="Trade web" sub="Beta: see the connections" />
       </div>
 
       <p className="mt-8 text-center text-[11px] leading-relaxed text-faint">

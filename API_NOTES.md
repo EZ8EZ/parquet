@@ -100,13 +100,33 @@ Observed volume 2025: wk1=84, wk2=31, wk5=17, wk10=2, wk15=21.
 2. **`draft_picks` is ALWAYS EMPTY on commissioner rows.** Confirmed: every
    commissioner transaction in 2023 has `draft_picks: []` and `waiver_budget: []`.
    Picks moved as part of a commissioner trade therefore have **no transaction record
-   whatsoever** — the only evidence is the `traded_picks` snapshot (which carries no
-   timestamp). → Handled by `lib/picks.ts` reconciliation: any pick ownership change
-   in `traded_picks` that no transaction's `draft_picks` explains is surfaced as an
-   unrecorded/commissioner-era transfer and attributed to the matching parties.
+   whatsoever** — the only evidence is the `traded_picks` snapshot, which carries **no
+   timestamp**.
 
-Consequence for analytics: without both fixes, commissioner-era trades are invisible
-to strategy/dossier/ledger, and their pick components are lost entirely.
+   **The pick component of a commissioner trade is UNRECOVERABLE, and we do not
+   guess.** We tried inferring it ("both parties to this pick hop are also parties to
+   this coalesced trade") and it failed badly on real data: for the 2023-07-03 deal it
+   attached **six** pick hops spanning 2023-2025, because rosters 6/7/11 traded picks
+   with each other repeatedly over three seasons and nothing distinguishes which deal
+   moved which pick. Attributing invented contents to a real trade is worse than
+   admitting the data is gone, so `attachInferredPicks()` exists but is
+   **deliberately not wired into the read path** (`lib/history.ts`). Unattributable
+   hops are surfaced separately by `unrecordedPickMoves()` in `lib/picks.ts`, and any
+   pick that IS inferred carries `inferred: true` and renders as "(inferred)".
+
+   Worth knowing: a pick hop keyed only by `(season, round, originalRoster)` is
+   ambiguous, because a pick can change hands several times. Match on the full hop
+   `(season, round, originalRoster, previousOwnerId, ownerId)` or a later recorded
+   trade will mask an earlier unrecorded one.
+
+**Corollary — trust the recorded trade, not the memory.** Picks a manager remembers
+receiving in a commissioner deal often actually moved in a *separate, properly
+recorded* trade. Verified: the NSLKB 2025 + 2026 firsts that EZ8 associates with the
+July 2023 three-teamer were in fact recorded in tx `1049520302340022272` on
+**2024-01-07**, an 8-player / 7-pick two-team trade with NSLKB.
+
+Consequence for analytics: without the coalescing fix, commissioner-era trades are
+invisible to strategy/dossier/ledger entirely.
 
 ### Traded picks — `/league/{league_id}/traded_picks`
 90 entries for 2025. Shape:

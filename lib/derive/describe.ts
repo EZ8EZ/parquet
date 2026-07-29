@@ -16,7 +16,9 @@ export function ordinal(n: number): string {
 }
 
 export function pickLabel(dp: DraftPickRef): string {
-  return `${dp.season} ${ordinal(dp.round)}`;
+  // Inferred picks are flagged in the label itself so an inference can never be
+  // read as a recorded fact, wherever it surfaces.
+  return `${dp.season} ${ordinal(dp.round)}${dp.inferred ? " (inferred)" : ""}`;
 }
 
 export function rosterName(h: LeagueHistory, rosterId: number): string {
