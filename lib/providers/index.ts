@@ -1,7 +1,16 @@
 /**
  * Provider selection. The app imports `getLeagueProvider()` and never a concrete
  * class, so swapping data sources is a one-line env change (LEAGUE_PROVIDER).
- * Defaults to `fixture` so a fresh clone runs with zero external dependencies.
+ *
+ * DEFAULTS TO THE REAL LEAGUE. The league id and username below are committed as
+ * defaults so a deployment (Vercel) serves real data with ZERO environment
+ * variables configured. Previously the default was `fixture`, which meant a deploy
+ * without env vars silently served synthetic demo data that looked plausible but was
+ * fake - a worse failure than an error, because nothing about the UI said "this is
+ * not your league."
+ *
+ * Set `LEAGUE_PROVIDER=fixture` to get the offline synthetic demo (no network, no
+ * database), which is what the tests and a zero-dependency local run use.
  */
 import type { LeagueProvider } from "./types";
 import { FixtureProvider, FIXTURE_LEAGUE_ID } from "./fixture";
@@ -10,10 +19,19 @@ import { CsvProvider } from "./csv";
 
 export type ProviderName = "fixture" | "sleeper" | "csv";
 
+/** NSL Fantasy Hoops, 2026 season (resolved empirically - see API_NOTES.md). */
+export const DEFAULT_SLEEPER_LEAGUE_ID = "1347007735815766016";
+export const DEFAULT_SLEEPER_USERNAME = "EZ8";
+
 export function providerName(): ProviderName {
-  const v = (process.env.LEAGUE_PROVIDER ?? "fixture").toLowerCase();
-  if (v === "sleeper" || v === "csv") return v;
-  return "fixture";
+  const v = (process.env.LEAGUE_PROVIDER ?? "sleeper").toLowerCase();
+  if (v === "fixture" || v === "csv") return v;
+  return "sleeper";
+}
+
+/** The Sleeper username whose roster is treated as "you" by default. */
+export function defaultUsername(): string {
+  return process.env.SLEEPER_USERNAME || DEFAULT_SLEEPER_USERNAME;
 }
 
 export function getLeagueProvider(): LeagueProvider {
@@ -28,19 +46,19 @@ export function getLeagueProvider(): LeagueProvider {
 }
 
 /**
- * The active league id for the current provider. For fixtures this is the
- * synthetic current-season league; for Sleeper/CSV it comes from env.
+ * The active league id. For fixtures this is the synthetic current-season league;
+ * for Sleeper it comes from env, falling back to the committed default so a
+ * zero-config deployment still serves the real league. CSV has no default.
  */
 export function activeLeagueId(): string {
   const name = providerName();
   if (name === "fixture") return FIXTURE_LEAGUE_ID;
-  const id = process.env.SLEEPER_LEAGUE_ID;
-  if (!id) {
-    throw new Error(
-      "SLEEPER_LEAGUE_ID is required when LEAGUE_PROVIDER is not 'fixture'.",
-    );
+  if (name === "csv") {
+    const id = process.env.SLEEPER_LEAGUE_ID;
+    if (!id) throw new Error("SLEEPER_LEAGUE_ID is required when LEAGUE_PROVIDER=csv.");
+    return id;
   }
-  return id;
+  return process.env.SLEEPER_LEAGUE_ID || DEFAULT_SLEEPER_LEAGUE_ID;
 }
 
 export * from "./types";

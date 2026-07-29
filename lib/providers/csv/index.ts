@@ -1,5 +1,5 @@
 /**
- * CsvProvider — fallback for platforms without an API (e.g., Fantrax).
+ * CsvProvider - fallback for any league platform that has no public API.
  *
  * Documented CSV schema (one file per entity, header row required). Semicolon
  * (`;`) separates list values inside a cell so commas remain the field delimiter.

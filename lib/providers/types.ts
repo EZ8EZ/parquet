@@ -71,8 +71,15 @@ export interface Roster {
 export interface LeagueUser {
   userId: string;
   displayName: string;
+  /** Sleeper user-avatar id. Render via sleepercdn.com/avatars/thumbs/{id}. */
   avatar?: string | null;
   teamName?: string | null;
+  /**
+   * Custom team logo. Sleeper puts this in `metadata.avatar` as a FULL URL
+   * (sleepercdn.com/uploads/...), distinct from the user-avatar id above. Only some
+   * managers upload one, so consumers must fall back.
+   */
+  teamLogoUrl?: string | null;
   isOwner: boolean;
   isBot: boolean;
 }
@@ -256,7 +263,7 @@ export interface PlayerSeasonStats {
 }
 
 /**
- * Stats are abstracted so a real source (balldontlie.io) can replace the fixture
+ * Stats are abstracted so a real external source can replace the fixture
  * without touching the valuation model. Never called from a render path — always
  * cached to the DB first.
  */

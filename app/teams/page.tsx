@@ -1,4 +1,5 @@
 import { getLeagueHistory } from "@/lib/history";
+import { defaultUsername } from "@/lib/providers";
 import { leagueValueRanking } from "@/lib/roster";
 import { buildDossier } from "@/lib/dossier";
 import { PageHeader } from "@/components/ui";
@@ -33,7 +34,7 @@ export default async function TeamsPage() {
       <TeamPicker
         teams={teams}
         currentRosterId={h.me.rosterId}
-        username={process.env.SLEEPER_USERNAME ?? "EZ8"}
+        username={defaultUsername()}
       />
     </div>
   );

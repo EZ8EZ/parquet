@@ -5,7 +5,7 @@ DECISIONS.md. This is the decision queue for when Eric is back.
 
 1. **League confirmed on Sleeper.** EZ8 → user_id `882695796544577536`, league
    "NSL Fantasy Hoops", full 5-season chain (2022-2026), `league_id`
-   `1347007735815766016`. No Fantrax fallback needed. ✅ (No action; FYI.)
+   `1347007735815766016`. No a no-API platform fallback needed. ✅ (No action; FYI.)
 
 2. **Which roster is yours?** The app currently identifies "you" by matching
    `owner_id` to the resolved user_id. Confirm your team name/roster_id so the
@@ -17,7 +17,7 @@ DECISIONS.md. This is the decision queue for when Eric is back.
    removal for the monogram fallback? (Deferred per brief.)
 
 4. **Stats source upgrade.** v1 valuation uses Sleeper `search_rank` + age/role.
-   Do you want to wire balldontlie.io (free tier) for real per-game production to
+   Do you want to wire a free external stats API (free tier) for real per-game production to
    sharpen values? It's abstracted behind `StatsProvider`; a drop-in swap.
 
 5. **Scoring is a points league** (pts 0.5, reb 1, ast 1, stl/blk 2, TO -1, 3PM

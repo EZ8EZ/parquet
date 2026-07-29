@@ -123,8 +123,8 @@ export default async function MethodologyPage() {
 
       <p className="mt-6 text-center text-[11px] leading-relaxed text-faint">
         Every constant lives in <span className="font-mono">lib/valuation/config.ts</span>.
-        A crowdsourced market (KTC-style voting) is intentionally deferred until there&apos;s
-        enough liquidity to trust it - see the research notes in the repo.
+        A crowdsourced vote-driven market is intentionally deferred until there&apos;s
+        enough participation to trust it - see the research notes in the repo.
       </p>
     </div>
   );

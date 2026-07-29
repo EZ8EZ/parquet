@@ -42,9 +42,23 @@ export default async function HomePage() {
         </Link>
       </div>
 
+      {/* Loud, not subtle: synthetic data that looks plausible is the most dangerous
+          failure this app can have, so it must be impossible to mistake for real. */}
       {h.provider === "fixture" && (
-        <div className="mb-4">
-          <Tag tone="info">Demo data - set LEAGUE_PROVIDER=sleeper for your league</Tag>
+        <div className="mb-4 rounded-[--radius] border border-warn/40 bg-warn/[0.08] p-3">
+          <div className="flex items-start gap-2.5">
+            <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warn" />
+            <div>
+              <div className="text-sm font-semibold text-warn">
+                Synthetic demo data, not your league
+              </div>
+              <p className="mt-0.5 text-xs leading-relaxed text-muted">
+                Every name, trade and value below is invented. Remove{" "}
+                <span className="font-mono">LEAGUE_PROVIDER=fixture</span> to load the
+                real league.
+              </p>
+            </div>
+          </div>
         </div>
       )}
 

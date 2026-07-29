@@ -140,11 +140,16 @@ export const RawLeagueUser = z.object({
 export function toLeagueUser(r: z.infer<typeof RawLeagueUser>): LeagueUser {
   const meta = (r.metadata ?? {}) as Record<string, unknown>;
   const teamName = typeof meta.team_name === "string" ? meta.team_name : null;
+  // metadata.avatar is a full URL to a custom team logo (not an avatar id). Only
+  // accept absolute http(s) URLs so a stray id can't produce a broken <img src>.
+  const rawLogo = typeof meta.avatar === "string" ? meta.avatar : null;
+  const teamLogoUrl = rawLogo && /^https?:\/\//.test(rawLogo) ? rawLogo : null;
   return {
     userId: r.user_id,
     displayName: r.display_name ?? r.user_id,
     avatar: r.avatar ?? null,
     teamName,
+    teamLogoUrl,
     isOwner: r.is_owner ?? false,
     isBot: r.is_bot ?? false,
   };

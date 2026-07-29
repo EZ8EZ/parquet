@@ -160,7 +160,7 @@ export const MANAGERS: Array<{
   archetype: Archetype;
 }> = [
   { displayName: "EZ8", teamName: "Parquet Kings", archetype: "you" },
-  { displayName: "yagevlevi", teamName: "Citadel", archetype: "churner" },
+  { displayName: "yagevlevi", teamName: "Hardwood Capital", archetype: "churner" },
   { displayName: "PickHoarder", teamName: "Future Assets", archetype: "hoarder" },
   { displayName: "SilentSam", teamName: "Do Not Disturb", archetype: "ghost" },
   { displayName: "TiltMachine", teamName: "Full Tilt", archetype: "panic" },

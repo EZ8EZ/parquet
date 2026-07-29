@@ -61,7 +61,11 @@ export function PlayerAvatar({
   const [failed, setFailed] = useState(false);
   const px = SIZES[size];
   const [c1, c2] = colorsFor(team ?? null, name);
-  const usePhotos = process.env.NEXT_PUBLIC_USE_PLAYER_PHOTOS === "true";
+  // Defaults to ON. This is a private-use app and the owner asked for real photos;
+  // NEXT_PUBLIC_* is inlined at BUILD time, so a Vercel deploy that forgot the var
+  // would otherwise silently ship monograms with no way to tell why.
+  // Set NEXT_PUBLIC_USE_PLAYER_PHOTOS=false to force monograms everywhere.
+  const usePhotos = process.env.NEXT_PUBLIC_USE_PLAYER_PHOTOS !== "false";
 
   if (usePhotos && playerId && !failed) {
     // Sleeper CDN thumbnail (personal/local use). Falls back to monogram on error.

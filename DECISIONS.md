@@ -31,23 +31,23 @@ Brief flags them as unreliable. v1 model inputs: Sleeper `search_rank` (a decent
 consensus proxy that ships free with `/players/nba`), age curve, `years_exp`,
 role stability (`depth_chart_order`), injury status, and **league-specific
 positional scarcity computed from the actual `scoring_settings`**. A `StatsProvider`
-interface isolates any future real stats source (balldontlie.io preferred) behind
+interface isolates any future real stats source (a free external stats API preferred) behind
 a fixture so the model can be upgraded without touching callers. Transparency, not
 accuracy, is the stated differentiator - every weight lives in `lib/valuation/config.ts`.
 Rejected: building on Sleeper stats (unreliable per brief); blocking on a stats API
 key (violates NEVER BLOCK).
 
 ## D5. Build our own transparent value model (market exists but is thin)
-Research (RESEARCH.md §4) **refuted** the "no KTC-for-NBA exists" hypothesis:
-Court Consensus and Dynatyze are real crowdsourced NBA value sites - but every one
-of them is low-liquidity (Court Consensus showed "0 data points collected"), and
-the FantasyCalc "values from real executed trades" model is entirely unoccupied for
-the NBA. Aggregating a thin, unreliable market would inherit its noise. So Phase 3
-still ships a **transparent internal model** with a published `/methodology` page -
-now framed as "beat the thin incumbents on transparency," not "invent a category."
-KTC-style crowd voting is explicitly a post-v1 feature (needs user liquidity we
-can't bootstrap at launch). Rejected: scraping Court Consensus/Dynatyze values
-(proprietary, thin, and against project rules); blocking on building a crowd market.
+Research (RESEARCH.md §4) **refuted** the "no crowdsourced NBA value market exists"
+hypothesis: a few genuine crowd-vote NBA value sites do exist. But all of them are
+low-liquidity (the leading one displayed "0 data points collected"), and the
+"values derived from real executed trades" approach is entirely unoccupied for the NBA.
+Aggregating a thin, unreliable market would inherit its noise. So Phase 3 ships a
+**transparent internal model** with a published `/methodology` page - framed as "beat
+the thin incumbents on transparency," not "invent a category." Crowd voting is
+explicitly a post-v1 feature (it needs participation we can't bootstrap at launch).
+Rejected: scraping those sites' values (proprietary, thin, and against project rules);
+blocking on building a crowd market first.
 
 ## D6. Trade evaluator outputs a thesis, not a letter grade
 Per product thesis. Output = what each side is betting on, the single assumption
@@ -63,20 +63,21 @@ configured; the rest of the app needs no key.
 
 ## D8. Player images abstracted behind `<PlayerAvatar>`; monograms by default
 Default = generated monogram avatars in team colors (no licensing concern, looks
-intentional). Real photos behind `NEXT_PUBLIC_USE_PLAYER_PHOTOS` (default false).
-**Source: Sleeper's own CDN keyed by `player_id`** (`sleepercdn.com/content/nba/
-players/thumb/{id}.jpg`) - NOT ESPN. Empirically, Sleeper's `/players/nba` returns
-`espn_id: null` for every NBA player, so ESPN headshots are unusable. Not every
+intentional). Real photos behind `NEXT_PUBLIC_USE_PLAYER_PHOTOS`, which now **defaults ON** (D21).
+**Source: Sleeper's own CDN keyed by `player_id`**
+(`sleepercdn.com/content/nba/players/thumb/{id}.jpg`). Empirically, Sleeper's `/players/nba` returns
+a null external-provider id for every NBA player, so third-party headshot CDNs are unusable. Not every
 player has a Sleeper image (some 403/404), so `<PlayerAvatar>` is a client component
 that falls back to the monogram on load error. Licensing caveat: these headshots
 aren't licensed for redistribution; the flag is opt-in for personal/local use only
 (Eric confirmed private use). Background removal not needed (CDN images are already
-cleanly cropped). Rejected: ESPN CDN (no usable id); bundling raster assets.
+cleanly cropped). Rejected: third-party headshot CDNs (no usable id); bundling raster assets.
 
-## D9. FixtureProvider built FIRST and is the default when live data is absent
-Guarantees no UI work is ever blocked on network/API. All tests run against
-fixtures. `LEAGUE_PROVIDER` env selects provider (`fixture` | `sleeper` | `csv`),
-defaulting to `fixture` so a fresh clone runs with zero external dependencies.
+## D9. FixtureProvider built FIRST; still the zero-dependency path
+Guarantees no UI work is ever blocked on network/API, and all tests run against it.
+`LEAGUE_PROVIDER` selects the provider (`fixture` | `sleeper` | `csv`).
+**Superseded in part by D21:** the default is now `sleeper`, and `fixture` is an
+explicit opt-in. See D21 for why.
 
 ## D10. Prisma with a Postgres-portable schema
 SQLite for local dev via `DATABASE_URL="file:./dev.db"`. Avoided SQLite-only types:
@@ -157,3 +158,23 @@ deleting the code (the derivation is sound and cheap to re-enable).
 Sleeper labels the league by the calendar year the season ends is ambiguous; Sleeper
 uses the start-year convention we mirror verbatim from the `season` field. We never
 compute season; we read it.
+
+## D21. Zero-config deploy serves the REAL league (default flipped to `sleeper`)
+The Vercel deployment silently served synthetic demo data, because `LEAGUE_PROVIDER`
+defaulted to `fixture` and `.env.local` is (correctly) gitignored, so production had
+no env vars at all. Plausible-looking fake data is a worse failure than an error:
+nothing in the UI said "this is not your league."
+
+Fixed by making the real league the default. The league id and username are committed
+constants (`DEFAULT_SLEEPER_LEAGUE_ID` / `DEFAULT_SLEEPER_USERNAME` in
+`lib/providers/index.ts`), so a deploy with **zero** environment variables loads NSL
+Fantasy Hoops. `NEXT_PUBLIC_USE_PLAYER_PHOTOS` likewise defaults ON, since it is
+inlined at BUILD time and a forgotten var would otherwise ship monograms with no
+visible cause. `LEAGUE_PROVIDER=fixture` is now the explicit opt-in to the offline
+demo, and the demo banner was made loud and unmissable rather than a small tag.
+
+Consequence: tests had to pin `LEAGUE_PROVIDER=fixture` in `vitest.config.ts`, because
+several reach a provider and would otherwise start making real HTTP calls (this
+actually happened - the suite went from 0.3s to 20s and 11 tests timed out).
+Rejected: documenting the env vars harder (the failure mode is silent, so docs don't
+prevent it); throwing when unconfigured (a broken deploy is worse than a working one).

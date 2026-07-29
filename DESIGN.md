@@ -44,7 +44,7 @@ as flat black.
 ## Layout & interaction rules (lessons from the competitor teardown)
 - **Fixed bottom tab bar** with icon **and** label (Home / Roster / League / Trade
   / Analyst). Never a hidden floating nav toggle.
-- **No floating overlays that occlude content.** (Citadel's FAB collided with real
+- **No floating overlays that occlude content.** (The competitor's FAB collided with real
   content on every page - we have none.)
 - **Stacked cards, never clipped tables**, on mobile. Rankings/values are rows, not
   a horizontally-scrolling grid.

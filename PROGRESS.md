@@ -23,8 +23,8 @@
 ## Phase 1 - Research (complete)
 - RESEARCH.md: teardowns of 6 basketball tools + 5 football UX patterns + the direct
   competitor. Feature matrix, ranked v1 features, explicit "not building" list.
-- **Key finding that changed a decision:** the "no KTC-for-NBA" hypothesis was
-  REFUTED (Court Consensus, Dynatyze exist) - but all are thin/low-liquidity, so
+- **Key finding that changed a decision:** the "no crowd-vote-for-NBA" hypothesis was
+  REFUTED (crowd-value NBA entrants do exist) - but all are thin/low-liquidity, so
   building our own transparent model is still right. Updated DECISIONS D5.
 
 ## Phase 2 - Data layer (complete)
@@ -130,13 +130,13 @@ Driven by owner feedback in session:
 - Installable PWA (manifest + icons + theme color).
 
 ### What is stubbed / intentionally deferred
-- **Real stats provider** - `BallDontLieStatsProvider` is a documented stub; the
+- **Real stats provider** - `ExternalStatsProvider` is a documented stub; the
   fixture stats provider is wired. Valuation deliberately doesn't depend on stats in
   v1 (D4), so this blocks nothing.
 - **After-loss behavioral signal on Sleeper** - computed from matchups, which are
   pulled only for the in-memory fixture; live Sleeper matchup ingest is skipped to
   avoid a per-request call storm. Dossiers degrade gracefully without it.
-- **Crowdsourced (KTC-style) value voting** - deferred by design until there's user
+- **Crowdsourced (crowd-vote-style) value voting** - deferred by design until there's user
   liquidity (RESEARCH §6). Values are model-derived.
 - **Annotation persistence on Vercel** needs a Postgres store (SQLite can't persist
   on serverless). Writes degrade gracefully without one; add Vercel Postgres/Neon +
@@ -155,9 +155,9 @@ Driven by owner feedback in session:
    revealed-vs-stated contradictions light up on his actual history.
 2. Wire Sleeper matchup ingest (small addition) to light up the "trades-after-losses"
    tilt signal for real leagues (currently fixture-only).
-3. Wire balldontlie.io behind the existing `StatsProvider` to sharpen valuations
+3. Wire a free external stats API behind the existing `StatsProvider` to sharpen valuations
    with real per-game production (age/role already handled).
-4. Trade-partner matcher (Yahoo's "top-3 partners" + dossier fit) - the dossiers
+4. Trade-partner matcher (a "top-3 partners" surface + dossier fit) - the dossiers
    already compute everything needed; it's a synthesis surface.
 
 ### Top questions blocking further progress (full list in QUESTIONS.md)
@@ -166,4 +166,4 @@ Driven by owner feedback in session:
 2. **Free LLM endpoint** - want the conversational analyst? A free Groq key (or a
    local Ollama) in `LLM_BASE_URL`/`LLM_API_KEY` turns it on; otherwise the
    deterministic audit ships as-is.
-3. **balldontlie stats** - worth wiring real per-game production into valuations?
+3. **External stats feed** - worth wiring real per-game production into valuations?

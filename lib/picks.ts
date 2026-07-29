@@ -18,7 +18,7 @@ export interface OwnedPick {
   acquired: boolean; // owned but not originally ours
   fromName: string | null; // the original team, if acquired
   value: number;
-  label: string; // e.g. "2027 1st (via Citadel)"
+  label: string; // e.g. "2027 1st (via Wire Warriors)"
 }
 
 export interface PickCapital {

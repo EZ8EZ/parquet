@@ -10,6 +10,7 @@
  */
 import {
   activeLeagueId,
+  defaultUsername,
   getLeagueProvider,
   providerName,
 } from "./providers";
@@ -187,7 +188,7 @@ async function getCorpus(fresh = false): Promise<Corpus> {
   const matchups = await loadMatchups(chain);
 
   // Default "me" identity from the configured username (fixture=EZ8; sleeper env).
-  const username = process.env.SLEEPER_USERNAME ?? "EZ8";
+  const username = defaultUsername();
   let defaultMeUserId = users[0]?.userId ?? "";
   try {
     defaultMeUserId = (await provider.getUser(username)).userId;

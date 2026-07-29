@@ -136,9 +136,9 @@ lib/
   providers/              PLATFORM-AGNOSTIC data layer
     types.ts              LeagueProvider + StatsProvider interfaces, domain model
     sleeper/              real provider - Zod-validated (schemas.ts)
-    csv/                  documented CSV importer (Fantrax fallback)
+    csv/                  documented CSV importer (no-API platforms)
     fixture/              deterministic 5-season synthetic corpus (the default)
-    stats/                StatsProvider (fixture + balldontlie stub)
+    stats/                StatsProvider (fixture + external stub)
   valuation/              transparent model; every weight in config.ts
   picks.ts                draft-pick capital: full holdings, valued as assets
   gameplan/               diagnosis + concrete prescribed moves
@@ -177,20 +177,14 @@ Next.js 16 (App Router, TS strict) · Tailwind v4 · Prisma 6 (SQLite → Postgr
 Zod 4 · Vitest · Anthropic SDK · deployable to Vercel · installable PWA.
 
 ## Deploy (Vercel)
-**No database is required to deploy** - all read features (roster, values, strategy,
-dossiers, analyst, trade) read the corpus live from Sleeper (cached), so the app runs
-on Vercel serverless out of the box. Set these Project → Settings → Environment
-Variables and deploy:
+**Zero configuration required.** No database, no environment variables. Just connect
+the repo and deploy: the real league and player photos are the committed defaults, so
+production serves live data out of the box. The first request after a cold start
+assembles 5 seasons from Sleeper (~1.5s), then it is cached. `pnpm build` runs
+`prisma generate` first.
 
-```
-LEAGUE_PROVIDER=sleeper
-SLEEPER_USERNAME=EZ8
-SLEEPER_LEAGUE_ID=1347007735815766016
-NEXT_PUBLIC_USE_PLAYER_PHOTOS=true
-```
-
-The first request after a cold start assembles ~5 seasons from Sleeper (a few
-seconds), then it's cached. `pnpm build` runs `prisma generate` first.
+Set env vars only to override: `LEAGUE_PROVIDER=fixture` for the offline demo, or
+`SLEEPER_LEAGUE_ID` / `SLEEPER_USERNAME` to point at a different league.
 
 **Persisting ledger annotations** is the one feature that needs a database (SQLite
 can't persist on serverless). To enable it: add a Vercel Postgres / Neon store, set
@@ -203,7 +197,7 @@ conversational analyst.
 
 ## Project docs
 - [RESEARCH.md](RESEARCH.md) - competitor teardown, feature matrix, the "is there a
-  KTC-for-NBA?" verdict, ranked v1 features, and what we deliberately did NOT build.
+  crowd-vote-for-NBA?" verdict, ranked v1 features, and what we deliberately did NOT build.
 - [DECISIONS.md](DECISIONS.md) - every non-obvious choice, with rejected alternatives.
 - [API_NOTES.md](API_NOTES.md) - empirically observed Sleeper API behavior/shapes.
 - [DESIGN.md](DESIGN.md) - the design system and tokens.

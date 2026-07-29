@@ -4,7 +4,7 @@
  * cached to the DB before use — never called from a render path.
  *
  * v1 valuation does NOT depend on stats (see DECISIONS.md D4); this interface
- * exists so a real source (balldontlie.io preferred) is a drop-in upgrade.
+ * exists so a real external stats source is a drop-in upgrade.
  */
 import type { PlayerSeasonStats, StatsProvider } from "../types";
 import { corpus } from "../fixture";
@@ -49,16 +49,16 @@ export class FixtureStatsProvider implements StatsProvider {
 }
 
 /**
- * balldontlie.io adapter — documented stub. Free tier gives per-game/season
- * stats. Wire this behind BALLDONTLIE_API_KEY when Eric approves (QUESTIONS #4).
+ * External stats adapter - documented stub for a third-party per-game/season stats
+ * feed. Wire it behind EXTERNAL_STATS_API_KEY when the owner approves (QUESTIONS #4).
  * Left unimplemented in v1 to honor "never block": the fixture stats provider is
  * the default and the valuation model needs no stats at all.
  */
-export class BallDontLieStatsProvider implements StatsProvider {
-  readonly name = "balldontlie";
+export class ExternalStatsProvider implements StatsProvider {
+  readonly name = "external-stats";
   async getSeasonStats(): Promise<PlayerSeasonStats[]> {
     throw new Error(
-      "BallDontLieStatsProvider not configured for v1. Set BALLDONTLIE_API_KEY " +
+      "ExternalStatsProvider not configured for v1. Set EXTERNAL_STATS_API_KEY " +
         "and implement per API_NOTES; the fixture stats provider is the default.",
     );
   }

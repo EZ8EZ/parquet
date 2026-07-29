@@ -46,7 +46,7 @@ export interface PickLineage {
   round: number;
   originalRoster: number;
   originalRosterName: string;
-  /** e.g. "2024 1st (orig. Citadel)". */
+  /** e.g. "2024 1st (orig. Wire Warriors)". */
   label: string;
   /** True only when `player` is populated. */
   resolved: boolean;
@@ -298,7 +298,7 @@ function unresolved(
   };
 }
 
-/** e.g. `2024 1st (orig. Citadel)` — the "(orig. …)" only when it was traded. */
+/** e.g. `2024 1st (orig. Wire Warriors)` - the "(orig. ...)" only when traded. */
 export function pickLabelFor(
   h: LeagueHistory,
   season: string,

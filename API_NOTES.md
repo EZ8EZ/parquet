@@ -56,8 +56,8 @@ player_id strings), `starters`, `reserve`, `taxi`, `keepers`, `player_map`,
 ### Users - `/league/{league_id}/users`
 14 entries. Keys: `user_id`, `display_name`, `avatar`, `is_owner`, `is_bot`,
 `metadata` (has `team_name` sometimes, `mention_pn`, `allow_pn`), `settings`.
-Note: leaguemate `yagevlevi` is the author of the football competitor cited in the
-brief (`yagev-levis-projects.vercel.app`). Same league.
+Note: `metadata.avatar` (when present) is a FULL URL to a custom team logo, distinct
+from the top-level `avatar` which is a user-avatar id. 7 of 14 managers set one.
 
 ### Transactions - `/league/{league_id}/transactions/{week}`
 **Full parity with NFL confirmed.** Keys: `type` ("trade" | "waiver" |
@@ -141,7 +141,7 @@ Snapshot of current pick ownership (vs `draft_picks` which is per-transaction).
 `player_id, full_name, first_name, last_name, team, position, fantasy_positions[],
 age, years_exp, birth_date, height, weight, college, number, status, injury_status,
 injury_body_part, depth_chart_position, depth_chart_order, search_rank`, plus
-external IDs: `espn_id, yahoo_id, rotowire_id, sportradar_id, ...` (espn_id useful
+external IDs for other platforms are present but unused by this app (espn_id notably
 for optional headshot CDN behind a flag).
 
 ### Matchups - `/league/{league_id}/matchups/{week}`
@@ -256,4 +256,4 @@ by the API's own `pick_no` and never reconstruct it.
 Sleeper stats/projections endpoints are unreliable; **not used** for valuation.
 See DECISIONS.md - v1 valuation runs on Sleeper's `search_rank` + age/role signals,
 abstracted behind a `StatsProvider` interface with a fixture implementation so a
-real stats source (balldontlie.io) can be swapped in without touching callers.
+real stats source (a free external stats API) can be swapped in without touching callers.
