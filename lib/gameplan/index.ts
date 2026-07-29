@@ -73,8 +73,11 @@ function positionGaps(a: RosterAnalysis) {
 }
 
 export function diagnose(h: LeagueHistory, rosterId: number): Diagnosis {
-  const a = analyzeRoster(h, rosterId);
   const ranking = leagueValueRanking(h);
+  // The ranked entry, not a standalone analyzeRoster call, so `window` is classified
+  // against the league's own core-age distribution rather than the absolute fallback -
+  // otherwise the game plan could contradict what /league and /roster already say.
+  const a = ranking.find((r) => r.rosterId === rosterId)!;
   const valueRank = ranking.findIndex((r) => r.rosterId === rosterId) + 1;
   const { weak, strong } = positionGaps(a);
   const stars = a.valued.filter((v) => v.value >= STAR_THRESHOLD).length;

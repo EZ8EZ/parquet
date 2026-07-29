@@ -15,6 +15,8 @@ import {
 import { getLeagueHistory } from "@/lib/history";
 import { getStrategyReport } from "@/lib/strategy";
 import { getLedgerSummary } from "@/lib/ledger";
+import { currentFormByRoster } from "@/lib/roster";
+import { ordinal } from "@/lib/derive/describe";
 import { Wordmark } from "@/components/Brand";
 import { Card, Tag, DeltaValue, SectionHeader } from "@/components/ui";
 
@@ -26,6 +28,7 @@ export default async function HomePage() {
   const ledger = getLedgerSummary(h);
   const p = report.profile;
   const roster = h.rostersById.get(p.rosterId);
+  const form = (await currentFormByRoster(h)).get(p.rosterId);
 
   const holdYears =
     p.avgHoldingDays != null ? (p.avgHoldingDays / 365).toFixed(1) : null;
@@ -128,8 +131,14 @@ export default async function HomePage() {
         <Figure
           href="/league"
           label="Record"
-          value={`${roster?.settings.wins ?? 0}-${roster?.settings.losses ?? 0}`}
-          sub={`${h.currentLeague.season} season`}
+          value={
+            form ? `${form.wins}-${form.losses}` : `${roster?.settings.wins ?? 0}-${roster?.settings.losses ?? 0}`
+          }
+          sub={
+            form
+              ? `${form.isLive ? form.season : `${form.season} final`}, ${ordinal(form.rank)} of ${form.teams}`
+              : `${h.currentLeague.season} season`
+          }
           className="border-b border-r border-border"
         />
         <Figure

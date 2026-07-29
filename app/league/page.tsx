@@ -1,12 +1,13 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
-import { leagueValueRanking } from "@/lib/roster";
+import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
 import { leagueTimelines } from "@/lib/metrics/duration";
 import { DeltaValue, SectionHeader, Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { TimelineQuadrant } from "@/components/TimelineChart";
 import { fmtValue } from "@/lib/ui";
+import { ordinal } from "@/lib/derive/describe";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperLeagueUrl } from "@/lib/sleeperLinks";
 
@@ -38,7 +39,11 @@ export default async function LeaguePage() {
   const h = await getLeagueHistory();
   const ranked = leagueValueRanking(h);
   const timelines = leagueTimelines(h);
+  const form = await currentFormByRoster(h);
   const meId = h.me.rosterId;
+  // Most of a dynasty league's calendar has the live season sitting at 0-0 in
+  // pre-draft, so the whole-league form is worth a callout when nobody has played yet.
+  const seasonLive = [...form.values()].some((f) => f.isLive);
 
   const contenders = ranked.filter((r) => r.window === "win-now").length;
   const rebuilders = ranked.filter((r) => r.window === "rebuilding").length;
@@ -171,6 +176,11 @@ export default async function LeaguePage() {
 
       <h2 className="mb-1.5 mt-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-muted">
         Power ranking - by roster value
+        {!seasonLive && (
+          <span className="ml-1.5 normal-case tracking-normal text-faint">
+            (records below are last season&rsquo;s final - {h.currentLeague.season} hasn&rsquo;t tipped off)
+          </span>
+        )}
       </h2>
 
       <ul className="space-y-1">
@@ -179,6 +189,7 @@ export default async function LeaguePage() {
           const ownerId = h.rostersById.get(r.rosterId)?.ownerId;
           const user = ownerId ? h.usersById.get(ownerId) : undefined;
           const pct = Math.max(3, Math.round((r.totalValue / leaderValue) * 100));
+          const f = form.get(r.rosterId);
           return (
             <li key={r.rosterId}>
               {/* The whole row is the hit area - one target, one destination. */}
@@ -212,7 +223,15 @@ export default async function LeaguePage() {
                     )}
                   </span>
                   <span className="mt-px block truncate font-mono text-[11px] tnum text-faint">
-                    {r.ownerName} · {r.record.wins}-{r.record.losses} ·{" "}
+                    {r.ownerName} ·{" "}
+                    {f ? (
+                      <>
+                        {f.wins}-{f.losses}
+                        {!f.isLive && " (last)"} · {ordinal(f.rank)} of {f.teams} ·{" "}
+                      </>
+                    ) : (
+                      `${r.record.wins}-${r.record.losses} · `
+                    )}
                     <span className={WINDOW_INK[r.window]}>{r.window}</span>
                   </span>
                   <span className="mt-1 block h-[3px] w-full overflow-hidden rounded-full bg-elevated">

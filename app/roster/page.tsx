@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
-import { analyzeRoster } from "@/lib/roster";
+import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
 import { leagueTimelines } from "@/lib/metrics/duration";
 import { Card, SectionHeader, Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
@@ -10,6 +10,7 @@ import { AgeStrip, BarChart } from "@/components/charts";
 import { fmtValue } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTeamUrl } from "@/lib/sleeperLinks";
+import { ordinal } from "@/lib/derive/describe";
 
 export const dynamic = "force-dynamic";
 
@@ -47,7 +48,10 @@ export default async function RosterPage() {
   if (rosterId == null) {
     return <p className="text-muted">Couldn&apos;t identify your roster.</p>;
   }
-  const a = analyzeRoster(h, rosterId);
+  // Pulled from the full league ranking rather than a standalone analyzeRoster call so
+  // `window` is classified against the same league-relative distribution /league uses -
+  // otherwise the same team could read "win-now" on one page and "balanced" on another.
+  const a = leagueValueRanking(h).find((r) => r.rosterId === rosterId)!;
   const win = WINDOW_COPY[a.window];
   const ages = a.valued.map((v) => v.age).filter((x): x is number => x != null);
   const posData = a.byPosition.map((p) => ({ label: p.pos, value: Math.round(p.value) }));
@@ -67,6 +71,7 @@ export default async function RosterPage() {
   const tciRank = timelines.findIndex((t) => t.rosterId === rosterId) + 1;
   const longest = tl?.assets.slice(0, 3) ?? [];
   const shortest = tl ? [...tl.assets].slice(-3).reverse() : [];
+  const form = (await currentFormByRoster(h)).get(rosterId);
 
   return (
     <div>
@@ -102,8 +107,11 @@ export default async function RosterPage() {
           {/* One string, so a wrap never leaves a dangling separator. */}
           <span className="font-mono text-[11px] tnum text-faint">
             <span className="font-semibold text-ink">
-              {a.record.wins}-{a.record.losses}
+              {form ? `${form.wins}-${form.losses}` : `${a.record.wins}-${a.record.losses}`}
             </span>{" "}
+            {form && !form.isLive && (
+              <span className="text-faint">({form.season} final, {ordinal(form.rank)} of {form.teams}) </span>
+            )}
             · {a.valued.length} players · {a.picks.picks.length} picks · core age{" "}
             <span className="font-semibold text-ink">{a.coreAge ?? "-"}</span>
             {injured > 0 && (
