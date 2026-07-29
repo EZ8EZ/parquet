@@ -7,11 +7,21 @@
  */
 import type { LeagueHistory } from "../history";
 import { pickValue, tierOf, valuePlayer } from "../valuation";
+import { strengthRanks } from "../picks";
+import { ordinal, rosterName } from "../derive/describe";
 import { getStrategyReport } from "../strategy";
 
 export interface PickInput {
   round: number;
   season: string;
+  /**
+   * The roster the pick ORIGINALLY belongs to. Optional, but supplying it is what
+   * lets the evaluator price "their 2027 1st" differently from "my 2027 1st" - the
+   * whole point of slot-aware pick valuation.
+   */
+  originalRosterId?: number;
+  /** Known slot within the round, when the draft order is already set. */
+  slot?: number;
 }
 export interface TradeInput {
   /** Assets YOU send away. */
@@ -69,13 +79,27 @@ function valueSide(
       age: p.age,
     });
   }
+  // Price picks exactly the way lib/picks.ts does, including slot estimation from
+  // the original team's strength. If these two disagreed, a roster's pick capital
+  // would not match what the trade evaluator says those same picks are worth.
+  const ranks = strengthRanks(h);
+  const teams = h.currentLeague.totalRosters || h.rosters.length;
+  const rounds = h.currentLeague.settings.draft_rounds || 3;
   for (const pk of side.picks) {
     const seasonsOut = parseInt(pk.season, 10) - h.currentSeasonYear;
-    const v = pickValue(pk.round, seasonsOut);
+    const v = pickValue(pk.round, seasonsOut, {
+      slot: pk.slot,
+      originalTeamRank:
+        pk.originalRosterId != null ? ranks.get(pk.originalRosterId) : undefined,
+      teams,
+      rounds,
+    });
+    const via =
+      pk.originalRosterId != null ? ` (via ${rosterName(h, pk.originalRosterId)})` : "";
     assets.push({
       kind: "pick",
-      id: `${pk.season}-${pk.round}`,
-      label: `${pk.season} Round ${pk.round}`,
+      id: `${pk.season}-${pk.round}-${pk.originalRosterId ?? "own"}`,
+      label: `${pk.season} ${ordinal(pk.round)}${via}`,
       value: v,
     });
   }

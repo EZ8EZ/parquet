@@ -30,12 +30,41 @@ export interface ValuationConfig {
   canonicalLines: Record<string, CanonicalLine>;
   /** How strongly positional value bends the multiplier (0 = ignore, 1 = full). */
   positionDampen: number;
-  /** Rookie-pick valuation. */
+  /**
+   * Rookie-pick valuation. SLOT-AWARE, not round-only.
+   *
+   * Round-only pricing was the model's worst flaw: it priced the 1.01 and the 1.14
+   * identically. In a 14-team league those are wildly different assets. Measured
+   * across this league's three rookie classes, the mean value of what slot 1 became
+   * was roughly 60x what slot 14 became. Published dynasty pick charts describe the
+   * same shape: an elite tier at the very top, a second tier just below, then a long
+   * flattening tail, with the single biggest gap between the first and second pick.
+   *
+   * Value decays exponentially over the OVERALL pick number, toward a floor:
+   *   value = floor + (topPickValue - floor) * exp(-slotDecay * (overall - 1))
+   *
+   * Deliberately conservative at the top: observed slot-1 outcomes in this league
+   * averaged ~7000, but that sample is three picks and includes two generational
+   * talents. `topPickValue` is set well below the observed mean on purpose, because
+   * calibrating to realized outcomes overfits to draft-class strength and to how well
+   * one manager happened to draft, neither of which you are buying when you trade for
+   * a pick. You are buying the slot.
+   */
   pick: {
-    /** Value of a next-season pick by round (1-indexed). */
-    baseByRound: Record<number, number>;
-    /** Present-value discount applied per season into the future. */
+    /** Value of the 1.01. Anchors the curve. */
+    topPickValue: number;
+    /** Exponential decay per pick slot. Higher = steeper drop-off. */
+    slotDecay: number;
+    /** Asymptotic floor: even a late third has lottery-ticket value. */
+    floor: number;
+    /** Present-value discount per season into the future. */
     discountPerYear: number;
+    /**
+     * How fast an estimated slot regresses to the league midpoint per season out.
+     * You can guess next year's draft order from current strength; you cannot guess
+     * 2029's. At 1.0 the estimate is fully discarded after one season.
+     */
+    slotUncertaintyPerYear: number;
   };
 }
 
@@ -84,7 +113,10 @@ export const VALUATION_CONFIG: ValuationConfig = {
   },
   positionDampen: 0.5,
   pick: {
-    baseByRound: { 1: 3200, 2: 1100, 3: 450 },
-    discountPerYear: 0.85,
+    topPickValue: 5000,
+    slotDecay: 0.155,
+    floor: 70,
+    discountPerYear: 0.9,
+    slotUncertaintyPerYear: 0.45,
   },
 };

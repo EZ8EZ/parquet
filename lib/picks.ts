@@ -9,7 +9,7 @@
  */
 import type { LeagueHistory } from "./history";
 import { ordinal, rosterName } from "./derive/describe";
-import { pickValue } from "./valuation";
+import { pickValue, valuePlayers } from "./valuation";
 
 export interface OwnedPick {
   season: string;
@@ -107,11 +107,68 @@ export function unrecordedPickMovesFor(
   );
 }
 
+/**
+ * Rank every roster by current strength, 1 = strongest.
+ *
+ * This is what lets a future pick be priced by WHO OWES IT rather than as a generic
+ * "a first". A first from the league's worst team is close to a lottery pick; a first
+ * from the best team is a late one.
+ *
+ * > [!warning] Records are useless in the preseason.
+ * > Verified on the live league: in `pre_draft` status every roster reads 0-0 with
+ * > 0 fpts. Sorting on that is a no-op, which silently left rank == roster_id, so
+ * > pick values were being driven by arbitrary league ids. Whenever the current
+ * > season has no games played we therefore rank by ROSTER TALENT instead, which is
+ * > a real preseason signal and the same thing a human uses to guess draft order.
+ *
+ * Talent is measured with the same valuation the rest of the app uses, so the two
+ * can never disagree. This function does NOT call `analyzeRoster` (that would recurse
+ * through `pickCapital` back into here); it values players directly.
+ */
+export function strengthRanks(h: LeagueHistory): Map<number, number> {
+  const played = h.rosters.some(
+    (r) => r.settings.wins + r.settings.losses > 0 || r.settings.fpts > 0,
+  );
+
+  let ordered: typeof h.rosters;
+  if (played) {
+    ordered = [...h.rosters].sort((a, b) => {
+      const aw = a.settings.wins - a.settings.losses;
+      const bw = b.settings.wins - b.settings.losses;
+      if (bw !== aw) return bw - aw;
+      return b.settings.fpts - a.settings.fpts;
+    });
+  } else {
+    const vals = valuePlayers(
+      [...h.players.values()],
+      h.currentLeague.scoringSettings,
+    );
+    const talent = (rosterId: number) => {
+      const roster = h.rostersById.get(rosterId);
+      if (!roster) return 0;
+      // Top 10 only: a contender is defined by its starters, not by bench filler.
+      return roster.players
+        .map((pid) => vals.get(pid)?.value ?? 0)
+        .sort((a, b) => b - a)
+        .slice(0, 10)
+        .reduce((s, v) => s + v, 0);
+    };
+    const scored = h.rosters.map((r) => ({ r, t: talent(r.rosterId) }));
+    scored.sort((a, b) => b.t - a.t || a.r.rosterId - b.r.rosterId);
+    ordered = scored.map((s) => s.r);
+  }
+
+  const m = new Map<number, number>();
+  ordered.forEach((r, i) => m.set(r.rosterId, i + 1));
+  return m;
+}
+
 export function pickCapital(h: LeagueHistory, rosterId: number): PickCapital {
   const cur = h.currentSeasonYear;
   const rounds = h.currentLeague.settings.draft_rounds || 3;
   const teams = h.currentLeague.totalRosters || h.rosters.length;
   const seasons = futureSeasons(h);
+  const ranks = strengthRanks(h);
 
   const picks: OwnedPick[] = [];
   for (const season of seasons) {
@@ -120,7 +177,12 @@ export function pickCapital(h: LeagueHistory, rosterId: number): PickCapital {
         if (ownerOf(h, season, round, original) !== rosterId) continue;
         const acquired = original !== rosterId;
         const fromName = acquired ? rosterName(h, original) : null;
-        const value = pickValue(round, parseInt(season, 10) - cur);
+        const seasonsOut = parseInt(season, 10) - cur;
+        const value = pickValue(round, seasonsOut, {
+          originalTeamRank: ranks.get(original),
+          teams,
+          rounds,
+        });
         picks.push({
           season,
           round,

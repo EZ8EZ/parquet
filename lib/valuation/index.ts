@@ -144,18 +144,87 @@ export function valuePlayers(
   return out;
 }
 
+/** What we know about which slot a pick will land in. */
+export interface PickSlotContext {
+  /**
+   * Known slot within the round (1 = earliest). Use when the draft order is set.
+   * Takes precedence over `originalTeamRank`.
+   */
+  slot?: number;
+  /**
+   * Strength rank of the team the pick ORIGINALLY belongs to, 1 = best team.
+   * A pick from a weak team lands early, which is what makes it valuable. This is
+   * how a future pick gets priced by who owes it rather than treated as generic.
+   */
+  originalTeamRank?: number;
+  /** Teams in the league. Defaults to 12 if unknown. */
+  teams?: number;
+  /** Rounds in the rookie draft. Defaults to 3. */
+  rounds?: number;
+}
+
 /**
- * Value a draft pick. Present-valued by how many seasons out it is.
+ * Estimate the overall pick number (1-based across the whole rookie draft).
+ *
+ * With a known slot, exact. With only the original team's strength, we invert the
+ * standings (worst team picks first) and then regress that estimate toward the league
+ * midpoint as the pick moves further into the future, because next season's order is
+ * roughly guessable and 2029's is not.
+ */
+export function estimateOverallPick(
+  round: number,
+  seasonsOut: number,
+  ctx: PickSlotContext = {},
+  cfg: ValuationConfig = VALUATION_CONFIG,
+): number {
+  const teams = ctx.teams ?? 12;
+  const mid = (teams + 1) / 2;
+
+  let slot: number;
+  if (ctx.slot != null) {
+    slot = ctx.slot;
+  } else if (ctx.originalTeamRank != null) {
+    // Best team (rank 1) picks last; worst team (rank = teams) picks first.
+    const impliedSlot = teams - ctx.originalTeamRank + 1;
+    // Regress toward the midpoint with distance into the future.
+    const trust = Math.max(
+      0,
+      1 - cfg.pick.slotUncertaintyPerYear * Math.max(0, seasonsOut),
+    );
+    slot = mid + (impliedSlot - mid) * trust;
+  } else {
+    slot = mid;
+  }
+  slot = Math.min(teams, Math.max(1, slot));
+  return (round - 1) * teams + slot;
+}
+
+/**
+ * Value a draft pick, slot-aware and present-valued.
+ *
  * `seasonsOut` = pick.season - currentSeason (0 = this year's rookie draft).
+ * Pass `ctx` to price by slot (known) or by who owes the pick (estimated). Without
+ * `ctx` it falls back to the middle of the round, which is the honest answer when
+ * nothing is known about the order.
  */
 export function pickValue(
   round: number,
   seasonsOut: number,
-  cfg: ValuationConfig = VALUATION_CONFIG,
+  ctxOrCfg?: PickSlotContext | ValuationConfig,
+  maybeCfg?: ValuationConfig,
 ): number {
-  const b = cfg.pick.baseByRound[round] ?? Math.max(80, 450 / round);
-  const discount = Math.pow(cfg.pick.discountPerYear, Math.max(0, seasonsOut));
-  return Math.round(b * discount);
+  // Back-compatible: the third arg used to be the config.
+  const isCfg = (v: unknown): v is ValuationConfig =>
+    !!v && typeof v === "object" && "maxValue" in (v as object);
+  const cfg = maybeCfg ?? (isCfg(ctxOrCfg) ? ctxOrCfg : VALUATION_CONFIG);
+  const ctx: PickSlotContext = isCfg(ctxOrCfg) ? {} : (ctxOrCfg ?? {});
+
+  const { topPickValue, slotDecay, floor, discountPerYear } = cfg.pick;
+  const overall = estimateOverallPick(round, seasonsOut, ctx, cfg);
+  const slotted =
+    floor + (topPickValue - floor) * Math.exp(-slotDecay * (overall - 1));
+  const discount = Math.pow(discountPerYear, Math.max(0, seasonsOut));
+  return Math.round(slotted * discount);
 }
 
 /** Coarse display tier from a value. */
