@@ -99,9 +99,10 @@ export default async function RosterPage() {
             {injured > 0 && (
               <>
                 {" "}
-                ·{" "}
-                <span className="whitespace-nowrap text-negative">
-                  {injured} flagged
+                {/* Separator inside the nowrap span so a wrap never leaves it
+                    stranded at the end of a line. */}
+                <span className="whitespace-nowrap">
+                  · <span className="text-negative">{injured} flagged</span>
                 </span>
               </>
             )}

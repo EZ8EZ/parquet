@@ -252,7 +252,7 @@ export default async function PlanPage() {
                   Pitch text for Sleeper
                 </summary>
                 <div className="pb-0.5">
-                  <CopyBlock text={m.copyable} />
+                  <CopyBlock text={m.copyable} label="Ready to paste" />
                 </div>
               </details>
             </article>
