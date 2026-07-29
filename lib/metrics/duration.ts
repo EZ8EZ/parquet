@@ -86,7 +86,7 @@ const ROOKIE_AGE = 19;
 const TAPER_START = 33;
 const TAPER_END = 41;
 
-function availability(age: number): number {
+export function availability(age: number): number {
   if (age <= TAPER_START) return 1;
   if (age >= TAPER_END) return 0;
   return (TAPER_END - age) / (TAPER_END - TAPER_START);
