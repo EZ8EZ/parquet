@@ -61,6 +61,24 @@
 
 ---
 
+## Post-v1 iteration — live data, serverless, open LLM, photos (complete)
+Driven by owner feedback ("no Anthropic key — use a free/open alternative", "my team
+is 5-Year Plan", "include images, private use", "deploying with Vercel"):
+- **Analyst is now provider-agnostic** (OpenAI-compatible via plain fetch) — works
+  with a free hosted open model (Groq/OpenRouter) OR local Ollama, and still falls
+  back to the deterministic audit. Removed the `@anthropic-ai/sdk` dependency.
+- **Reads are now DB-free** — the corpus is read live from the provider (Sleeper
+  fetches cached by Next), so the app deploys on Vercel serverless with no database.
+  The DB is used only to persist annotations, best-effort (degrades gracefully).
+- **Verified live against the real league** (`LEAGUE_PROVIDER=sleeper`): team
+  resolves to "5-Year Plan" (EZ8), real 5-season transactions, pick capital (+6
+  firsts), revealed posture, dossiers, values — all rendering. Fixed two real-data
+  bugs found in the process: transaction `type` widened (live API emits
+  `commissioner`), and the 3.3MB `/players/nba` payload is now memoized in-process
+  (it exceeds Next's 2MB fetch-cache limit).
+- **Player photos on** via Sleeper's own CDN keyed by `player_id` (Sleeper returns
+  null `espn_id` for NBA), with monogram fallback on missing images.
+
 ## FINAL STATE
 
 ### What works (end to end, zero external deps on fixtures)
@@ -82,26 +100,25 @@
   avoid a per-request call storm. Dossiers degrade gracefully without it.
 - **Crowdsourced (KTC-style) value voting** — deferred by design until there's user
   liquidity (RESEARCH §6). Values are model-derived.
-- **Live Sleeper run not exercised end-to-end** here (built against fixtures per the
-  brief); the SleeperProvider is Zod-validated against the real observed shapes and
-  the ingest chain-walk is provider-agnostic, but a real `pnpm ingest` against the
-  live league hasn't been run in this session.
+- **Annotation persistence on Vercel** needs a Postgres store (SQLite can't persist
+  on serverless). Writes degrade gracefully without one; add Vercel Postgres/Neon +
+  flip the Prisma provider to enable. Local dev persists fine (SQLite).
 
 ### What I'd do next, in priority order
-1. Run a real `LEAGUE_PROVIDER=sleeper` ingest against NSL Fantasy Hoops and sanity-
-   check dossiers/strategy on live data; wire Sleeper matchup ingest (a small table)
-   to light up the after-loss signal for real leagues.
-2. Wire balldontlie.io behind the existing `StatsProvider` to sharpen valuations
+1. Add Vercel Postgres/Neon so ledger annotations persist in production (the only
+   feature gated on it). Then Eric can start annotating real moves → the
+   revealed-vs-stated contradictions light up on his actual history.
+2. Wire Sleeper matchup ingest (small addition) to light up the "trades-after-losses"
+   tilt signal for real leagues (currently fixture-only).
+3. Wire balldontlie.io behind the existing `StatsProvider` to sharpen valuations
    with real per-game production (age/role already handled).
-3. Trade-partner matcher (Yahoo's "top-3 partners" + dossier fit) — the dossiers
+4. Trade-partner matcher (Yahoo's "top-3 partners" + dossier fit) — the dossiers
    already compute everything needed; it's a synthesis surface.
-4. Push notifications / email for new unannotated decisions (v1 relies on the badge).
-5. Provision hosted Postgres + deploy to Vercel; run ingest on a cron.
 
-### Top 3 questions blocking further progress (full list in QUESTIONS.md)
-1. **Confirm your roster identity** in NSL Fantasy Hoops (co-owner handling) so the
-   "you vs them" framing is exact on live data. (QUESTIONS #2)
-2. **Anthropic API key + model choice** to switch the Analyst from deterministic to
-   conversational. (QUESTIONS #6)
-3. **Deployment target** — hosted Postgres (Neon/Vercel) vs stay local SQLite, and
-   whether to enable real player photos given the licensing caveat. (QUESTIONS #7, #3)
+### Top questions blocking further progress (full list in QUESTIONS.md)
+1. **Persist annotations in prod?** If yes, add a Vercel Postgres/Neon store — that's
+   the one thing standing between the live deploy and a fully-functional ledger.
+2. **Free LLM endpoint** — want the conversational analyst? A free Groq key (or a
+   local Ollama) in `LLM_BASE_URL`/`LLM_API_KEY` turns it on; otherwise the
+   deterministic audit ships as-is.
+3. **balldontlie stats** — worth wiring real per-game production into valuations?

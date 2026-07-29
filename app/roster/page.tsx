@@ -72,7 +72,7 @@ export default async function RosterPage() {
             age={v.age}
             value={v.value}
             tier={v.tier}
-            espnId={v.espnId}
+            playerId={v.playerId}
             injuryStatus={v.injuryStatus}
           />
         ))}

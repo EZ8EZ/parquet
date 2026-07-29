@@ -9,7 +9,13 @@
 
 export type Sport = "nba";
 
-export type TransactionType = "trade" | "waiver" | "free_agent";
+/**
+ * Sleeper transaction types. The common ones are trade / waiver / free_agent, but
+ * the live API also emits others (e.g. "commissioner"). Kept as a widened string so
+ * unknown types never break ingestion; consumers filter on the literals they care
+ * about.
+ */
+export type TransactionType = "trade" | "waiver" | "free_agent" | (string & {});
 
 export interface User {
   userId: string;

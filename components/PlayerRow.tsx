@@ -9,7 +9,7 @@ export function PlayerRow({
   age,
   value,
   tier,
-  espnId,
+  playerId,
   right,
   injuryStatus,
 }: {
@@ -19,13 +19,13 @@ export function PlayerRow({
   age?: number | null;
   value?: number;
   tier?: string;
-  espnId?: string | null;
+  playerId?: string | null;
   right?: ReactNode;
   injuryStatus?: string | null;
 }) {
   return (
     <div className="flex items-center gap-3 rounded-[--radius-sm] border border-border bg-surface/60 px-3 py-2.5">
-      <PlayerAvatar name={name} team={team} espnId={espnId} size="md" />
+      <PlayerAvatar name={name} team={team} playerId={playerId} size="md" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-semibold text-ink">{name}</span>

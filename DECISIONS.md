@@ -63,10 +63,15 @@ primary failure mode. Degrades to a deterministic rules-based summary when
 
 ## D8. Player images abstracted behind `<PlayerAvatar>`; monograms by default
 Default = generated monogram avatars in team colors (no licensing concern, looks
-intentional). NBA headshot CDN support behind `NEXT_PUBLIC_USE_PLAYER_PHOTOS`
-(default false). Licensing caveat: NBA/Getty headshots are not licensed for
-redistribution; the flag is opt-in for personal/local use only. Background removal
-deferred to Eric (QUESTIONS.md).
+intentional). Real photos behind `NEXT_PUBLIC_USE_PLAYER_PHOTOS` (default false).
+**Source: Sleeper's own CDN keyed by `player_id`** (`sleepercdn.com/content/nba/
+players/thumb/{id}.jpg`) — NOT ESPN. Empirically, Sleeper's `/players/nba` returns
+`espn_id: null` for every NBA player, so ESPN headshots are unusable. Not every
+player has a Sleeper image (some 403/404), so `<PlayerAvatar>` is a client component
+that falls back to the monogram on load error. Licensing caveat: these headshots
+aren't licensed for redistribution; the flag is opt-in for personal/local use only
+(Eric confirmed private use). Background removal not needed (CDN images are already
+cleanly cropped). Rejected: ESPN CDN (no usable id); bundling raster assets.
 
 ## D9. FixtureProvider built FIRST and is the default when live data is absent
 Guarantees no UI work is ever blocked on network/API. All tests run against

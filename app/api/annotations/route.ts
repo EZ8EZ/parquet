@@ -26,16 +26,33 @@ export async function POST(req: Request) {
     );
   }
   const { transactionId, reasoning, posture } = parsed.data;
-  const saved = await prisma.annotation.upsert({
-    where: { transactionId },
-    create: { transactionId, reasoning, posture: posture ?? null },
-    update: { reasoning, posture: posture ?? null },
-  });
-  invalidateHistory();
-  return NextResponse.json({ ok: true, annotation: saved });
+  try {
+    const saved = await prisma.annotation.upsert({
+      where: { transactionId },
+      create: { transactionId, reasoning, posture: posture ?? null },
+      update: { reasoning, posture: posture ?? null },
+    });
+    invalidateHistory();
+    return NextResponse.json({ ok: true, persisted: true, annotation: saved });
+  } catch {
+    // No database configured (e.g. Vercel without Postgres). Don't error the UI.
+    return NextResponse.json(
+      {
+        ok: true,
+        persisted: false,
+        message:
+          "Saved for this session, but not persisted — connect a database (set DATABASE_URL to a Postgres store) to keep annotations.",
+      },
+      { status: 200 },
+    );
+  }
 }
 
 export async function GET() {
-  const all = await prisma.annotation.findMany({ orderBy: { updatedAt: "desc" } });
-  return NextResponse.json({ annotations: all });
+  try {
+    const all = await prisma.annotation.findMany({ orderBy: { updatedAt: "desc" } });
+    return NextResponse.json({ annotations: all });
+  } catch {
+    return NextResponse.json({ annotations: [] });
+  }
 }

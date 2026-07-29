@@ -41,6 +41,31 @@ async function transactionsForWeek(
   return provider.getTransactions(leagueId, week);
 }
 
+/**
+ * Assemble every transaction across a season chain, chronological. Used both by
+ * ingest (to persist) and by the live read path in history.ts (so the app never
+ * requires a DB for reads — critical for serverless/Vercel). For Sleeper the
+ * per-week fetches are cached by Next's data cache across invocations.
+ */
+export async function collectTransactions(
+  provider: LeagueProvider,
+  chain: LeagueDetail[],
+): Promise<Transaction[]> {
+  const out: Transaction[] = [];
+  for (const league of chain) {
+    for (let week = 1; week <= MAX_WEEKS; week++) {
+      const txs = await transactionsForWeek(
+        provider,
+        league.leagueId,
+        week,
+        league.season,
+      );
+      out.push(...txs);
+    }
+  }
+  return out.sort((a, b) => a.created - b.created);
+}
+
 export interface IngestSummary {
   provider: string;
   leagueId: string;

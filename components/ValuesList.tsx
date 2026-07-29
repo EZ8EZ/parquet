@@ -76,7 +76,7 @@ export function ValuesList({ rows }: { rows: ValueRow[] }) {
                 age={r.age}
                 value={r.value}
                 tier={r.tier}
-                espnId={r.espnId}
+                playerId={r.id}
               />
             </div>
           </div>

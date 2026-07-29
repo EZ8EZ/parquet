@@ -42,15 +42,17 @@ const BASE = "https://api.sleeper.app/v1";
 async function getJson<T>(
   path: string,
   schema: z.ZodType<T>,
-  { retries = 3 }: { retries?: number } = {},
+  { retries = 3, noStore = false }: { retries?: number; noStore?: boolean } = {},
 ): Promise<T> {
   let lastErr: unknown;
   for (let attempt = 0; attempt <= retries; attempt++) {
     try {
       const res = await fetch(`${BASE}${path}`, {
         headers: { accept: "application/json" },
-        // Sleeper data is highly cacheable; the app also persists to the DB.
-        next: { revalidate: 3600 },
+        // Sleeper data is highly cacheable. The players payload is too big for the
+        // data cache (>2MB), so it opts out and is memoized in-process instead.
+        cache: noStore ? "no-store" : undefined,
+        ...(noStore ? {} : { next: { revalidate: 3600 } }),
       });
       if (res.status === 429) {
         await sleep(1000 * (attempt + 1));
@@ -147,7 +149,19 @@ export class SleeperProvider implements LeagueProvider {
   }
 
   async getPlayers(): Promise<Player[]> {
-    const raw = await getJson(`/players/nba`, RawPlayerMap);
-    return Object.values(raw).map(toPlayer);
+    // /players/nba is ~3.3MB — over Next's 2MB fetch-cache limit, so it can't use
+    // the data cache. Memoize in-process (rosters change far more often than the
+    // player universe) to avoid re-downloading it on every render.
+    const now = Date.now();
+    if (playersCache && now - playersCache.at < PLAYERS_TTL_MS) {
+      return playersCache.data;
+    }
+    const raw = await getJson(`/players/nba`, RawPlayerMap, { noStore: true });
+    const data = Object.values(raw).map(toPlayer);
+    playersCache = { at: now, data };
+    return data;
   }
 }
+
+let playersCache: { at: number; data: Player[] } | null = null;
+const PLAYERS_TTL_MS = 6 * 60 * 60 * 1000; // 6h — the player universe is stable

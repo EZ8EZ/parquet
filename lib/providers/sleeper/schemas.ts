@@ -169,7 +169,9 @@ export function toDraftPick(r: z.infer<typeof RawDraftPick>): DraftPickRef {
 // ---------- Transaction ----------
 export const RawTransaction = z.object({
   transaction_id: str,
-  type: z.enum(["trade", "waiver", "free_agent"]),
+  // Widened from an enum: the live API emits types beyond trade/waiver/free_agent
+  // (e.g. "commissioner"). Accept any string so a single odd type can't fail a week.
+  type: str,
   status: str.nullish(),
   created: num.nullish(),
   status_updated: num.nullish(),

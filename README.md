@@ -62,16 +62,23 @@ Then pull the full multi-season history:
 pnpm ingest       # walks previous_league_id back to the start; idempotent, re-runnable
 ```
 
-### Enable the conversational analyst (optional)
+### Enable the conversational analyst (optional, free / open-source)
+
+The Analyst talks to **any OpenAI-compatible chat endpoint** — no paid vendor:
 
 ```bash
-# .env.local
-ANTHROPIC_API_KEY=sk-ant-...
-ANALYST_MODEL=claude-sonnet-5
+# .env.local — pick ONE
+# a) Groq (free hosted open models):
+LLM_BASE_URL=https://api.groq.com/openai/v1
+LLM_API_KEY=gsk_...            # free key from console.groq.com
+LLM_MODEL=llama-3.3-70b-versatile
+# b) Local Ollama (fully offline, no key):
+# LLM_BASE_URL=http://localhost:11434/v1
+# LLM_MODEL=llama3.1
 ```
 
-Without a key, the Analyst still works — it falls back to a deterministic,
-rules-based audit. The rest of the app never needs a key.
+With nothing set, the Analyst still works — it runs a deterministic, still-adversarial
+audit. The rest of the app never needs any key.
 
 ## Environment variables
 
@@ -83,8 +90,9 @@ All documented in [`.env.example`](.env.example):
 | `DATABASE_URL` | `file:./dev.db` | SQLite locally; swap to `postgres://` for prod |
 | `SLEEPER_USERNAME` | `EZ8` | resolves your roster ("you") |
 | `SLEEPER_LEAGUE_ID` | — | current-season league id (Sleeper mode) |
-| `ANTHROPIC_API_KEY` | — | enables the LLM analyst; optional |
-| `ANALYST_MODEL` | `claude-sonnet-5` | analyst model |
+| `LLM_BASE_URL` | — | OpenAI-compatible endpoint (Groq/OpenRouter/Ollama); enables conversational analyst |
+| `LLM_API_KEY` | — | key for that endpoint (none needed for local Ollama) |
+| `LLM_MODEL` | `llama-3.3-70b-versatile` | analyst model |
 | `NEXT_PUBLIC_USE_PLAYER_PHOTOS` | `false` | real NBA headshots (licensing caveat, see DECISIONS D8) |
 | `CSV_DIR` | — | directory of CSVs when `LEAGUE_PROVIDER=csv` |
 
@@ -150,10 +158,29 @@ Next.js 16 (App Router, TS strict) · Tailwind v4 · Prisma 6 (SQLite → Postgr
 Zod 4 · Vitest · Anthropic SDK · deployable to Vercel · installable PWA.
 
 ## Deploy (Vercel)
-Set the env vars above (swap `DATABASE_URL` to a hosted Postgres and change
-`provider = "postgresql"` in `prisma/schema.prisma`). `pnpm build` runs
-`prisma generate` first. Run `pnpm ingest` once (or let `ensureIngested` handle it)
-to populate the corpus.
+**No database is required to deploy** — all read features (roster, values, strategy,
+dossiers, analyst, trade) read the corpus live from Sleeper (cached), so the app runs
+on Vercel serverless out of the box. Set these Project → Settings → Environment
+Variables and deploy:
+
+```
+LEAGUE_PROVIDER=sleeper
+SLEEPER_USERNAME=EZ8
+SLEEPER_LEAGUE_ID=1347007735815766016
+NEXT_PUBLIC_USE_PLAYER_PHOTOS=true
+```
+
+The first request after a cold start assembles ~5 seasons from Sleeper (a few
+seconds), then it's cached. `pnpm build` runs `prisma generate` first.
+
+**Persisting ledger annotations** is the one feature that needs a database (SQLite
+can't persist on serverless). To enable it: add a Vercel Postgres / Neon store, set
+`DATABASE_URL`, change `provider = "postgresql"` in `prisma/schema.prisma`, and run
+`prisma db push`. Until then, annotation writes degrade gracefully (they don't error;
+they just aren't saved), and the rest of the app is fully functional.
+
+Optional: set `LLM_BASE_URL` + `LLM_API_KEY` (e.g. a free Groq key) to turn on the
+conversational analyst.
 
 ## Project docs
 - [RESEARCH.md](RESEARCH.md) — competitor teardown, feature matrix, the "is there a

@@ -1,13 +1,13 @@
 /**
  * LeagueHistory — the single corpus object every derivation engine consumes.
  *
- * Transactions + annotations come from the DB (populated by ingest / lazily by
- * ensureIngested). Current league state (rosters, users, players) comes live from
- * the provider. The engines (strategy, dossier, analyst) are pure functions over
- * this object.
+ * READS ARE DB-FREE. The corpus (chain, rosters, players, transactions) is read
+ * live from the provider so the app runs on serverless/Vercel with no database
+ * (Sleeper fetches are cached by Next's data cache). The DB is used ONLY to persist
+ * user annotations, and even that is best-effort: if it's unavailable, reads still
+ * work and the fixture demo seeds its own annotation in code.
+ * The engines (strategy, dossier, analyst) are pure functions over this object.
  */
-import { prisma } from "./db";
-import { ensureIngested } from "./ingest";
 import {
   activeLeagueId,
   getLeagueProvider,
@@ -22,7 +22,7 @@ import type {
   TradedPick,
   Transaction,
 } from "./providers/types";
-import { assembleChain } from "./ingest";
+import { assembleChain, collectTransactions } from "./ingest";
 
 export interface Annotation {
   transactionId: string;
@@ -59,24 +59,45 @@ export interface LeagueHistory {
   currentSeasonYear: number;
 }
 
-async function loadPlayers(): Promise<Map<string, Player>> {
-  const provider = getLeagueProvider();
-  // For Sleeper, prefer the DB cache (payload is 2.3MB) if present.
-  if (provider.name === "sleeper") {
-    const cached = await prisma.playerCacheEntry.findMany({
-      select: { payload: true },
-    });
-    if (cached.length) {
-      const m = new Map<string, Player>();
-      for (const row of cached) {
-        const p = JSON.parse(row.payload) as Player;
-        m.set(p.playerId, p);
-      }
-      return m;
-    }
+/**
+ * Fixture-only seed annotation so the revealed-vs-stated demo works with no DB and
+ * no seed script (the 2022 rebuild statement that the 2025 pivot contradicts).
+ */
+const FIXTURE_SEED_ANNOTATIONS: Annotation[] = [
+  {
+    transactionId: "fx-2022-rebuildA",
+    reasoning:
+      "Full rebuild. I'm getting younger and stockpiling first-round picks. " +
+      "Not chasing wins for the next 2-3 years — the goal is a young core that " +
+      "peaks together. Moving every veteran who isn't part of the future.",
+    posture: "rebuild",
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+  },
+];
+
+/** Best-effort annotation load: DB if reachable, else empty; + fixture seed. */
+async function loadAnnotations(providerNm: string): Promise<Map<string, Annotation>> {
+  const map = new Map<string, Annotation>();
+  if (providerNm === "fixture") {
+    for (const a of FIXTURE_SEED_ANNOTATIONS) map.set(a.transactionId, a);
   }
-  const players = await provider.getPlayers();
-  return new Map(players.map((p) => [p.playerId, p]));
+  try {
+    const { prisma } = await import("./db");
+    const rows = await prisma.annotation.findMany();
+    for (const a of rows) {
+      map.set(a.transactionId, {
+        transactionId: a.transactionId,
+        reasoning: a.reasoning,
+        posture: a.posture,
+        createdAt: a.createdAt,
+        updatedAt: a.updatedAt,
+      });
+    }
+  } catch {
+    // DB not configured/reachable (e.g. Vercel without Postgres) — reads still work.
+  }
+  return map;
 }
 
 async function loadMatchups(chain: LeagueDetail[]): Promise<HistoryMatchup[]> {
@@ -109,7 +130,8 @@ function resolveMe(
 }
 
 let cachedHistory: { at: number; value: LeagueHistory } | null = null;
-const HISTORY_TTL_MS = 30_000;
+// Longer TTL because the Sleeper corpus assembly is many (cached) fetches.
+const HISTORY_TTL_MS = 5 * 60_000;
 
 export async function getLeagueHistory(
   opts: { fresh?: boolean } = {},
@@ -117,40 +139,22 @@ export async function getLeagueHistory(
   if (!opts.fresh && cachedHistory && Date.now() - cachedHistory.at < HISTORY_TTL_MS) {
     return cachedHistory.value;
   }
-  await ensureIngested();
   const provider = getLeagueProvider();
   const leagueId = activeLeagueId();
 
-  const [currentLeague, users, rosters, tradedPicks, players] = await Promise.all([
+  const [currentLeague, users, rosters, tradedPicks, playerList] = await Promise.all([
     provider.getLeague(leagueId),
     provider.getUsers(leagueId),
     provider.getRosters(leagueId),
     provider.getTradedPicks(leagueId),
-    loadPlayers(),
+    provider.getPlayers(),
   ]);
+  const players = new Map<string, Player>(playerList.map((p) => [p.playerId, p]));
   const chain = await assembleChain(provider, leagueId);
 
-  const txRows = await prisma.ingestedTransaction.findMany({
-    orderBy: { createdMs: "asc" },
-  });
-  const transactions = txRows.map(
-    (r) => JSON.parse(r.payload) as Transaction,
-  );
-
-  const annRows = await prisma.annotation.findMany();
-  const annotations = new Map<string, Annotation>(
-    annRows.map((a) => [
-      a.transactionId,
-      {
-        transactionId: a.transactionId,
-        reasoning: a.reasoning,
-        posture: a.posture,
-        createdAt: a.createdAt,
-        updatedAt: a.updatedAt,
-      },
-    ]),
-  );
-
+  // Corpus read live from the provider — no DB required (Sleeper fetches cached).
+  const transactions = await collectTransactions(provider, chain);
+  const annotations = await loadAnnotations(provider.name);
   const matchups = await loadMatchups(chain);
 
   // Resolve "me": the provider's user (fixture=EZ8; sleeper via SLEEPER_USERNAME).

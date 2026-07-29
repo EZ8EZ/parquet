@@ -3,8 +3,12 @@
  * NOT fine-tuning, NOT a vector DB (DECISIONS.md D7): 3+ seasons of annotated
  * transactions fit in one context window.
  *
- * Degrades gracefully: with no ANTHROPIC_API_KEY it returns a deterministic,
- * rules-based audit instead of erroring. The rest of the app needs no key.
+ * Provider-agnostic: talks to ANY OpenAI-compatible chat-completions endpoint via
+ * plain fetch — a free hosted open model (Groq, OpenRouter, Together) OR a local
+ * open-source model (Ollama, LM Studio). Configured with LLM_BASE_URL / LLM_API_KEY
+ * / LLM_MODEL. With nothing configured it degrades to a deterministic, rules-based
+ * audit — so the app works with zero keys and deploys free on Vercel. No paid
+ * dependency, no vendor lock-in (DECISIONS.md D17).
  */
 import type { LeagueHistory } from "../history";
 import { getStrategyReport } from "../strategy";
@@ -116,42 +120,41 @@ export async function runAnalyst(
   prior: AnalystMessage[] = [],
 ): Promise<AnalystResult> {
   const corpus = buildCorpus(h);
-  const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
+  const baseUrl = process.env.LLM_BASE_URL; // OpenAI-compatible base, e.g. https://api.groq.com/openai/v1
+  if (!baseUrl) {
+    // No LLM configured — the deterministic audit IS the product here, not a stub.
     return { text: rulesFallback(h, question), mode: "rules" };
   }
+  const apiKey = process.env.LLM_API_KEY; // optional (local Ollama needs none)
+  const model = process.env.LLM_MODEL || "llama-3.3-70b-versatile";
   try {
-    const { default: Anthropic } = await import("@anthropic-ai/sdk");
-    const client = new Anthropic({ apiKey });
-    const model = process.env.ANALYST_MODEL || "claude-sonnet-5";
     const messages = [
+      { role: "system", content: ANALYST_SYSTEM_PROMPT },
       {
-        role: "user" as const,
-        content: `Here is my dynasty history corpus. Use it to ground every answer.\n\n<corpus>\n${corpus}\n</corpus>`,
-      },
-      {
-        role: "assistant" as const,
-        content: "Understood. I have your corpus. I'll lead with the disconfirming evidence and cite your own moves. What do you want audited?",
+        role: "system",
+        content: `The user's dynasty history corpus follows. Ground every answer in it; cite specific transactions and seasons.\n\n<corpus>\n${corpus}\n</corpus>`,
       },
       ...prior.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user" as const, content: `${question}\n\n(${ADVERSARIAL_REMINDER})` },
+      { role: "user", content: `${question}\n\n(${ADVERSARIAL_REMINDER})` },
     ];
-    const res = await client.messages.create({
-      model,
-      max_tokens: 1024,
-      system: ANALYST_SYSTEM_PROMPT,
-      messages,
+    const res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
+      },
+      body: JSON.stringify({ model, messages, max_tokens: 1024, temperature: 0.4 }),
+      signal: AbortSignal.timeout(45_000),
     });
-    const text = res.content
-      .map((b) => (b.type === "text" ? b.text : ""))
-      .join("\n")
-      .trim();
+    if (!res.ok) throw new Error(`LLM HTTP ${res.status}`);
+    const data = await res.json();
+    const text: string = data?.choices?.[0]?.message?.content?.trim() ?? "";
     return { text: text || rulesFallback(h, question), mode: "llm", model };
   } catch {
     // Never error the UI — degrade to rules with a note.
     return {
       text:
-        `(Analyst API unavailable — showing the deterministic audit instead.)\n\n` +
+        `(Live analyst unavailable — showing the deterministic audit instead.)\n\n` +
         rulesFallback(h, question),
       mode: "rules",
     };
@@ -205,7 +208,7 @@ export function rulesFallback(h: LeagueHistory, question: string): string {
 
   out.push("");
   out.push(
-    "(This is the deterministic audit. Set ANTHROPIC_API_KEY for the conversational analyst that can reason about specific hypotheticals.)",
+    "(This is the deterministic audit. Point LLM_BASE_URL at any OpenAI-compatible endpoint — a free hosted open model or a local Ollama — for the conversational analyst that reasons about specific hypotheticals.)",
   );
   return out.join("\n");
 }
