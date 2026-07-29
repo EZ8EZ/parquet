@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { valuePlayers } from "@/lib/valuation";
 import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
@@ -87,6 +88,19 @@ export default async function ValuesPage() {
           />
         </dl>
       </header>
+
+      {/* This is somebody else's board (Sleeper's search rank). /rank is where
+          that stops being true - drag your own order in and blend it against
+          this one at whatever weight you trust. */}
+      <nav aria-label="Values sections" className="mt-2 flex gap-1.5">
+        <Link
+          href="/rank"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+        >
+          Build your own ranking
+          <ChevronRight size={13} aria-hidden="true" />
+        </Link>
+      </nav>
 
       <ValuesList rows={rows} />
     </div>

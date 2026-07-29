@@ -129,3 +129,42 @@ a[role="button"],
   height: 1px;
   background: linear-gradient(90deg, var(--color-border-strong), transparent);
 }
+
+/* /rank blend-weight control. A bare native range renders as a hairline track
+ * with a tiny thumb - fine with a mouse, not fine as a 44px-minimum touch
+ * target. Sized up so the thumb itself reads as a real control; the fill color
+ * is set inline per-value in RankingBoard since that part is data-driven. */
+.weight-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  background: transparent;
+}
+.weight-slider::-webkit-slider-runnable-track {
+  height: 10px;
+  border-radius: 9999px;
+}
+.weight-slider::-moz-range-track {
+  height: 10px;
+  border-radius: 9999px;
+}
+.weight-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 28px;
+  height: 28px;
+  margin-top: -9px;
+  border-radius: 9999px;
+  background: var(--color-accent);
+  border: 3px solid var(--color-accent-ink);
+  box-shadow: 0 0 0 1px var(--color-border-strong);
+  cursor: pointer;
+}
+.weight-slider::-moz-range-thumb {
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background: var(--color-accent);
+  border: 3px solid var(--color-accent-ink);
+  box-shadow: 0 0 0 1px var(--color-border-strong);
+  cursor: pointer;
+}
