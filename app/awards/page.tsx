@@ -1,13 +1,7 @@
 import Link from "next/link";
 import { ChevronRight, Trophy } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
-import {
-  AWARD_GROUPS,
-  awardsSummary,
-  computeAwards,
-  type Award,
-  type AwardEntrant,
-} from "@/lib/superlatives";
+import { AWARD_GROUPS, awardsPageData, type Award, type AwardEntrant } from "@/lib/superlatives";
 import { Tag, EmptyState } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import type { LeagueUser } from "@/lib/providers/types";
@@ -17,8 +11,38 @@ export const dynamic = "force-dynamic";
 
 const PLACE = ["2nd", "3rd", "4th"];
 
-/** Roster -> the league user behind it, for team imagery. */
-type UserLookup = (rosterId: number) => LeagueUser | undefined;
+/** Entrant -> the league user behind it, for team imagery. */
+type UserLookup = (entrant: AwardEntrant) => LeagueUser | undefined;
+
+/**
+ * Links an entrant to their dossier, EXCEPT when they have left the league: that
+ * roster's dossier now describes their successor, so the link would name the wrong
+ * person. A former manager renders as plain, unclickable text instead.
+ */
+function EntrantLink({
+  entrant,
+  className,
+  ariaLabel,
+  children,
+}: {
+  entrant: AwardEntrant;
+  className: string;
+  ariaLabel: string;
+  children: React.ReactNode;
+}) {
+  if (entrant.isFormer) {
+    return (
+      <div className={className} aria-label={ariaLabel}>
+        {children}
+      </div>
+    );
+  }
+  return (
+    <Link href={`/managers/${entrant.rosterId}`} aria-label={ariaLabel} className={className}>
+      {children}
+    </Link>
+  );
+}
 
 function AwardCard({
   award,
@@ -32,8 +56,9 @@ function AwardCard({
   const w = award.winner;
   const isMe =
     meRosterId != null &&
+    !w.isFormer &&
     (w.rosterId === meRosterId || w.partnerRosterId === meRosterId);
-  const user = userOf(w.rosterId);
+  const user = userOf(w);
 
   return (
     <article
@@ -55,9 +80,9 @@ function AwardCard({
         {award.subtitle}
       </p>
 
-      <Link
-        href={`/managers/${w.rosterId}`}
-        aria-label={`Dossier: ${w.label}`}
+      <EntrantLink
+        entrant={w}
+        ariaLabel={w.isFormer ? `Former manager: ${w.label}` : `Dossier: ${w.label}`}
         className={cn(
           "mt-1.5 flex min-h-11 items-center gap-2 rounded-[--radius-sm] border px-2 py-1.5 transition-colors",
           isMe
@@ -84,6 +109,8 @@ function AwardCard({
             </span>
             {isMe ? (
               <Tag tone="accent">you</Tag>
+            ) : w.isFormer ? (
+              <Tag>former{w.tenureLabel ? ` ${w.tenureLabel}` : ""}</Tag>
             ) : (
               <span className="shrink-0 truncate text-[11px] text-faint">
                 {w.displayName}
@@ -91,8 +118,10 @@ function AwardCard({
             )}
           </span>
         </span>
-        <ChevronRight size={13} aria-hidden="true" className="shrink-0 text-faint" />
-      </Link>
+        {!w.isFormer && (
+          <ChevronRight size={13} aria-hidden="true" className="shrink-0 text-faint" />
+        )}
+      </EntrantLink>
 
       {w.partnerRosterId != null && (
         <Link
@@ -106,13 +135,15 @@ function AwardCard({
 
       {award.runnersUp.length > 0 && (
         <ol className="mt-1 divide-y divide-border/70">
+          {/* Keyed on the owner, not the roster: two principals share a roster id
+              across a handover and can both place in the same award. */}
           {award.runnersUp.map((r, i) => (
-            <li key={`${r.rosterId}-${r.partnerRosterId ?? ""}`}>
+            <li key={`${r.ownerId ?? r.rosterId}-${r.partnerRosterId ?? ""}`}>
               <RunnerUpRow
                 entrant={r}
                 place={PLACE[i] ?? `${i + 2}th`}
                 meRosterId={meRosterId}
-                user={userOf(r.rosterId)}
+                user={userOf(r)}
               />
             </li>
           ))}
@@ -135,11 +166,12 @@ function RunnerUpRow({
 }) {
   const isMe =
     meRosterId != null &&
+    !entrant.isFormer &&
     (entrant.rosterId === meRosterId || entrant.partnerRosterId === meRosterId);
   return (
-    <Link
-      href={`/managers/${entrant.rosterId}`}
-      aria-label={`${place}: ${entrant.label}, ${entrant.stat}`}
+    <EntrantLink
+      entrant={entrant}
+      ariaLabel={`${place}: ${entrant.label}, ${entrant.stat}`}
       className={cn(
         "flex min-h-11 items-center gap-2 rounded-[--radius-sm] px-1.5 transition-colors",
         isMe ? "bg-accent/[0.05]" : "hover:bg-surface-2",
@@ -166,27 +198,36 @@ function RunnerUpRow({
       >
         {entrant.label}
       </span>
+      {entrant.tenureLabel && (
+        <span className="shrink-0 text-[10px] text-faint">
+          {entrant.tenureLabel}
+        </span>
+      )}
       <span className="shrink-0 truncate font-mono text-[11px] tnum text-faint">
         {entrant.stat}
       </span>
-    </Link>
+    </EntrantLink>
   );
 }
 
 export default async function AwardsPage() {
   const h = await getLeagueHistory();
-  const awards = computeAwards(h);
-  const summary = awardsSummary(h);
+  const { awards, summary } = await awardsPageData(h);
   const meRosterId = h.me.rosterId;
 
-  const userOf: UserLookup = (rosterId) => {
-    const r = h.rostersById.get(rosterId);
+  // A departed manager shares a roster id with whoever took the team over, so keying
+  // imagery off the roster would put the current owner's logo on the former owner's
+  // award. Resolve by owner id and let the avatar fall back to a monogram.
+  const userOf: UserLookup = (entrant) => {
+    if (entrant.ownerId) return h.usersById.get(entrant.ownerId);
+    const r = h.rostersById.get(entrant.rosterId);
     return r?.ownerId ? h.usersById.get(r.ownerId) : undefined;
   };
 
   const mine = awards.filter(
     (a) =>
       meRosterId != null &&
+      !a.winner.isFormer &&
       (a.winner.rosterId === meRosterId || a.winner.partnerRosterId === meRosterId),
   );
 
@@ -233,7 +274,12 @@ export default async function AwardsPage() {
           <div className="flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface/60">
             {[
               { v: awards.length, l: "awards" },
-              { v: summary.managers, l: "managers" },
+              {
+                v: summary.managers,
+                // Not the number of teams: a team that changed hands contributes two
+                // managers, and the one who left is still eligible for their seasons.
+                l: summary.formerManagers > 0 ? "managers*" : "managers",
+              },
               { v: summary.trades, l: "trades" },
               { v: summary.moves.toLocaleString(), l: "moves" },
             ].map((s, i) => (
@@ -299,6 +345,19 @@ export default async function AwardsPage() {
             {summary.seasons} seasons. Ties break to the lower roster number. Awards
             with no real signal behind them are left unawarded. Tap any team for their
             dossier.
+            {summary.formerManagers > 0 && (
+              <>
+                {" "}
+                <span className="text-muted">
+                  *{summary.managers} managers across {summary.managers - summary.formerManagers}{" "}
+                  teams: {summary.formerManagers} team
+                  {summary.formerManagers === 1 ? " has" : "s have"} changed hands, and
+                  each manager is judged only on the seasons they actually ran. Former
+                  managers are listed without a dossier link, because that roster&rsquo;s
+                  dossier now describes their successor.
+                </span>
+              </>
+            )}
           </p>
         </>
       )}

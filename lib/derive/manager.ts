@@ -101,16 +101,42 @@ function seasonYear(season: string): number {
   return parseInt(season, 10);
 }
 
+/**
+ * Restricts a profile to one manager's TENURE on a roster.
+ *
+ * Without this, a roster that changed hands produces one profile blending two people:
+ * their trade counts, their age preferences and their holding patterns all averaged
+ * into a manager who never existed. Passing a scope confines every derived signal to
+ * the seasons that principal actually managed. See lib/principals.ts.
+ *
+ * Known limitation: a player acquired in the last season of one tenure and dropped in
+ * the first season of the next spans the handover, so the holding-time pairing does not
+ * resolve and that hold is simply not counted for either manager. Dropping an
+ * unattributable hold is better than crediting it to the wrong person.
+ */
+export interface TenureScope {
+  /** Platform user id of the principal being profiled. */
+  ownerId: string | null;
+  displayName: string;
+  teamName: string | null;
+  /** Only transactions in these seasons count. Omit for the whole history. */
+  seasons?: Set<string>;
+}
+
 export function deriveManagerProfile(
   h: LeagueHistory,
   rosterId: number,
+  scope?: TenureScope,
 ): ManagerProfile {
   const roster = h.rostersById.get(rosterId);
-  const userId = roster?.ownerId ?? null;
+  const userId = scope ? scope.ownerId : (roster?.ownerId ?? null);
   const user = userId ? h.usersById.get(userId) : undefined;
   const results = resultIndex(h);
 
-  const mine = h.transactions.filter((t) => involves(t, rosterId));
+  const seasons = scope?.seasons;
+  const mine = h.transactions.filter(
+    (t) => involves(t, rosterId) && (!seasons || seasons.has(t.season)),
+  );
   const trades = mine.filter((t) => t.type === "trade");
   const waivers = mine.filter((t) => t.type === "waiver");
   const freeAgents = mine.filter((t) => t.type === "free_agent");
@@ -215,8 +241,10 @@ export function deriveManagerProfile(
   return {
     rosterId,
     userId,
-    displayName: user?.displayName ?? `Roster ${rosterId}`,
-    teamName: user?.teamName ?? null,
+    // A departed principal is not in the current users list, so the scope carries the
+    // name that only their own seasons still know.
+    displayName: user?.displayName ?? scope?.displayName ?? `Roster ${rosterId}`,
+    teamName: user?.teamName ?? scope?.teamName ?? null,
     totalTransactions: mine.length,
     trades: trades.length,
     waivers: waivers.length,

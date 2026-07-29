@@ -8,9 +8,10 @@ const rosterFor = (archetype: string) =>
 
 const byId = (awards: Award[], id: string) => awards.find((a) => a.id === id);
 
+const h = buildFixtureHistory();
+const awards = await computeAwards(h);
+
 describe("league awards", () => {
-  const h = buildFixtureHistory();
-  const awards = computeAwards(h);
 
   it("produces a healthy slate of well-formed awards", () => {
     expect(awards.length).toBeGreaterThanOrEqual(10);
@@ -50,9 +51,9 @@ describe("league awards", () => {
     }
   });
 
-  it("is deterministic across repeated calls", () => {
-    const again = computeAwards(buildFixtureHistory());
-    expect(JSON.stringify(computeAwards(h))).toBe(JSON.stringify(awards));
+  it("is deterministic across repeated calls", async () => {
+    const again = await computeAwards(buildFixtureHistory());
+    expect(JSON.stringify(await computeAwards(h))).toBe(JSON.stringify(awards));
     expect(JSON.stringify(again)).toBe(JSON.stringify(awards));
   });
 
@@ -157,10 +158,10 @@ describe("league awards", () => {
 });
 
 describe("league awards on an empty corpus", () => {
-  it("never crashes and never crowns a fake winner", () => {
+  it("never crashes and never crowns a fake winner", async () => {
     const h = buildFixtureHistory();
     const empty = { ...h, transactions: [], matchups: [] };
-    const awards = computeAwards(empty);
+    const awards = await computeAwards(empty);
     for (const a of awards) {
       expect(a.winner.rosterId).toBeGreaterThan(0);
       expect(a.statLine.length).toBeGreaterThan(0);
@@ -172,9 +173,9 @@ describe("league awards on an empty corpus", () => {
     expect(awardsSummary(empty).trades).toBe(0);
   });
 
-  it("handles a league with no rosters at all", () => {
+  it("handles a league with no rosters at all", async () => {
     const h = buildFixtureHistory();
     const bare = { ...h, rosters: [], rostersById: new Map() };
-    expect(computeAwards(bare)).toEqual([]);
+    expect(await computeAwards(bare)).toEqual([]);
   });
 });
