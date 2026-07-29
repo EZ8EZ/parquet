@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import type { Player } from "../providers/types";
+import { corpus, FIXTURE_LEAGUE_ID } from "../providers/fixture";
 import {
   VALUATION_CONFIG,
   ageMultiplier,
@@ -8,8 +9,10 @@ import {
   pickValue,
   slotDistribution,
   positionMultipliers,
+  theoreticalMaxMultiplier,
   tierOf,
   valuePlayer,
+  valuePlayers,
 } from "./index";
 
 const SCORING = {
@@ -95,6 +98,113 @@ describe("positionMultipliers (league-aware)", () => {
     const blkHeavy = positionMultipliers({ ...SCORING, blk: 6 });
     const flat = positionMultipliers({ ...SCORING, blk: 2 });
     expect(blkHeavy.C).toBeGreaterThan(flat.C);
+  });
+});
+
+describe("theoreticalMaxMultiplier", () => {
+  it("is the product of each multiplier's own max, not a hand-typed constant", () => {
+    const posMults = { PG: 1.05, C: 1.12, SF: 0.95 };
+    const ageMax = Math.max(...VALUATION_CONFIG.ageAnchors.map(([, m]) => m));
+    const injuryMax = Math.max(
+      1,
+      VALUATION_CONFIG.injuryDefault,
+      ...Object.values(VALUATION_CONFIG.injury),
+    );
+    const roleMax = Math.max(
+      VALUATION_CONFIG.role.starter,
+      VALUATION_CONFIG.role.secondary,
+      VALUATION_CONFIG.role.bench,
+      VALUATION_CONFIG.role.unknown,
+    );
+    expect(theoreticalMaxMultiplier(posMults)).toBeCloseTo(
+      ageMax * injuryMax * roleMax * 1.12,
+      6,
+    );
+  });
+
+  it("tracks a config edit automatically instead of needing a matching magic number", () => {
+    const posMults = { SF: 1 };
+    const hotAge = {
+      ...VALUATION_CONFIG,
+      ageAnchors: [...VALUATION_CONFIG.ageAnchors, [17, 1.5]] as Array<
+        [number, number]
+      >,
+    };
+    expect(theoreticalMaxMultiplier(posMults, hotAge)).toBeGreaterThan(
+      theoreticalMaxMultiplier(posMults, VALUATION_CONFIG),
+    );
+  });
+
+  it("confirms injury and role never exceed 1.0 in the current config", () => {
+    expect(
+      Math.max(VALUATION_CONFIG.injuryDefault, ...Object.values(VALUATION_CONFIG.injury)),
+    ).toBeLessThanOrEqual(1);
+    expect(
+      Math.max(
+        VALUATION_CONFIG.role.starter,
+        VALUATION_CONFIG.role.secondary,
+        VALUATION_CONFIG.role.bench,
+        VALUATION_CONFIG.role.unknown,
+      ),
+    ).toBeLessThanOrEqual(1);
+  });
+});
+
+describe("valuation ceiling (rescale, not clamp)", () => {
+  it("prices the single most extreme hypothetical player at exactly maxValue, not above it", () => {
+    // Youngest anchor age, perfectly healthy, a starter, at whichever position
+    // this scoring rewards most - the combination no real player embodies, and
+    // exactly the number the ceiling is derived from.
+    const ageAnchorMax = VALUATION_CONFIG.ageAnchors.reduce((best, a) =>
+      a[1] > best[1] ? a : best,
+    );
+    const posMults = positionMultipliers(SCORING);
+    const bestPos = Object.entries(posMults).reduce((best, [k, v]) =>
+      v > best[1] ? [k, v] : best,
+    )[0] as string;
+
+    const synthetic = player({
+      searchRank: 1,
+      age: ageAnchorMax[0],
+      injuryStatus: null,
+      depthChartOrder: 1,
+      position: bestPos,
+      fantasyPositions: [bestPos],
+    });
+
+    const b = valuePlayer(synthetic, SCORING);
+    expect(b.value).toBeLessThanOrEqual(VALUATION_CONFIG.maxValue);
+    expect(Math.abs(b.value - VALUATION_CONFIG.maxValue)).toBeLessThanOrEqual(1);
+  });
+
+  it("no player in the (offline, deterministic) fixture corpus exceeds maxValue", () => {
+    const c = corpus();
+    const scoring = c.leagues[FIXTURE_LEAGUE_ID].scoringSettings;
+    const values = valuePlayers(c.players, scoring);
+    for (const v of values.values()) {
+      expect(v.value).toBeLessThanOrEqual(VALUATION_CONFIG.maxValue);
+    }
+  });
+
+  it("preserves the ratio between any two players' values when maxValue changes", () => {
+    // A rescale multiplies every value by the same constant. Doubling maxValue
+    // must double every player's value and leave the ratio between any two of
+    // them untouched - a clamp could not make this claim.
+    const cfgDouble = { ...VALUATION_CONFIG, maxValue: VALUATION_CONFIG.maxValue * 2 };
+    const p1 = player({ searchRank: 5, age: 24 });
+    const p2 = player({ searchRank: 80, age: 30, injuryStatus: "Questionable" });
+
+    const a1 = valuePlayer(p1, SCORING).value;
+    const a2 = valuePlayer(p2, SCORING).value;
+    const b1 = valuePlayer(p1, SCORING, cfgDouble).value;
+    const b2 = valuePlayer(p2, SCORING, cfgDouble).value;
+
+    expect(b1 / a1).toBeCloseTo(2, 2);
+    expect(b2 / a2).toBeCloseTo(2, 2);
+    // Integer rounding on both sides means this is "near-bit-for-bit", not
+    // literally bit-for-bit: a couple hundredths of a percent of slack absorbs
+    // Math.round() quantization, not any distortion from the rescale itself.
+    expect(a1 / a2).toBeCloseTo(b1 / b2, 2);
   });
 });
 

@@ -107,6 +107,42 @@ function primaryPosition(player: Player): string {
   return player.position ?? player.fantasyPositions[0] ?? "SF";
 }
 
+/**
+ * The true ceiling of `ageMult * injuryMult * roleMult * posMult`, derived from
+ * config and this league's live scoring rather than hand-typed.
+ *
+ * `base(1)` is exactly `maxValue`, so if any multiplier can exceed 1.0 the #1
+ * asset can price above the ceiling `maxValue` documents. That happened here:
+ * `ageAnchors` peaks at 1.16 for the youngest players, and `positionMultipliers`
+ * can also exceed 1.0 for whichever position this league's scoring rewards
+ * most - so a young player at the best-scoring position blew straight past
+ * maxValue. `injury` and `role` both top out at 1.0 in the current config (the
+ * healthy/starter case), so they do not currently contribute to the ceiling,
+ * but they are included in this max rather than assumed away, so a future
+ * config edit that pushes either above 1.0 is caught automatically instead of
+ * silently reopening this bug.
+ *
+ * Age's own max is just the largest anchor value: interpolation is linear
+ * between two anchors, so it can never produce a value outside the range of
+ * its two endpoints, which means the curve's global max is always one of the
+ * anchor points themselves.
+ */
+export function theoreticalMaxMultiplier(
+  posMults: Record<string, number>,
+  cfg: ValuationConfig = VALUATION_CONFIG,
+): number {
+  const ageMax = Math.max(...cfg.ageAnchors.map(([, m]) => m));
+  const injuryMax = Math.max(1, cfg.injuryDefault, ...Object.values(cfg.injury));
+  const roleMax = Math.max(
+    cfg.role.starter,
+    cfg.role.secondary,
+    cfg.role.bench,
+    cfg.role.unknown,
+  );
+  const posMax = Math.max(...Object.values(posMults));
+  return ageMax * injuryMax * roleMax * posMax;
+}
+
 export function valuePlayer(
   player: Player,
   scoring: Record<string, number>,
@@ -120,7 +156,17 @@ export function valuePlayer(
   const roleMult = roleMultiplier(player.depthChartOrder, cfg);
   const mults = posMults ?? positionMultipliers(scoring, cfg);
   const posMult = mults[primaryPosition(player)] ?? 1;
-  const value = Math.round(base * ageMult * injuryMult * roleMult * posMult);
+  // Rescale, don't clamp: dividing by the same constant for every player
+  // preserves every ratio and every ordering exactly, whereas a clamp would
+  // flatten the whole elite tier onto one repeated value right where the
+  // ranking's resolution matters most. The constant is this scoring setup's
+  // theoretical max multiplier, so `base(1) * ceiling / ceiling == maxValue`
+  // and no real player - who cannot be simultaneously youngest, healthiest,
+  // a starter, AND at the best-scoring position, all at once - ever reaches it.
+  const ceiling = theoreticalMaxMultiplier(mults, cfg);
+  const value = Math.round(
+    (base * ageMult * injuryMult * roleMult * posMult) / ceiling,
+  );
   return {
     playerId: player.playerId,
     base: Math.round(base),

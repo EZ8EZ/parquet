@@ -7,7 +7,16 @@
  */
 
 export interface ValuationConfig {
-  /** Value assigned to the #1 asset; the whole scale is anchored here. */
+  /**
+   * The scale's ceiling. `base(rank)` anchors here at rank 1, and
+   * `theoreticalMaxMultiplier()` in index.ts rescales every player's full
+   * multiplier stack so this ceiling is exactly what a hypothetical player who
+   * is simultaneously the youngest, healthiest, a starter, and at whichever
+   * position this league's scoring rewards most, would be worth at rank 1. No
+   * real player is all of those at once, so this is a reachable ceiling, not
+   * an assigned value: an actual #1 overall player prices at or below it,
+   * never above (see DECISIONS.md D28).
+   */
   maxValue: number;
   /** Exponential decay of value by consensus rank (higher = steeper drop-off). */
   rankDecay: number;
