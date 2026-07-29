@@ -325,3 +325,96 @@ the startup" (breaks for any other league, and this app is provider-agnostic); d
 startup by draft `type` (snake vs linear is a convention, not a definition); excluding
 startup picks from every draft metric (their decisions were real and The Scout should see
 them).
+
+## D28. `valuePlayer()` was pricing above its own stated ceiling; fixed by RESCALING, not clamping
+`maxValue` is documented as the value anchoring the whole scale at rank 1, but
+`base(1) * ageMult * injuryMult * roleMult * posMult` can exceed `base(1)` (which equals
+`maxValue` exactly) whenever any multiplier is greater than 1.0. `ageAnchors` peaks at
+**1.16** for the youngest players (age 19 or under) - it was never capped at 1.0, because
+capping it would have contradicted the entire point of an age curve, which is that youth is
+worth a premium over a rank-equal older player, not merely worth-no-less. `injury` and
+`role` both max out at exactly 1.0 in the current config (the healthy / starter case), so
+neither contributes to the overflow today, but nothing in the code asserted that, so a future
+edit pushing either above 1.0 would have silently reopened this same bug. `positionMultiplier`
+can also exceed 1.0, and by how much depends on the league's live scoring settings, not a
+fixed constant - checked against this league's actual scoring, Centers currently multiply by
+**1.049** (`ast:1, blk:2, dd:1, pts:0.5, reb:1, stl:2, to:-1, tpm:0.5`, plus double-double and
+40/50-point scoring bonuses). Verified live: Victor Wembanyama (rank 1, age 22, Center)
+priced at **11,646** before this fix, 1,646 over the documented ceiling of 10,000.
+
+**The true ceiling is `ageMax * injuryMax * roleMax * posMax`, computed programmatically by
+`theoreticalMaxMultiplier()` in `lib/valuation/index.ts`, never hand-typed.** `ageMax` is
+just the largest anchor value, because linear interpolation between any two anchors can
+never exceed the larger of the two endpoints, so the curve's global max is always one of its
+anchor points. `injuryMax` and `roleMax` are `Math.max` over their config maps (including the
+"healthy"/`null` case, which resolves to 1.0), so if either config ever changes to exceed 1.0
+the ceiling calculation picks it up automatically instead of needing a matching edit somewhere
+else. `posMax` is the max of `positionMultipliers()` computed from the league's actual live
+scoring, per the existing "never hardcoded" rule for that function. Under this league's
+scoring: `1.16 * 1.0 * 1.0 * 1.0491462851868945 = 1.2170096908167976`.
+
+**Rescaled, not clamped.** A clamp (`Math.min(value, maxValue)`) would have flattened every
+player above the ceiling onto the same repeated value, destroying the ranking's resolution
+in exactly the tier where dynasty decisions get made - the top of the board. A rescale
+instead divides the full multiplier product by this one constant before rounding. Because the
+constant depends only on config and league scoring, not on any individual player's own age,
+injury, role, or position, it is identical for every player valued in the same call, so every
+player's value shrinks by the exact same factor and every ratio and every ordering survives
+untouched. Verified on the live league: dividing by 1.2170096908167976 brought
+Wembanyama's value from 11,646 to **9,569** (at or under the 10,000 ceiling, as required),
+while the top-20-by-value ordering was bit-for-bit identical before and after, and the ratio
+between two arbitrary real players' values (Luka Dončić / Alperen Şengün) moved from
+1.0206162956464524 to 1.020685973575337 - a difference of 0.00007, attributable entirely to
+`Math.round()` quantization at two different scales rather than to any distortion introduced
+by the rescale.
+
+One consequence worth stating out loud: `maxValue`'s doc comment used to promise it IS the
+#1 asset's value. After this fix that is no longer literally true - `maxValue` is now a
+reachable ceiling that only a hypothetical player who is simultaneously the youngest,
+healthiest, a starter, AND at whichever position the league's scoring currently rewards most
+would actually reach. No real player is all four at once, so every real #1 overall prices at
+or below 10,000, never exactly at it. The doc comment on `ValuationConfig.maxValue` in
+`lib/valuation/config.ts` was rewritten to say this plainly. Rejected: `Math.min`-clamping the
+final value (destroys resolution at the top, the one place it matters most); hardcoding the
+rescale constant as a literal number (goes stale the moment `ageAnchors` or a canonical scoring
+line changes, silently reopening the exact bug this fixes); lowering `ageAnchors`' peak to 1.0
+(defeats the purpose of an age curve, which is supposed to reward youth beyond rank parity).
+
+## D29. Two independent bugs were hiding every "win-now" team in the league
+
+The owner reported that real win-now teams were invisible in the app, and it turned out
+to be two separate failures that happened to compound.
+
+**First: `record` everywhere read the LIVE season, which is 0-0 for most of a dynasty
+league's calendar.** `h.rosters` is always the current league's snapshot, and outside the
+few months a season is actually being played, the current league sits in `pre_draft` with
+every record at 0-0. A team that just went 18-2 the prior season had no way to show that
+anywhere in the app - Home, `/league`, and `/roster` all read the dead live snapshot.
+Fixed with `currentFormByRoster()` in `lib/roster.ts`, which walks the season chain newest
+to oldest (the same "has this season actually been played" check `strengthRanks` in
+`lib/picks.ts` already uses) and falls back to the most recent COMPLETED season when the
+live one has not started, carrying an `isLive` flag so the UI can label a fallback record
+as "last season's final" rather than passing it off as current. Verified live: the 2026
+season is `pre_draft` (0-0 everywhere); the fallback correctly surfaces 2025's final
+standings, topped by an 18-2 record that was previously invisible everywhere in the app.
+
+**Second: the separate age-based `window` field used ABSOLUTE thresholds that this
+league's core ages never cleared.** `RosterAnalysis.window` classifies a roster as
+"win-now" at `coreAge >= 28.5`, but this league's oldest core tops out at 28.2 - so the
+league-wide count read "0 WIN-NOW" directly beside a team that had just gone 18-2. This is
+the same failure mode the Timeline Coherence Index's posture classification hit earlier
+(`lib/metrics/duration.ts` - absolute duration thresholds once classified nobody in this
+league as contending, until posture was switched to league-relative percentiles): an
+absolute threshold that happened to sit just past every real team in this particular
+league. Fixed the same way - classify against the league's OWN core-age distribution
+instead of a fixed cutoff (top quartile oldest = win-now, bottom quartile youngest = rebuilding),
+implemented in a new `relativeWindow()` in `lib/roster.ts`. The absolute thresholds remain
+as the fallback for a standalone `analyzeRoster()` call with no league context to compare
+against. `leagueValueRanking()` now overrides every roster's `window` with the
+league-relative version at zero extra cost (it already computes every roster's `coreAge`;
+this only adds a cheap array filter over values already in hand, not a second valuation
+pass). `diagnose()` in `lib/gameplan/index.ts` and `/roster` were both switched from a
+standalone `analyzeRoster()` call to reading the ranked entry from `leagueValueRanking()`,
+so the same team cannot read "win-now" on one page and "balanced" on another. Verified
+live: the league-wide count moved from 0/7/7 (win-now/balanced/rebuilding) to 4/7/3, and
+the two teams with the best actual recent records are both now correctly flagged win-now.
