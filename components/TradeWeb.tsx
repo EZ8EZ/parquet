@@ -21,24 +21,31 @@
  */
 
 import { useMemo, useState } from "react";
+import Link from "next/link";
 import {
   ChevronRight,
   CornerDownRight,
   FlaskConical,
   GitBranch,
   Info,
+  Layers,
   Network,
   Search,
   X,
 } from "lucide-react";
 import { Card, EmptyState, SectionHeader, Stat, Tag } from "@/components/ui";
-import { cn } from "@/lib/ui";
+import { TeamAvatar } from "@/components/TeamAvatar";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { cn, fmtValue } from "@/lib/ui";
 import {
   RING,
+  assetPlayerId,
   buildTradeTree,
   countTreeNodes,
   rankTradeRoots,
   type AssetMove,
+  type ManagerMetric,
+  type PlayerNow,
   type TradeGraph,
   type TradeGraphEdge,
   type TradeRecord,
@@ -50,15 +57,150 @@ type Selection =
   | { kind: "edge"; key: string }
   | null;
 
+const POSTURE_TONE = {
+  contending: "accent",
+  ascending: "positive",
+  rebuilding: "info",
+  straddling: "negative",
+} as const;
+
+const BAND_TONE = {
+  resilient: "positive",
+  balanced: "neutral",
+  brittle: "negative",
+} as const;
+
+/**
+ * Both proprietary metrics, as two small tappable pills. This is the one place the
+ * web/tree connects PAST decisions to WHERE THINGS STAND TODAY - a trade tree is
+ * otherwise pure history, and the two metrics are otherwise nowhere outside their own
+ * pages. Every pill routes to the metric's home page rather than trying to explain
+ * the number inline a second time.
+ */
+function ManagerMetricPills({ metric }: { metric: ManagerMetric | undefined }) {
+  if (!metric) return null;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-1">
+      <Link
+        href="/league"
+        className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2/70 px-1.5 py-0.5 text-[10px] font-semibold text-muted transition-colors hover:text-ink"
+      >
+        <Tag tone={POSTURE_TONE[metric.posture]}>{metric.tci} TCI</Tag>
+        <span className="text-faint">{metric.posture}</span>
+      </Link>
+      {metric.fragility != null && metric.fragilityBand && (
+        <Link
+          href="/awards"
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2/70 px-1.5 py-0.5 text-[10px] font-semibold text-muted transition-colors hover:text-ink"
+        >
+          <Layers size={10} className="shrink-0" />
+          <Tag tone={BAND_TONE[metric.fragilityBand]}>{Math.round(metric.fragility)} RFI</Tag>
+        </Link>
+      )}
+    </span>
+  );
+}
+
+/**
+ * A manager's identity as one tappable unit: avatar, name, and their current
+ * metric pills, linking to their dossier. Used everywhere the web or a tree names a
+ * manager, so "who is this" always has a next step instead of dead-ending as text.
+ */
+function ManagerLink({
+  node,
+  metric,
+  isMe,
+}: {
+  node: { rosterId: number; name: string; avatarId: string | null; teamLogoUrl: string | null };
+  metric: ManagerMetric | undefined;
+  isMe?: boolean;
+}) {
+  // Two links side by side, deliberately NOT nested: the dossier link wraps only the
+  // avatar and name, and the metric pills below it link out on their own. An <a>
+  // cannot contain another <a> - the pills used to sit inside this link and React
+  // flagged the resulting hydration mismatch.
+  return (
+    <span className="inline-flex min-w-0 max-w-full flex-col items-start gap-0.5">
+      <Link
+        href={`/managers/${node.rosterId}`}
+        className="group -m-1 inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-[--radius-sm] p-1 text-left transition-colors hover:bg-surface-2"
+      >
+        <TeamAvatar
+          name={node.name}
+          avatarId={node.avatarId}
+          teamLogoUrl={node.teamLogoUrl}
+          size="xs"
+          isMe={isMe}
+        />
+        <span className="flex min-w-0 items-baseline gap-1">
+          <span className="truncate text-[13px] font-semibold text-ink group-hover:text-accent">
+            {node.name}
+          </span>
+          {isMe && <Tag tone="accent">you</Tag>}
+        </span>
+      </Link>
+      <ManagerMetricPills metric={metric} />
+    </span>
+  );
+}
+
+/** A player-kind asset's CURRENT standing: avatar, value, tier, duration, holder. */
+function PlayerNowRow({
+  assetKey,
+  label,
+  now,
+  names,
+}: {
+  assetKey: string;
+  label: string;
+  now: PlayerNow | undefined;
+  names: Record<number, string>;
+}) {
+  const pid = assetPlayerId(assetKey);
+  if (!pid || !now) return null;
+  return (
+    <div className="mt-1.5 flex items-center gap-1.5 rounded-[--radius-sm] border border-border/70 bg-surface/50 px-2 py-1.5">
+      <PlayerAvatar name={label} team={now.team} playerId={pid} size="sm" />
+      <span className="min-w-0 flex-1">
+        <span className="block text-[11px] leading-snug text-muted">
+          worth <span className="font-mono font-semibold text-ink">{fmtValue(now.value)}</span>{" "}
+          today · {now.tier} · {now.duration.toFixed(1)}s
+        </span>
+        {now.heldBy != null && names[now.heldBy] && (
+          <span className="block text-[11px] leading-snug text-faint">
+            now on{" "}
+            <Link
+              href={`/managers/${now.heldBy}`}
+              className="font-semibold text-accent hover:underline"
+            >
+              {names[now.heldBy]}
+            </Link>
+          </span>
+        )}
+      </span>
+    </div>
+  );
+}
+
 export interface TradeWebProps {
   graph: TradeGraph;
   moves: AssetMove[];
   holdings: Record<string, number>;
+  /** Every roster's CURRENT read on Duration/TCI and Fragility. */
+  managerMetrics: Record<number, ManagerMetric>;
+  /** Every ever-traded player's CURRENT value, tier, duration and holder. */
+  playerNow: Record<string, PlayerNow>;
 }
 
 const ALL = "all";
 
-export function TradeWeb({ graph, moves, holdings }: TradeWebProps) {
+export function TradeWeb({
+  graph,
+  moves,
+  holdings,
+  managerMetrics,
+  playerNow,
+}: TradeWebProps) {
   const [mode, setMode] = useState<"web" | "trees">("web");
 
   return (
@@ -83,9 +225,15 @@ export function TradeWeb({ graph, moves, holdings }: TradeWebProps) {
       </div>
 
       {mode === "web" ? (
-        <WebMode graph={graph} />
+        <WebMode graph={graph} managerMetrics={managerMetrics} />
       ) : (
-        <TreesMode graph={graph} moves={moves} holdings={holdings} />
+        <TreesMode
+          graph={graph}
+          moves={moves}
+          holdings={holdings}
+          managerMetrics={managerMetrics}
+          playerNow={playerNow}
+        />
       )}
     </div>
   );
@@ -123,7 +271,13 @@ function ModeTab({
 
 /* ------------------------------------------------------------------ web mode */
 
-function WebMode({ graph }: { graph: TradeGraph }) {
+function WebMode({
+  graph,
+  managerMetrics,
+}: {
+  graph: TradeGraph;
+  managerMetrics: Record<number, ManagerMetric>;
+}) {
   const [season, setSeason] = useState<string>(ALL);
   const [sel, setSel] = useState<Selection>(null);
   const [focused, setFocused] = useState<number | null>(null);
@@ -472,6 +626,7 @@ function WebMode({ graph }: { graph: TradeGraph }) {
             graph={graph}
             view={view}
             rosterId={activeNode}
+            metric={managerMetrics[activeNode]}
             onClear={() => setSel(null)}
             onPickEdge={(key) => setSel({ kind: "edge", key })}
           />
@@ -481,6 +636,7 @@ function WebMode({ graph }: { graph: TradeGraph }) {
             graph={graph}
             view={view}
             edge={selectedEdge}
+            managerMetrics={managerMetrics}
             onClear={() => setSel(null)}
           />
         )}
@@ -632,12 +788,14 @@ function NodePanel({
   graph,
   view,
   rosterId,
+  metric,
   onClear,
   onPickEdge,
 }: {
   graph: TradeGraph;
   view: WebView;
   rosterId: number;
+  metric: ManagerMetric | undefined;
   onClear: () => void;
   onPickEdge: (key: string) => void;
 }) {
@@ -660,17 +818,10 @@ function NodePanel({
   return (
     <Card>
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="font-display text-lg font-semibold leading-tight text-ink">
-            {node.name}
-          </h3>
-          <p className="text-[11px] text-faint">
-            {node.handle}
-            {node.isMe && <span className="ml-1.5 text-accent">this is you</span>}
-          </p>
-        </div>
+        <ManagerLink node={node} metric={metric} isMe={node.isMe} />
         <ClearButton onClick={onClear} />
       </div>
+      <p className="-mt-1 text-[11px] text-faint">{node.handle}</p>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
         <Stat label="Deals" value={view.nodeTrades.get(rosterId) ?? 0} tone="accent" />
@@ -745,11 +896,13 @@ function EdgePanel({
   graph,
   view,
   edge,
+  managerMetrics,
   onClear,
 }: {
   graph: TradeGraph;
   view: WebView;
   edge: TradeGraph["edges"][number];
+  managerMetrics: Record<number, ManagerMetric>;
   onClear: () => void;
 }) {
   const a = graph.nodes.find((n) => n.rosterId === edge.a)!;
@@ -762,10 +915,12 @@ function EdgePanel({
   return (
     <Card>
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="font-display text-lg font-semibold leading-tight text-ink">
-            {a.name} <span className="text-faint">&amp;</span> {b.name}
-          </h3>
+        <div className="min-w-0 flex-1 space-y-1">
+          <div className="flex flex-wrap items-center gap-1">
+            <ManagerLink node={a} metric={managerMetrics[a.rosterId]} isMe={a.isMe} />
+            <span className="text-faint">&amp;</span>
+            <ManagerLink node={b} metric={managerMetrics[b.rosterId]} isMe={b.isMe} />
+          </div>
           <p className="font-mono text-[11px] tnum text-accent">
             {edge.count} {edge.count === 1 ? "deal" : "deals"} ·{" "}
             {edge.seasons.join(", ")}
@@ -856,14 +1011,23 @@ function TreesMode({
   graph,
   moves,
   holdings,
+  managerMetrics,
+  playerNow,
 }: {
   graph: TradeGraph;
   moves: AssetMove[];
   holdings: Record<string, number>;
+  managerMetrics: Record<number, ManagerMetric>;
+  playerNow: Record<string, PlayerNow>;
 }) {
   const [q, setQ] = useState("");
   const [mineOnly, setMineOnly] = useState(graph.meRosterId != null);
   const [rootId, setRootId] = useState<string | null>(null);
+
+  const nodeById = useMemo(
+    () => new Map(graph.nodes.map((n) => [n.rosterId, n])),
+    [graph.nodes],
+  );
 
   const ctx = useMemo(() => {
     const names: Record<number, string> = {};
@@ -961,30 +1125,50 @@ function TreesMode({
             ))}
           </div>
 
-          {tree && rootMeta && (
+          {tree && rootMeta && nodeById.get(tree.from) && (
             <Card>
-              <div className="mb-1 text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
+              <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
                 Trade tree · {rootMeta.season}
               </div>
-              <h3 className="font-display text-xl font-semibold leading-tight text-ink">
-                {ctx.names[tree.from]} gave up {tree.label}
+              <ManagerLink
+                node={nodeById.get(tree.from)!}
+                metric={managerMetrics[tree.from]}
+                isMe={nodeById.get(tree.from)!.isMe}
+              />
+              <h3 className="mt-0.5 font-display text-xl font-semibold leading-tight text-ink">
+                gave up {tree.label}
               </h3>
               <p className="mt-0.5 text-xs text-muted">
                 {tree.outcome}
                 {tree.kind === "pick" && tree.became && ` · became ${tree.became}`}
               </p>
+              {tree.kind === "player" && (
+                <PlayerNowRow
+                  assetKey={tree.assetKey}
+                  label={tree.label}
+                  now={playerNow[assetPlayerId(tree.assetKey) ?? ""]}
+                  names={ctx.names}
+                />
+              )}
               <div className="mt-3">
                 {tree.children.length === 0 ? (
                   <p className="text-sm text-muted">
                     Nothing came back on record for this side of the deal.
                   </p>
                 ) : (
-                  <TreeBranch nodes={tree.children} />
+                  <TreeBranch nodes={tree.children} playerNow={playerNow} names={ctx.names} />
                 )}
               </div>
               <p className="mt-3 text-[11px] text-faint">
                 {countTreeNodes(tree)} assets in this chain · depth capped at 4
                 trades deep
+              </p>
+            </Card>
+          )}
+          {tree && rootMeta && !nodeById.get(tree.from) && (
+            <Card>
+              <p className="text-sm text-muted">
+                {ctx.names[tree.from]} gave up {tree.label}. {tree.outcome}
               </p>
             </Card>
           )}
@@ -1037,43 +1221,62 @@ function TreesMode({
  * horizontal room this column does not have at 390px, so the tree is drawn as
  * nested rails: same structure, readable on a phone, no horizontal scroll.
  */
-function TreeBranch({ nodes }: { nodes: TradeTreeNode[] }) {
+function TreeBranch({
+  nodes,
+  playerNow,
+  names,
+}: {
+  nodes: TradeTreeNode[];
+  playerNow: Record<string, PlayerNow>;
+  names: Record<number, string>;
+}) {
   return (
     <ul className="space-y-2 border-l border-border pl-3">
-      {nodes.map((n) => (
-        <li key={n.id} className="relative">
-          <span
-            aria-hidden
-            className="absolute -left-3 top-3.5 h-px w-3 bg-border"
-          />
-          <div className="rounded-[--radius-sm] border border-border bg-surface-2/50 px-3 py-2">
-            <div className="flex items-start gap-2">
-              <CornerDownRight size={13} className="mt-0.5 shrink-0 text-positive" />
-              <div className="min-w-0">
-                <div className="text-[13px] font-semibold leading-snug text-ink">
-                  {n.label}
-                </div>
-                {n.became && (
-                  <div className="text-[11px] text-info">became {n.became}</div>
-                )}
-                <div className="mt-0.5 text-[11px] leading-snug text-muted">
-                  {n.season} · {n.outcome}
-                </div>
-                {n.inferred && (
-                  <div className="mt-1">
-                    <Tag tone="warn">inferred pick</Tag>
+      {nodes.map((n) => {
+        const pid = assetPlayerId(n.assetKey);
+        return (
+          <li key={n.id} className="relative">
+            <span
+              aria-hidden
+              className="absolute -left-3 top-3.5 h-px w-3 bg-border"
+            />
+            <div className="rounded-[--radius-sm] border border-border bg-surface-2/50 px-3 py-2">
+              <div className="flex items-start gap-2">
+                <CornerDownRight size={13} className="mt-0.5 shrink-0 text-positive" />
+                <div className="min-w-0 flex-1">
+                  <div className="text-[13px] font-semibold leading-snug text-ink">
+                    {n.label}
                   </div>
-                )}
+                  {n.became && (
+                    <div className="text-[11px] text-info">became {n.became}</div>
+                  )}
+                  <div className="mt-0.5 text-[11px] leading-snug text-muted">
+                    {n.season} · {n.outcome}
+                  </div>
+                  {n.inferred && (
+                    <div className="mt-1">
+                      <Tag tone="warn">inferred pick</Tag>
+                    </div>
+                  )}
+                  {pid && (
+                    <PlayerNowRow
+                      assetKey={n.assetKey}
+                      label={n.label}
+                      now={playerNow[pid]}
+                      names={names}
+                    />
+                  )}
+                </div>
               </div>
             </div>
-          </div>
-          {n.children.length > 0 && (
-            <div className="mt-2">
-              <TreeBranch nodes={n.children} />
-            </div>
-          )}
-        </li>
-      ))}
+            {n.children.length > 0 && (
+              <div className="mt-2">
+                <TreeBranch nodes={n.children} playerNow={playerNow} names={names} />
+              </div>
+            )}
+          </li>
+        );
+      })}
     </ul>
   );
 }

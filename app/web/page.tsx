@@ -6,7 +6,13 @@ import {
   buildHoldings,
   buildTradeGraph,
   pickKey,
+  type ManagerMetric,
+  type PlayerNow,
 } from "@/lib/tradegraph";
+import { valuePlayers } from "@/lib/valuation";
+import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
+import { leagueTimelines, playerDuration } from "@/lib/metrics/duration";
+import { leagueFragility } from "@/lib/metrics/fragility";
 import { Card, PageHeader, Tag } from "@/components/ui";
 import { TradeWeb } from "@/components/TradeWeb";
 
@@ -15,6 +21,59 @@ export const dynamic = "force-dynamic";
 export default async function TradeWebPage() {
   const h = await getLeagueHistory();
   const graph = buildTradeGraph(h);
+
+  // Every roster's current read on the two proprietary metrics, keyed for O(1)
+  // lookup wherever the web/tree names a manager. Both are already computed
+  // league-wide for other pages, so this is two cheap synchronous passes, not a
+  // second valuation of anything.
+  const managerMetrics: Record<number, ManagerMetric> = {};
+  for (const t of leagueTimelines(h)) {
+    managerMetrics[t.rosterId] = {
+      tci: t.tci,
+      posture: t.posture,
+      rosterDuration: t.rosterDuration,
+      fragility: null,
+      fragilityBand: null,
+    };
+  }
+  for (const f of leagueFragility(h)) {
+    managerMetrics[f.rosterId] = {
+      ...(managerMetrics[f.rosterId] ?? {
+        tci: 0,
+        posture: "straddling",
+        rosterDuration: 0,
+      }),
+      fragility: f.fragility,
+      fragilityBand: f.band,
+    };
+  }
+
+  // Current value, tier and duration for every player who has ever moved in a
+  // trade - so a tree node can say what the asset is worth TODAY, not just what
+  // it was called at the time. Priced with the same recipe /values uses, so a
+  // tier label here never disagrees with the one on that page.
+  const scoring = h.currentLeague.scoringSettings;
+  const values = valuePlayers([...h.players.values()], scoring);
+  const valuesDesc = [...values.values()]
+    .map((v) => v.value)
+    .filter((v) => v > 0)
+    .sort((a, b) => b - a);
+  const tierFor = tierResolver(
+    computeTiers(valuesDesc, { floor: (valuesDesc[0] ?? 0) * 0.1 }),
+  );
+  const holdings = buildHoldings(h);
+  const playerNow: Record<string, PlayerNow> = {};
+  for (const p of h.players.values()) {
+    const v = values.get(p.playerId);
+    if (!v || v.value <= 0) continue;
+    playerNow[p.playerId] = {
+      team: p.team,
+      value: v.value,
+      tier: tierFor(v.value)?.label ?? "Fringe",
+      duration: playerDuration(p.age),
+      heldBy: holdings[p.playerId] ?? null,
+    };
+  }
 
   // Pick -> the player it actually became, so a pick in a lineage chain keeps going
   // past the draft. Best-effort: a provider or season with no draft data just leaves
@@ -31,7 +90,6 @@ export default async function TradeWebPage() {
   }
 
   const moves = buildAssetMoves(h, pickPlayers);
-  const holdings = buildHoldings(h);
 
   return (
     <div>
@@ -61,7 +119,13 @@ export default async function TradeWebPage() {
         </div>
       </Card>
 
-      <TradeWeb graph={graph} moves={moves} holdings={holdings} />
+      <TradeWeb
+        graph={graph}
+        moves={moves}
+        holdings={holdings}
+        managerMetrics={managerMetrics}
+        playerNow={playerNow}
+      />
     </div>
   );
 }

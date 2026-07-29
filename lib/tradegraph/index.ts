@@ -69,6 +69,9 @@ export interface TradeGraphNode {
   /** Net picks acquired minus spent, for the focus panel. */
   picksNet: number;
   isMe: boolean;
+  /** For `TeamAvatar` - same imagery every other page uses for this manager. */
+  avatarId: string | null;
+  teamLogoUrl: string | null;
   /** Position on the ring, in the `RING` coordinate space. */
   x: number;
   y: number;
@@ -128,6 +131,31 @@ export interface TradeGraph {
    * deals found for that pair. Surfaced rather than silently reconciled.
    */
   weightsAgree: boolean;
+}
+
+/**
+ * A manager's CURRENT read on the two proprietary metrics, attached wherever the web
+ * or a trade tree names them. Optional fields are null rather than absent so a
+ * consumer can render "not enough data" instead of silently omitting the row -
+ * matches how both metrics already degrade on their own pages.
+ */
+export interface ManagerMetric {
+  tci: number;
+  posture: "contending" | "ascending" | "rebuilding" | "straddling";
+  rosterDuration: number;
+  fragility: number | null;
+  fragilityBand: "resilient" | "balanced" | "brittle" | null;
+}
+
+/** A traded player's CURRENT standing, not what they were worth at trade time. */
+export interface PlayerNow {
+  team: string | null;
+  value: number;
+  tier: string;
+  /** Seasons from now the player's own value arrives, on average. */
+  duration: number;
+  /** Roster currently holding them, or null if no longer in the league. */
+  heldBy: number | null;
 }
 
 export type AssetKind = "player" | "pick";
@@ -361,6 +389,8 @@ export function buildTradeGraph(h: LeagueHistory): TradeGraph {
   for (const rid of rosterIds) {
     const p = profiles.get(rid)!;
     const name = rosterName(h, rid);
+    const ownerId = h.rostersById.get(rid)?.ownerId;
+    const user = ownerId ? h.usersById.get(ownerId) : undefined;
     nodeByRoster.set(rid, {
       rosterId: rid,
       name,
@@ -370,6 +400,8 @@ export function buildTradeGraph(h: LeagueHistory): TradeGraph {
       partners: p.tradePartners.length,
       picksNet: p.picks.net,
       isMe: h.me.rosterId === rid,
+      avatarId: user?.avatar ?? null,
+      teamLogoUrl: user?.teamLogoUrl ?? null,
       x: 0,
       y: 0,
     });
@@ -407,6 +439,9 @@ function round2(v: number): number {
 export const playerKey = (playerId: string) => `p:${playerId}`;
 export const pickKey = (season: string, round: number, orig: number) =>
   `k:${season}-${round}-${orig}`;
+/** Recovers the player id from a player-kind asset key. Null for a pick. */
+export const assetPlayerId = (assetKey: string): string | null =>
+  assetKey.startsWith("p:") ? assetKey.slice(2) : null;
 
 /**
  * Every hop of every asset that moved in a trade, chronological.

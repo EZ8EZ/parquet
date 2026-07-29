@@ -418,3 +418,43 @@ standalone `analyzeRoster()` call to reading the ranked entry from `leagueValueR
 so the same team cannot read "win-now" on one page and "balanced" on another. Verified
 live: the league-wide count moved from 0/7/7 (win-now/balanced/rebuilding) to 4/7/3, and
 the two teams with the best actual recent records are both now correctly flagged win-now.
+
+## D30. The trade web gets clickability and both proprietary metrics
+
+The trade tree (and web) rendered every manager and player as plain text with no
+next step - no avatar, no link to a dossier, no connection to Duration/TCI or the
+Fragility Index, which otherwise live only on their own pages. The owner's read: a
+great idea whose UI and interactivity had not caught up.
+
+`TradeGraphNode` gained `avatarId`/`teamLogoUrl` so the web can use the same
+`TeamAvatar` imagery every other page already uses, sourced from `h.usersById` at
+build time rather than a second lookup per render. A new `assetPlayerId()` helper
+recovers a player id from a player-kind asset key (`p:<playerId>`), which is what
+makes a tree node's CURRENT standing computable at all.
+
+Two new shared pieces carry the actual fix. `ManagerLink` renders a manager as one
+unit - avatar, name, dossier link - and is now used everywhere the web or a tree
+names a manager: the web's node and edge panels, and both ends of every tree.
+`PlayerNowRow` shows a player-kind tree node's CURRENT value, tier, and duration
+(priced with the exact `/values` recipe, so it never disagrees with that page),
+plus who currently holds them, linking to that manager's dossier. A pick that
+became a player still shows only its resolved name - the pick lineage stores a
+display string, not a player id, so backfilling one would risk misattribution
+for the sake of one more link, and was not worth it.
+
+Both proprietary metrics are computed once per page load (`leagueTimelines` and
+`leagueFragility`, already used elsewhere, so this is two cheap synchronous
+passes, not new valuation work) and attached to every manager reference as a
+pair of pills - TCI/posture and RFI/band, each linking to that metric's home
+page. This is the only place in the app a PAST decision (a trade tree) connects
+to WHERE THINGS STAND TODAY.
+
+One real bug caught in verification: the metric pills were originally rendered
+INSIDE the manager's own dossier link, nesting an `<a>` inside an `<a>`, which
+is invalid HTML and threw a hydration error. Fixed by making the dossier link
+and the metric pills siblings rather than nesting one inside the other - three
+independent tap targets instead of one broken one. Confirmed clean in a fresh
+tab with an empty console after the fix; a stale console-log buffer kept
+surfacing the old error transcript for several checks after until a fresh tab
+finally proved it gone, which is worth remembering: don't trust a persisted
+console-log read over a direct DOM query when the two disagree.
