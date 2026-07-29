@@ -1,6 +1,7 @@
 import { FlaskConical } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getTradedPickLineages } from "@/lib/lineage";
+import { getPrincipals } from "@/lib/principals";
 import {
   buildAssetMoves,
   buildHoldings,
@@ -20,7 +21,11 @@ export const dynamic = "force-dynamic";
 
 export default async function TradeWebPage() {
   const h = await getLeagueHistory();
-  const graph = buildTradeGraph(h);
+  // One fetch, threaded through both the graph and the asset lineage below, so a
+  // roster that changed hands (see lib/principals.ts) is attributed consistently
+  // everywhere on this page rather than resolved twice and risking drift.
+  const principals = await getPrincipals(h);
+  const graph = buildTradeGraph(h, principals);
 
   // Every roster's current read on the two proprietary metrics, keyed for O(1)
   // lookup wherever the web/tree names a manager. Both are already computed
@@ -89,7 +94,7 @@ export default async function TradeWebPage() {
     // no draft data — chains still build, they just stop at the pick.
   }
 
-  const moves = buildAssetMoves(h, pickPlayers);
+  const moves = buildAssetMoves(h, principals, pickPlayers);
 
   return (
     <div>

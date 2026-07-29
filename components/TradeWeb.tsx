@@ -53,7 +53,7 @@ import {
 } from "@/lib/tradegraph";
 
 type Selection =
-  | { kind: "node"; rosterId: number }
+  | { kind: "node"; ownerId: string }
   | { kind: "edge"; key: string }
   | null;
 
@@ -105,16 +105,32 @@ function ManagerMetricPills({ metric }: { metric: ManagerMetric | undefined }) {
  * A manager's identity as one tappable unit: avatar, name, and their current
  * metric pills, linking to their dossier. Used everywhere the web or a tree names a
  * manager, so "who is this" always has a next step instead of dead-ending as text.
+ *
+ * A FORMER principal (left the league - see lib/principals.ts) routes to their own
+ * `/managers/former/{ownerId}` page rather than the roster they no longer hold, and
+ * never shows metric pills: fragility and TCI are properties of a roster as it stands
+ * tonight, so attaching them to a departed manager would silently borrow whoever
+ * replaced them - exactly the bug this component exists to avoid. That guard lives
+ * here rather than in every caller, so it cannot be forgotten at a new call site.
  */
 function ManagerLink({
   node,
   metric,
   isMe,
 }: {
-  node: { rosterId: number; name: string; avatarId: string | null; teamLogoUrl: string | null };
+  node: {
+    ownerId: string;
+    rosterId: number;
+    name: string;
+    avatarId: string | null;
+    teamLogoUrl: string | null;
+    isFormer: boolean;
+    tenureLabel?: string;
+  };
   metric: ManagerMetric | undefined;
   isMe?: boolean;
 }) {
+  const href = node.isFormer ? `/managers/former/${node.ownerId}` : `/managers/${node.rosterId}`;
   // Two links side by side, deliberately NOT nested: the dossier link wraps only the
   // avatar and name, and the metric pills below it link out on their own. An <a>
   // cannot contain another <a> - the pills used to sit inside this link and React
@@ -122,7 +138,7 @@ function ManagerLink({
   return (
     <span className="inline-flex min-w-0 max-w-full flex-col items-start gap-0.5">
       <Link
-        href={`/managers/${node.rosterId}`}
+        href={href}
         className="group -m-1 inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-[--radius-sm] p-1 text-left transition-colors hover:bg-surface-2"
       >
         <TeamAvatar
@@ -136,10 +152,16 @@ function ManagerLink({
           <span className="truncate text-[13px] font-semibold text-ink group-hover:text-accent">
             {node.name}
           </span>
-          {isMe && <Tag tone="accent">you</Tag>}
+          {isMe ? (
+            <Tag tone="accent">you</Tag>
+          ) : (
+            node.isFormer && (
+              <Tag>former{node.tenureLabel ? ` ${node.tenureLabel}` : ""}</Tag>
+            )
+          )}
         </span>
       </Link>
-      <ManagerMetricPills metric={metric} />
+      {!node.isFormer && <ManagerMetricPills metric={metric} />}
     </span>
   );
 }
@@ -280,7 +302,7 @@ function WebMode({
 }) {
   const [season, setSeason] = useState<string>(ALL);
   const [sel, setSel] = useState<Selection>(null);
-  const [focused, setFocused] = useState<number | null>(null);
+  const [focused, setFocused] = useState<string | null>(null);
   const [focusedEdge, setFocusedEdge] = useState<string | null>(null);
 
   const view = useMemo(() => {
@@ -298,13 +320,16 @@ function WebMode({
       })
       .filter((e) => e.count > 0);
 
-    const nodeTrades = new Map<number, number>();
+    // Keyed by owner id, not roster id: `ownerParties` is already resolved to
+    // whoever actually held each seat that season (lib/tradegraph#buildTradeGraph),
+    // which is what lets a handover split into two honest node counts.
+    const nodeTrades = new Map<string, number>();
     for (const t of trades) {
-      for (const rid of t.parties) {
-        nodeTrades.set(rid, (nodeTrades.get(rid) ?? 0) + 1);
+      for (const ownerId of t.ownerParties) {
+        nodeTrades.set(ownerId, (nodeTrades.get(ownerId) ?? 0) + 1);
       }
     }
-    const partnersOf = new Map<number, Map<number, number>>();
+    const partnersOf = new Map<string, Map<string, number>>();
     for (const e of edges) {
       (partnersOf.get(e.a) ?? partnersOf.set(e.a, new Map()).get(e.a)!).set(
         e.b,
@@ -321,11 +346,11 @@ function WebMode({
   }, [graph, season]);
 
   const nodeById = useMemo(
-    () => new Map(graph.nodes.map((n) => [n.rosterId, n])),
+    () => new Map(graph.nodes.map((n) => [n.ownerId, n])),
     [graph.nodes],
   );
 
-  const activeNode = sel?.kind === "node" ? sel.rosterId : null;
+  const activeNode = sel?.kind === "node" ? sel.ownerId : null;
   const activeEdge = sel?.kind === "edge" ? sel.key : null;
   const selectedEdge = activeEdge
     ? view.edges.find((e) => e.key === activeEdge)
@@ -333,7 +358,7 @@ function WebMode({
 
   // A strand is lit when it is selected, keyboard-focused, or touches the
   // focused manager.
-  const isLit = (a: number, b: number, key: string) => {
+  const isLit = (a: string, b: string, key: string) => {
     if (key === focusedEdge) return true;
     if (activeEdge) return key === activeEdge;
     if (activeNode != null) return a === activeNode || b === activeNode;
@@ -457,17 +482,17 @@ function WebMode({
           {/* Managers */}
           <g>
             {graph.nodes.map((n) => {
-              const trades = view.nodeTrades.get(n.rosterId) ?? 0;
+              const trades = view.nodeTrades.get(n.ownerId) ?? 0;
               const r = r2(
                 13 + 6 * Math.pow(trades / view.maxTrades, 0.6) * (trades ? 1 : 0),
               );
-              const isSel = activeNode === n.rosterId;
+              const isSel = activeNode === n.ownerId;
               const onLitEdge =
                 selectedEdge != null &&
-                (selectedEdge.a === n.rosterId || selectedEdge.b === n.rosterId);
+                (selectedEdge.a === n.ownerId || selectedEdge.b === n.ownerId);
               const isPartner =
                 activeNode != null &&
-                view.partnersOf.get(activeNode)?.has(n.rosterId) === true;
+                view.partnersOf.get(activeNode)?.has(n.ownerId) === true;
               const dim =
                 dimming && !isSel && !onLitEdge && !isPartner;
               const stroke = isSel
@@ -481,29 +506,29 @@ function WebMode({
                       : "var(--color-border-strong)";
               return (
                 <g
-                  key={n.rosterId}
+                  key={n.ownerId}
                   role="button"
                   tabIndex={0}
                   aria-pressed={isSel}
-                  aria-label={`${n.name}${n.isMe ? " (you)" : ""}: ${trades} trades, ${view.partnersOf.get(n.rosterId)?.size ?? 0} partners`}
+                  aria-label={`${n.name}${n.isMe ? " (you)" : ""}${n.isFormer ? " (former)" : ""}: ${trades} trades, ${view.partnersOf.get(n.ownerId)?.size ?? 0} partners`}
                   className="cursor-pointer"
                   opacity={dim ? 0.3 : 1}
                   onClick={() =>
-                    setSel(isSel ? null : { kind: "node", rosterId: n.rosterId })
+                    setSel(isSel ? null : { kind: "node", ownerId: n.ownerId })
                   }
-                  onFocus={() => setFocused(n.rosterId)}
+                  onFocus={() => setFocused(n.ownerId)}
                   onBlur={() => setFocused(null)}
                   onKeyDown={(ev) => {
                     if (ev.key === "Enter" || ev.key === " ") {
                       ev.preventDefault();
                       setSel(
-                        isSel ? null : { kind: "node", rosterId: n.rosterId },
+                        isSel ? null : { kind: "node", ownerId: n.ownerId },
                       );
                     }
                   }}
                 >
                   <circle cx={n.x} cy={n.y} r={RING.tapR} fill="transparent" />
-                  {focused === n.rosterId && (
+                  {focused === n.ownerId && (
                     <circle
                       cx={n.x}
                       cy={n.y}
@@ -625,8 +650,8 @@ function WebMode({
           <NodePanel
             graph={graph}
             view={view}
-            rosterId={activeNode}
-            metric={managerMetrics[activeNode]}
+            ownerId={activeNode}
+            managerMetrics={managerMetrics}
             onClear={() => setSel(null)}
             onPickEdge={(key) => setSel({ kind: "edge", key })}
           />
@@ -656,10 +681,10 @@ function WebMode({
         {[...graph.nodes]
           .sort((a, b) => b.trades - a.trades)
           .map((n) => (
-            <li key={n.rosterId}>
+            <li key={n.ownerId}>
               <button
                 type="button"
-                onClick={() => setSel({ kind: "node", rosterId: n.rosterId })}
+                onClick={() => setSel({ kind: "node", ownerId: n.ownerId })}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-[--radius-sm] border px-3 py-2 text-left transition-colors motion-reduce:transition-none",
                   n.isMe
@@ -674,6 +699,11 @@ function WebMode({
                   <span className="block truncate text-sm font-semibold text-ink">
                     {n.name}
                     {n.isMe && <span className="ml-1.5 text-accent">(you)</span>}
+                    {!n.isMe && n.isFormer && (
+                      <span className="ml-1.5 text-faint">
+                        former{n.tenureLabel ? ` ${n.tenureLabel}` : ""}
+                      </span>
+                    )}
                   </span>
                   <span className="block truncate text-[11px] text-faint">
                     {n.handle}
@@ -681,7 +711,7 @@ function WebMode({
                 </span>
                 <span className="shrink-0 text-right">
                   <span className="block font-mono text-sm tnum text-ink">
-                    {view.nodeTrades.get(n.rosterId) ?? 0}
+                    {view.nodeTrades.get(n.ownerId) ?? 0}
                   </span>
                   <span className="block text-[10px] text-faint">deals</span>
                 </span>
@@ -731,9 +761,10 @@ interface WebView {
   trades: TradeRecord[];
   tradeById: Map<string, TradeRecord>;
   edges: TradeGraphEdge[];
-  nodeTrades: Map<number, number>;
-  /** rosterId -> (partner rosterId -> deals with them). */
-  partnersOf: Map<number, Map<number, number>>;
+  /** ownerId -> deals that season/filter. */
+  nodeTrades: Map<string, number>;
+  /** ownerId -> (partner ownerId -> deals with them). */
+  partnersOf: Map<string, Map<string, number>>;
   maxCount: number;
   maxTrades: number;
 }
@@ -748,7 +779,7 @@ function WebOverview({
   season: string;
 }) {
   const busiest = view.edges[0];
-  const nodeById = new Map(graph.nodes.map((n) => [n.rosterId, n]));
+  const nodeById = new Map(graph.nodes.map((n) => [n.ownerId, n]));
   return (
     <div>
       <div className="grid grid-cols-2 gap-2">
@@ -787,44 +818,48 @@ function WebOverview({
 function NodePanel({
   graph,
   view,
-  rosterId,
-  metric,
+  ownerId,
+  managerMetrics,
   onClear,
   onPickEdge,
 }: {
   graph: TradeGraph;
   view: WebView;
-  rosterId: number;
-  metric: ManagerMetric | undefined;
+  ownerId: string;
+  managerMetrics: Record<number, ManagerMetric>;
   onClear: () => void;
   onPickEdge: (key: string) => void;
 }) {
-  const node = graph.nodes.find((n) => n.rosterId === rosterId);
+  const node = graph.nodes.find((n) => n.ownerId === ownerId);
   if (!node) return null;
-  const partners = [...(view.partnersOf.get(rosterId) ?? new Map())]
-    .map(([rid, count]) => ({
-      rid,
+  const partners = [...(view.partnersOf.get(ownerId) ?? new Map())]
+    .map(([oid, count]) => ({
+      oid,
       count,
-      node: graph.nodes.find((n) => n.rosterId === rid)!,
+      node: graph.nodes.find((n) => n.ownerId === oid)!,
     }))
     .sort((a, b) => b.count - a.count || a.node.name.localeCompare(b.node.name));
   const never = graph.nodes.filter(
     (n) =>
-      n.rosterId !== rosterId &&
-      !(view.partnersOf.get(rosterId)?.has(n.rosterId) ?? false),
+      n.ownerId !== ownerId &&
+      !(view.partnersOf.get(ownerId)?.has(n.ownerId) ?? false),
   );
   const max = Math.max(1, ...partners.map((p) => p.count));
 
   return (
     <Card>
       <div className="flex items-start justify-between gap-2">
-        <ManagerLink node={node} metric={metric} isMe={node.isMe} />
+        <ManagerLink
+          node={node}
+          metric={managerMetrics[node.rosterId]}
+          isMe={node.isMe}
+        />
         <ClearButton onClick={onClear} />
       </div>
       <p className="-mt-1 text-[11px] text-faint">{node.handle}</p>
 
       <div className="mt-3 grid grid-cols-3 gap-2">
-        <Stat label="Deals" value={view.nodeTrades.get(rosterId) ?? 0} tone="accent" />
+        <Stat label="Deals" value={view.nodeTrades.get(ownerId) ?? 0} tone="accent" />
         <Stat label="Partners" value={partners.length} />
         <Stat
           label="Picks net"
@@ -842,14 +877,14 @@ function NodePanel({
           </div>
           <ul className="space-y-1">
             {partners.map((p) => (
-              <li key={p.rid}>
+              <li key={p.oid}>
                 <button
                   type="button"
                   onClick={() =>
                     onPickEdge(
-                      rosterId < p.rid
-                        ? `${rosterId}-${p.rid}`
-                        : `${p.rid}-${rosterId}`,
+                      ownerId < p.oid
+                        ? `${ownerId}-${p.oid}`
+                        : `${p.oid}-${ownerId}`,
                     )
                   }
                   className="flex w-full items-center gap-2 rounded-[--radius-sm] px-2 py-1.5 text-left transition-colors hover:bg-surface-2 motion-reduce:transition-none"
@@ -881,7 +916,7 @@ function NodePanel({
           </div>
           <div className="flex flex-wrap gap-1.5">
             {never.map((n) => (
-              <Tag key={n.rosterId} tone="neutral">
+              <Tag key={n.ownerId} tone="neutral">
                 {n.name}
               </Tag>
             ))}
@@ -905,8 +940,8 @@ function EdgePanel({
   managerMetrics: Record<number, ManagerMetric>;
   onClear: () => void;
 }) {
-  const a = graph.nodes.find((n) => n.rosterId === edge.a)!;
-  const b = graph.nodes.find((n) => n.rosterId === edge.b)!;
+  const a = graph.nodes.find((n) => n.ownerId === edge.a)!;
+  const b = graph.nodes.find((n) => n.ownerId === edge.b)!;
   const trades = edge.tradeIds
     .map((id) => view.tradeById.get(id))
     .filter((t): t is TradeGraph["trades"][number] => t != null)
@@ -1024,15 +1059,27 @@ function TreesMode({
   const [mineOnly, setMineOnly] = useState(graph.meRosterId != null);
   const [rootId, setRootId] = useState<string | null>(null);
 
-  const nodeById = useMemo(
-    () => new Map(graph.nodes.map((n) => [n.rosterId, n])),
+  // Keyed by owner id: the stable identity that survives a handover, needed to look
+  // up a tree hop's actual manager (`fromOwnerId`/`toOwnerId`) rather than whoever
+  // currently sits in that roster's seat.
+  const nodeByOwner = useMemo(
+    () => new Map(graph.nodes.map((n) => [n.ownerId, n])),
     [graph.nodes],
   );
 
   const ctx = useMemo(() => {
+    // CURRENT holder only - "still on X"/"now on X" always describes today, and a
+    // former principal's old roster id belongs to someone else now, so including
+    // them here would let their name win that lookup by iteration order.
     const names: Record<number, string> = {};
-    for (const n of graph.nodes) names[n.rosterId] = n.name;
-    return { moves, holdings, names };
+    for (const n of graph.nodes) if (!n.isFormer) names[n.rosterId] = n.name;
+    // Every principal's own name, keyed by the identity that never changes even
+    // though the roster they hold can. Paired with a move's own fromOwnerId/
+    // toOwnerId (resolved at the correct season by buildAssetMoves) this is what
+    // lets a hop through a succeeded roster name the manager who actually made it.
+    const ownerNames: Record<string, string> = {};
+    for (const n of graph.nodes) ownerNames[n.ownerId] = n.name;
+    return { moves, holdings, names, ownerNames };
   }, [graph.nodes, moves, holdings]);
 
   const roots = useMemo(() => rankTradeRoots(ctx), [ctx]);
@@ -1056,6 +1103,15 @@ function TreesMode({
     [ctx, effectiveRoot],
   );
   const rootMeta = roots.find((r) => r.moveId === effectiveRoot);
+  // The principal who actually made the root move, resolved via the move's own
+  // fromOwnerId (season-correct - see lib/tradegraph#buildAssetMoves) rather than
+  // whoever currently holds that roster seat. Falls back to a current-roster lookup
+  // only in the degraded case where no owner id resolved at all.
+  const originNode = tree
+    ? (tree.fromOwnerId && nodeByOwner.get(tree.fromOwnerId)) ||
+      graph.nodes.find((n) => !n.isFormer && n.rosterId === tree.from) ||
+      null
+    : null;
 
   return (
     <div>
@@ -1125,15 +1181,15 @@ function TreesMode({
             ))}
           </div>
 
-          {tree && rootMeta && nodeById.get(tree.from) && (
+          {tree && rootMeta && originNode && (
             <Card>
               <div className="mb-1.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-accent">
                 Trade tree · {rootMeta.season}
               </div>
               <ManagerLink
-                node={nodeById.get(tree.from)!}
-                metric={managerMetrics[tree.from]}
-                isMe={nodeById.get(tree.from)!.isMe}
+                node={originNode}
+                metric={managerMetrics[originNode.rosterId]}
+                isMe={originNode.isMe}
               />
               <h3 className="mt-0.5 font-display text-xl font-semibold leading-tight text-ink">
                 gave up {tree.label}
@@ -1165,10 +1221,12 @@ function TreesMode({
               </p>
             </Card>
           )}
-          {tree && rootMeta && !nodeById.get(tree.from) && (
+          {tree && rootMeta && !originNode && (
             <Card>
               <p className="text-sm text-muted">
-                {ctx.names[tree.from]} gave up {tree.label}. {tree.outcome}
+                {(tree.fromOwnerId && ctx.ownerNames[tree.fromOwnerId]) ||
+                  ctx.names[tree.from]}{" "}
+                gave up {tree.label}. {tree.outcome}
               </p>
             </Card>
           )}
@@ -1192,7 +1250,8 @@ function TreesMode({
                       {r.label}
                     </span>
                     <span className="block truncate text-[11px] text-faint">
-                      {ctx.names[r.owner]} · {r.season}
+                      {(r.ownerId && ctx.ownerNames[r.ownerId]) || ctx.names[r.owner]} ·{" "}
+                      {r.season}
                     </span>
                   </span>
                   <span className="shrink-0 text-right">

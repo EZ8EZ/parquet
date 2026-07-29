@@ -3,18 +3,25 @@
  *
  * Two pure, serializable models over the same corpus:
  *
- *  1. `buildTradeGraph` — the league as a network. Nodes are the managers, edges are
- *     manager PAIRS that have traded, weighted by how many deals they've done. Edge
- *     weights come from the existing `deriveManagerProfile().tradePartners`
- *     derivation rather than a fresh recount, so the web can never disagree with the
- *     dossiers. Node positions are baked in here (a deterministic ring, seriated so
- *     frequent partners land next to each other) — the renderer draws, it never
- *     decides geometry, and there is no randomness or clock anywhere in this file.
+ *  1. `buildTradeGraph` — the league as a network. Nodes are PRINCIPALS (see
+ *     lib/principals.ts), not roster seats: a roster that changed hands contributes
+ *     one node per manager who actually sat in it, not one blended node for whoever
+ *     holds it today. Edges are manager PAIRS that have traded, weighted by how many
+ *     deals they've done, with each trade attributed to whoever actually held a seat
+ *     THAT season - `PrincipalIndex.ownerAt` is the only correct way to turn a
+ *     (season, rosterId) pair into a person, and a roster-keyed version would credit
+ *     one manager's trades to whoever replaced them. Node positions are baked in here
+ *     (a deterministic ring, seriated so frequent partners land next to each other) —
+ *     the renderer draws, it never decides geometry, and there is no randomness or
+ *     clock anywhere in this file.
  *
  *  2. `buildAssetMoves` + `buildTradeTree` — asset lineage. Every hop every player and
  *     pick took, from which a "what did trading him away actually become?" tree can
- *     be walked. The moves list is the only thing that has to cross the wire; the
- *     trees are rebuilt from it on demand, so switching roots costs nothing.
+ *     be walked. Asset flow is tracked by ROSTER SEAT (a roster's belongings are a
+ *     fact about the roster, not the person), but each hop also carries the PRINCIPAL
+ *     who actually made that move, resolved once at build time via `ownerAt`, so a
+ *     chain that happens to span a handover names the right manager at each hop
+ *     instead of relabelling the whole history with whoever holds the seat today.
  *
  * MULTI-TEAM TRADES: a 3-team deal is one transaction with 3+ parties. It becomes one
  * edge per participating pair (3 pairs for 3 teams) and is flagged `multiTeam` so the
@@ -24,7 +31,8 @@
  */
 import type { LeagueHistory } from "../history";
 import type { Transaction } from "../providers/types";
-import { deriveManagerProfile } from "../derive/manager";
+import { deriveManagerProfile, type ManagerProfile } from "../derive/manager";
+import { tenureLabel, tenureSeasons, type PrincipalIndex } from "../principals";
 import {
   describeTradeForRoster,
   describeTransaction,
@@ -56,13 +64,21 @@ export const RING = {
 // ---------------------------------------------------------------- types
 
 export interface TradeGraphNode {
+  /** Stable identity: the platform user id (Principal.ownerId). Never shared, even
+   *  across a handover - a departed and a current manager can share a rosterId, but
+   *  never this. */
+  ownerId: string;
+  /** The roster they hold now, or the last one they held if they've left. Kept for
+   *  `TeamAvatar`/ring-math continuity and for routing a CURRENT principal's dossier
+   *  link - it is not the identity key, `ownerId` is. */
   rosterId: number;
   /** Team name if set, else the Sleeper handle. */
   name: string;
   handle: string;
   /** <=3 characters, drawn inside the node. Unique across the league. */
   abbr: string;
-  /** Deals this manager has been part of (from the dossier derivation). */
+  /** Deals this manager has been part of (from the dossier derivation, scoped to
+   *  their own tenure when any roster in the league has changed hands). */
   trades: number;
   /** Distinct managers they've traded with. */
   partners: number;
@@ -72,6 +88,11 @@ export interface TradeGraphNode {
   /** For `TeamAvatar` - same imagery every other page uses for this manager. */
   avatarId: string | null;
   teamLogoUrl: string | null;
+  /** No longer holds a roster in the league. */
+  isFormer: boolean;
+  /** e.g. "2022-2024". Set only when `isFormer` - nothing to date-range for a current
+   *  manager. See `lib/principals.ts#tenureLabel`. */
+  tenureLabel: string | undefined;
   /** Position on the ring, in the `RING` coordinate space. */
   x: number;
   y: number;
@@ -89,7 +110,13 @@ export interface TradeRecord {
   season: string;
   week: number;
   created: number;
+  /** Roster seats that were party to this trade. */
   parties: number[];
+  /** The same parties, resolved to the PRINCIPAL who actually held each seat during
+   *  `season` - the correct key for grouping this trade into an edge. Deduplicated;
+   *  usually the same length as `parties`, but collapses if a seat somehow resolved
+   *  to the same owner twice. */
+  ownerParties: string[];
   multiTeam: boolean;
   /** Neutral, perspective-free summary. */
   summary: string;
@@ -103,10 +130,12 @@ export interface TradeRecord {
 }
 
 export interface TradeGraphEdge {
-  /** `${a}-${b}` with a < b. */
+  /** `${a}-${b}` with a < b lexicographically. `a`/`b` are owner ids, not roster ids -
+   *  a roster that changed hands needs to distinguish "traded with the old guy" from
+   *  "traded with the new guy" and a roster-id key cannot do that. */
   key: string;
-  a: number;
-  b: number;
+  a: string;
+  b: string;
   /** Number of deals between the pair. */
   count: number;
   tradeIds: string[];
@@ -122,13 +151,22 @@ export interface TradeGraph {
   seasons: string[];
   maxEdgeCount: number;
   totalTrades: number;
-  /** n*(n-1)/2 — how many pairings could exist. */
+  /** n*(n-1)/2 over PRINCIPALS, not rosters - how many pairings could exist. */
   possiblePairs: number;
   multiTeamCount: number;
   meRosterId: number | null;
   /**
    * False if the dossier-derived edge weight ever disagreed with the number of
    * deals found for that pair. Surfaced rather than silently reconciled.
+   *
+   * A roster that has changed hands makes this comparison inherently one-sided: a
+   * STABLE partner's own dossier still reports one blended trade count against
+   * "roster 11" across both managers who ever held it (`deriveManagerProfile`'s
+   * partner counts are roster-keyed and this file does not change that), while the
+   * web now draws two separate, correctly-attributed edges for the same pair of
+   * trades. That produces a legitimate, expected `false` here for edges touching a
+   * succeeded roster - it is not a bug, it is the thing this file exists to fix. A
+   * league with no successions still gets a hard guarantee of agreement.
    */
   weightsAgree: boolean;
 }
@@ -138,6 +176,10 @@ export interface TradeGraph {
  * or a trade tree names them. Optional fields are null rather than absent so a
  * consumer can render "not enough data" instead of silently omitting the row -
  * matches how both metrics already degrade on their own pages.
+ *
+ * Both metrics are properties of a roster AS IT STANDS TONIGHT, so a departed
+ * principal has nothing here - callers must not look this up by a former principal's
+ * last roster id, which belongs to whoever replaced them now.
  */
 export interface ManagerMetric {
   tci: number;
@@ -176,8 +218,15 @@ export interface AssetMove {
   season: string;
   week: number;
   created: number;
+  /** Roster seats. Asset flow is tracked by SEAT, not by manager - a roster's
+   *  belongings are a fact about the roster, and that is what makes a chain that
+   *  spans a handover keep making sense as one lineage. */
   from: number;
   to: number;
+  /** The PRINCIPAL who actually made this hop, resolved via `ownerAt(season, from/
+   *  to)` at build time - who was in the seat THAT season, not who holds it now. */
+  fromOwnerId: string | null;
+  toOwnerId: string | null;
 }
 
 export interface TradeTreeNode {
@@ -192,6 +241,8 @@ export interface TradeTreeNode {
   tradeId: string;
   from: number;
   to: number;
+  fromOwnerId: string | null;
+  toOwnerId: string | null;
   /** "out" = left the tracked manager, "in" = came back to them. */
   direction: "out" | "in";
   /** Where this branch ended: still held, released, flipped on, cap reached. */
@@ -204,8 +255,10 @@ export interface TradeRoot {
   assetKey: string;
   label: string;
   kind: AssetKind;
-  /** The manager who gave the asset up — the tree is told from their side. */
+  /** The seat that gave the asset up — the tree is told from their side. */
   owner: number;
+  /** The principal who actually gave it up, resolved at that season. */
+  ownerId: string | null;
   season: string;
   /** Total nodes in the resulting tree, i.e. how much of a story it is. */
   size: number;
@@ -228,7 +281,7 @@ export function tradeParties(t: Transaction): number[] {
 
 /**
  * A <=3 character tag for the ring. Initials for multi-word names, else the first
- * three characters. Collisions are broken deterministically by roster id order.
+ * three characters. Collisions are broken deterministically by iteration order.
  */
 export function abbreviate(name: string, taken: Set<string>): string {
   const words = name.split(/[^A-Za-z0-9]+/).filter(Boolean);
@@ -254,31 +307,35 @@ export function abbreviate(name: string, taken: Set<string>): string {
  * what makes cliques legible instead of a hairball of chords.
  *
  * Deterministic: a weight-sorted seed order, then first-improvement pairwise-swap
- * descent on Σ weight × circular-step-distance. No randomness, no clock.
+ * descent on Σ weight × circular-step-distance. No randomness, no clock. Generic over
+ * the id type so it works equally for roster ids (tests exercise it directly with
+ * plain numbers) and the owner-id strings the trade graph now keys nodes by - the
+ * default tie-break compares ids with `<`/`>`, which does the right thing for both.
  */
-export function ringOrder(
-  ids: number[],
-  weight: (a: number, b: number) => number,
-): number[] {
+export function ringOrder<T>(
+  ids: T[],
+  weight: (a: T, b: T) => number,
+  compare: (a: T, b: T) => number = (a, b) => (a < b ? -1 : a > b ? 1 : 0),
+): T[] {
   const n = ids.length;
   if (n < 3) return [...ids];
 
-  const total = new Map<number, number>();
+  const total = new Map<T, number>();
   for (const a of ids) {
     let s = 0;
     for (const b of ids) if (a !== b) s += weight(a, b);
     total.set(a, s);
   }
-  // Seed: busiest traders first, ties by roster id.
+  // Seed: busiest traders first, ties broken deterministically.
   const order = [...ids].sort(
-    (a, b) => (total.get(b) ?? 0) - (total.get(a) ?? 0) || a - b,
+    (a, b) => (total.get(b) ?? 0) - (total.get(a) ?? 0) || compare(a, b),
   );
 
   const step = (i: number, j: number) => {
     const d = Math.abs(i - j);
     return Math.min(d, n - d);
   };
-  const cost = (arr: number[]) => {
+  const cost = (arr: T[]) => {
     let c = 0;
     for (let i = 0; i < n; i++) {
       for (let j = i + 1; j < n; j++) {
@@ -311,48 +368,89 @@ export function ringOrder(
 
 // ---------------------------------------------------------------- graph
 
-export function buildTradeGraph(h: LeagueHistory): TradeGraph {
-  const trades = h.transactions.filter((t) => t.type === "trade");
-  const rosterIds = h.rosters.map((r) => r.rosterId).sort((a, b) => a - b);
+/**
+ * Builds the trade web. `principals` is the caller's one `getPrincipals(h)` fetch
+ * (see lib/principals.ts) - this file never fetches it itself, so a page that needs
+ * both the graph and something else keyed by principal (e.g. the manager metrics)
+ * only pays for the succession lookup once.
+ */
+export function buildTradeGraph(h: LeagueHistory, principals: PrincipalIndex): TradeGraph {
+  const tradesRaw = h.transactions.filter((t) => t.type === "trade");
 
-  // Edge weights + node counts come from the existing dossier derivation.
-  const profiles = new Map(
-    rosterIds.map((rid) => [rid, deriveManagerProfile(h, rid)] as const),
-  );
-  const profileWeight = (a: number, b: number) =>
-    profiles.get(a)?.tradePartners.find((p) => p.rosterId === b)?.count ?? 0;
+  // One behavioural profile per PRINCIPAL, confined to their own tenure when any
+  // roster in this league has changed hands - the exact conditional lib/superlatives
+  // uses, so a league with no handovers produces byte-identical numbers to the old
+  // roster-keyed derivation, and a handover splits one blended profile into two real
+  // ones instead of averaging two people together.
+  const profiles = new Map<string, ManagerProfile>();
+  for (const pr of principals.principals) {
+    const rosterId = pr.currentRosterId ?? pr.lastRosterId;
+    profiles.set(
+      pr.ownerId,
+      deriveManagerProfile(h, rosterId, {
+        ownerId: pr.ownerId,
+        displayName: pr.displayName,
+        teamName: pr.teamName,
+        seasons: principals.hasSuccessions ? tenureSeasons(pr, rosterId) : undefined,
+      }),
+    );
+  }
 
-  // Deals per pair, from the trades themselves (this is what the UI lists).
-  const pairTrades = new Map<string, string[]>();
+  // Deals per pair, from the trades themselves (this is what the UI lists) - grouped
+  // by PRINCIPAL, resolved trade-by-trade via ownerAt rather than assumed from the
+  // roster ids alone, which is what lets a single roster's history split cleanly
+  // across a handover instead of crediting every trade it was ever part of to
+  // whoever holds the seat today.
+  const pairTrades = new Map<string, { a: string; b: string; ids: string[] }>();
   const pairSeasons = new Map<string, Set<string>>();
   const records: TradeRecord[] = [];
   let multiTeamCount = 0;
 
-  for (const t of trades) {
+  for (const t of tradesRaw) {
     const parties = tradeParties(t);
     const multiTeam = parties.length > 2;
     if (multiTeam) multiTeamCount++;
+
+    const ownerParties = [
+      ...new Set(
+        parties
+          .map((rid) => principals.ownerAt(t.season, rid))
+          .filter((x): x is string => x != null),
+      ),
+    ].sort();
+
     records.push({
       id: t.transactionId,
       season: t.season,
       week: t.week,
       created: t.created,
       parties,
+      ownerParties,
       multiTeam,
       summary: describeTransaction(h, t),
-      sides: parties.map((rid) => ({
-        rosterId: rid,
-        name: rosterName(h, rid),
-        text: describeTradeForRoster(h, t, rid),
-      })),
+      sides: parties.map((rid) => {
+        const ownerId = principals.ownerAt(t.season, rid);
+        const pr = ownerId ? principals.byOwnerId.get(ownerId) : undefined;
+        return {
+          rosterId: rid,
+          // A principal's own team name/handle from THAT season beats the roster's
+          // current label, which would otherwise say the successor's name for a
+          // trade the departed manager actually made.
+          name: pr ? pr.teamName || pr.displayName : rosterName(h, rid),
+          text: describeTradeForRoster(h, t, rid),
+        };
+      }),
       hasInferredPicks: t.draftPicks.some((dp) => dp.inferred === true),
     });
-    for (let i = 0; i < parties.length; i++) {
-      for (let j = i + 1; j < parties.length; j++) {
-        const key = `${parties[i]}-${parties[j]}`;
-        (pairTrades.get(key) ?? pairTrades.set(key, []).get(key)!).push(
-          t.transactionId,
-        );
+
+    for (let i = 0; i < ownerParties.length; i++) {
+      for (let j = i + 1; j < ownerParties.length; j++) {
+        const a = ownerParties[i];
+        const b = ownerParties[j];
+        const key = `${a}-${b}`;
+        const entry = pairTrades.get(key) ?? { a, b, ids: [] };
+        entry.ids.push(t.transactionId);
+        pairTrades.set(key, entry);
         (
           pairSeasons.get(key) ?? pairSeasons.set(key, new Set()).get(key)!
         ).add(t.season);
@@ -360,12 +458,24 @@ export function buildTradeGraph(h: LeagueHistory): TradeGraph {
     }
   }
 
+  // Sanity cross-check against the dossier derivation - see the caveat on
+  // `weightsAgree` above for what this can and cannot promise once a roster has
+  // changed hands.
+  const effectiveRosterOf = new Map<string, number>(
+    principals.principals.map((pr) => [pr.ownerId, pr.currentRosterId ?? pr.lastRosterId]),
+  );
+  const profileWeight = (ownerA: string, rosterB: number) =>
+    profiles.get(ownerA)?.tradePartners.find((p) => p.rosterId === rosterB)?.count ?? 0;
+
   let weightsAgree = true;
   const edges: TradeGraphEdge[] = [];
-  for (const [key, ids] of pairTrades) {
-    const [a, b] = key.split("-").map(Number);
-    // Symmetrised: the derivation is computed per manager, so read both directions.
-    const derived = Math.max(profileWeight(a, b), profileWeight(b, a));
+  for (const [key, { a, b, ids }] of pairTrades) {
+    const rosterA = effectiveRosterOf.get(a);
+    const rosterB = effectiveRosterOf.get(b);
+    const derived =
+      rosterA != null && rosterB != null
+        ? Math.max(profileWeight(a, rosterB), profileWeight(b, rosterA))
+        : 0;
     if (derived !== ids.length) weightsAgree = false;
     edges.push({
       key,
@@ -380,50 +490,53 @@ export function buildTradeGraph(h: LeagueHistory): TradeGraph {
 
   // Ring layout, seriated on the same weights.
   const w = new Map(edges.map((e) => [e.key, e.count]));
-  const weight = (a: number, b: number) =>
+  const weight = (a: string, b: string) =>
     w.get(a < b ? `${a}-${b}` : `${b}-${a}`) ?? 0;
-  const order = ringOrder(rosterIds, weight);
+  const ownerIds = principals.principals.map((pr) => pr.ownerId);
+  const order = ringOrder(ownerIds, weight);
 
   const taken = new Set<string>();
-  const nodeByRoster = new Map<number, TradeGraphNode>();
-  for (const rid of rosterIds) {
-    const p = profiles.get(rid)!;
-    const name = rosterName(h, rid);
-    const ownerId = h.rostersById.get(rid)?.ownerId;
-    const user = ownerId ? h.usersById.get(ownerId) : undefined;
-    nodeByRoster.set(rid, {
-      rosterId: rid,
+  const nodeByOwner = new Map<string, TradeGraphNode>();
+  for (const pr of principals.principals) {
+    const p = profiles.get(pr.ownerId)!;
+    const rosterId = pr.isFormer ? pr.lastRosterId : (pr.currentRosterId as number);
+    const name = pr.teamName || pr.displayName;
+    nodeByOwner.set(pr.ownerId, {
+      ownerId: pr.ownerId,
+      rosterId,
       name,
-      handle: p.displayName,
+      handle: pr.displayName,
       abbr: abbreviate(name, taken),
       trades: p.trades,
       partners: p.tradePartners.length,
       picksNet: p.picks.net,
-      isMe: h.me.rosterId === rid,
-      avatarId: user?.avatar ?? null,
-      teamLogoUrl: user?.teamLogoUrl ?? null,
+      isMe: pr.ownerId === h.me.userId,
+      avatarId: pr.avatar,
+      teamLogoUrl: pr.teamLogoUrl,
+      isFormer: pr.isFormer,
+      tenureLabel: tenureLabel(pr),
       x: 0,
       y: 0,
     });
   }
   const n = order.length;
-  order.forEach((rid, i) => {
+  order.forEach((ownerId, i) => {
     // Start at the top and go clockwise.
     const angle = -Math.PI / 2 + (i * 2 * Math.PI) / n;
-    const node = nodeByRoster.get(rid)!;
+    const node = nodeByOwner.get(ownerId)!;
     node.x = round2(RING.cx + RING.r * Math.cos(angle));
     node.y = round2(RING.cy + RING.r * Math.sin(angle));
   });
 
   return {
     // Ring order, so the renderer can draw in place without re-sorting.
-    nodes: order.map((rid) => nodeByRoster.get(rid)!),
+    nodes: order.map((ownerId) => nodeByOwner.get(ownerId)!),
     edges,
     trades: records,
     seasons: h.chain.map((c) => c.season),
     maxEdgeCount: edges.reduce((m, e) => Math.max(m, e.count), 0),
-    totalTrades: trades.length,
-    possiblePairs: (rosterIds.length * (rosterIds.length - 1)) / 2,
+    totalTrades: tradesRaw.length,
+    possiblePairs: (ownerIds.length * (ownerIds.length - 1)) / 2,
     multiTeamCount,
     meRosterId: h.me.rosterId,
     weightsAgree,
@@ -448,9 +561,15 @@ export const assetPlayerId = (assetKey: string): string | null =>
  *
  * `pickPlayers` maps a pick's asset key to the player it became (resolved by
  * `lib/lineage`), which is how a pick chain keeps going past the draft.
+ *
+ * Each hop also carries `fromOwnerId`/`toOwnerId`, the principal actually holding
+ * that seat during the hop's own season - resolved once here via `ownerAt` so
+ * `buildTradeTree` never has to guess who a roster id "means" at a given point in the
+ * chain.
  */
 export function buildAssetMoves(
   h: LeagueHistory,
+  principals: PrincipalIndex,
   pickPlayers: Record<string, string> = {},
 ): AssetMove[] {
   const out: AssetMove[] = [];
@@ -475,6 +594,8 @@ export function buildAssetMoves(
         created: t.created,
         from,
         to,
+        fromOwnerId: principals.ownerAt(t.season, from),
+        toOwnerId: principals.ownerAt(t.season, to),
       });
     }
 
@@ -496,6 +617,8 @@ export function buildAssetMoves(
         created: t.created,
         from: dp.previousOwnerId,
         to: dp.ownerId,
+        fromOwnerId: principals.ownerAt(t.season, dp.previousOwnerId),
+        toOwnerId: principals.ownerAt(t.season, dp.ownerId),
       });
     }
   }
@@ -516,8 +639,19 @@ export interface TreeContext {
   moves: AssetMove[];
   /** playerId -> roster currently holding them. */
   holdings: Record<string, number>;
-  /** rosterId -> display name. */
+  /** rosterId -> CURRENT display name. Only for "still on X"/"now on X" in a terminal
+   *  outcome - who holds a roster TODAY, never who held it at some past hop. Must be
+   *  built from CURRENT principals only: a departed principal's last roster id is
+   *  someone else's seat now, and keying this off them would show their name for
+   *  what is actually the successor's roster. */
   names: Record<number, string>;
+  /** ownerId -> display name. A principal's own name never changes, only which
+   *  roster they occupy over time, so this needs no season dimension by itself - pair
+   *  it with a move's `fromOwnerId`/`toOwnerId` (already resolved at the correct
+   *  season by `buildAssetMoves`) to name any historical hop correctly, e.g. the
+   *  departing manager for a pre-handover hop and the successor for a post-handover
+   *  one, even within the same chain. */
+  ownerNames: Record<string, string>;
   maxDepth?: number;
 }
 
@@ -543,11 +677,17 @@ const DEFAULT_DEPTH = 4;
 /**
  * "I gave up X. What do I have to show for it now?"
  *
- * The root is one asset leaving one manager. Its children are what that manager got
- * back in the same deal; each of those, if it was later traded on by the same
- * manager, hangs the next deal's return underneath it. Branches end when the asset
- * is still on the roster, was released, became a drafted player, or the depth cap is
- * hit — and the outcome is always stated rather than left blank.
+ * The root is one asset leaving one roster SEAT. Its children are what that seat got
+ * back in the same deal; each of those, if it was later traded on by the same seat,
+ * hangs the next deal's return underneath it. Branches end when the asset is still on
+ * the roster, was released, became a drafted player, or the depth cap is hit — and
+ * the outcome is always stated rather than left blank.
+ *
+ * Asset flow is tracked by SEAT (a roster's belongings are a fact about the roster),
+ * but every outcome sentence names the PRINCIPAL who actually made that hop, resolved
+ * at the hop's own season - so a chain spanning a handover correctly credits the
+ * departing manager for their hops and the successor for theirs, never blending the
+ * two or relabelling history with whoever holds the seat today.
  */
 export function buildTradeTree(
   ctx: TreeContext,
@@ -559,6 +699,12 @@ export function buildTradeTree(
   const maxDepth = ctx.maxDepth ?? DEFAULT_DEPTH;
   const owner = root.from;
   const name = (rid: number) => ctx.names[rid] ?? `Roster ${rid}`;
+  // Historical attribution for an outcome sentence: whoever actually held the seat
+  // at the hop's own season, falling back to the roster's current name only when an
+  // owner id couldn't be resolved (a provider with no per-season data degrades to the
+  // old roster-keyed behaviour rather than dropping the fact - see lib/principals.ts).
+  const ownerName = (ownerId: string | null, fallbackRosterId: number) =>
+    (ownerId && ctx.ownerNames[ownerId]) || name(fallbackRosterId);
 
   /** What `owner` received in a given trade. */
   const returns = (tradeId: string) =>
@@ -598,6 +744,8 @@ export function buildTradeTree(
       tradeId: m.tradeId,
       from: m.from,
       to: m.to,
+      fromOwnerId: m.fromOwnerId,
+      toOwnerId: m.toOwnerId,
       direction: "in",
       outcome: null,
       children: [],
@@ -609,11 +757,11 @@ export function buildTradeTree(
     }
     const stamp = `${onward.assetKey}|${onward.tradeId}`;
     if (depth >= maxDepth || seen.has(stamp)) {
-      node.outcome = `flipped in ${onward.season} to ${name(onward.to)} - chain continues`;
+      node.outcome = `flipped in ${onward.season} to ${ownerName(onward.toOwnerId, onward.to)} - chain continues`;
       return node;
     }
     seen.add(stamp);
-    node.outcome = `flipped in ${onward.season} to ${name(onward.to)}`;
+    node.outcome = `flipped in ${onward.season} to ${ownerName(onward.toOwnerId, onward.to)}`;
     node.children = returns(onward.tradeId).map((r, i) =>
       visit(r, depth + 1, `${path}.${i}`),
     );
@@ -632,8 +780,10 @@ export function buildTradeTree(
     tradeId: root.tradeId,
     from: root.from,
     to: root.to,
+    fromOwnerId: root.fromOwnerId,
+    toOwnerId: root.toOwnerId,
     direction: "out",
-    outcome: `sent to ${name(root.to)} in ${root.season}`,
+    outcome: `sent to ${ownerName(root.toOwnerId, root.to)} in ${root.season}`,
     children: returns(root.tradeId).map((r, i) => visit(r, 1, `r${i}`)),
   };
 }
@@ -651,7 +801,7 @@ export function treeDepth(node: TradeTreeNode): number {
 /**
  * Every asset departure worth offering as a tree root, best story first.
  *
- * One root per (asset, manager who gave it up), keeping the FIRST departure, since
+ * One root per (asset, seat that gave it up), keeping the FIRST departure, since
  * that's where the lineage actually starts.
  */
 export function rankTradeRoots(ctx: TreeContext): TradeRoot[] {
@@ -670,6 +820,7 @@ export function rankTradeRoots(ctx: TreeContext): TradeRoot[] {
       label: m.label,
       kind: m.kind,
       owner: m.from,
+      ownerId: m.fromOwnerId,
       season: m.season,
       size: countTreeNodes(tree),
       depth: treeDepth(tree),
