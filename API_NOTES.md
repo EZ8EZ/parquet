@@ -59,6 +59,49 @@ player_id strings), `starters`, `reserve`, `taxi`, `keepers`, `player_map`,
 Note: `metadata.avatar` (when present) is a FULL URL to a custom team logo, distinct
 from the top-level `avatar` which is a user-avatar id. 7 of 14 managers set one.
 
+### ⭐ The ownership signal - who held which roster, in which season
+
+This is the basis of the principals / succession model (DECISIONS D22), and all of it
+was verified against the live chain on 2026-07-29.
+
+**`owner_id` on the rosters endpoint is per season, and it is the succession source.**
+Each league in the chain has its own `/league/{league_id}/rosters`, and the `owner_id`
+there is whoever held that roster **that season**. Walk the chain, read the owner off
+each season, and a handover is exactly the season where the id changes. Nothing has to
+be inferred.
+
+Observed across the full 2022-2026 chain: **13 of 14 rosters carry one stable `owner_id`
+in all five seasons.** Roster 11 changes exactly once:
+
+| Roster | 2022 | 2023 | 2024 | 2025 | 2026 |
+|---|---|---|---|---|---|
+| 11 | `882785740399087616` | same | same | `866379005824217088` | same |
+
+Those are two different platform **user ids**, not a renamed display name:
+`882785740399087616` resolves to `NSLKB` and `866379005824217088` to `kdewitt4`. So the
+league has **15 principals over 14 rosters, one of them former**.
+
+**`/league/{league_id}/users` is per season too, and it is the only place a departed
+manager's name survives.** The 2024 users payload contains `NSLKB`; the 2025 and 2026
+payloads do not. Both list exactly 14 users. Any display-name lookup for a historical
+fact therefore has to fall back through the chain, most recent season first, or a
+departed manager renders as a raw user id. `lib/principals.ts` does this in `userOf()`.
+
+**Roster ids are stable across this league's `previous_league_id` chain**, verified: the
+same 14 ids appear in every season, and the one ownership change kept `roster_id: 11`.
+That is what makes per-season joins comparable at all, and it is why crediting a **made
+draft pick** to a person needs the ownership table rather than the roster id alone: a
+pick record carries `roster_id` and no `owner_id`, so the only correct join is
+`(season, rosterId) -> owner`. Keyed on roster id alone, every 2022-2024 pick made on
+roster 11 would be credited to the manager who arrived in 2025.
+
+**`ppts` / `ppts_decimal` presence follows season status.** `roster.settings.ppts`
+(points a roster could have scored with an optimal lineup) is populated for all four
+`complete` seasons and is absent or zero in the `pre_draft` 2026 season, alongside
+`fpts`. So any rate built on it must skip a season where either side is missing rather
+than divide by zero: live start rates (`fpts / ppts`) span **83.2% to 94.8%** across
+managers on the four completed seasons. See `lib/metrics/skill.ts`.
+
 ### Transactions - `/league/{league_id}/transactions/{week}`
 **Full parity with NFL confirmed.** Keys: `type` ("trade" | "waiver" |
 "free_agent"), `status` ("complete" | "failed"), `adds` (map `player_id`→`roster_id`
@@ -243,9 +286,11 @@ by the API's own `pick_no` and never reconstruct it.
 #### Caveats worth remembering
 
 - Roster ids are stable across the chain here, but `slot_to_roster_id` is scoped to
-  its own season's league. The 2022→2024 owner swap
+  its own season's league. The roster 11 owner swap between **2024 and 2025**
   (`882785740399087616` → `866379005824217088`) changed the *user* on a roster, not
-  the `roster_id`, so per-season slot maps stay comparable.
+  the `roster_id`, so per-season slot maps stay comparable. Full detail in the
+  ownership-signal section above; the swap is why made picks must be credited through
+  `(season, rosterId) -> owner`.
 - 2022 is a 17-round startup snake draft, not a rookie draft - it has no traded
   picks to trace, but it is still a legitimate, browsable board.
 - `metadata` is denormalized onto each pick, which makes the board renderable even

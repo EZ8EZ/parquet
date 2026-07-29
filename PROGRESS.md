@@ -117,6 +117,79 @@ Driven by owner feedback in session:
   1.4s, which matters for serverless timeouts.
 - **Copy**: em dashes removed from all user-facing text, per owner preference.
 
+## Post-v1 iteration 3 - principals, performance awards, a second proprietary metric
+Three workstreams, all landed in the same session:
+
+- **Managers are modelled as PRINCIPALS, not rosters** (`lib/principals.ts`, DECISIONS
+  D22). Identity is the platform user account; history is a **tenure**, one (principal,
+  roster, contiguous span of seasons) triple. Succession is **detected** from per-season
+  `roster.owner_id` across the chain, never inferred: 13 of 14 rosters carry one stable
+  owner id across 2022-2026 and roster 11 changes hands exactly once, between 2024 and
+  2025. So the league honestly reports **15 principals over 14 rosters, one of them
+  former**. `ownerAt(season, rosterId)` is the attribution key. Without it we would have
+  credited three seasons of one manager's drafts to another, reported a trade-partner
+  relationship with someone who was never there, and averaged two risk appetites into a
+  manager who never existed. A provider with no per-season variation (the fixture) finds
+  no successions and reproduces the old roster-keyed numbers exactly.
+- **A new "On the merits" awards group** (`lib/metrics/skill.ts`, group `performance`).
+  **Seven** performance awards on top of the fourteen behavioural ones plus the pairing
+  award: 22 defined, **20 of which appear on live data** (Panic Button and Big FAAB Energy
+  still self-omit, D20). Three of the performance metrics name their baseline: **start rate**
+  (`fpts / ppts`, against the platform's own optimal lineup, live spread 83.2% to 94.8%),
+  **draft capture** (against the pool still on the board, live spread 13.5% to 41.3%) and
+  **trade value added** (at today's value, verified zero-sum across the league). All are
+  keyed by principal, and all three are hindsight, which every subtitle says out loud (D23).
+  The seventh, **House of Cards**, reads the roster as it stands today rather than in
+  retrospect.
+- **The two draft awards were recalibrated twice, and both rounds are recorded.** Scored on
+  pool capture, The Steal crowned a 1.01 pick, which is the easiest pick in a draft rather
+  than a steal, so it was rescored on **slot surplus** (`pickNo - valueRank`, D26). Raw
+  surplus then turned out to scale with draft depth, and the 238-pick 2022 startup draft
+  filled all four places of both The Steal and The Reach. Two fixes (D27): rank on
+  `slotSurplusRate` (surplus normalized by draft size), and hold the one-off startup draft
+  out of those two awards entirely, since a league holds exactly one startup ever and the
+  award would be frozen on 2022 forever. Startup detection is self-calibrating via
+  `startupSeasons()`: median round count across the chain, flag anything above twice it (17
+  against a median of 3). Startup picks still count toward The Scout, because those decisions
+  were real. Final results: **The Steal is Kyshawn George, pick 35 of the 2024 rookie draft,
+  the 7th most valuable player in that class; The Reach is Robert Dillingham, pick 6, who
+  ended up 27th.**
+- **Roster Fragility Index** (`lib/metrics/fragility.ts`, 57 tests), the second proprietary
+  metric after Dynasty Duration / TCI. Duration asks *when* a roster's value arrives; RFI
+  asks *how much of the season is load-bearing on a handful of assets, and what breaks
+  first*. Three components: exact **leave-one-out** damage (delete a player, re-solve the
+  optimal lineup with a DP over subsets of lineup slots rather than greedily, measure the
+  startable value lost, which prices positional eligibility for free and names the single
+  point of failure), normalized **HHI concentration** `(HHI - 1/n)/(1 - 1/n)` over
+  starter-weighted value with `n` pinned to a lineup-derived benchmark, and **availability
+  exposure** reusing the valuation injury map plus `availability(age)` from `duration.ts`.
+  Weighted `W_LOO` 0.45 / `W_CONCENTRATION` 0.35 / `W_EXPOSURE` 0.20 into a 0-100 index where
+  higher means more fragile, plus a league-relative percentile and a `band`. Live league
+  spread is **38 to 73 with no component clipped**. Picks are excluded on purpose: a 2028
+  first cannot fill a lineup slot tonight. Surfaced as the **House of Cards** award, so it is
+  not dead code.
+- **Two RFI calibration bugs were caught and fixed before shipping**, both by property tests
+  rather than by inspection. `LOO_REF` at 0.6 pinned 8 of 14 teams at exactly 100, which
+  erased the difference between a top-heavy roster and a catastrophically top-heavy one
+  (now 0.9). And normalized HHI was *falling* when backups were shed, because it measures
+  inequality relative to `n` and below-mean backups read as inequality; pinning `n` to a
+  lineup-derived benchmark (a starter plus one backup at every slot) makes adding depth always
+  lower concentration and removing it always raise it, which is what the word means.
+- **The honest caveat on RFI: a low score is not "good".** The most torn-down roster in the
+  league scores mid-pack, because a roster with nothing to lose loses nothing when a player
+  goes down. `startableValue` and `depthBeyondStarters` sit on the profile precisely so this
+  cannot be misread, and both the award subtitle and the low-band copy say it.
+- **Trade value added counts players only** (D24), because hand-executed trades record
+  `draft_picks: []`. Stated bias: a pick-for-player trader looks better than they were, a
+  player-for-pick trader looks worse.
+- **Per-season rosters, per-season users and the draft index load outside the corpus**
+  (D25), memoized in-process on a 5 minute TTL, so only the pages that grade performance or
+  attribute history to people pay the requests. The 1.4s corpus cold start is treated as a
+  budget to protect, not a benchmark to admire.
+- **API notes extended** with the ownership signal: per-season `owner_id` as the succession
+  source, per-season `/users` as the only place a departed manager's name survives, `ppts`
+  presence by season status, and roster-id stability across the chain.
+
 ## FINAL STATE
 
 ### What works (end to end, zero external deps on fixtures)
@@ -126,7 +199,12 @@ Driven by owner feedback in session:
   screen leads with "You said rebuild. You bought win-now." straight from the data.
 - All table-stakes surfaces. Trade evaluator + ledger annotation + analyst all
   round-trip through API routes.
-- `pnpm build`, `pnpm typecheck`, `pnpm lint`, and **37 tests** all pass clean.
+- `pnpm build`, `pnpm typecheck`, `pnpm lint`, and **260 tests across 15 files** all pass
+  clean (observed 2026-07-29, `pnpm test`). `/awards` responds in under 110ms warm.
+- Manager identity is principal-keyed on the awards surface: 15 principals over 14
+  rosters, one former, succession detected rather than inferred.
+- Two proprietary metrics: Dynasty Duration / TCI (when the value arrives) and the Roster
+  Fragility Index (what breaks first).
 - Installable PWA (manifest + icons + theme color).
 
 ### What is stubbed / intentionally deferred
@@ -148,6 +226,26 @@ Driven by owner feedback in session:
   since this league doesn't use FAAB) therefore self-omit on live data.
 - **Pick components of commissioner-executed trades are unrecoverable**, not stubbed -
   Sleeper simply doesn't record them. Documented rather than guessed.
+- **Principals reach the awards page only.** Dossiers (`lib/dossier`), trade partners
+  (`ManagerProfile.tradePartners`), the trade web (`lib/tradegraph`) and `lib/strategy` are
+  still roster-keyed, so on the one roster that changed hands "trading with NSLKB" and
+  "trading with kdewitt4" still read as one relationship. `deriveManagerProfile` already
+  accepts a `TenureScope`, so the plumbing exists; per-season partner identity is the real
+  work. QUESTIONS #12.
+- **"Best Friends Forever" takes current managers only**, for the same reason: a pairing is
+  a relationship between two seats, not two people.
+- **Holding-time spans that cross a handover are dropped** rather than attributed to either
+  manager. Unattributable beats wrongly attributed.
+- **A former manager has no dossier page**, so the awards page renders them unlinked with a
+  tenure label ("2022-2024") instead of a link. QUESTIONS #13.
+- **Trade value added excludes draft picks** (D24), a consequence of D19 rather than an
+  oversight, with the bias direction stated wherever the number appears.
+- **The startup draft is held out of The Steal and The Reach** (D27), so those two awards
+  describe rookie drafts only. Startup picks still count toward The Scout.
+- **RFI excludes draft picks and models nightly capacity with one solved lineup.** A full
+  82-night simulation was considered and rejected: the honest version needs the NBA schedule
+  and per-team rest patterns, none of which this app ingests. Availability exposure is an
+  index of exposure, not a probability of missed games.
 
 ### What I'd do next, in priority order
 1. Add Vercel Postgres/Neon so ledger annotations persist in production (the only

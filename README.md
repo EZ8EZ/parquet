@@ -38,6 +38,37 @@ four things **no competitor builds** (see [RESEARCH.md](RESEARCH.md)):
 roster value, tradeable in the evaluator, and traced to the players they became
 (`/drafts`). In dynasty a pick stockpile is a real asset, so it is never invisible.
 
+**A manager is a person, not a seat.** Teams change hands in long-running dynasty
+leagues, so identity is the platform user account (a **principal**) and history is a
+**tenure**: one principal, one roster, a contiguous span of seasons. Succession is
+*detected* from each season's own `owner_id`, never inferred, so a manager's drafts and
+trades stay theirs after they hand the team over, and a manager who has left the league
+keeps credit for the seasons they were here. The real league is 15 principals over 14
+rosters, one of them former. See `lib/principals.ts` and DECISIONS D22.
+
+**Two proprietary metrics, both published rather than hidden:**
+- **Dynasty Duration and the Timeline Coherence Index** (`lib/metrics/duration.ts`) -
+  Macaulay duration applied to dynasty assets. It answers *when* a roster's value arrives,
+  and TCI answers whether the assets agree about it. Coherence is direction-free: a good
+  rebuild and a good contender both score high, and the only bad quadrant is straddling.
+- **Roster Fragility Index** (`lib/metrics/fragility.ts`) - the other half of that
+  question: *how much of this season is load-bearing on a handful of assets, and what
+  breaks first*. Exact leave-one-out damage (delete a player, re-solve the optimal lineup
+  with a DP over subsets of lineup slots rather than greedily, so positional eligibility is
+  priced) plus starter-weighted HHI concentration plus availability exposure, weighted 0.45
+  / 0.35 / 0.20 into a 0-100 index where higher means more fragile. Names the single point
+  of failure. Surfaced as the **House of Cards** award. Low fragility is not the same as
+  good, and the copy says so: a roster with nothing to lose loses nothing.
+
+**Awards are graded on behaviour and, separately, on merit.** The "On the merits" group
+adds seven performance awards; 22 awards are defined and 20 appear on live data. Three of
+the underlying metrics name their baseline: start rate against the platform's own optimal
+lineup, draft capture against the pool still on the board, and trade value added at today's
+value. All three are hindsight and every subtitle says so, because we hold no historical
+ranking snapshots and a process-fair version is not available. See DECISIONS D23. The
+draft-steal award is a worked example of a metric caught measuring the wrong thing, twice:
+D26 and D27.
+
 > **Anti-sycophancy is the core design constraint.** Every analytical surface is
 > tuned to disagree with you when the record warrants it. See
 > `lib/analyst/system-prompt.ts` - sycophancy is named there as the product's
@@ -94,14 +125,14 @@ All documented in [`.env.example`](.env.example):
 
 | Var | Default | Purpose |
 |---|---|---|
-| `LEAGUE_PROVIDER` | `fixture` | `fixture` \| `sleeper` \| `csv` |
+| `LEAGUE_PROVIDER` | `sleeper` | `fixture` \| `sleeper` \| `csv`. Defaults to the real league so a zero-config deploy is never silently fake (D21) |
 | `DATABASE_URL` | `file:./dev.db` | SQLite locally; swap to `postgres://` for prod |
 | `SLEEPER_USERNAME` | `EZ8` | resolves your roster ("you") |
-| `SLEEPER_LEAGUE_ID` | - | current-season league id (Sleeper mode) |
+| `SLEEPER_LEAGUE_ID` | committed constant | current-season league id; falls back to `DEFAULT_SLEEPER_LEAGUE_ID` in `lib/providers/index.ts` (D21) |
 | `LLM_BASE_URL` | - | OpenAI-compatible endpoint (Groq/OpenRouter/Ollama); enables conversational analyst |
 | `LLM_API_KEY` | - | key for that endpoint (none needed for local Ollama) |
 | `LLM_MODEL` | `llama-3.3-70b-versatile` | analyst model |
-| `NEXT_PUBLIC_USE_PLAYER_PHOTOS` | `false` | real NBA headshots (licensing caveat, see DECISIONS D8) |
+| `NEXT_PUBLIC_USE_PLAYER_PHOTOS` | `true` | real NBA headshots (licensing caveat, see DECISIONS D8) |
 | `CSV_DIR` | - | directory of CSVs when `LEAGUE_PROVIDER=csv` |
 
 ## Scripts
@@ -111,7 +142,7 @@ All documented in [`.env.example`](.env.example):
 | `pnpm dev` | Next dev server |
 | `pnpm build` | `prisma generate` + production build |
 | `pnpm typecheck` | `tsc --noEmit` |
-| `pnpm test` | Vitest (valuation, strategy, dossier, trade, Sleeper + CSV parsers) |
+| `pnpm test` | Vitest (valuation, strategy, dossier, trade, principals, metrics, awards, Sleeper + CSV parsers) |
 | `pnpm db:push` | apply the Prisma schema to SQLite |
 | `pnpm ingest [leagueId]` | full historical pull, idempotent upserts |
 | `pnpm seed` | seed the demo ledger annotation (fixture) |
@@ -141,9 +172,14 @@ lib/
     stats/                StatsProvider (fixture + external stub)
   valuation/              transparent model; every weight in config.ts
   picks.ts                draft-pick capital: full holdings, valued as assets
+  principals.ts           managers as principals + tenures; succession detection
+  metrics/
+    duration.ts           Dynasty Duration + Timeline Coherence Index
+    fragility.ts          Roster Fragility Index (leave-one-out, HHI, exposure)
+    skill.ts              start rate, draft capture, trade value added
   gameplan/               diagnosis + concrete prescribed moves
   lineage/                traded pick -> the player it actually became
-  superlatives/           league awards
+  superlatives/           league awards (behavioural + "On the merits")
   sleeperLinks.ts         verified deep links back into the Sleeper app
   derive/                 per-manager behavioral derivation, descriptions, and
                           coalesce.ts (rebuilds commissioner-executed trades)
@@ -174,7 +210,7 @@ recommendation ends in a copyable summary you paste into Sleeper yourself.
 
 ## Stack
 Next.js 16 (App Router, TS strict) · Tailwind v4 · Prisma 6 (SQLite → Postgres) ·
-Zod 4 · Vitest · Anthropic SDK · deployable to Vercel · installable PWA.
+Zod 4 · Vitest · any OpenAI-compatible LLM endpoint (D17) · deployable to Vercel · installable PWA.
 
 ## Deploy (Vercel)
 **Zero configuration required.** No database, no environment variables. Just connect
@@ -206,8 +242,12 @@ conversational analyst.
 
 ## Current state
 v1 is feature-complete and runs end to end on fixtures with zero external deps.
-Build, typecheck, lint, and 37 tests are green. See PROGRESS.md for the honest
-what-works / what's-stubbed / next-steps rundown.
+Build, typecheck, lint, and **260 tests across 15 files** are green. See PROGRESS.md for
+the honest what-works / what's-stubbed / next-steps rundown.
+
+Known gap worth naming here: **principals are threaded through the awards surface only.**
+Dossiers, trade partners, the trade web and the strategy engine are still roster-keyed, so
+on the one roster that changed hands they still read two managers as one. QUESTIONS #12.
 
 ## License
 MIT - see [LICENSE](LICENSE).

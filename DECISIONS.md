@@ -178,3 +178,150 @@ several reach a provider and would otherwise start making real HTTP calls (this
 actually happened - the suite went from 0.3s to 20s and 11 tests timed out).
 Rejected: documenting the env vars harder (the failure mode is silent, so docs don't
 prevent it); throwing when unconfigured (a broken deploy is worse than a working one).
+
+## D22. A manager is a PRINCIPAL with TENURES, not a roster
+The unit of identity is the platform user account (a **principal**), and the unit of
+history is a **tenure**: one (principal, roster, contiguous span of seasons) triple.
+`lib/principals.ts` builds the index; `PrincipalIndex.ownerAt(season, rosterId)` is the
+only sanctioned way to turn a historical fact into a person.
+
+Succession is **detected, never inferred**. Every league in the chain has its own
+`/league/{id}/rosters`, and each roster there carries the `owner_id` of whoever held it
+**that** season. Walk the chain, read the owner off each season, and a handover is simply
+the season where the id changes. Verified on the real league: 13 of 14 rosters have one
+stable owner id across all five seasons (2022-2026), and roster 11 changes owner id
+exactly once, between 2024 and 2025. That is **15 principals over 14 rosters, one of them
+former**. A provider that returns the same rosters for every season (the fixture) finds no
+successions and produces one principal per roster, so nothing throws and the numbers stay
+byte-identical to the old roster-keyed output.
+
+What breaks if you key on roster id instead, all three of which we would have shipped:
+- **One manager's drafts get credited to another.** The made-pick record carries a roster
+  id and no owner id, so every 2022-2024 pick on roster 11 would have been attributed to
+  the manager who arrived in 2025.
+- **A trade-partner relationship is reported with someone who was never there.** "You
+  trade a lot with roster 11" silently merges two different humans into one counterparty.
+- **Two risk appetites are averaged into a manager who never existed.** Acquisition age,
+  pick flow and posture blend across the handover and describe nobody.
+
+Consequence worth stating: the departing manager's display name survives **only** in the
+older seasons' `/league/{id}/users` payloads. The current league's users list does not
+contain them, so any name lookup has to fall back through the chain (see API_NOTES.md).
+Rejected: matching managers by display name (they differ by platform user id here, not by
+a rename, so name matching would both merge and split the wrong people); ignoring the
+handover as an edge case (it is 1 of 14 rosters and 3 of 5 seasons of one team's history).
+
+## D23. Performance awards are graded with HINDSIGHT, and say so in their own copy
+`lib/metrics/skill.ts` adds the first awards that ask "who is actually good at this"
+rather than "what did this manager do". Behaviour needs no counterfactual; performance
+always needs a baseline. Each of the three metrics names its baseline out loud:
+
+1. **Start rate** (`fpts / ppts`) is graded against the **platform-supplied optimal
+   lineup**. This is the only one whose counterfactual we do not compute ourselves. Live
+   spread across managers is 83.2% to 94.8%, so it discriminates.
+2. **Draft capture** is graded against **the pool still on the board**: every player taken
+   at that slot or later. Draft position and class strength both cancel out because each
+   pick is graded only against what sat in front of it. Live spread 13.5% to 41.3%.
+3. **Trade value added** is graded at **today's value**. It is a measure of how deals
+   turned out, not of how they were reasoned. Verified zero-sum: it sums to exactly 0
+   across the league.
+
+The group also carries **House of Cards**, which is the one performance award that is not
+hindsight: the Roster Fragility Index reads the roster as it stands today, so it makes a
+claim about the present rather than a retrospective grade. Its copy carries a different
+caveat instead, and it is the important one: **low fragility is not the same as good.** The
+most torn-down roster in the league scores mid-pack, because a roster with nothing to lose
+loses nothing when a player goes down.
+
+The other three price assets at what we know now, not at what was knowable then, which is the
+correct way to grade an outcome and the wrong way to grade a decision. We hold no
+historical ranking snapshots, so a process-fair version is **not available** and we do not
+pretend otherwise: every award priced that way carries the hindsight caveat in its own
+subtitle, and "Left On The Bench" additionally admits it cannot tell tanking from
+inattention.
+Rejected: shipping these as skill ratings without the caveat (dishonest); withholding them
+until historical rankings exist (the outcome question is worth answering, and stating the
+baseline makes it honest).
+
+## D24. Trade value added counts PLAYERS ONLY, and names the bias it creates
+Direct consequence of D19. Hand-executed (commissioner) trades arrive with
+`draft_picks: []`, which is how every multi-team deal in this league was done, so the pick
+side of those trades is simply not in the record. Including picks for the trades that
+happen to record them while silently omitting them for the trades that do not would
+produce a number that looks complete and is not. Measuring one side completely beats
+measuring both sides inconsistently.
+
+The bias direction is stated wherever the number is shown: **a manager who traded picks
+for players looks better than they were, and a manager who traded players for picks looks
+worse.** Pick capital is reported separately and honestly by `lib/picks.ts`. Rejected:
+folding in the picks we do have (produces a confidently wrong total); dropping the metric
+(the player side is real and complete).
+
+## D25. Per-season rosters, per-season users and the draft index load OUTSIDE the corpus
+`getPrincipals()` costs two requests per season and `loadSeasonRosters()` one, and only
+the pages that attribute history to people or grade performance need them. Folding either
+into `getLeagueHistory()` would add those requests to **every** cold start in the app,
+including pages that never look at them. Corpus cold load is 1.4s (down from 15.7s), and
+that number is close enough to serverless execution limits that it is treated as a budget
+to protect rather than a benchmark to admire.
+
+So both are loaded on demand and memoized in-process behind a 5 minute TTL, exactly like
+the draft index, with `invalidatePrincipals()` / `invalidateSeasonRosters()` as the reload
+hooks. A season that fails to load is skipped rather than fatal. Rejected: adding them to
+the corpus (a latency tax on every page for two pages' benefit); refetching per request
+(the awards page alone would issue them three times).
+
+## D26. "The Steal" was rescored from pool capture to SLOT SURPLUS
+Worth recording as a worked example of catching a metric that was measuring the wrong
+thing rather than measuring it badly.
+
+The award originally scored on **pool capture** ("did you take the best asset in front of
+you"), and on real data it crowned Victor Wembanyama at pick 1.01. That is a correct
+answer to the question being asked and a useless answer to the question meant: the first
+pick of a draft satisfies capture trivially by taking the consensus number one, which is
+the easiest pick in the draft, not a steal.
+
+Rescored on **slot surplus** (`pickNo - valueRank`, where `valueRank` is the player's rank
+by today's value inside his own draft class). Both numbers stayed on `GradedPick`, because
+capture and slot surplus are genuinely different questions and the aggregate rate (The
+Scout) still wants capture. Rejected: gating the award by round (arbitrary, and it would
+still crown the best pick of round 5 rather than the biggest surplus); keeping capture and
+rewriting the copy to match it (the copy was fine, the metric was answering the wrong
+question).
+
+## D27. Slot surplus is NORMALIZED by draft size, and the startup draft is held out
+D26 fixed the question and left a second bug behind it, which is why both rounds are
+recorded rather than just the outcome.
+
+**Raw slot surplus scales with draft depth.** The 2022 startup draft is 17 rounds and 238
+picks against three rounds and 42 picks for a rookie draft, so it can produce surpluses
+nearly five times as large for the same quality of decision. Verified on the real league:
+the unnormalised version filled **all four places of both The Steal and The Reach** with
+picks from that one season. Fixed by ranking on `slotSurplusRate` (`slotSurplus /
+draftSize`), so a three-round class is comparable with another three-round class.
+
+**The startup draft is excluded from those two awards entirely.** Normalising makes the
+numbers comparable; it does not make the exercise comparable. A startup draft is 17 rounds
+over the whole player pool, a rookie draft is three rounds over one class, and a league
+holds **exactly one startup ever**, so an award ranked on it would be frozen on 2022
+forever. Startup picks still count toward **The Scout**, because those decisions were real
+and pool capture is the right lens for them; the profile carries `rookiePicks` and
+`startupPicks` so the reader can see what each number is built on.
+
+Startup detection is **self-calibrating rather than a magic threshold**: `startupSeasons()`
+takes the median round count across the chain's drafts and flags anything above twice it
+(17 rounds against a median of 3 here). Round count is the signal rather than draft format,
+because format is a league setting that can change for unrelated reasons (this league runs
+its startup as a snake and its rookie drafts as linear, but that pairing is a convention,
+not a rule). A chain whose drafts are all the same shape flags nothing, and a chain with a
+single draft flags nothing either, because one sample cannot tell you what kind of draft it
+is. A league that has only ever held a startup falls back to it rather than reporting no
+extremes at all.
+
+Final results after both rounds: **The Steal is Kyshawn George, pick 35 of the 2024 rookie
+draft, who became the 7th most valuable player in that class. The Reach is Robert
+Dillingham, pick 6 of the same draft, who ended up 27th.** Rejected: hardcoding "2022 is
+the startup" (breaks for any other league, and this app is provider-agnostic); detecting the
+startup by draft `type` (snake vs linear is a convention, not a definition); excluding
+startup picks from every draft metric (their decisions were real and The Scout should see
+them).

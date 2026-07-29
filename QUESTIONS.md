@@ -75,3 +75,44 @@ is well positioned for this: player value already keys off a single rank input, 
 rank override map is a small change rather than a rewrite. Open questions: which public
 sources are acceptable to use, and whether a user ranking should REPLACE consensus or be
 blended with it (blending is the more defensible default, with the weight exposed).
+
+## 12. Principals reach the AWARDS page only. Everything else is still roster-keyed. NOT DONE
+The manager-succession model (D22) is real and correct where it is wired, and it is wired
+in exactly one place: `lib/superlatives/index.ts` and the performance metrics it consumes.
+Every other manager-facing surface still keys on roster id, which means the roster that
+changed hands between 2024 and 2025 still reads as one continuous manager there:
+
+- **Dossiers** (`lib/dossier`) - one page per roster, so the page for that roster blends
+  two people's behaviour.
+- **Trade partners** (`ManagerProfile.tradePartners`) - keyed by roster id, so "trading
+  with NSLKB" and "trading with kdewitt4" still read as one relationship.
+- **The trade web** (`lib/tradegraph`) - nodes are rosters, so the network shows 14 seats,
+  not 15 managers.
+- **Revealed vs stated strategy** (`lib/strategy`) - scoped to a roster's whole history.
+
+The plumbing for the fix already exists: `deriveManagerProfile(h, rosterId, scope?)` takes
+an optional `TenureScope` (owner id, display name, team name, and the set of seasons that
+count), and the awards layer already passes one. Threading it through the surfaces above is
+mechanical for dossiers and strategy; the trade web and `tradePartners` need partner
+identity resolved **per season**, which is the larger piece of work.
+
+Two smaller consequences of the same gap, both deliberate rather than overlooked:
+- **"Best Friends Forever" takes current managers only.** A pairing is a relationship
+  between two seats, and two principals who shared a seat cannot both be indexed by it.
+  Making pairings principal-aware is the per-season partner identity work above.
+- **Holding-time spans that cross a handover are dropped**, not attributed to either
+  manager. A player acquired in the last season of one tenure and dropped in the first
+  season of the next does not resolve, so that hold counts for nobody. Dropping an
+  unattributable hold beats crediting it to the wrong person.
+
+Question for Eric: is "who am I actually negotiating with" worth the per-season partner
+identity work, or is having the awards page right enough?
+
+## 13. A former manager has no dossier page, so the awards page renders them unlinked. NOT DONE
+Dossiers live at `/managers/[rosterId]` and describe the roster's **current** manager, so
+a principal who has left the league has nowhere to link to. `AwardEntrant` carries
+`isFormer` and a `tenureLabel` (for example "2022-2024") precisely so the UI can render
+them as text instead of a broken link, which is what it does today.
+
+The honest options are a principal-scoped dossier route (needs #12 first) or leaving them
+unlinked with the tenure label as the explanation. Currently the second.
