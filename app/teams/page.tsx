@@ -2,6 +2,7 @@ import { getLeagueHistory } from "@/lib/history";
 import { defaultUsername } from "@/lib/providers";
 import { leagueValueRanking } from "@/lib/roster";
 import { buildDossier } from "@/lib/dossier";
+import { getPrincipals } from "@/lib/principals";
 import { PageHeader } from "@/components/ui";
 import { TeamPicker, type TeamOption } from "@/components/TeamPicker";
 
@@ -10,9 +11,10 @@ export const dynamic = "force-dynamic";
 export default async function TeamsPage() {
   const h = await getLeagueHistory();
   const ranked = leagueValueRanking(h);
+  const principals = await getPrincipals(h);
 
   const teams: TeamOption[] = ranked.map((r) => {
-    const d = buildDossier(h, r.rosterId);
+    const d = buildDossier(h, r.rosterId, principals);
     return {
       rosterId: r.rosterId,
       teamName: r.teamName ?? r.ownerName,

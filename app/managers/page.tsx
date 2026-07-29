@@ -2,6 +2,8 @@ import Link from "next/link";
 import { ChevronRight, Lock } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getAllDossiers } from "@/lib/dossier";
+import { getPrincipals } from "@/lib/principals";
+import { Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { signed } from "@/lib/ui";
 
@@ -9,7 +11,8 @@ export const dynamic = "force-dynamic";
 
 export default async function ManagersPage() {
   const h = await getLeagueHistory();
-  const dossiers = getAllDossiers(h);
+  const principals = await getPrincipals(h);
+  const dossiers = getAllDossiers(h, principals);
   const seasons = h.chain.length || 1;
   const me = h.me.rosterId;
 
@@ -58,20 +61,32 @@ export default async function ManagersPage() {
         <ul className="divide-y divide-border">
           {dossiers.map((d) => {
             const p = d.profile;
-            const user = p.userId ? h.usersById.get(p.userId) : undefined;
+            const identity = d.identity;
+            const isFormer = identity.kind === "former";
+            // A former principal is absent from the current league's user list, so
+            // their imagery comes off the principal record itself, not h.usersById.
+            const principal = p.userId ? principals.byOwnerId.get(p.userId) : undefined;
+            const href =
+              identity.kind === "former"
+                ? `/managers/former/${identity.ownerId}`
+                : `/managers/${identity.rosterId}`;
+            const key =
+              identity.kind === "former"
+                ? `former-${identity.ownerId}`
+                : `current-${identity.rosterId}`;
             const shown = d.tags.slice(0, 3);
             const extra = d.tags.length - shown.length;
             return (
-              <li key={p.rosterId}>
+              <li key={key}>
                 <Link
-                  href={`/managers/${p.rosterId}`}
+                  href={href}
                   aria-label={`Dossier: ${p.teamName ?? p.displayName}`}
                   className="flex items-start gap-2.5 px-3 py-2.5 transition-colors hover:bg-surface-2 focus-visible:bg-surface-2"
                 >
                   <TeamAvatar
                     name={p.teamName ?? p.displayName}
-                    avatarId={user?.avatar}
-                    teamLogoUrl={user?.teamLogoUrl}
+                    avatarId={principal?.avatar}
+                    teamLogoUrl={principal?.teamLogoUrl}
                     size="sm"
                   />
                   <div className="min-w-0 flex-1">
@@ -82,6 +97,9 @@ export default async function ManagersPage() {
                       <span className="shrink-0 truncate text-[11px] leading-tight text-faint">
                         {p.displayName}
                       </span>
+                      {isFormer && d.identity.kind === "former" && (
+                        <Tag className="shrink-0">former {d.identity.tenureLabel}</Tag>
+                      )}
                     </div>
                     {shown.length > 0 && (
                       <div className="mt-0.5 truncate text-[11px] font-medium leading-tight text-accent/85">

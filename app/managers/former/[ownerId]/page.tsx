@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, Lightbulb } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
-import { buildDossier } from "@/lib/dossier";
+import { buildFormerDossier } from "@/lib/dossier";
 import { getPrincipals } from "@/lib/principals";
 import { Tag, DeltaValue, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
@@ -11,7 +11,6 @@ import { cn, signed } from "@/lib/ui";
 import type { ReactNode } from "react";
 
 export const dynamic = "force-dynamic";
-
 
 function Metric({
   label,
@@ -52,30 +51,31 @@ const POSTURE_TONE: Record<string, string> = {
   balanced: "border-border bg-elevated text-muted",
 };
 
-export default async function ManagerDetailPage({
+export default async function FormerManagerDetailPage({
   params,
 }: {
-  params: Promise<{ rosterId: string }>;
+  params: Promise<{ ownerId: string }>;
 }) {
-  const { rosterId: rid } = await params;
-  const rosterId = parseInt(rid, 10);
+  const { ownerId } = await params;
   const h = await getLeagueHistory();
-  if (!h.rostersById.has(rosterId)) notFound();
-
   const principals = await getPrincipals(h);
-  const d = buildDossier(h, rosterId, principals);
-  const p = d.profile;
-  const tradesData = p.tradesBySeason.map((s) => ({ label: s.season, value: s.count }));
-  const isMe = h.me.rosterId === rosterId;
-  const user = p.userId ? h.usersById.get(p.userId) : undefined;
 
-  /** Team identity for any roster in the league (used by the partner rows). */
+  // A former dossier only exists for a principal who has actually left the league -
+  // a current occupant's ownerId, or an unknown one, has no route here.
+  const d = buildFormerDossier(h, ownerId, principals);
+  if (!d || d.identity.kind !== "former") notFound();
+  const identity = d.identity;
+
+  const p = d.profile;
+  const principal = principals.byOwnerId.get(ownerId);
+  const tradesData = p.tradesBySeason.map((s) => ({ label: s.season, value: s.count }));
+
+  /** Team identity for any CURRENT roster (used by the partner rows). */
   const teamOf = (id: number) => {
     const r = h.rostersById.get(id);
     const u = r?.ownerId ? h.usersById.get(r.ownerId) : undefined;
     return {
       name: u?.teamName ?? u?.displayName ?? `Roster ${id}`,
-      handle: u?.displayName ?? null,
       user: u,
     };
   };
@@ -107,14 +107,13 @@ export default async function ManagerDetailPage({
       <header className="mb-2 flex items-start gap-3">
         <TeamAvatar
           name={p.teamName ?? p.displayName}
-          avatarId={user?.avatar}
-          teamLogoUrl={user?.teamLogoUrl}
+          avatarId={principal?.avatar}
+          teamLogoUrl={principal?.teamLogoUrl}
           size="lg"
-          isMe={isMe}
         />
         <div className="min-w-0 flex-1">
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
-            {isMe ? "Your own file" : "Dossier"}
+            Dossier · former manager
           </p>
           <h1 className="truncate font-display text-[24px] font-semibold leading-[1.15] text-ink">
             {p.teamName ?? p.displayName}
@@ -122,12 +121,19 @@ export default async function ManagerDetailPage({
           <div className="flex flex-wrap items-center gap-x-2 font-mono text-[11px] tnum text-faint">
             <span className="truncate">{p.displayName}</span>
             <span aria-hidden="true">·</span>
+            <span>{identity.tenureLabel}</span>
+            <span aria-hidden="true">·</span>
             <span>{p.trades} trades</span>
             <span aria-hidden="true">·</span>
             <span>{d.tradesPerSeason}/szn</span>
           </div>
         </div>
       </header>
+
+      <p className="mb-2 rounded-[--radius-sm] border border-border-strong bg-elevated px-2.5 py-1.5 text-[11.5px] leading-snug text-muted">
+        No longer in the league - ran this roster {identity.tenureLabel}, then handed
+        it off. Everything below is scoped to their own seasons only.
+      </p>
 
       {d.tags.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1">
@@ -293,8 +299,7 @@ export default async function ManagerDetailPage({
 
       <div className="mt-3 flex flex-wrap gap-1.5">
         {[
-          { href: "/trade", label: "Price a trade" },
-          { href: "/plan", label: "Game plan" },
+          { href: "/managers", label: "All dossiers" },
           { href: "/drafts", label: "Pick lineage" },
         ].map((a) => (
           <Link
@@ -309,7 +314,8 @@ export default async function ManagerDetailPage({
 
       <p className="mt-3 text-[11px] leading-relaxed text-faint">
         Read from {p.totalTransactions} recorded moves ({signed(p.picks.net)} net
-        picks). Behavior only - no roster contents, no stated intent.
+        picks) across {identity.tenureLabel}. Behavior only - no roster contents, no
+        stated intent.
       </p>
     </div>
   );

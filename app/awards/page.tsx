@@ -16,9 +16,11 @@ const PLACE = ["2nd", "3rd", "4th"];
 type UserLookup = (entrant: AwardEntrant) => LeagueUser | undefined;
 
 /**
- * Links an entrant to their dossier, EXCEPT when they have left the league: that
- * roster's dossier now describes their successor, so the link would name the wrong
- * person. A former manager renders as plain, unclickable text instead.
+ * Links an entrant to their dossier. A departed manager now has their own dossier
+ * route, keyed by owner id rather than the roster they no longer hold - that roster's
+ * `/managers/{id}` page describes their successor instead. Only the (theoretical)
+ * case of a former entrant with no recorded owner id falls back to plain text, since
+ * there is nothing to build a route from.
  */
 function EntrantLink({
   entrant,
@@ -32,10 +34,21 @@ function EntrantLink({
   children: React.ReactNode;
 }) {
   if (entrant.isFormer) {
+    if (!entrant.ownerId) {
+      return (
+        <div className={className} aria-label={ariaLabel}>
+          {children}
+        </div>
+      );
+    }
     return (
-      <div className={className} aria-label={ariaLabel}>
+      <Link
+        href={`/managers/former/${entrant.ownerId}`}
+        aria-label={ariaLabel}
+        className={className}
+      >
         {children}
-      </div>
+      </Link>
     );
   }
   return (

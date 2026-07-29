@@ -6,11 +6,26 @@
  * Note on responsiveness: Sleeper exposes only COMPLETED transactions, not
  * rejected/ignored offers, so "responsiveness" is inferred from how often a
  * manager appears as a trade responder vs initiator — a proxy, flagged as such.
+ *
+ * PRINCIPAL-AWARE. A roster that changed hands is not one manager, it is two, and a
+ * dossier that blends both tenures together describes a person who never existed.
+ * Every dossier is scoped to the ONE principal it is about - see lib/principals.ts.
+ * A CURRENT principal gets a dossier keyed by the roster they hold today
+ * (`identity.kind === "current"`); a FORMER principal, who holds no roster at all,
+ * gets one keyed by their own owner id (`identity.kind === "former"`), scoped to the
+ * seasons they actually ran the team. Both funnel through one tag/read/tip engine
+ * below so the two entry points cannot drift apart.
  */
 import type { LeagueHistory } from "../history";
 import { deriveManagerProfile, type ManagerProfile } from "../derive/manager";
+import { tenureLabel, tenureSeasons, type PrincipalIndex } from "../principals";
+
+export type DossierIdentity =
+  | { kind: "current"; rosterId: number }
+  | { kind: "former"; ownerId: string; lastRosterId: number; tenureLabel: string };
 
 export interface Dossier {
+  identity: DossierIdentity;
   profile: ManagerProfile;
   tags: string[];
   read: string;
@@ -22,10 +37,19 @@ function tradesPerSeason(p: ManagerProfile, seasons: number): number {
   return Math.round((p.trades / Math.max(1, seasons)) * 10) / 10;
 }
 
-export function buildDossier(h: LeagueHistory, rosterId: number): Dossier {
-  const p = deriveManagerProfile(h, rosterId);
-  const seasons = h.chain.length || 1;
-  const tps = tradesPerSeason(p, seasons);
+/**
+ * The actual tag/read/tip derivation, shared by both entry points below. Takes an
+ * already-derived (and already-scoped, where applicable) profile and the season
+ * count to rate it against - the whole league's for an unscoped profile, or the
+ * principal's own tenure length when scoped, so "trades/season" describes the
+ * person's actual reign rather than diluting it against seasons they never played.
+ */
+function assembleDossier(
+  p: ManagerProfile,
+  seasonCount: number,
+  identity: DossierIdentity,
+): Dossier {
+  const tps = tradesPerSeason(p, seasonCount);
   const tags: string[] = [];
   const tips: string[] = [];
   const read: string[] = [];
@@ -117,6 +141,7 @@ export function buildDossier(h: LeagueHistory, rosterId: number): Dossier {
   }
 
   return {
+    identity,
     profile: p,
     tags: [...new Set(tags)],
     read: read.join(" "),
@@ -125,11 +150,83 @@ export function buildDossier(h: LeagueHistory, rosterId: number): Dossier {
   };
 }
 
-/** Dossiers for every manager except the user, most active first. */
-export function getAllDossiers(h: LeagueHistory): Dossier[] {
+/** Dossier for whoever currently holds `rosterId`, scoped to their own tenure. */
+export function buildDossier(
+  h: LeagueHistory,
+  rosterId: number,
+  principals: PrincipalIndex,
+): Dossier {
+  const roster = h.rostersById.get(rosterId);
+  const principal = roster?.ownerId ? principals.byOwnerId.get(roster.ownerId) : undefined;
+
+  // Only scope when there is something to scope: a league with no handovers must
+  // produce byte-identical output to the unscoped version. See lib/superlatives.
+  const scope =
+    principal && principals.hasSuccessions
+      ? {
+          ownerId: principal.ownerId,
+          displayName: principal.displayName,
+          teamName: principal.teamName,
+          seasons: tenureSeasons(principal, rosterId),
+        }
+      : undefined;
+
+  const p = deriveManagerProfile(h, rosterId, scope);
+  const seasonCount =
+    scope?.seasons && scope.seasons.size > 0 ? scope.seasons.size : h.chain.length || 1;
+  return assembleDossier(p, seasonCount, { kind: "current", rosterId });
+}
+
+/**
+ * Dossier for a departed principal, scoped to the seasons they actually ran the
+ * team. Returns null when the owner id is unknown or still holds a roster today -
+ * a former dossier for a current manager would be a routing bug upstream.
+ */
+export function buildFormerDossier(
+  h: LeagueHistory,
+  ownerId: string,
+  principals: PrincipalIndex,
+): Dossier | null {
+  const principal = principals.byOwnerId.get(ownerId);
+  if (!principal || !principal.isFormer) return null;
+  const label = tenureLabel(principal);
+  if (!label) return null;
+
+  const rosterId = principal.lastRosterId;
+  const seasons = tenureSeasons(principal, rosterId);
+  const scope = {
+    ownerId: principal.ownerId,
+    displayName: principal.displayName,
+    teamName: principal.teamName,
+    seasons,
+  };
+  const p = deriveManagerProfile(h, rosterId, scope);
+  const seasonCount = seasons.size > 0 ? seasons.size : h.chain.length || 1;
+  return assembleDossier(p, seasonCount, {
+    kind: "former",
+    ownerId,
+    lastRosterId: rosterId,
+    tenureLabel: label,
+  });
+}
+
+/**
+ * Dossiers for every principal except the viewer - current managers first (most
+ * active first, matching the old roster-keyed ordering), then former managers
+ * after, mirroring the ordering `principals.principals` itself already uses.
+ */
+export function getAllDossiers(h: LeagueHistory, principals: PrincipalIndex): Dossier[] {
   const meRoster = h.me.rosterId;
-  return h.rosters
+
+  const current = h.rosters
     .filter((r) => r.rosterId !== meRoster)
-    .map((r) => buildDossier(h, r.rosterId))
+    .map((r) => buildDossier(h, r.rosterId, principals))
     .sort((a, b) => b.profile.totalTransactions - a.profile.totalTransactions);
+
+  const former = principals.principals
+    .filter((pr) => pr.isFormer && pr.ownerId !== h.me.userId)
+    .map((pr) => buildFormerDossier(h, pr.ownerId, principals))
+    .filter((d): d is Dossier => d != null);
+
+  return [...current, ...former];
 }

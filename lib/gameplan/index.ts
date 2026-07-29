@@ -12,6 +12,7 @@
 import type { LeagueHistory } from "./../history";
 import { analyzeRoster, leagueValueRanking, type RosterAnalysis } from "../roster";
 import { buildDossier, type Dossier } from "../dossier";
+import type { PrincipalIndex } from "../principals";
 import { getStrategyReport } from "../strategy";
 import { tierOf } from "../valuation";
 
@@ -72,7 +73,14 @@ function positionGaps(a: RosterAnalysis) {
   return { weak, strong };
 }
 
-export function diagnose(h: LeagueHistory, rosterId: number): Diagnosis {
+export function diagnose(
+  h: LeagueHistory,
+  rosterId: number,
+  // Not read here — diagnose has no buildDossier call of its own — but every caller
+  // in this module now carries one index end to end so a future addition here (or
+  // in buildGamePlan, which does call buildDossier) never has to thread a second one.
+  _principals: PrincipalIndex,
+): Diagnosis {
   const ranking = leagueValueRanking(h);
   // The ranked entry, not a standalone analyzeRoster call, so `window` is classified
   // against the league's own core-age distribution rather than the absolute fallback -
@@ -189,12 +197,16 @@ function copyBlock(give: string[], get: string[], note: string): string {
     .join("\n");
 }
 
-export function buildGamePlan(h: LeagueHistory, rosterId: number): GamePlan {
+export function buildGamePlan(
+  h: LeagueHistory,
+  rosterId: number,
+  principals: PrincipalIndex,
+): GamePlan {
   const a = analyzeRoster(h, rosterId);
-  const dx = diagnose(h, rosterId);
+  const dx = diagnose(h, rosterId, principals);
   const dossiers = h.rosters
     .filter((r) => r.rosterId !== rosterId)
-    .map((r) => buildDossier(h, r.rosterId));
+    .map((r) => buildDossier(h, r.rosterId, principals));
   const report = getStrategyReport(h);
   const moves: Move[] = [];
   const caveats: string[] = [];

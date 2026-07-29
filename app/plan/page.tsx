@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, ArrowRight, ChevronRight, Target } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildGamePlan } from "@/lib/gameplan";
+import { getPrincipals } from "@/lib/principals";
 import { leagueTimelines } from "@/lib/metrics/duration";
 import { Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
@@ -34,7 +35,8 @@ export default async function PlanPage() {
       </p>
     );
   }
-  const plan = buildGamePlan(h, rosterId);
+  const principals = await getPrincipals(h);
+  const plan = buildGamePlan(h, rosterId, principals);
   const dx = plan.diagnosis;
   const dir = DIR_LABEL[dx.direction];
   const myUser = h.usersById.get(h.me.userId);

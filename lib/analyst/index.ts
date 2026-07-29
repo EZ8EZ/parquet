@@ -13,6 +13,7 @@
 import type { LeagueHistory } from "../history";
 import { getStrategyReport } from "../strategy";
 import { getAllDossiers } from "../dossier";
+import { getPrincipals, type PrincipalIndex } from "../principals";
 import { describeTransaction, describeTradeForRoster } from "../derive/describe";
 import { valuePlayer, tierOf } from "../valuation";
 import { ADVERSARIAL_REMINDER, ANALYST_SYSTEM_PROMPT } from "./system-prompt";
@@ -28,7 +29,7 @@ export interface AnalystResult {
 }
 
 /** Build the compact text corpus injected into the analyst prompt. */
-export function buildCorpus(h: LeagueHistory): string {
+export function buildCorpus(h: LeagueHistory, principals: PrincipalIndex): string {
   const report = getStrategyReport(h);
   const p = report.profile;
   const rosterId = h.me.rosterId;
@@ -107,7 +108,7 @@ export function buildCorpus(h: LeagueHistory): string {
 
   // Leaguemate dossiers (compact).
   lines.push(`## LEAGUEMATE DOSSIERS (behavioral)`);
-  for (const d of getAllDossiers(h)) {
+  for (const d of getAllDossiers(h, principals)) {
     lines.push(`- ${d.profile.displayName}${d.profile.teamName ? ` (${d.profile.teamName})` : ""}: ${d.tags.join(", ") || "no strong tell"}. ${d.read}`);
   }
 
@@ -119,11 +120,12 @@ export async function runAnalyst(
   question: string,
   prior: AnalystMessage[] = [],
 ): Promise<AnalystResult> {
-  const corpus = buildCorpus(h);
+  const principals = await getPrincipals(h);
+  const corpus = buildCorpus(h, principals);
   const baseUrl = process.env.LLM_BASE_URL; // OpenAI-compatible base, e.g. https://api.groq.com/openai/v1
   if (!baseUrl) {
     // No LLM configured — the deterministic audit IS the product here, not a stub.
-    return { text: rulesFallback(h, question), mode: "rules" };
+    return { text: rulesFallback(h, question, principals), mode: "rules" };
   }
   const apiKey = process.env.LLM_API_KEY; // optional (local Ollama needs none)
   const model = process.env.LLM_MODEL || "llama-3.3-70b-versatile";
@@ -149,13 +151,13 @@ export async function runAnalyst(
     if (!res.ok) throw new Error(`LLM HTTP ${res.status}`);
     const data = await res.json();
     const text: string = data?.choices?.[0]?.message?.content?.trim() ?? "";
-    return { text: text || rulesFallback(h, question), mode: "llm", model };
+    return { text: text || rulesFallback(h, question, principals), mode: "llm", model };
   } catch {
     // Never error the UI — degrade to rules with a note.
     return {
       text:
         `(Live analyst unavailable - showing the deterministic audit instead.)\n\n` +
-        rulesFallback(h, question),
+        rulesFallback(h, question, principals),
       mode: "rules",
     };
   }
@@ -165,10 +167,14 @@ export async function runAnalyst(
  * Deterministic, still-adversarial audit used when no API key is set. Answers the
  * common questions from the derived strategy report and dossiers.
  */
-export function rulesFallback(h: LeagueHistory, question: string): string {
+export function rulesFallback(
+  h: LeagueHistory,
+  question: string,
+  principals: PrincipalIndex,
+): string {
   const q = question.toLowerCase();
   const report = getStrategyReport(h);
-  const dossiers = getAllDossiers(h);
+  const dossiers = getAllDossiers(h, principals);
 
   // Ask about a specific manager?
   const named = dossiers.find(
