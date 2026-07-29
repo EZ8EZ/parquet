@@ -1,16 +1,16 @@
-# DESIGN.md — Parquet design system
+# DESIGN.md - Parquet design system
 
-Aesthetic: **dark, editorial, high-contrast — a financial terminal crossed with a
+Aesthetic: **dark, editorial, high-contrast - a financial terminal crossed with a
 well-designed sports magazine.** One sharp accent (parquet gold). Generous
 whitespace, real typographic hierarchy, data in a mono face for the terminal feel.
 Mobile-first: every screen is designed at 390px first, primary actions in the
 bottom third, a fixed bottom tab bar, and no horizontal-scrolling tables.
 
 ## Typography
-- **Display / headlines:** Fraunces (serif, optical sizing) — gives the editorial,
+- **Display / headlines:** Fraunces (serif, optical sizing) - gives the editorial,
   magazine voice. Used for page titles and the strategy headline.
 - **UI / body:** Inter.
-- **Data / figures:** JetBrains Mono with tabular numerals — every value, record,
+- **Data / figures:** JetBrains Mono with tabular numerals - every value, record,
   age, and delta. This is the "terminal" texture.
 
 All three are loaded via `next/font/google` and wired to CSS variables in
@@ -45,30 +45,30 @@ as flat black.
 - **Fixed bottom tab bar** with icon **and** label (Home / Roster / League / Trade
   / Analyst). Never a hidden floating nav toggle.
 - **No floating overlays that occlude content.** (Citadel's FAB collided with real
-  content on every page — we have none.)
+  content on every page - we have none.)
 - **Stacked cards, never clipped tables**, on mobile. Rankings/values are rows, not
   a horizontally-scrolling grid.
 - Single centered column, `max-w-2xl`, that widens gracefully on desktop.
 - Safe-area insets respected on the tab bar and the analyst composer.
 
 ## Components
-- `components/ui.tsx` — PageHeader, Card, SectionHeader, Tag, Stat, DeltaValue,
+- `components/ui.tsx` - PageHeader, Card, SectionHeader, Tag, Stat, DeltaValue,
   EmptyState, ButtonLink, Skeletons.
-- `components/PlayerAvatar.tsx` — monogram avatars in team colors by default;
+- `components/PlayerAvatar.tsx` - monogram avatars in team colors by default;
   real headshots only behind `NEXT_PUBLIC_USE_PLAYER_PHOTOS` (see DECISIONS D8).
-- `components/charts.tsx` — hand-rolled SVG (LineChart, BarChart, AgeStrip), legible
+- `components/charts.tsx` - hand-rolled SVG (LineChart, BarChart, AgeStrip), legible
   at 390px, no chart library.
 - `components/BottomNav.tsx`, `components/Brand.tsx` (wordmark + inline logo).
 
 ## Logo & icons
-Geometric parquet **herringbone chevron** in gold on a near-black rounded square —
+Geometric parquet **herringbone chevron** in gold on a near-black rounded square -
 `public/icon.svg`. The PWA/favicon PNG set is generated from it by
 `pnpm gen:icons` (sharp). No AI-generated raster art.
 
 ## States
 - **Loading:** skeletons (`.skeleton` shimmer), never spinners, except a small
   inline spinner on in-flight buttons (evaluate / save / ask).
-- **Empty:** designed as onboarding, not apology — the ledger empty state is a
+- **Empty:** designed as onboarding, not apology - the ledger empty state is a
   "you're all caught up" and the analyst empty state teaches its adversarial intent.
 
 ## Accessibility

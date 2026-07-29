@@ -1,6 +1,6 @@
-# DECISIONS.md — Non-obvious choices and their rationale
+# DECISIONS.md - Non-obvious choices and their rationale
 
-Format: **Decision** — rationale, and rejected alternatives.
+Format: **Decision** - rationale, and rejected alternatives.
 
 ## D1. Repo name
 Attempting `parquet` (Celtics floor + columnar-data nod) per brief. Fallbacks in
@@ -8,7 +8,7 @@ order: `hardwood-ledger`, `glasshouse-hoops`. Final name recorded in README.md.
 
 ## D2. Stack confirmed as briefed, versions pinned by scaffold
 Next 16.2.12 (App Router), React 19, TypeScript strict, Tailwind v4,
-Zod 4, Vitest 4, `@anthropic-ai/sdk`.
+Zod 4, Vitest 4. (No LLM SDK: the analyst speaks OpenAI-compatible HTTP - see D17.)
 Tailwind v4 uses CSS-first config (`@theme` in globals.css), not `tailwind.config.js`.
 
 **Pinned Prisma 6 (6.19), not the freshly-released Prisma 7.** Prisma 7 removed
@@ -23,7 +23,7 @@ adopting Prisma 7's adapter model (more moving parts, less battle-tested).
 The brief allows "a lightweight library or hand-rolled SVG." Chose hand-rolled.
 Rationale: total control of legibility at 390px, zero bundle cost, no dependency
 churn, and our charts (age curve, value-over-time, pick capital) are simple enough.
-Rejected: Recharts/visx — heavier, harder to make truly thumb-legible, and their
+Rejected: Recharts/visx - heavier, harder to make truly thumb-legible, and their
 defaults fight our editorial aesthetic.
 
 ## D4. Valuation model does NOT use Sleeper stats/projections
@@ -33,17 +33,17 @@ role stability (`depth_chart_order`), injury status, and **league-specific
 positional scarcity computed from the actual `scoring_settings`**. A `StatsProvider`
 interface isolates any future real stats source (balldontlie.io preferred) behind
 a fixture so the model can be upgraded without touching callers. Transparency, not
-accuracy, is the stated differentiator — every weight lives in `lib/valuation/config.ts`.
+accuracy, is the stated differentiator - every weight lives in `lib/valuation/config.ts`.
 Rejected: building on Sleeper stats (unreliable per brief); blocking on a stats API
 key (violates NEVER BLOCK).
 
 ## D5. Build our own transparent value model (market exists but is thin)
 Research (RESEARCH.md §4) **refuted** the "no KTC-for-NBA exists" hypothesis:
-Court Consensus and Dynatyze are real crowdsourced NBA value sites — but every one
+Court Consensus and Dynatyze are real crowdsourced NBA value sites - but every one
 of them is low-liquidity (Court Consensus showed "0 data points collected"), and
 the FantasyCalc "values from real executed trades" model is entirely unoccupied for
 the NBA. Aggregating a thin, unreliable market would inherit its noise. So Phase 3
-still ships a **transparent internal model** with a published `/methodology` page —
+still ships a **transparent internal model** with a published `/methodology` page -
 now framed as "beat the thin incumbents on transparency," not "invent a category."
 KTC-style crowd voting is explicitly a post-v1 feature (needs user liquidity we
 can't bootstrap at launch). Rejected: scraping Court Consensus/Dynatyze values
@@ -54,18 +54,18 @@ Per product thesis. Output = what each side is betting on, the single assumption
 that must hold for the user, and what the user's own history says about this kind of
 bet. A letter grade is explicitly what competitors ship; we do not.
 
-## D7. Analyst is a prompt over a text corpus — not fine-tuning, not a vector DB
-~20–40 transactions/season × 3–5 seasons of annotated history fits in one context
+## D7. Analyst is a prompt over a text corpus - not fine-tuning, not a vector DB
+~20-40 transactions/season × 3-5 seasons of annotated history fits in one context
 window. Implemented as a single well-constructed adversarial prompt. System prompt
 lives in `lib/analyst/system-prompt.ts` with a comment naming sycophancy as the
-primary failure mode. Degrades to a deterministic rules-based summary when
-`ANTHROPIC_API_KEY` is absent; the rest of the app needs no key.
+primary failure mode. Degrades to a deterministic rules-based summary when no LLM is
+configured; the rest of the app needs no key.
 
 ## D8. Player images abstracted behind `<PlayerAvatar>`; monograms by default
 Default = generated monogram avatars in team colors (no licensing concern, looks
 intentional). Real photos behind `NEXT_PUBLIC_USE_PLAYER_PHOTOS` (default false).
 **Source: Sleeper's own CDN keyed by `player_id`** (`sleepercdn.com/content/nba/
-players/thumb/{id}.jpg`) — NOT ESPN. Empirically, Sleeper's `/players/nba` returns
+players/thumb/{id}.jpg`) - NOT ESPN. Empirically, Sleeper's `/players/nba` returns
 `espn_id: null` for every NBA player, so ESPN headshots are unusable. Not every
 player has a Sleeper image (some 403/404), so `<PlayerAvatar>` is a client component
 that falls back to the monogram on load error. Licensing caveat: these headshots
@@ -96,10 +96,10 @@ no annotation and `type in (trade, notable)` drives the home-screen "unannotated
 decisions" badge.
 
 ## D13. Ingest sweeps weeks 1..25 per season
-NBA fantasy weeks empirically run ~1–22. Sweeping to 25 with empty-tolerance is
+NBA fantasy weeks empirically run ~1-22. Sweeping to 25 with empty-tolerance is
 safely idempotent and future-proofs longer seasons/play-in weeks.
 
-## D15. Design system — dark editorial "parquet", not default shadcn
+## D15. Design system - dark editorial "parquet", not default shadcn
 Committed to a specific aesthetic (financial terminal × sports magazine): near-black
 surfaces, one sharp gold accent, Fraunces serif display + Inter + JetBrains Mono for
 data. Fixed bottom tab bar with icons+labels, no floating overlays, stacked cards
@@ -116,9 +116,42 @@ requiring a manual ingest before the UI works (violates "runs end to end with ze
 external dependencies"); reading the corpus live from the provider on every request
 (a call storm for Sleeper).
 
-## D17. Analyst model default = claude-sonnet-5
-Cost/latency-appropriate default for a chat surface; Opus available via ANALYST_MODEL.
-The analyst is optional entirely — absent a key it degrades to a deterministic audit.
+## D17. Analyst is provider-agnostic and free/open-source by default
+Eric ruled out a paid Anthropic key ("we must find an open source or free
+alternative"), so the analyst now speaks to **any OpenAI-compatible
+chat-completions endpoint over plain `fetch`**, configured with `LLM_BASE_URL` /
+`LLM_API_KEY` / `LLM_MODEL`. That covers free hosted open models (Groq, OpenRouter)
+and fully local ones (Ollama, LM Studio) with the same code path, and it removed the
+`@anthropic-ai/sdk` dependency entirely. Absent any config it degrades to the
+deterministic audit, so the app ships with zero keys and no vendor lock-in.
+Rejected: bundling a local model (Vercel serverless can't host one); an Ollama-only
+integration (would not work in production).
+
+## D18. Reads are DB-free; the database is optional
+Eric deploys on Vercel, where SQLite cannot persist. The corpus is therefore read
+live from the provider (Sleeper fetches cached, players memoized in-process), so every
+read feature works with no database at all. The DB is used ONLY to persist ledger
+annotations, and even that is best-effort: if it is unreachable the write returns
+`persisted: false` instead of erroring. Rejected: requiring Postgres to deploy (a
+setup wall for a private app); localStorage-only annotations (lost across devices).
+
+## D19. Do not guess the pick component of commissioner trades
+Commissioner-executed trades always carry `draft_picks: []`, so their pick component
+is unrecoverable. Inferring it from the timestamp-less `traded_picks` snapshot was
+implemented, tested against the real league, and **rejected**: it attributed six
+unrelated pick hops spanning three seasons to a single 2023 deal, because the only
+available signal ("both parties are in this trade") is far too weak. Fabricating trade
+contents is worse than an acknowledged gap, especially for a product whose entire
+premise is an honest record. Unattributable hops surface separately via
+`unrecordedPickMoves()`, and anything inferred is labelled "(inferred)" in the UI.
+
+## D20. Tilt signal (trades after a loss) left fixture-only
+Deriving it live requires ~110 matchup requests and measured ~15s of cold start.
+It demonstrably works (1232 matchups, 4 managers flagged), but Eric judged "panic
+after losses" not a question worth answering, so we don't pay the latency on every
+request. `loadMatchups()` has a one-line switch to re-enable. Consequence: two awards
+self-omit on live data. Rejected: paying 15s on every cold start for an unwanted read;
+deleting the code (the derivation is sound and cheap to re-enable).
 
 ## D14. Season labeling
 Sleeper labels the league by the calendar year the season ends is ambiguous; Sleeper

@@ -1,10 +1,10 @@
-# QUESTIONS.md — Things only Eric can answer
+# QUESTIONS.md - Things only Eric can answer
 
-Numbered. None of these block v1 — reasonable defaults were chosen and logged in
+Numbered. None of these block v1 - reasonable defaults were chosen and logged in
 DECISIONS.md. This is the decision queue for when Eric is back.
 
 1. **League confirmed on Sleeper.** EZ8 → user_id `882695796544577536`, league
-   "NSL Fantasy Hoops", full 5-season chain (2022–2026), `league_id`
+   "NSL Fantasy Hoops", full 5-season chain (2022-2026), `league_id`
    `1347007735815766016`. No Fantrax fallback needed. ✅ (No action; FYI.)
 
 2. **Which roster is yours?** The app currently identifies "you" by matching
@@ -22,7 +22,7 @@ DECISIONS.md. This is the decision queue for when Eric is back.
 
 5. **Scoring is a points league** (pts 0.5, reb 1, ast 1, stl/blk 2, TO -1, 3PM
    0.5, DD +1, TD +2, 40/50-pt bonuses, technical/flagrant -2). The valuation
-   weights positional scarcity off this. Confirm these are current for 2026 —
+   weights positional scarcity off this. Confirm these are current for 2026 -
    they're read live from the league object each ingest, so they self-correct.
 
 6. **Anthropic API key.** Set `ANTHROPIC_API_KEY` to enable the conversational
