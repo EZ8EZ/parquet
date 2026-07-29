@@ -86,19 +86,30 @@ export async function collectTransactions(
   provider: LeagueProvider,
   chain: LeagueDetail[],
 ): Promise<Transaction[]> {
-  const out: Transaction[] = [];
-  for (const league of chain) {
-    for (let week = 1; week <= MAX_WEEKS; week++) {
-      const txs = await transactionsForWeek(
-        provider,
-        league.leagueId,
-        week,
-        league.season,
+  // Fan out per league: 5 seasons x 25 weeks sequentially was ~125 round trips in
+  // series, which dominated cold-start latency. Sleeper allows ~1000 req/min, so
+  // issuing a season's weeks concurrently is well within budget.
+  const perLeague = await Promise.all(
+    chain.map(async (league) => {
+      const weeks = await Promise.all(
+        Array.from({ length: MAX_WEEKS }, (_, i) => i + 1).map(async (week) => {
+          try {
+            return await transactionsForWeek(
+              provider,
+              league.leagueId,
+              week,
+              league.season,
+            );
+          } catch {
+            // One bad week must not lose the whole season.
+            return [] as Transaction[];
+          }
+        }),
       );
-      out.push(...txs);
-    }
-  }
-  return out.sort((a, b) => a.created - b.created);
+      return weeks.flat();
+    }),
+  );
+  return perLeague.flat().sort((a, b) => a.created - b.created);
 }
 
 export interface IngestSummary {

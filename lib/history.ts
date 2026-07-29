@@ -108,8 +108,17 @@ async function loadAnnotations(providerNm: string): Promise<Map<string, Annotati
   return map;
 }
 
+/**
+ * Weekly matchups across the chain.
+ *
+ * DELIBERATELY FIXTURE-ONLY. Matchups exist solely to power the "trades after a
+ * loss" (tilt) signal, and loading them live costs ~110 requests and roughly 15s of
+ * cold-start latency. Measured on the real league it does work (1232 matchups, 4
+ * managers flagged), but the owner judged that read not worth answering, so we don't
+ * pay for it. Dossiers degrade cleanly: `afterLoss` is simply null and the tag never
+ * fires. Flip this to load for all providers if the signal is ever wanted back.
+ */
 async function loadMatchups(chain: LeagueDetail[]): Promise<HistoryMatchup[]> {
-  // Only cheap for the in-memory fixture; skip live Sleeper (avoids a call storm).
   if (providerName() !== "fixture") return [];
   const provider = getLeagueProvider();
   const out: HistoryMatchup[] = [];
