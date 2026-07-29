@@ -7,11 +7,7 @@
  * manual ingest step against the default fixture provider.
  */
 import { prisma } from "./db";
-import {
-  activeLeagueId,
-  getLeagueProvider,
-  providerName,
-} from "./providers";
+import { activeLeagueId, getLeagueProvider } from "./providers";
 import type { LeagueDetail, LeagueProvider, Transaction } from "./providers/types";
 
 const MAX_WEEKS = 25; // NBA fantasy weeks run ~1–22; sweep to 25 to be safe.

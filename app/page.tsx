@@ -1,65 +1,166 @@
-import Image from "next/image";
+import Link from "next/link";
+import {
+  AlertTriangle,
+  ArrowRight,
+  BookText,
+  MessageSquareText,
+  ScrollText,
+  Users,
+} from "lucide-react";
+import { getLeagueHistory } from "@/lib/history";
+import { getStrategyReport } from "@/lib/strategy";
+import { getLedgerSummary } from "@/lib/ledger";
+import { Wordmark } from "@/components/Brand";
+import { Card, Stat, Tag, SectionHeader, DeltaValue } from "@/components/ui";
 
-export default function Home() {
+export const dynamic = "force-dynamic";
+
+export default async function HomePage() {
+  const h = await getLeagueHistory();
+  const report = getStrategyReport(h);
+  const ledger = getLedgerSummary(h);
+  const p = report.profile;
+
   return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
+    <div>
+      <Wordmark tagline="Dynasty memory" />
+
+      {h.provider === "fixture" && (
+        <div className="mb-4">
+          <Tag tone="info">Demo data — set LEAGUE_PROVIDER=sleeper for your league</Tag>
+        </div>
+      )}
+
+      {/* Unannotated decisions badge — a to-do to clear, not paperwork. */}
+      {ledger.unannotatedNotable > 0 && (
+        <Link href="/ledger" className="mb-5 block">
+          <div className="flex items-center justify-between rounded-[--radius] border border-accent/30 bg-accent/10 p-4">
+            <div className="flex items-center gap-3">
+              <span className="flex h-9 w-9 items-center justify-center rounded-full bg-accent/20 text-accent">
+                <ScrollText size={18} />
+              </span>
+              <div>
+                <div className="text-sm font-semibold text-ink">
+                  {ledger.unannotatedNotable} decision
+                  {ledger.unannotatedNotable > 1 ? "s" : ""} to capture
+                </div>
+                <div className="text-xs text-muted">
+                  Log why you made them — while you still remember.
+                </div>
+              </div>
+            </div>
+            <ArrowRight size={18} className="text-accent" />
+          </div>
+        </Link>
+      )}
+
+      {/* Revealed strategy — the headline, first thing on the screen. */}
+      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+        Revealed strategy
+      </p>
+      <h1 className="mt-1 font-display text-[28px] font-semibold leading-[1.15] text-ink">
+        {report.headline}
+      </h1>
+
+      {report.contradictions.length > 0 && (
+        <div className="mt-4 space-y-3">
+          {report.contradictions.slice(0, 2).map((c) => (
+            <Card key={c.id} className="border-negative/30 bg-negative/[0.06]">
+              <div className="mb-2 flex items-center gap-2">
+                <AlertTriangle size={15} className="text-negative" />
+                <span className="text-xs font-semibold uppercase tracking-wide text-negative">
+                  Stated vs revealed
+                </span>
+              </div>
+              <p className="text-[15px] leading-relaxed text-ink">{c.narrative}</p>
+              <div className="mt-3 flex flex-wrap items-center gap-2">
+                <Tag tone="neutral">said: {c.statedSeason}</Tag>
+                <Tag tone="neutral">did: {c.revealedSeason}</Tag>
+                <Link
+                  href="/ledger"
+                  className="text-xs font-semibold text-accent underline-offset-2 hover:underline"
+                >
+                  see the moves →
+                </Link>
+              </div>
+            </Card>
+          ))}
+        </div>
+      )}
+
+      {/* Quick stats */}
+      <div className="mt-5 grid grid-cols-2 gap-2.5">
+        <Stat
+          label="Record (curr.)"
+          value={`${h.rostersById.get(p.rosterId)?.settings.wins ?? 0}-${
+            h.rostersById.get(p.rosterId)?.settings.losses ?? 0
+          }`}
         />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
+        <Stat label="Trades made" value={p.trades} sub={`${p.tradesInitiated} you started`} />
+        <Stat
+          label="Pick capital"
+          value={<DeltaValue n={p.picks.net} />}
+          sub={`${p.picks.firstsAcquired} firsts in / ${p.picks.firstsSpent} out`}
+          tone={p.picks.net >= 0 ? "positive" : "negative"}
+        />
+        <Stat
+          label="Avg acq. age"
+          value={p.acquisitions.avgAge ?? "—"}
+          sub={p.overpaysForAge ? "leans veteran" : "leans young"}
+        />
+      </div>
+
+      {/* Findings */}
+      {report.findings.length > 0 && (
+        <>
+          <SectionHeader title="What your record shows" />
+          <ul className="space-y-2.5">
+            {report.findings.map((f, i) => (
+              <li key={i} className="flex gap-2.5 text-sm leading-relaxed">
+                <span className="mt-2 h-1.5 w-1.5 shrink-0 rounded-full bg-accent" />
+                <span className="text-ink/90">{f}</span>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {/* Explore */}
+      <SectionHeader title="Go deeper" />
+      <div className="grid grid-cols-2 gap-2.5">
+        <HomeLink href="/analyst" icon={<MessageSquareText size={18} />} title="The Analyst" sub="Audit your thinking" />
+        <HomeLink href="/managers" icon={<Users size={18} />} title="Dossiers" sub="Scout your rivals" />
+        <HomeLink href="/ledger" icon={<ScrollText size={18} />} title="Decision ledger" sub={`${ledger.annotated}/${ledger.notable} annotated`} />
+        <HomeLink href="/methodology" icon={<BookText size={18} />} title="Methodology" sub="How values work" />
+      </div>
+
+      <p className="mt-8 text-center text-[11px] leading-relaxed text-faint">
+        Parquet advises; it can&apos;t act. Sleeper has no write API — every
+        recommendation ends in a copyable summary you paste yourself.
+      </p>
     </div>
+  );
+}
+
+function HomeLink({
+  href,
+  icon,
+  title,
+  sub,
+}: {
+  href: string;
+  icon: React.ReactNode;
+  title: string;
+  sub: string;
+}) {
+  return (
+    <Link
+      href={href}
+      className="flex flex-col gap-2 rounded-[--radius] border border-border bg-surface/70 p-4 transition-colors hover:border-border-strong hover:bg-surface-2"
+    >
+      <span className="text-accent">{icon}</span>
+      <span className="text-sm font-semibold text-ink">{title}</span>
+      <span className="text-xs text-faint">{sub}</span>
+    </Link>
   );
 }
