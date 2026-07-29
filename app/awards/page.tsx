@@ -1,9 +1,10 @@
 import Link from "next/link";
-import { ChevronRight, Trophy } from "lucide-react";
+import { ChevronRight, Trophy, type LucideIcon } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { AWARD_GROUPS, awardsPageData, type Award, type AwardEntrant } from "@/lib/superlatives";
 import { Tag, EmptyState } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
+import { AwardBadge, GROUP_TONE, iconForAward, type BadgeTone } from "@/components/AwardBadge";
 import type { LeagueUser } from "@/lib/providers/types";
 import { cn } from "@/lib/ui";
 
@@ -59,6 +60,8 @@ function AwardCard({
     !w.isFormer &&
     (w.rosterId === meRosterId || w.partnerRosterId === meRosterId);
   const user = userOf(w);
+  const icon = iconForAward(award.id);
+  const tone = GROUP_TONE[award.group];
 
   return (
     <article
@@ -90,11 +93,7 @@ function AwardCard({
             : "border-border-strong bg-surface-2 hover:bg-elevated",
         )}
       >
-        <Trophy
-          size={13}
-          aria-hidden="true"
-          className={cn("shrink-0", isMe ? "text-accent" : "text-faint")}
-        />
+        <AwardBadge icon={icon} tone={tone} rank="winner" />
         <TeamAvatar
           name={w.label}
           avatarId={user?.avatar}
@@ -144,6 +143,8 @@ function AwardCard({
                 place={PLACE[i] ?? `${i + 2}th`}
                 meRosterId={meRosterId}
                 user={userOf(r)}
+                icon={icon}
+                tone={tone}
               />
             </li>
           ))}
@@ -158,11 +159,15 @@ function RunnerUpRow({
   place,
   meRosterId,
   user,
+  icon,
+  tone,
 }: {
   entrant: AwardEntrant;
   place: string;
   meRosterId: number | null;
   user: LeagueUser | undefined;
+  icon: LucideIcon;
+  tone: BadgeTone;
 }) {
   const isMe =
     meRosterId != null &&
@@ -183,6 +188,7 @@ function RunnerUpRow({
       >
         {place.replace(/\D/g, "")}
       </span>
+      <AwardBadge icon={icon} tone={tone} rank="runner-up" size={18} />
       <TeamAvatar
         name={entrant.label}
         avatarId={user?.avatar}
