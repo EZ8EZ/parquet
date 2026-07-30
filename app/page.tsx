@@ -15,8 +15,10 @@ import {
 import { getLeagueHistory } from "@/lib/history";
 import { getStrategyReport } from "@/lib/strategy";
 import { getLedgerSummary } from "@/lib/ledger";
+import { loadDigest } from "@/lib/digest";
 import { currentFormByRoster } from "@/lib/roster";
 import { ordinal } from "@/lib/derive/describe";
+import { DigestPanel } from "@/components/DigestPanel";
 import { Wordmark } from "@/components/Brand";
 import { Card, Tag, DeltaValue, SectionHeader } from "@/components/ui";
 
@@ -29,6 +31,7 @@ export default async function HomePage() {
   const p = report.profile;
   const roster = h.rostersById.get(p.rosterId);
   const form = (await currentFormByRoster(h)).get(p.rosterId);
+  const digest = await loadDigest(h);
 
   const holdYears =
     p.avgHoldingDays != null ? (p.avgHoldingDays / 365).toFixed(1) : null;
@@ -184,6 +187,11 @@ export default async function HomePage() {
           {ledger.annotated}/{ledger.notable} annotated
         </p>
       </Link>
+
+      {/* What moved while you were gone - the memory the rest of the page cannot give,
+          because every other figure here describes a state rather than a change. */}
+      <SectionHeader title="Since your last visit" />
+      <DigestPanel digest={digest} />
 
       {/* Findings */}
       {report.findings.length > 0 && (
