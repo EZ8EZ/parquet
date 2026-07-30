@@ -15,6 +15,7 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronDown, Search } from "lucide-react";
 import { PlayerAvatar } from "./PlayerAvatar";
+import { Sparkline } from "./charts";
 import { cn, fmtValue } from "@/lib/ui";
 
 /** The multiplier chain `valuePlayer()` returns, flattened for display. */
@@ -57,6 +58,7 @@ export function ValueAssetRow({
   breakdown,
   meta,
   share,
+  trajectory,
 }: {
   rank?: number;
   name: string;
@@ -72,6 +74,12 @@ export function ValueAssetRow({
   meta?: string | null;
   /** Share of the parent roster's player value, 0-1. Renders as a spine bar. */
   share?: number;
+  /**
+   * Optional value trajectory (present-day first) for an inline sparkline.
+   * Nobody is required to pass this - there is no stored value history, so a
+   * caller only supplies it when it has a real, defensible series to show.
+   */
+  trajectory?: number[];
 }) {
   const [open, setOpen] = useState(false);
 
@@ -123,6 +131,11 @@ export function ValueAssetRow({
             </span>
           )}
         </span>
+        {trajectory && trajectory.length > 1 && (
+          <span className="shrink-0" aria-hidden="true">
+            <Sparkline values={trajectory} width={48} height={20} />
+          </span>
+        )}
         <span className="shrink-0 text-right">
           <span className="block font-mono text-[13px] font-semibold leading-tight tnum text-ink">
             {fmtValue(value)}

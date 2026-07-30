@@ -6,7 +6,8 @@ import { leagueTimelines } from "@/lib/metrics/duration";
 import { Card, SectionHeader, Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { ValueAssetRow } from "@/components/ValuesList";
-import { AgeStrip, BarChart } from "@/components/charts";
+import { AgeStrip, BarChart, PositionRadar } from "@/components/charts";
+import { ageMultiplier } from "@/lib/valuation";
 import { fmtValue } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTeamUrl } from "@/lib/sleeperLinks";
@@ -41,6 +42,30 @@ const POSTURE_TONE = {
   rebuilding: "info",
   straddling: "negative",
 } as const;
+
+/** How many seasons of trajectory the sparkline shows, current season included. */
+const TRAJECTORY_SEASONS = 4;
+
+/**
+ * A value-trend sparkline needs a series, and this app deliberately stores no
+ * week-over-week value history (D3/D4: the valuation model is recomputed live, not
+ * snapshotted - inventing a plausible-looking history would be exactly the kind of
+ * fabricated-but-real-looking number this app refuses to ship). What genuinely exists
+ * is the published age curve itself, so this projects THIS player's own value forward
+ * on that curve, holding injury/role/position fixed - "if nothing else about this
+ * player changes, here is what the model says happens as they age." That is an
+ * honest, transparent trajectory, not a claim about the past.
+ */
+function valueTrajectory(v: { age: number | null; value: number; breakdown: { age: number } }): number[] | undefined {
+  if (v.age == null || !v.breakdown.age) return undefined;
+  // Back out the product of every OTHER multiplier from the already-computed value,
+  // so re-walking the age curve at future ages reproduces the current value exactly
+  // at offset 0 without re-deriving base/injury/role/position from scratch here.
+  const restOfModel = v.value / v.breakdown.age;
+  return Array.from({ length: TRAJECTORY_SEASONS }, (_, n) =>
+    Math.round(restOfModel * ageMultiplier(v.age! + n)),
+  );
+}
 
 export default async function RosterPage() {
   const h = await getLeagueHistory();
@@ -341,7 +366,14 @@ export default async function RosterPage() {
             {posCounts}
           </span>
         </div>
-        <BarChart data={posData} height={112} format={(n) => fmtValue(n)} />
+        {/* Radar reads shape (balanced vs. concentrated) at a glance, which a bar
+            chart can't; a roster missing 3+ distinct positions can't form a
+            legible polygon, so that rare case keeps the bar chart instead. */}
+        {posData.length >= 3 ? (
+          <PositionRadar data={posData} format={(n) => fmtValue(n)} />
+        ) : (
+          <BarChart data={posData} height={112} format={(n) => fmtValue(n)} />
+        )}
       </Card>
 
       <SectionHeader
@@ -351,7 +383,8 @@ export default async function RosterPage() {
       />
       <p className="-mt-1 mb-1.5 font-mono text-[11px] tnum text-faint">
         {a.valued.length} players · bar = share of {fmtValue(a.playerValue)} player
-        value · tap for multipliers
+        value · line = {TRAJECTORY_SEASONS}-season age-curve trajectory · tap for
+        multipliers
       </p>
       <ul className="space-y-1">
         {a.valued.map((v) => (
@@ -367,6 +400,7 @@ export default async function RosterPage() {
             injuryStatus={v.injuryStatus}
             share={a.playerValue ? v.value / a.playerValue : 0}
             breakdown={v.breakdown}
+            trajectory={valueTrajectory(v)}
           />
         ))}
       </ul>

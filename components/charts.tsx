@@ -15,6 +15,16 @@ export interface Point {
   value: number;
 }
 
+/**
+ * Round to 2dp. Every computed SVG coordinate below goes through this - an
+ * unrounded float can serialize differently between the server render and the
+ * client hydration pass, which React reports as a hydration mismatch (same fix
+ * TradeWeb.tsx uses for its curved edges).
+ */
+function r2(v: number): number {
+  return Math.round(v * 100) / 100;
+}
+
 /** Line chart with dots and axis labels. Good for trends over seasons. */
 export function LineChart({
   data,
@@ -145,6 +155,129 @@ export function AgeStrip({
           </text>
         </g>
       )}
+    </svg>
+  );
+}
+
+/**
+ * Inline trend line with no axes, sized to sit next to a single row rather than
+ * stand on its own as a section. Direction is read off the first-vs-last value
+ * (rising = positive tint, falling = negative) unless a color is forced by the
+ * caller - useful when the series being drawn isn't itself a "good/bad" quantity.
+ */
+export function Sparkline({
+  values,
+  width = 64,
+  height = 22,
+  color,
+  label = "trend",
+}: {
+  values: number[];
+  width?: number;
+  height?: number;
+  color?: string;
+  label?: string;
+}) {
+  if (values.length < 2) return null;
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = max - min || 1;
+  const pad = 3;
+  const x = (i: number) => r2(pad + (i * (width - pad * 2)) / (values.length - 1));
+  const y = (v: number) => r2(pad + (1 - (v - min) / span) * (height - pad * 2));
+  const path = values.map((v, i) => `${i === 0 ? "M" : "L"}${x(i)},${y(v)}`).join(" ");
+  const rising = values[values.length - 1] >= values[0];
+  const stroke = color ?? (rising ? POS : NEG);
+  const lastX = x(values.length - 1);
+  const lastY = y(values[values.length - 1]);
+
+  return (
+    <svg
+      viewBox={`0 0 ${width} ${height}`}
+      width={width}
+      height={height}
+      className="shrink-0"
+      role="img"
+      aria-label={label}
+    >
+      <path d={path} fill="none" stroke={stroke} strokeWidth={1.5} strokeLinejoin="round" strokeLinecap="round" />
+      <circle cx={lastX} cy={lastY} r={2} fill={stroke} />
+    </svg>
+  );
+}
+
+/**
+ * Positional strength as a radar/spider shape. A bar chart answers "which position
+ * is biggest"; a radar answers the question a bar chart can't - is value balanced
+ * across the roster's positions, or is the whole team really one deep position and
+ * four thin ones. Needs at least 3 axes to read as a shape, so callers with fewer
+ * distinct positions should fall back to BarChart instead.
+ */
+export function PositionRadar({
+  data,
+  height = 210,
+  format = (n) => `${n}`,
+}: {
+  data: Point[];
+  height?: number;
+  format?: (n: number) => string;
+}) {
+  const W = 320;
+  const H = height;
+  const cx = W / 2;
+  const cy = H / 2;
+  const radius = Math.min(cx, cy) - 40;
+  const n = data.length;
+  if (n < 3) return null;
+
+  const maxVal = Math.max(1, ...data.map((d) => d.value));
+  const angle = (i: number) => -Math.PI / 2 + (i * 2 * Math.PI) / n;
+  const pointAt = (i: number, r: number) => ({
+    x: r2(cx + r * Math.cos(angle(i))),
+    y: r2(cy + r * Math.sin(angle(i))),
+  });
+  const ring = (f: number) =>
+    Array.from({ length: n }, (_, i) => {
+      const p = pointAt(i, f * radius);
+      return `${p.x},${p.y}`;
+    }).join(" ");
+  const shape = data
+    .map((d, i) => pointAt(i, (d.value / maxVal) * radius))
+    .map((p) => `${p.x},${p.y}`)
+    .join(" ");
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label="positional strength radar">
+      {[0.25, 0.5, 0.75, 1].map((f) => (
+        <polygon key={f} points={ring(f)} fill="none" stroke={GRID} strokeWidth={1} />
+      ))}
+      {data.map((_, i) => {
+        const p = pointAt(i, radius);
+        return <line key={i} x1={cx} y1={cy} x2={p.x} y2={p.y} stroke={GRID} strokeWidth={1} />;
+      })}
+      <polygon
+        points={shape}
+        fill={ACCENT}
+        fillOpacity={0.22}
+        stroke={ACCENT}
+        strokeWidth={2}
+        strokeLinejoin="round"
+      />
+      {data.map((d, i) => {
+        const vp = pointAt(i, (d.value / maxVal) * radius);
+        const lp = pointAt(i, radius + 16);
+        return (
+          <g key={d.label}>
+            <circle cx={vp.x} cy={vp.y} r={3} fill={ACCENT} />
+            <text x={lp.x} y={lp.y} textAnchor="middle" fontSize="11" fontWeight={600} fill="var(--color-ink)">
+              {d.label}
+            </text>
+            <text x={lp.x} y={lp.y + 12} textAnchor="middle" fontSize="9" fill={MUTED} className="font-mono">
+              {format(d.value)}
+            </text>
+          </g>
+        );
+      })}
     </svg>
   );
 }
