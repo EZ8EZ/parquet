@@ -458,3 +458,39 @@ tab with an empty console after the fix; a stale console-log buffer kept
 surfacing the old error transcript for several checks after until a fresh tab
 finally proved it gone, which is worth remembering: don't trust a persisted
 console-log read over a direct DOM query when the two disagree.
+
+## D31. Trade Finder: star protection is deliberately asymmetric by direction
+
+`sideRespectsStars()` (lib/tradefinder) rejects any package where a contending or
+ascending side ships out a star (top asset >= `STAR_VALUE`) without receiving a
+BIGGER single piece back - a team trying to win that downgrades its best asset is
+not consolidating, it is spreading value thinner, and the finder should never
+propose it. Rebuilding and retooling sides are exempt on purpose: selling the star
+for a bundle of youth and picks is the correct move from there, and applying the
+guard symmetrically would hide the only genuinely available star in most leagues.
+Their protection is the value band instead, which is what stops a "bundle" from
+being scraps. Rejected: a symmetric guard (hides correct rebuild sells); no guard
+(recommends contenders trade down, which loses trust in one screen).
+
+## D32. Trade Finder: the consolidation premium only pays UPWARD
+
+A side may pay up to `CONSOLIDATION_PREMIUM` (20%) over the `FAIR_BAND` (12%) only
+when it concentrates value upward - fewer pieces in, incoming top asset >=
+`STAR_VALUE` AND bigger than anything sent (`withinBand()` in lib/tradefinder).
+The premium exists because you cannot start four medium players; trading one
+superstar for two lesser stars is the opposite move and gets no such licence.
+Rejected: a symmetric premium keyed only on piece count, which would have priced
+"split your best player into parts" as a bargain worth paying extra for.
+
+## D33. `stanceOf` duplicates /plan's direction read, pinned by test, instead of calling `diagnose`
+
+The finder rates every leaguemate against one already-computed league ranking;
+/plan's `diagnose()` re-runs the whole league ranking internally on every call, so
+calling it once per candidate partner would multiply the page's cost by the league
+size for identical answers. `stanceOf()` (lib/tradefinder) restates the same
+four-way read on the same inputs, and `tradefinder.test.ts` asserts it agrees with
+`diagnose` on EVERY roster in the league (same for the hole/surplus definition in
+`positionSplit`), so the duplicate cannot drift silently - a change to one without
+the other fails the suite. Rejected: refactoring `diagnose` to accept a
+pre-computed ranking (touches /plan's contract mid-integration for a perf win the
+test-pinned copy already delivers).

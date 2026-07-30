@@ -1,0 +1,447 @@
+import Link from "next/link";
+import { notFound } from "next/navigation";
+import { ArrowLeft, ChevronRight, Lightbulb, ThumbsDown } from "lucide-react";
+import { getLeagueHistory } from "@/lib/history";
+import { getPrincipals } from "@/lib/principals";
+import { findTrades, partnerBoard, type FinderAsset } from "@/lib/tradefinder";
+import { PageHeader, SectionHeader, Stat, Tag, DeltaValue } from "@/components/ui";
+import { TeamAvatar } from "@/components/TeamAvatar";
+import { CopyBlock } from "@/components/CopyBlock";
+import { fmtValue } from "@/lib/ui";
+
+export const dynamic = "force-dynamic";
+
+const STANCE: Record<
+  string,
+  { label: string; tone: "accent" | "info" | "warn" | "positive" }
+> = {
+  contend: { label: "Contend", tone: "accent" },
+  ascend: { label: "Ascend", tone: "positive" },
+  rebuild: { label: "Rebuild", tone: "info" },
+  retool: { label: "Retool", tone: "warn" },
+};
+
+export default async function TradeFinderPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ with?: string; pkg?: string }>;
+}) {
+  const { with: withParam, pkg: pkgParam } = await searchParams;
+  const h = await getLeagueHistory();
+  const rosterId = h.me.rosterId;
+  if (rosterId == null) {
+    return (
+      <p className="text-muted">
+        Couldn&apos;t identify your roster.{" "}
+        <Link href="/teams" className="text-accent underline">
+          Pick a team
+        </Link>
+        .
+      </p>
+    );
+  }
+  const principals = await getPrincipals(h);
+
+  const partnerId = withParam ? Number(withParam) : null;
+  if (partnerId != null && (!Number.isInteger(partnerId) || partnerId === rosterId)) {
+    notFound();
+  }
+
+  // ------------------------------------------------------------ the board view
+  if (partnerId == null) {
+    const rows = partnerBoard(h, principals, rosterId);
+    const live = rows.filter((r) => r.mutual > 0);
+    return (
+      <div>
+        <PageHeader
+          kicker="Trade finder"
+          title="Who should you call?"
+          subtitle="Ranked by how much room actually exists between your two rosters, not by who is best. A trade needs the same asset to be worth more to them than to you, so this reads their behaviour and their holes alongside the values."
+        />
+        <dl className="grid grid-cols-2 gap-1.5">
+          <Stat
+            label="live matches"
+            value={`${live.length}`}
+            sub={`of ${rows.length} leaguemates`}
+          />
+          <Stat
+            label="best room"
+            value={live.length ? fmtValue(live[0].mutual) : "-"}
+            sub={live.length ? live[0].name : "nothing clears the bar"}
+            tone={live.length ? "accent" : "neutral"}
+          />
+        </dl>
+
+        <SectionHeader title="Every leaguemate, best room first" />
+        <ul className="space-y-1">
+          {rows.map((r) => {
+            const ownerId = h.rostersById.get(r.rosterId)?.ownerId;
+            const user = ownerId ? h.usersById.get(ownerId) : undefined;
+            const stance = STANCE[r.stance];
+            return (
+              <li key={r.rosterId}>
+                <Link
+                  href={`/trade/finder?with=${r.rosterId}`}
+                  className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
+                >
+                  <TeamAvatar
+                    name={r.name}
+                    avatarId={user?.avatar}
+                    teamLogoUrl={user?.teamLogoUrl}
+                    size="sm"
+                  />
+                  <span className="min-w-0 flex-1">
+                    <span className="flex items-center gap-1.5">
+                      <span className="min-w-0 truncate text-[13px] font-semibold leading-tight text-ink">
+                        {r.name}
+                      </span>
+                      <Tag tone={stance.tone}>{stance.label}</Tag>
+                    </span>
+                    {/* Two lines rather than one: a package name is the whole point of
+                        the row, and truncating it to "Stephon Castle + Onyeka Ok..."
+                        tells the reader nothing. */}
+                    <span className="mt-0.5 block text-[11px] leading-snug text-muted line-clamp-2">
+                      {r.bestIdea ?? "Nothing clears the bar right now."}
+                    </span>
+                    {r.tags.length > 0 && (
+                      <span className="mt-0.5 block truncate font-mono text-[10px] leading-tight text-faint">
+                        {r.tags.join(" · ")} · {r.trades} trades
+                      </span>
+                    )}
+                  </span>
+                  <span className="shrink-0 text-right">
+                    <span className="block font-mono text-[13px] font-semibold tnum text-accent">
+                      {r.mutual > 0 ? fmtValue(r.mutual) : "-"}
+                    </span>
+                    <span className="block text-[10px] uppercase tracking-wide text-faint">
+                      room
+                    </span>
+                  </span>
+                  <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-faint" />
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+        <p className="mt-1.5 text-[11px] leading-snug text-faint">
+          Room is the smaller of the two sides&apos; fit gain on the best package found.
+          Scoring it on the smaller side is deliberate: if only one team gains, it is not
+          a trade idea, it is a wish.
+        </p>
+        <div className="mt-3 flex flex-wrap gap-1.5">
+          {[
+            { href: "/trade", label: "Price a trade by hand" },
+            { href: "/plan", label: "What should I even offer?" },
+            { href: "/managers", label: "Manager dossiers" },
+          ].map((a) => (
+            <Link
+              key={a.href}
+              href={a.href}
+              className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-[12px] font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+            >
+              {a.label}
+            </Link>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------- one partner view
+  const result = findTrades(h, principals, {
+    rosterId,
+    partnerRosterId: partnerId,
+    max: 3,
+  });
+  if (!result) notFound();
+
+  const ownerId = h.rostersById.get(partnerId)?.ownerId;
+  const user = ownerId ? h.usersById.get(ownerId) : undefined;
+  const stance = STANCE[result.partner.stance];
+  const selected = pkgParam
+    ? result.packages.find((p) => p.id === pkgParam)
+    : undefined;
+  if (pkgParam && !selected) notFound();
+
+  return (
+    <div>
+      <Link
+        href={selected ? `/trade/finder?with=${partnerId}` : "/trade/finder"}
+        className="mb-1 -ml-2 inline-flex min-h-11 items-center gap-1 px-2 text-[12px] font-semibold text-muted transition-colors hover:text-accent"
+      >
+        <ArrowLeft size={13} aria-hidden="true" />
+        {selected ? "All ideas" : "All partners"}
+      </Link>
+
+      <header className="mb-3 flex items-start gap-2.5">
+        <TeamAvatar
+          name={result.partner.name}
+          avatarId={user?.avatar}
+          teamLogoUrl={user?.teamLogoUrl}
+        />
+        <div className="min-w-0">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+            Trade finder
+          </p>
+          <h1 className="min-w-0 font-display text-[24px] font-semibold leading-tight text-ink">
+            {result.partner.name}
+          </h1>
+          <div className="mt-1 flex flex-wrap items-center gap-1">
+            <Tag tone={stance.tone}>{stance.label}</Tag>
+            {result.dossier.tags.slice(0, 3).map((t) => (
+              <Tag key={t}>{t}</Tag>
+            ))}
+          </div>
+        </div>
+      </header>
+
+      {/* The dossier's own words, not a paraphrase: this is the read the finder
+          searched against, so the user can judge the premise before the packages. */}
+      <div className="rounded-[--radius-sm] border border-border bg-surface/60 p-2.5">
+        <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-accent">
+          <Lightbulb size={12} aria-hidden="true" />
+          How to approach them
+        </div>
+        <p className="mt-1 text-[12px] leading-snug text-muted">
+          {result.dossier.approachTips[0]}
+        </p>
+        <p className="mt-1 font-mono text-[11px] leading-snug text-faint">
+          Their holes: {result.partner.weakPositions.join(", ") || "none obvious"} · Their
+          surplus: {result.partner.strongPositions.join(", ") || "none obvious"} · Your
+          holes: {result.you.weakPositions.join(", ") || "none obvious"}
+        </p>
+        <Link
+          href={`/managers/${partnerId}`}
+          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-[12px] font-semibold text-accent"
+        >
+          Full dossier
+          <ChevronRight size={13} aria-hidden="true" />
+        </Link>
+      </div>
+
+      {selected ? (
+        <PackageDetail pkg={selected} />
+      ) : (
+        <>
+          <SectionHeader
+            title={
+              result.packages.length
+                ? `${result.packages.length} package${result.packages.length === 1 ? "" : "s"} that work both ways`
+                : "No package clears the bar"
+            }
+          />
+          <ul className="space-y-2">
+            {result.packages.map((p) => (
+              <li key={p.id}>
+                <Link
+                  href={`/trade/finder?with=${partnerId}&pkg=${p.id}`}
+                  className="block min-h-11 rounded-[--radius] border border-border bg-surface/80 p-3 transition-colors hover:border-accent/40 hover:bg-surface-2"
+                >
+                  <div className="flex items-start justify-between gap-2">
+                    <h3 className="min-w-0 font-display text-[15px] font-semibold leading-tight text-ink">
+                      {p.headline}
+                    </h3>
+                    <ChevronRight
+                      size={15}
+                      aria-hidden="true"
+                      className="mt-0.5 shrink-0 text-faint"
+                    />
+                  </div>
+                  <div className="mt-2 space-y-1">
+                    <AssetLine label="You send" assets={p.give} />
+                    <AssetLine label="You get" assets={p.get} />
+                  </div>
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 font-mono text-[11px] tnum text-faint">
+                    <span>
+                      value <DeltaValue n={p.evaluation.delta} /> (
+                      {p.evaluation.deltaPct > 0 ? "+" : ""}
+                      {p.evaluation.deltaPct}%)
+                    </span>
+                    <span>{p.evaluation.direction}</span>
+                    <span className="text-accent">room {fmtValue(p.fit.mutual)}</span>
+                  </div>
+                  {p.theirCase[0] && (
+                    <p className="mt-1.5 text-[12px] leading-snug text-muted">
+                      <span className="font-semibold text-ink">Why they say yes: </span>
+                      {p.theirCase[0]}
+                    </p>
+                  )}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      <ul className="mt-3 space-y-1">
+        {result.caveats.map((c) => (
+          <li key={c} className="text-[11px] leading-snug text-faint">
+            {c}
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}
+
+function AssetLine({ label, assets }: { label: string; assets: FinderAsset[] }) {
+  return (
+    <div className="flex items-baseline gap-2">
+      <span className="w-[62px] shrink-0 text-[10px] uppercase tracking-wide text-faint">
+        {label}
+      </span>
+      <span className="min-w-0 flex-1 text-[12px] leading-snug text-ink">
+        {assets.map((a, i) => (
+          <span key={a.id}>
+            {i > 0 && <span className="text-faint"> + </span>}
+            {a.label}
+            <span className="font-mono text-[11px] tnum text-faint"> {fmtValue(a.value)}</span>
+          </span>
+        ))}
+      </span>
+    </div>
+  );
+}
+
+function PackageDetail({
+  pkg,
+}: {
+  pkg: NonNullable<ReturnType<typeof findTrades>>["packages"][number];
+}) {
+  const e = pkg.evaluation;
+  return (
+    <>
+      <h2 className="mt-4 font-display text-[19px] font-semibold leading-tight text-ink">
+        {pkg.headline}
+      </h2>
+
+      <dl className="mt-2 grid grid-cols-3 gap-1.5">
+        <Stat label="you send" value={fmtValue(e.give.total)} sub={`${pkg.give.length} assets`} />
+        <Stat label="you get" value={fmtValue(e.get.total)} sub={`${pkg.get.length} assets`} />
+        <Stat
+          label="net"
+          value={<DeltaValue n={e.delta} />}
+          sub={`${e.deltaPct > 0 ? "+" : ""}${e.deltaPct}% · ${e.direction}`}
+          tone={e.delta >= 0 ? "positive" : "negative"}
+        />
+      </dl>
+
+      <div className="mt-2 grid gap-1.5">
+        <AssetTable title="You send" side={e.give} />
+        <AssetTable title="You get" side={e.get} />
+      </div>
+
+      <SectionHeader title="Why they say yes" />
+      <Bullets lines={pkg.theirCase} />
+
+      <SectionHeader title="Why it helps you" />
+      <Bullets lines={pkg.yourCase} />
+
+      {pkg.pushback.length > 0 && (
+        <>
+          <SectionHeader title="What they will push back on" />
+          <ul className="space-y-1">
+            {pkg.pushback.map((l) => (
+              <li
+                key={l}
+                className="flex gap-1.5 rounded-[--radius-sm] border border-warn/25 bg-warn/10 px-2.5 py-1.5 text-[12px] leading-snug text-muted"
+              >
+                <ThumbsDown size={12} aria-hidden="true" className="mt-0.5 shrink-0 text-warn" />
+                {l}
+              </li>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {/* The thesis, straight from the evaluator /trade uses. A suggested package and
+          a hand-built one must read the same way, so this is not re-derived here. */}
+      <SectionHeader title="The bet" />
+      <div className="space-y-1.5">
+        <Read label="Your bet" text={e.yourBet} />
+        <Read label="Their bet" text={e.theirBet} />
+        <Read label="The assumption that must hold" text={e.keyAssumption} accent />
+        {e.consolidationNote && <Read label="Consolidation" text={e.consolidationNote} />}
+        <Read label="Against your own record" text={e.historyCheck} />
+      </div>
+
+      <div className="mt-3">
+        <CopyBlock text={e.copyable} />
+      </div>
+    </>
+  );
+}
+
+function Bullets({ lines }: { lines: string[] }) {
+  return (
+    <ul className="space-y-1">
+      {lines.map((l) => (
+        <li key={l} className="flex gap-1.5 text-[12px] leading-snug text-muted">
+          <span aria-hidden="true" className="mt-1.5 size-1 shrink-0 rounded-full bg-accent" />
+          {l}
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+function Read({
+  label,
+  text,
+  accent,
+}: {
+  label: string;
+  text: string;
+  accent?: boolean;
+}) {
+  return (
+    <div
+      className={
+        accent
+          ? "rounded-[--radius-sm] border border-accent/25 bg-accent/10 p-2.5"
+          : "rounded-[--radius-sm] border border-border bg-surface/60 p-2.5"
+      }
+    >
+      <div
+        className={`text-[10px] font-semibold uppercase tracking-wide ${accent ? "text-accent" : "text-faint"}`}
+      >
+        {label}
+      </div>
+      <p className="mt-0.5 text-[12px] leading-snug text-muted">{text}</p>
+    </div>
+  );
+}
+
+function AssetTable({
+  title,
+  side,
+}: {
+  title: string;
+  side: NonNullable<ReturnType<typeof findTrades>>["packages"][number]["evaluation"]["give"];
+}) {
+  return (
+    <div className="rounded-[--radius-sm] border border-border bg-surface/60">
+      <div className="flex items-center justify-between border-b border-border px-2.5 py-1.5">
+        <span className="text-[10px] uppercase tracking-wide text-faint">{title}</span>
+        <span className="font-mono text-[11px] tnum text-muted">
+          {fmtValue(side.total)}
+          {side.avgAge != null && ` · avg ${side.avgAge}`}
+        </span>
+      </div>
+      <ul className="divide-y divide-border">
+        {side.assets.map((a) => (
+          <li key={a.id} className="flex items-center gap-2 px-2.5 py-1.5">
+            <span className="min-w-0 flex-1 truncate text-[12px] text-ink">{a.label}</span>
+            {a.tier && <span className="shrink-0 text-[10px] text-faint">{a.tier}</span>}
+            {a.age != null && (
+              <span className="shrink-0 font-mono text-[10px] tnum text-faint">{a.age}</span>
+            )}
+            <span className="shrink-0 font-mono text-[12px] tnum font-semibold text-ink">
+              {fmtValue(a.value)}
+            </span>
+          </li>
+        ))}
+      </ul>
+    </div>
+  );
+}

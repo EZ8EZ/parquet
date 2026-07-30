@@ -85,6 +85,17 @@ export default async function TradePage() {
         title="Should you make this move?"
         subtitle="We value both sides - but the answer isn't a grade. It's what each side is betting on, the assumption that must hold, and what your own history says. Picks are priced by who owes them."
       />
+      {/* The builder prices a trade you already have in mind. The finder runs the other
+          direction: it proposes the trade, using the same evaluator underneath. */}
+      <nav aria-label="Trade tools" className="mb-2 flex gap-1.5">
+        <Link
+          href="/trade/finder"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+        >
+          Find a trade for me
+          <ChevronRight size={13} aria-hidden="true" />
+        </Link>
+      </nav>
       <TradeBuilder
         myPlayers={myPlayers}
         otherPlayers={otherPlayers}
