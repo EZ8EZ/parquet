@@ -15,7 +15,7 @@ function Hop({ from, to }: { from: string; to: string }) {
   return (
     <span className="flex min-w-0 items-center gap-1 text-[11px] text-faint">
       <span className="truncate">{from}</span>
-      <MoveRight size={11} className="shrink-0 text-accent/70" aria-hidden="true" />
+      <MoveRight size={11} className="shrink-0 text-accent" aria-hidden="true" />
       <span className="truncate font-medium text-muted">{to}</span>
     </span>
   );

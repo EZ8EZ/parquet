@@ -295,7 +295,7 @@ function PlayerRow({ p, onNavigate }: { p: PlayerResult; onNavigate: () => void 
           <div className="font-mono text-[12.5px] font-semibold tnum text-ink">
             {fmtValue(p.value)}
           </div>
-          <div className="text-[10px] uppercase tracking-wide text-accent/85">
+          <div className="text-[10px] uppercase tracking-wide text-accent">
             {p.tier}
           </div>
         </div>

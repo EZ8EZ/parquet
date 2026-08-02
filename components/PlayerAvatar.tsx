@@ -78,7 +78,7 @@ export function PlayerAvatar({
         width={px}
         height={px}
         onError={() => setFailed(true)}
-        className={cn("shrink-0 rounded-full object-cover object-top ring-1 ring-white/10", className)}
+        className={cn("shrink-0 rounded-full object-cover object-top ring-1 ring-ink/10", className)}
         style={{ width: px, height: px, background: `linear-gradient(135deg, ${c1}, ${c2})` }}
       />
     );
@@ -89,7 +89,7 @@ export function PlayerAvatar({
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-mono font-semibold text-white/90 ring-1 ring-white/10",
+        "inline-flex shrink-0 items-center justify-center rounded-full font-mono font-semibold text-white/90 ring-1 ring-ink/10",
         className,
       )}
       style={{

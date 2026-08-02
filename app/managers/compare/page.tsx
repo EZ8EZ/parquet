@@ -141,7 +141,7 @@ function Side({
         <Tag className="mt-1">former {d.identity.tenureLabel}</Tag>
       )}
       {shown.length > 0 && (
-        <div className="mt-1 text-[11px] font-medium leading-snug text-accent/85">
+        <div className="mt-1 text-[11px] font-medium leading-snug text-accent">
           {shown.join(" · ")}
         </div>
       )}

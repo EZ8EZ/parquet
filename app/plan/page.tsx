@@ -241,7 +241,7 @@ export default async function PlanPage() {
               {/* Send / target side by side even at 390px: the comparison is the point. */}
               <div className="mt-1.5 grid grid-cols-2 gap-1.5">
                 <div className="rounded-[--radius-sm] border border-border bg-bg/40 px-2 py-1.5">
-                  <div className="text-[11px] uppercase tracking-wide text-negative/80">
+                  <div className="text-[11px] uppercase tracking-wide text-negative">
                     You send
                   </div>
                   <div className="text-[12px] leading-snug text-ink">
@@ -249,7 +249,7 @@ export default async function PlanPage() {
                   </div>
                 </div>
                 <div className="rounded-[--radius-sm] border border-border bg-bg/40 px-2 py-1.5">
-                  <div className="text-[11px] uppercase tracking-wide text-positive/80">
+                  <div className="text-[11px] uppercase tracking-wide text-positive">
                     You target
                   </div>
                   <div className="text-[12px] leading-snug text-ink">

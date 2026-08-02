@@ -39,10 +39,110 @@
   --radius-sm: 8px;
   --radius: 12px;
   --radius-lg: 18px;
+
+  /* The two grain washes on <body>. Tokens rather than literals so a theme can
+   * restate them - a gold-on-black wash is wrong on paper. */
+  --grain-1: rgba(230, 179, 77, 0.05);
+  --grain-2: rgba(90, 169, 255, 0.03);
+  --selection: rgba(230, 179, 77, 0.28);
+  /* The accent at low alpha, used to tint a surface that belongs to the viewer. */
+  --accent-wash: rgba(230, 179, 77, 0.16);
 }
 
 :root {
   color-scheme: dark;
+}
+
+/*
+ * THEMES. Dark is the identity (DECISIONS D15) and stays the default - these are an
+ * escape hatch, not a rebrand, which is why they are overrides of the same token names
+ * rather than a second design system. Tailwind v4 compiles every utility down to
+ * `var(--color-*)`, so restating those variables here re-colors the whole app without
+ * one component knowing a theme exists.
+ *
+ * Selector is `:root[data-theme=...]`, one specificity step above the `:root` that
+ * `@theme` writes to, so these win without `!important`.
+ */
+
+/* Paper. Warm rather than pure white, so the editorial feel survives the flip. */
+:root[data-theme="light"] {
+  color-scheme: light;
+
+  --color-bg: #f6f4f0;
+  --color-surface: #fffefb;
+  --color-surface-2: #efece5;
+  --color-elevated: #e5e1d8;
+  --color-border: #dcd7cc;
+  --color-border-strong: #b9b2a4;
+
+  --color-ink: #15171b;
+  --color-muted: #4f5661;
+  /* Both of these are set by measurement, not taste: at the 10-11px this app uses for
+   * secondary text, the first values tried (#6b7280 faint, #8a6414 accent) came in at
+   * 4.40 and 4.31 against their own surfaces - under the 4.5 body-text bar. Darkened
+   * until the whole app cleared it. See the sweep in the round-5 report. */
+  --color-faint: #616875;
+
+  /* Gold has to darken to carry text weight on paper, and `accent-ink` flips to a
+   * light value because `bg-accent` surfaces now need light text on top. */
+  --color-accent: #7a5810;
+  --color-accent-dim: #a8842c;
+  --color-accent-ink: #fffdf6;
+  --color-positive: #0f7040;
+  --color-negative: #b3252c;
+  --color-info: #1a5aa8;
+  --color-warn: #855400;
+
+  --grain-1: rgba(122, 88, 16, 0.05);
+  --grain-2: rgba(26, 90, 168, 0.035);
+  --selection: rgba(122, 88, 16, 0.22);
+  --accent-wash: rgba(122, 88, 16, 0.12);
+}
+
+/*
+ * High contrast, still dark - the accessibility case that keeps the app's identity
+ * rather than trading it away. Pure black ground, pure white ink, borders lifted from
+ * "hairline" to actually visible, and every semantic colour pushed to a value that
+ * clears text contrast on that ground.
+ */
+:root[data-theme="contrast"] {
+  color-scheme: dark;
+
+  --color-bg: #000000;
+  --color-surface: #0d0f12;
+  --color-surface-2: #171a20;
+  --color-elevated: #22272f;
+  --color-border: #4b525e;
+  --color-border-strong: #737c8a;
+
+  --color-ink: #ffffff;
+  --color-muted: #d2d7df;
+  --color-faint: #a6adb8;
+
+  /*
+   * Brighter than the dark theme's, and stopping deliberately short of near-white.
+   *
+   * A handful of pills in this app tint their background with 15% of the very colour
+   * their text uses (`text-accent` on `bg-accent/15`), which lifts the local ground and
+   * eats the ratio. Clearing 4.5 on that self-tint needs a value so pale that gold stops
+   * reading as gold and `bg-accent` buttons go muddy - checked on screen, not guessed.
+   * These values are the point where the palette is markedly clearer than the default
+   * and still recognisably this app. The residual is ~8 small pills at 4.08-4.49; see
+   * the round-5 report, and the structural fix (neutral pill grounds) noted there.
+   */
+  --color-accent: #ffd27a;
+  --color-accent-dim: #c99b3f;
+  --color-accent-ink: #000000;
+  --color-positive: #7cf2b6;
+  --color-negative: #ffaeb2;
+  --color-info: #a9d4ff;
+  --color-warn: #ffd07a;
+
+  /* No decorative wash here: it is contrast that is being asked for. */
+  --grain-1: transparent;
+  --grain-2: transparent;
+  --selection: rgba(255, 210, 122, 0.35);
+  --accent-wash: rgba(255, 210, 122, 0.22);
 }
 
 html {
@@ -57,10 +157,10 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* subtle parquet-grain radial so black isn't flat */
+  /* subtle parquet-grain radial so the ground isn't flat */
   background-image:
-    radial-gradient(120% 80% at 50% -10%, rgba(230, 179, 77, 0.05), transparent 60%),
-    radial-gradient(100% 60% at 100% 0%, rgba(90, 169, 255, 0.03), transparent 55%);
+    radial-gradient(120% 80% at 50% -10%, var(--grain-1), transparent 60%),
+    radial-gradient(100% 60% at 100% 0%, var(--grain-2), transparent 55%);
   background-attachment: fixed;
 }
 
@@ -79,7 +179,7 @@ body {
 }
 
 /* Accessible focus states */
-:where(a, button, input, textarea, select, [tabindex]):focus-visible {
+:where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--color-accent);
   outline-offset: 2px;
   border-radius: 4px;
@@ -93,7 +193,7 @@ a[role="button"],
 }
 
 ::selection {
-  background: rgba(230, 179, 77, 0.28);
+  background: var(--selection);
 }
 
 /* Thin scrollbars where scrolling is unavoidable */

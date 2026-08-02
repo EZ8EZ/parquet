@@ -661,7 +661,7 @@ function WebMode({
                       isSel
                         ? "var(--color-accent)"
                         : n.isMe
-                          ? "rgba(230,179,77,0.16)"
+                          ? "var(--accent-wash)"
                           : "var(--color-surface-2)"
                     }
                     stroke={stroke}

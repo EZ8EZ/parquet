@@ -8,6 +8,7 @@ import {
   MessageSquareText,
   Repeat,
   ScrollText,
+  Settings,
   Share2,
   Target,
   Users,
@@ -47,16 +48,27 @@ export default async function HomePage() {
     <div>
       <div className="flex items-start justify-between gap-3">
         <Wordmark tagline="Dynasty memory" />
-        {/* Who am I? - switch teams / enter a username. */}
-        <Link
-          href="/teams"
-          className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
-        >
-          <Repeat size={13} aria-hidden="true" />
-          <span className="max-w-[9rem] truncate">
-            {h.me.teamName ?? h.me.displayName}
-          </span>
-        </Link>
+        <div className="flex shrink-0 items-center gap-1.5">
+          {/* Who am I? - switch teams / enter a username. */}
+          <Link
+            href="/teams"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+          >
+            <Repeat size={13} aria-hidden="true" />
+            <span className="max-w-[7rem] truncate">
+              {h.me.teamName ?? h.me.displayName}
+            </span>
+          </Link>
+          {/* The display escape hatch. Icon-only so it costs almost no width on the
+              one row every visit starts from - two taps from anywhere in the app. */}
+          <Link
+            href="/settings"
+            aria-label="Settings"
+            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-muted transition-colors hover:border-accent hover:text-accent"
+          >
+            <Settings size={15} aria-hidden="true" />
+          </Link>
+        </div>
       </div>
 
       {/* Loud, not subtle: synthetic data that looks plausible is the most dangerous

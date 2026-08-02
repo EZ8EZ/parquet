@@ -125,7 +125,7 @@ export default async function DraftBoardPage({
                     <span
                       className={cn(
                         "text-[11px] font-normal",
-                        active ? "text-accent/80" : "text-faint",
+                        active ? "text-accent" : "text-faint",
                       )}
                     >
                       {s.pickCount === 0 ? "soon" : s.pickCount}

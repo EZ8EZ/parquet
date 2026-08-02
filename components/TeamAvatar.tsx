@@ -62,7 +62,7 @@ export function TeamAvatar({
   const bg = `linear-gradient(135deg, hsl(${hue} 42% 30%), hsl(${(hue + 44) % 360} 42% 19%))`;
   const ring = isMe
     ? "ring-2 ring-accent"
-    : "ring-1 ring-white/10";
+    : "ring-1 ring-ink/10";
 
   if (src) {
     return (

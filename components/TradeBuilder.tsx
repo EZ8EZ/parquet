@@ -458,7 +458,7 @@ function TradeResult({
           {([["send", r.give] as const, ["get", r.get] as const]).map(([k, side]) => (
             <div key={k} className="rounded-[--radius-sm] border border-border bg-bg/40 px-2 py-1.5">
               <div className="flex items-baseline justify-between gap-1">
-                <span className={cn("text-[11px] uppercase tracking-wide", k === "send" ? "text-negative/80" : "text-positive/80")}>
+                <span className={cn("text-[11px] uppercase tracking-wide", k === "send" ? "text-negative" : "text-positive")}>
                   you {k}
                 </span>
                 <span className="font-mono text-[11px] font-semibold tnum text-ink">

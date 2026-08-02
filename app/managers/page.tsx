@@ -111,7 +111,7 @@ export default async function ManagersPage() {
                       )}
                     </div>
                     {shown.length > 0 && (
-                      <div className="mt-0.5 truncate text-[11px] font-medium leading-tight text-accent/85">
+                      <div className="mt-0.5 truncate text-[11px] font-medium leading-tight text-accent">
                         {shown.join(" · ")}
                         {extra > 0 && (
                           <span className="text-faint"> +{extra}</span>
