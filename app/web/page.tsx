@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import { FlaskConical } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getTradedPickLineages } from "@/lib/lineage";
@@ -124,13 +125,23 @@ export default async function TradeWebPage() {
         </div>
       </Card>
 
-      <TradeWeb
-        graph={graph}
-        moves={moves}
-        holdings={holdings}
-        managerMetrics={managerMetrics}
-        playerNow={playerNow}
-      />
+      {/*
+        Suspense because TradeWeb reads the query string through useSearchParams -
+        selection, season and mode are all addressable now (lib/tradegraph/url.ts), so
+        a deal has a URL that global search and the digest can link. This page is
+        force-dynamic, so the boundary never actually suspends in practice; it is here
+        so the component's dependency on the URL can never turn into a render-mode
+        surprise for whoever touches this page next.
+      */}
+      <Suspense fallback={null}>
+        <TradeWeb
+          graph={graph}
+          moves={moves}
+          holdings={holdings}
+          managerMetrics={managerMetrics}
+          playerNow={playerNow}
+        />
+      </Suspense>
     </div>
   );
 }

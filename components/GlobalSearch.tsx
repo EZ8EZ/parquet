@@ -15,11 +15,12 @@
  * multi-megabyte payload on every cold load just to support a feature most visits
  * never open.
  *
- * Three of the four result kinds are real navigable pages (players, managers,
- * picks). Trades are not: there is no per-trade URL anywhere in the app today, and
- * wiring one into the trade web is a bigger change than this feature owns, so a
- * trade result expands its full summary inline instead and links out to the trade
- * web in general.
+ * All four result kinds are real navigable places. A trade result still expands its
+ * full summary inline first - the summary is usually the whole answer to "what was
+ * that deal again" and is worth reading without leaving the page you are on - and
+ * then links to that exact deal on the trade web, which marks it inside its pair's
+ * history. That trade URL is built by lib/tradegraph/url.ts, the one place the
+ * mapping lives; this file never assembles the query string itself.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
@@ -35,6 +36,7 @@ import { PlayerAvatar } from "./PlayerAvatar";
 import { TeamAvatar } from "./TeamAvatar";
 import { Tag } from "./ui";
 import { cn, fmtValue } from "@/lib/ui";
+import { tradeWebHref } from "@/lib/tradegraph/url";
 import type {
   ManagerResult,
   PickResult,
@@ -369,11 +371,11 @@ function TradeRow({
       {expanded && (
         <div className="border-t border-border px-2.5 py-1.5">
           <Link
-            href="/web"
+            href={tradeWebHref(t.id)}
             onClick={onNavigate}
             className="inline-flex min-h-11 items-center gap-1 text-[11.5px] font-semibold text-accent"
           >
-            Open the trade web
+            Open this deal on the trade web
             <ChevronRight size={13} aria-hidden="true" />
           </Link>
         </div>

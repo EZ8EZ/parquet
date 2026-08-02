@@ -4,6 +4,7 @@ import { ArrowLeft, ChevronRight, Lightbulb } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildFormerDossier } from "@/lib/dossier";
 import { getPrincipals } from "@/lib/principals";
+import { managerWebHref } from "@/lib/tradegraph/url";
 import { Tag, DeltaValue, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { BarChart } from "@/components/charts";
@@ -251,7 +252,9 @@ export default async function FormerManagerDetailPage({
             title="Favorite trade partners"
             action={
               <Link
-                href="/web"
+                // Straight to this manager's strands - a former manager's whole
+                // trade record is exactly what the web's node panel shows.
+                href={managerWebHref(ownerId)}
                 className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-accent"
               >
                 trade web

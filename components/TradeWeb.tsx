@@ -14,14 +14,22 @@
  * ring geometry is computed deterministically in lib/tradegraph and shipped with the
  * data, so this file only draws.
  *
+ * Every view here is addressable: mode, season filter, the focused manager or pair,
+ * one specific deal, and the trees root all live in the query string rather than in
+ * component state, so anything you are looking at reloads, bookmarks and pastes.
+ * That is also what gives a deal a URL at all - see lib/tradegraph/url.ts, which is
+ * the only place the mapping is defined and the thing global search links a trade
+ * result at.
+ *
  * Mobile-first: one 400-unit-square viewBox that scales to the column width, 45px
  * tap circles on every node, abbreviations inside the nodes with full names in the
  * panel, and every strand also reachable as a button in the list underneath — which
  * doubles as the screen-reader path, since a ring of chords is not one.
  */
 
-import { useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import {
   ChevronRight,
   CornerDownRight,
@@ -51,11 +59,13 @@ import {
   type TradeRecord,
   type TradeTreeNode,
 } from "@/lib/tradegraph";
-
-type Selection =
-  | { kind: "node"; ownerId: string }
-  | { kind: "edge"; key: string }
-  | null;
+import {
+  edgeKeyForTrade,
+  parseWebParams,
+  webQueryString,
+  type WebSelection,
+  type WebUrlState,
+} from "@/lib/tradegraph/url";
 
 const POSTURE_TONE = {
   contending: "accent",
@@ -216,6 +226,33 @@ export interface TradeWebProps {
 
 const ALL = "all";
 
+/**
+ * The view state of this page, backed by the address bar.
+ *
+ * WHY `replaceState` rather than `router.replace`: `/web` is force-dynamic and its
+ * server render prices every player who has ever been traded, so routing on every tap
+ * of a strand would pay for that whole render again, per tap. `replaceState` moves the
+ * address bar with no server round trip, and Next reflects it back through
+ * `useSearchParams` - which keeps the URL as the single source of truth instead of a
+ * mirrored copy of it that can quietly disagree.
+ *
+ * Selections deliberately do not stack up in the back button: back leaves the page,
+ * exactly as it did before any of this was addressable. The URL is here to be
+ * reloaded and shared, not to turn every tap into a history entry.
+ */
+function useWebUrl(): [WebUrlState, (next: WebUrlState) => void] {
+  const params = useSearchParams();
+  const state = useMemo(() => parseWebParams(params), [params]);
+  const commit = useCallback((next: WebUrlState) => {
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${webQueryString(next)}`,
+    );
+  }, []);
+  return [state, commit];
+}
+
 export function TradeWeb({
   graph,
   moves,
@@ -223,7 +260,44 @@ export function TradeWeb({
   managerMetrics,
   playerNow,
 }: TradeWebProps) {
-  const [mode, setMode] = useState<"web" | "trees">("web");
+  const [url, commit] = useWebUrl();
+
+  // A URL is untrusted input (see lib/tradegraph/url.ts), so every id in it is checked
+  // against THIS league's graph before it drives anything: a stale or hand-edited link
+  // lands on the overview rather than an empty panel or a zeroed season.
+  const linkedEdgeKey = useMemo(
+    () => (url.tradeId ? edgeKeyForTrade(graph.edges, url.tradeId) : null),
+    [url.tradeId, graph.edges],
+  );
+  const season =
+    url.season && graph.seasons.includes(url.season) ? url.season : ALL;
+  const selection = useMemo<WebSelection>(() => {
+    // A linked deal lights up the strand it sits on - the web has no per-trade
+    // geometry of its own to select.
+    if (url.tradeId) {
+      return linkedEdgeKey ? { kind: "edge", key: linkedEdgeKey } : null;
+    }
+    const s = url.selection;
+    if (s?.kind === "node") {
+      return graph.nodes.some((n) => n.ownerId === s.ownerId) ? s : null;
+    }
+    if (s?.kind === "edge") {
+      return graph.edges.some((e) => e.key === s.key) ? s : null;
+    }
+    return null;
+  }, [url.tradeId, url.selection, linkedEdgeKey, graph.nodes, graph.edges]);
+
+  // Everything a commit builds on is the VALIDATED read, so changing the season on a
+  // page reached by a bad link does not carry that bad link's ids forward.
+  const current: WebUrlState = {
+    mode: url.mode,
+    season: season === ALL ? null : season,
+    selection,
+    tradeId: linkedEdgeKey ? url.tradeId : null,
+    asset: url.asset,
+  };
+  const mode = url.mode;
+  const setMode = (next: "web" | "trees") => commit({ ...current, mode: next });
 
   return (
     <div>
@@ -247,7 +321,22 @@ export function TradeWeb({
       </div>
 
       {mode === "web" ? (
-        <WebMode graph={graph} managerMetrics={managerMetrics} />
+        <WebMode
+          graph={graph}
+          managerMetrics={managerMetrics}
+          season={season}
+          selection={selection}
+          linkedTradeId={current.tradeId}
+          unresolvedTradeId={url.tradeId && !linkedEdgeKey ? url.tradeId : null}
+          onSeason={(next) =>
+            commit({ ...current, season: next === ALL ? null : next })
+          }
+          onSelect={(next) =>
+            // Tapping anything yourself replaces a linked deal: the URL should say
+            // what you are looking at now, not how you arrived.
+            commit({ ...current, selection: next, tradeId: null })
+          }
+        />
       ) : (
         <TreesMode
           graph={graph}
@@ -255,6 +344,8 @@ export function TradeWeb({
           holdings={holdings}
           managerMetrics={managerMetrics}
           playerNow={playerNow}
+          rootId={url.asset}
+          onRoot={(next) => commit({ ...current, asset: next })}
         />
       )}
     </div>
@@ -296,12 +387,27 @@ function ModeTab({
 function WebMode({
   graph,
   managerMetrics,
+  season,
+  selection: sel,
+  linkedTradeId,
+  unresolvedTradeId,
+  onSeason,
+  onSelect,
 }: {
   graph: TradeGraph;
   managerMetrics: Record<number, ManagerMetric>;
+  /** `ALL` or a season in `graph.seasons` - already validated by the caller. */
+  season: string;
+  selection: WebSelection;
+  /** The deal a link pointed at, marked in the pair's list once it is found. */
+  linkedTradeId: string | null;
+  /** A linked deal this graph has no strand for, said out loud rather than ignored. */
+  unresolvedTradeId: string | null;
+  onSeason: (next: string) => void;
+  onSelect: (next: WebSelection) => void;
 }) {
-  const [season, setSeason] = useState<string>(ALL);
-  const [sel, setSel] = useState<Selection>(null);
+  // Keyboard focus is not part of the view being shared - it belongs to this session's
+  // pointer and tab order, so it stays local while everything above lives in the URL.
   const [focused, setFocused] = useState<string | null>(null);
   const [focusedEdge, setFocusedEdge] = useState<string | null>(null);
 
@@ -374,14 +480,14 @@ function WebMode({
       <div className="scroll-x -mx-4 mb-3 flex gap-1.5 px-4 sm:mx-0 sm:px-0">
         <FilterChip
           active={season === ALL}
-          onClick={() => setSeason(ALL)}
+          onClick={() => onSeason(ALL)}
           label="All seasons"
         />
         {graph.seasons.map((s) => (
           <FilterChip
             key={s}
             active={season === s}
-            onClick={() => setSeason(s)}
+            onClick={() => onSeason(s)}
             label={s}
           />
         ))}
@@ -404,7 +510,7 @@ function WebMode({
             width={RING.size}
             height={RING.size}
             fill="transparent"
-            onClick={() => setSel(null)}
+            onClick={() => onSelect(null)}
           />
           <circle
             cx={RING.cx}
@@ -450,13 +556,13 @@ function WebMode({
                       aria-label={`${a.name} and ${b.name}: ${e.count} ${e.count === 1 ? "deal" : "deals"}`}
                       className="cursor-pointer"
                       style={{ pointerEvents: "stroke", outline: "none" }}
-                      onClick={() => setSel({ kind: "edge", key: e.key })}
+                      onClick={() => onSelect({ kind: "edge", key: e.key })}
                       onFocus={() => setFocusedEdge(e.key)}
                       onBlur={() => setFocusedEdge(null)}
                       onKeyDown={(ev) => {
                         if (ev.key === "Enter" || ev.key === " ") {
                           ev.preventDefault();
-                          setSel(
+                          onSelect(
                             activeEdge === e.key
                               ? null
                               : { kind: "edge", key: e.key },
@@ -514,14 +620,14 @@ function WebMode({
                   className="cursor-pointer"
                   opacity={dim ? 0.3 : 1}
                   onClick={() =>
-                    setSel(isSel ? null : { kind: "node", ownerId: n.ownerId })
+                    onSelect(isSel ? null : { kind: "node", ownerId: n.ownerId })
                   }
                   onFocus={() => setFocused(n.ownerId)}
                   onBlur={() => setFocused(null)}
                   onKeyDown={(ev) => {
                     if (ev.key === "Enter" || ev.key === " ") {
                       ev.preventDefault();
-                      setSel(
+                      onSelect(
                         isSel ? null : { kind: "node", ownerId: n.ownerId },
                       );
                     }
@@ -645,6 +751,15 @@ function WebMode({
 
       {/* Selection panel */}
       <div className="mt-4">
+        {unresolvedTradeId && (
+          <Card className="mb-2 border-warn/30 bg-warn/[0.06]">
+            <p className="text-sm leading-relaxed text-muted">
+              That link points at a deal this web has no strand for - its sides
+              never resolved to two managers, so there is no pairing to open. Every
+              other deal is below.
+            </p>
+          </Card>
+        )}
         {sel == null && <WebOverview graph={graph} view={view} season={season} />}
         {activeNode != null && (
           <NodePanel
@@ -652,8 +767,8 @@ function WebMode({
             view={view}
             ownerId={activeNode}
             managerMetrics={managerMetrics}
-            onClear={() => setSel(null)}
-            onPickEdge={(key) => setSel({ kind: "edge", key })}
+            onClear={() => onSelect(null)}
+            onPickEdge={(key) => onSelect({ kind: "edge", key })}
           />
         )}
         {selectedEdge && (
@@ -662,7 +777,8 @@ function WebMode({
             view={view}
             edge={selectedEdge}
             managerMetrics={managerMetrics}
-            onClear={() => setSel(null)}
+            linkedTradeId={linkedTradeId}
+            onClear={() => onSelect(null)}
           />
         )}
         {activeEdge && !selectedEdge && (
@@ -684,7 +800,7 @@ function WebMode({
             <li key={n.ownerId}>
               <button
                 type="button"
-                onClick={() => setSel({ kind: "node", ownerId: n.ownerId })}
+                onClick={() => onSelect({ kind: "node", ownerId: n.ownerId })}
                 className={cn(
                   "flex w-full items-center gap-3 rounded-[--radius-sm] border px-3 py-2 text-left transition-colors motion-reduce:transition-none",
                   n.isMe
@@ -732,7 +848,7 @@ function WebMode({
             <li key={e.key}>
               <button
                 type="button"
-                onClick={() => setSel({ kind: "edge", key: e.key })}
+                onClick={() => onSelect({ kind: "edge", key: e.key })}
                 className="flex w-full items-center gap-2 rounded-[--radius-sm] border border-border bg-surface/60 px-3 py-2 text-left transition-colors hover:bg-surface-2 motion-reduce:transition-none"
               >
                 <span className="min-w-0 flex-1">
@@ -932,12 +1048,20 @@ function EdgePanel({
   view,
   edge,
   managerMetrics,
+  linkedTradeId,
   onClear,
 }: {
   graph: TradeGraph;
   view: WebView;
   edge: TradeGraph["edges"][number];
   managerMetrics: Record<number, ManagerMetric>;
+  /**
+   * The deal a link pointed at. A pair can have a dozen deals, so arriving from a
+   * trade URL has to say WHICH one, or the link lands you in a list and leaves you
+   * to guess. The list stays in date order rather than floating it to the top: the
+   * order is the pair's history, and reordering it would misrepresent that.
+   */
+  linkedTradeId: string | null;
   onClear: () => void;
 }) {
   const a = graph.nodes.find((n) => n.ownerId === edge.a)!;
@@ -965,15 +1089,23 @@ function EdgePanel({
       </div>
 
       <ul className="mt-3 space-y-2">
-        {trades.map((t) => (
+        {trades.map((t) => {
+          const linked = t.id === linkedTradeId;
+          return (
           <li
             key={t.id}
-            className="rounded-[--radius-sm] border border-border bg-surface-2/60 p-3"
+            className={cn(
+              "rounded-[--radius-sm] border p-3",
+              linked
+                ? "border-accent/50 bg-accent/[0.07]"
+                : "border-border bg-surface-2/60",
+            )}
           >
             <div className="mb-1.5 flex flex-wrap items-center gap-1.5">
               <span className="font-mono text-[11px] tnum text-muted">
                 {t.season} · wk {t.week}
               </span>
+              {linked && <Tag tone="accent">this deal</Tag>}
               {t.multiTeam && (
                 <Tag tone="info">{t.parties.length}-team deal</Tag>
               )}
@@ -995,7 +1127,8 @@ function EdgePanel({
               ))}
             </ul>
           </li>
-        ))}
+          );
+        })}
       </ul>
     </Card>
   );
@@ -1048,16 +1181,26 @@ function TreesMode({
   holdings,
   managerMetrics,
   playerNow,
+  rootId,
+  onRoot,
 }: {
   graph: TradeGraph;
   moves: AssetMove[];
   holdings: Record<string, number>;
   managerMetrics: Record<number, ManagerMetric>;
   playerNow: Record<string, PlayerNow>;
+  /** An `AssetMove` id from the URL, or null for "whatever ranks first". */
+  rootId: string | null;
+  onRoot: (next: string) => void;
 }) {
   const [q, setQ] = useState("");
-  const [mineOnly, setMineOnly] = useState(graph.meRosterId != null);
-  const [rootId, setRootId] = useState<string | null>(null);
+  // "My deals" is the right default for someone arriving cold, but it is the wrong
+  // one for someone arriving on a link to a specific chain: half the league's chains
+  // are not theirs, and defaulting the filter on would silently drop the very asset
+  // the link named.
+  const [mineOnly, setMineOnly] = useState(
+    graph.meRosterId != null && rootId == null,
+  );
 
   // Keyed by owner id: the stable identity that survives a handover, needed to look
   // up a tree hop's actual manager (`fromOwnerId`/`toOwnerId`) rather than whoever
@@ -1164,7 +1307,7 @@ function TreesMode({
               <button
                 key={r.moveId}
                 type="button"
-                onClick={() => setRootId(r.moveId)}
+                onClick={() => onRoot(r.moveId)}
                 aria-pressed={r.moveId === effectiveRoot}
                 className={cn(
                   "shrink-0 rounded-full border px-3 py-1.5 text-xs font-semibold transition-colors motion-reduce:transition-none",
@@ -1237,7 +1380,7 @@ function TreesMode({
               <li key={r.moveId}>
                 <button
                   type="button"
-                  onClick={() => setRootId(r.moveId)}
+                  onClick={() => onRoot(r.moveId)}
                   className={cn(
                     "flex w-full items-center gap-2 rounded-[--radius-sm] border px-3 py-2 text-left transition-colors motion-reduce:transition-none",
                     r.moveId === effectiveRoot
