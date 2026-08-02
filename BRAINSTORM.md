@@ -631,3 +631,148 @@ through the search API.
   behind a disclosure the way routine picks already are. And the round-2 note
   stands: whether the digest's Group header should keep pointing at /ledger
   now that its rows deep-link is a product question, not a bug.
+
+## Round 4 - same four, thinner backlog
+
+No departures this round either - still Chief Fable, Opus Lead B, Sonnet Lead
+D, Haiku Worker 3. The original 15-candidate list from round 1 is down to a
+handful of real Lead-shaped items left; audits 14 and 15 stay excluded from
+the vote for the same reason as every prior round (engineering hygiene, not
+single-session Lead work). Two Leads, so this round again targets two
+winners.
+
+### Round 4 candidates
+
+30. **Season Recap** (was 3, never once voted on across three rounds). A
+    narrative end-of-season summary pulling from the ledger, awards, and
+    timeline shifts. Private, not shareable outside the app.
+31. **Light/high-contrast toggle** (was 25/20, carried twice, never won).
+    Scoping is fully settled from round 2's debate: token layer exists, only
+    3 files hold hardcoded hex, ships as a toggle not a redesign, dark stays
+    the committed default.
+32. **Live achievements, differentiation angle mandatory** (was 26/21, carried
+    twice, flagged both times for lacking one). If this wins, the brief
+    states the ongoing/live-updating distinction from Superlatives up front
+    as a hard requirement, not a suggestion to be discovered mid-build - if
+    the build can't hold that line it should say so and stop rather than ship
+    a second badge system.
+
+Not competing for a Lead slot, small enough for direct assignment (same
+pattern as 17 and 28):
+33. **Sparkline red-tint fix** (round 1 non-blocking note, still open). A
+    very young player's declining trajectory tints red even though it is just
+    the age-curve premium unwinding one more year, not bad news - `Sparkline`
+    already accepts a color override per that note.
+34. **A "quiet lately" disclosure for stale rosters** (round 3 non-blocking
+    note). 13 of 14 rosters flag stale in the offseason lull right now, which
+    is honest but noisy - a one-line context note when most of the league is
+    quiet would keep the page from reading like a false alarm.
+
+### Round 4 vote
+
+All four voted top-2, one line each. Points: 1st=2, 2nd=1.
+
+| Rank | # | Idea | Points |
+|---|---|---|---|
+| 1 | 30 | Season Recap | 5 |
+| 2 | 32 | Live achievements | 4 |
+| 3 | 31 | Light/high-contrast toggle | 3 |
+
+**A real dissent worth recording, same shape as round 1's light-theme
+debate.** Chief Fable and Sonnet Lead D both argued directly against
+spending a Lead slot on candidate 32 at all - even with the differentiation
+angle made mandatory this round, both called it the riskiest bet of the
+three, with a real chance a Lead concludes "this duplicates Superlatives,
+stop" and ships nothing. Opus Lead B and Haiku Worker 3 ranked it 1st
+regardless. The vote's own math still put 32 ahead of 31, so it stands as a
+winner - the team's own math resolves this the same way it resolved round
+1's dissent, without anyone overruling it. The stop-condition Fable wants
+enforced was already load-bearing in 32's own brief before the vote ran.
+
+Opus Lead B also flagged a real scoping gap in Season Recap: it's the
+offseason right now, so the brief needs to say which season the recap
+summarizes and how it behaves outside of an active season, or it reads
+stale the moment anyone opens it.
+
+**Assignments:**
+- **Opus Lead B -> 32** (live achievements). Their own 1st-place vote.
+- **Sonnet Lead D -> 30** (Season Recap). Their own 1st-place vote. Carries
+  Lead B's offseason scoping flag into the brief.
+- **Haiku Worker 3 -> 33 and 34** (sparkline red-tint fix, stale-roster
+  "quiet lately" disclosure), both direct-assigned, no vote needed - correctly
+  sized per every voter who commented on them. 34 first, per Lead B's read
+  that it's undermining the commissioner page's premise right now.
+
+### Round 4 - what got built
+
+**Opus Lead B - live achievements: shipped, and cleared the two-round-old
+differentiation bar.** `lib/streaks/` states the line in its own header:
+Superlatives is 27 categories, one winner each, every figure settled; nothing
+here is any of those things. Every streak is personal (no ranking), present
+tense, measured to an injected instant (`opts.now`, the commissioner-tools
+convention), moves without a transaction (four of the five change with
+nothing but the passage of a day), and can be at risk - which an award
+cannot. A test pins the distinction mechanically: the same history at a
+later instant must produce a larger value, and no label may read as award
+language. The panel returns `countedAt` so the stamp and the numbers describe
+the same instant. Two real bugs Lead B caught in their own verification:
+holds older than the record now win the ties they were losing (floor values
+flagged `atLeast`, printed with a "+"), and the two-year count stops hedging
+once the record itself is old enough that every unknown start has certainly
+crossed. The supporting refactor is the right shape: `holdingSpans` extracted
+from the dossier walk so "how long you have held him" and "your average hold"
+can never disagree about what an acquisition is. Verified live: all five
+streaks running on the real roster, including a genuine AT RISK season run
+("One trade in 2026 keeps it alive") and a personal quiet-stretch record 15
+days from being beaten.
+
+**Sonnet Lead D - Season Recap: shipped.** `lib/recap.ts` orchestrates only
+existing machinery (ledger, awards, timelines, the digest's pick reader) and
+extracts `rankSeasonRosters` from `/roster`'s ranking core rather than
+re-deriving standings. The offseason flag held: it always recaps the last
+COMPLETE season (2025 here, since 2026 is `pre_draft`), and the header says
+so in plain words. The ownership check is D22's own primitive
+(`principals.ownerAt`), not a reimplementation - a viewer who inherited the
+roster after the recapped season is told the numbers are the team's, not
+theirs. Honesty notes on both odd joints: awards are career standings as of
+today (Superlatives has no per-season snapshot, and the copy says so), and
+the timeline/fragility tiles are present-day readings, explicitly not a
+historical recompute. 80 ledger rows split 7 notable leading, 73 routine
+behind a disclosure - the same pattern the commissioner page set. Verified
+live: recaps 2025, real annotations render under the trades they explain.
+
+**Haiku Worker 3 - the two polish notes: done.** 33: young players'
+declining sparklines on `/roster` now render muted instead of red (the age
+premium unwinding is not bad news), via the color override `Sparkline`
+already had. 34: the stale-roster list gains a one-line offseason note when
+more than 75% of the league is flagged, so the page stops reading like a
+false alarm in August and the note disappears entirely in season.
+
+### Chief Fable's integration review, round 4
+
+- **The dash sweep the em-dash incident prompted, three encodings** (literal,
+  HTML entity, unicode escape) across everything that landed: one entity
+  dash found in #34's copy as reported (`&mdash;`, which is exactly why a
+  raw-character grep is not enough), rephrased as two sentences. #30's and
+  #32's prose: clean on all three encodings.
+- **#30's ownership honesty confirmed to AGREE with the existing guards, not
+  parallel them:** it calls `principals.ownerAt`, which D22 names as the only
+  sanctioned way to turn a historical fact into a person - the same index
+  `ManagerLink` and Manager Compare guard from.
+- **The avgHoldingDays adjacency call (flagged by Lead B, decided here):**
+  the metric is untouched - it feeds The Tortoise, Hot Potato and every
+  dossier, and Lead B was right not to move it. The fix is one word at the
+  exact point of confusion: Home's footer now reads "avg completed hold",
+  which is what the number has always measured, so it stops reading as a
+  contradiction of "3y 9mo+ still running" two sections below. The footer
+  also wraps instead of truncating, since the annotated count it was cutting
+  off is what drives the capture nudge above it.
+- **One small dedupe:** the recap page hand-rolled an ordinal suffix;
+  `ordinal()` in `lib/derive/describe` already exists and now serves it.
+- **Full gate:** 484/484 tests, typecheck and lint clean, both new surfaces
+  plus the Home panel verified at 390px against the live league.
+- **Non-blocking for later:** ~100 em dashes persist in round-0/1 CODE
+  COMMENTS (sleeperLinks.ts, lineage/index.ts and friends) - never
+  user-facing, predating enforcement, and a mass rewrite mid-round would be
+  churn for its own sake. Worth one dedicated sweep commit some quiet day if
+  the rule is meant to cover comments too.
