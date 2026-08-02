@@ -494,3 +494,19 @@ four-way read on the same inputs, and `tradefinder.test.ts` asserts it agrees wi
 the other fails the suite. Rejected: refactoring `diagnose` to accept a
 pre-computed ranking (touches /plan's contract mid-integration for a perf win the
 test-pinned copy already delivers).
+
+## D34. Dark stays sub-AA on faint text; the contrast theme is the AA remedy
+The round-5 contrast audit measured the committed dark default at 1,606 AA failures,
+dominated by `--color-faint` at 3.75:1 against the 4.5 body-text bar. This is recorded
+as a KNOWN, DELIBERATE identity tradeoff, not fixed: faint text is faint because the
+dark editorial identity (D15, re-affirmed by four separate votes in round 1) uses
+de-emphasis as a design tool, and brightening 1,600+ instances would change what the
+app looks like everywhere to serve a need the new high-contrast theme now serves in
+one tap. The escape hatch IS the remedy - that is what round 5 shipped it for, and it
+is why that theme is more load-bearing than a preference. Two residuals ride along:
+translucent accent pills (`text-accent` on `bg-accent/15`) are mathematically unable
+to clear 4.5 at current alpha values even in the contrast theme (~8 small pills at
+4.08-4.49; the real fix is neutral pill grounds, a structural change to component
+markup that belongs to a dedicated pass, not a theme override), and any future
+revisiting of the default's own contrast is an owner-level identity question, not an
+engineering one.

@@ -776,3 +776,119 @@ false alarm in August and the note disappears entirely in season.
   user-facing, predating enforcement, and a mass rewrite mid-round would be
   churn for its own sake. Worth one dedicated sweep commit some quiet day if
   the rule is meant to cover comments too.
+
+## Round 5 - closing out the original list, no vote needed
+
+Same four, no departures. After round 4 the original 15-candidate list plus
+everything it grew is down to exactly three untouched items, and for the
+first time a vote would be theater rather than a real choice:
+
+- **31 - Light/high-contrast toggle.** Fully de-risked and scoped since
+  round 2's debate, has placed in three straight votes, has never once won -
+  something else has always been more compelling with only two Lead slots
+  to give. With no competing feature-shaped candidate left, it gets the
+  slot outright instead of losing a fourth time on the same math.
+- **14 and 15 - cold-start performance audit and accessibility audit.**
+  Excluded from every prior vote on the team's own established finding:
+  open-ended engineering hygiene, not a single-session Lead-owned feature.
+  That finding still holds, but nothing says an audit can't be assigned
+  directly the way 17/28/33/34 were - so both go to one Lead as a combined
+  hygiene pass rather than a vote nobody could meaningfully cast.
+
+**Assignments:**
+- **Opus Lead B -> 31** (light/high-contrast toggle).
+- **Sonnet Lead D -> 14 + 15** (cold-start performance audit and
+  accessibility audit, combined). Audit findings should still ship as real,
+  verified fixes where safe to do inline (memoization, TTLs, focus states,
+  contrast, ARIA labels) rather than a report with no code behind it -
+  same standard as every prior round's build.
+
+Once this round lands, the entire round-1 brainstorm and everything it grew
+into round 2/3/4 will be fully built or explicitly accounted for. Worth a
+fresh brainstorm before any round 6, rather than stretching this list
+further.
+
+### Round 5 - what got built
+
+**Opus Lead B - light/high-contrast toggle: shipped, and the app's first
+settings page with it.** `lib/theme.ts` owns the vocabulary (three themes:
+dark default, Paper, High contrast), `globals.css` restates the same token
+names under `:root[data-theme=...]` so no component knows a theme exists, and
+an inline boot script applies the stored choice before first paint - the
+flash of the wrong theme every themed app gets wrong once, tested by
+EXECUTING the real script against a stub document rather than eyeballing the
+string. The toggle holds no state: the `<html>` attribute is the source of
+truth, subscribed via `useSyncExternalStore` and a MutationObserver. Scoping
+held exactly as round 2 settled it - dark stays the default and the identity;
+the CSS says "an escape hatch, not a rebrand" in so many words. Built a real
+contrast auditor rather than trusting eyes; both non-default palettes are set
+by measurement (the first light values tried failed the bar and were
+darkened until the whole app cleared it). The settings page lands exactly
+where round 1 said it should: folded in with the first real preference.
+
+**Sonnet Lead D - cold-start performance audit: shipped.** One shared
+`cachedValuePlayers` replaces seven call sites' independent recomputation of
+the full league value model (the awards page alone was computing it twice per
+request), and the search route's private value memo from round 1 dissolved
+into it. Verified live: /awards 536ms cold, 88ms warm, /values and /web
+riding the same map.
+
+**Haiku Worker 3 - accessibility audit: done.** The one real gap was focus
+states on `<summary>` disclosure elements (used by the commissioner page,
+the recap, and the streak panel's sibling patterns) - `summary` added to the
+global focus-visible rule. Everything else was already at bar.
+
+**The waiver-type bug (dispatched mid-round): fixed at the definition.**
+This league runs rolling-priority waivers, so `waiver_bid` is null on every
+waiver row ever - the FAAB threshold in `isNotable` had silently reduced
+"notable" to trades-only while three pages promised otherwise. Now
+`buildIsNotable` reads the league's actual waiver type: FAAB leagues keep the
+bid threshold, everyone else gets contested claims (multiple managers, same
+player, same week - 41 real contested player-weeks in 2025 alone), and a
+shared `notableWaiverLabel` keeps /ledger, /commissioner and /recap
+describing the same filter in the same words. The fixture now declares
+`waiver_type: 2` to match the FAAB bids it fabricates. Visible immediately:
+Home's capture nudge went from 16 decisions to 29.
+
+### Chief Fable's integration review, round 5
+
+- **The two contrast decisions (Lead B correctly escalated rather than fixed):**
+  recorded as D34. Dark's 1,606 AA failures stay - faint-by-design is the
+  identity D15 committed to, and the contrast theme now serves the need in
+  one tap; brightening the whole app to fix a solved problem would be a
+  rebrand by increments. The translucent-pill residual (~8 pills, 4.08-4.49
+  in contrast) is likewise logged: the real fix is neutral pill grounds,
+  structural, for a dedicated pass.
+- **The themeColor gap: fixed rather than logged.** A paper page under
+  near-black browser chrome looks broken on exactly the phones this app is
+  built for. `THEME_CHROME` in lib/theme.ts (each value is that theme's own
+  `--color-bg`), written by the boot script and the toggle, with the
+  viewport default now reading from the same map. The boot-script test stub
+  grew a `querySelector` so the new path is executed, not assumed.
+- **#14's cache, tightened during review:** the TTL-and-string-key first cut
+  allowed a refreshed corpus to be served minutes of stale values (two clocks
+  that merely match are not one clock, and `players.size` is a weak proxy for
+  content). Rewritten as a WeakMap keyed on the corpus's own `players` Map
+  instance - `getLeagueHistory` rebuilds the wrapper per request but hands
+  back the same Map for the corpus's whole life, so identity makes the
+  pairing exact by construction and invalidation is automatic.
+- **The FAB overlap report, measured rather than re-litigated:** the round-1
+  invariant still holds - last content clears the button's top edge by
+  exactly 20px on Home, League and Roster at 390px (safe-area + 160px main
+  padding vs safe-area + 140px button top). What the screenshots show is the
+  mid-scroll overlap inherent to ANY floating button. That is a real design
+  question (hide-on-scroll, or a search slot in the bottom nav) and belongs
+  in the fresh round-6 brainstorm, not in a patch.
+- **Full gate:** 508/508 tests, typecheck and lint clean. Verified at 390px
+  live: all three themes (boot persistence across reload, chrome tint moving
+  with the theme, SVG charts and semantic colors holding in both non-default
+  palettes), cache timings, FAB clearance, and the waiver fix's visible
+  effect on Home.
+
+**THE ORIGINAL LIST IS CLOSED.** With 31, 14 and 15 landed, every candidate
+from the round-1 brainstorm - and everything rounds 2-4 grew out of it - is
+now built or explicitly decided against with reasons on file. A fresh
+brainstorm is the right move before any round 6; the seeds already banked:
+the FAB's mid-scroll design question, the structural pill-ground contrast
+fix, the em-dash comment sweep, and whether the digest's group header should
+follow its rows to the trade web.
