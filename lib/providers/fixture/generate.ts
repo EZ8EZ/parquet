@@ -573,6 +573,12 @@ export function generateCorpus(): FixtureCorpus {
         pick_trading: 1,
         playoff_teams: 6,
         waiver_budget: 100,
+        // The fixture fabricates real FAAB bid amounts on its waiver transactions
+        // (see generateTransaction's `waiverBid`), so it has to declare itself a
+        // FAAB league (Sleeper waiver_type 2) to match - otherwise isFaabLeague()
+        // would read this as a rolling-priority league with bids that should not
+        // exist, and the fixture-vs-live scenarios would test the wrong path.
+        waiver_type: 2,
       },
     };
   }

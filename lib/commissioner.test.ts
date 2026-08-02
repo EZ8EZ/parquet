@@ -42,6 +42,43 @@ describe("getAuditLog", () => {
     expect(log.map((e) => e.transactionId).sort()).toEqual(["bigwaiver", "trade1"]);
   });
 
+  it("uses contested claims, not a dead FAAB bar, as the notability signal for a rolling-priority league", () => {
+    // Regression for the round-6 finding: this league runs waiver_type 0
+    // (rolling priority), so waiverBid is null on every real waiver row and the
+    // old NOTABLE_FAAB >= 20 check could never fire. The audit log must fall
+    // back to contested claims (two rosters adding the same player the same
+    // week) instead of silently showing trades only.
+    const rolling: LeagueHistory = {
+      ...h,
+      currentLeague: {
+        ...h.currentLeague,
+        settings: { ...h.currentLeague.settings, waiver_type: 0 },
+      },
+      transactions: [
+        tx({ transactionId: "trade1", type: "trade", rosterIds: [1, 2] }),
+        // Uncontested claim - real activity, but not notable.
+        tx({ transactionId: "solowaiver", type: "waiver", rosterIds: [3], adds: { p9: 3 } }),
+        // Contested claim - two rosters wanted the same player the same week.
+        tx({
+          transactionId: "wonit",
+          type: "waiver",
+          status: "complete",
+          rosterIds: [4],
+          adds: { p10: 4 },
+        }),
+        tx({
+          transactionId: "lostit",
+          type: "waiver",
+          status: "failed",
+          rosterIds: [5],
+          adds: { p10: 5 },
+        }),
+      ],
+    };
+    const log = getAuditLog(rolling);
+    expect(log.map((e) => e.transactionId).sort()).toEqual(["trade1", "wonit"]);
+  });
+
   it("gives trades a deep link into the trade web and nothing else does", () => {
     const withTxns: LeagueHistory = {
       ...h,

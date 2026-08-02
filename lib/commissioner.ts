@@ -10,11 +10,11 @@
  *      transaction: `/ledger` already owns the viewer's own decisions (with
  *      annotation and reasoning), and copying its rows here would be a second
  *      surface the two pages would have to be kept in sync with by hand. Instead
- *      this scopes to NOTABLE transactions (`isNotable`, imported straight from
- *      `lib/ledger.ts` rather than redefined - one definition of "worth showing"
- *      for the whole app) across EVERY roster, not just the viewer's, and hands
- *      each row a link to an existing surface: a trade opens on its own strand
- *      via `tradeWebHref`, everything else opens on the manager who made it.
+ *      this scopes to NOTABLE transactions (`buildIsNotable`, imported straight
+ *      from `lib/ledger.ts` rather than redefined - one definition of "worth
+ *      showing" for the whole app) across EVERY roster, not just the viewer's, and
+ *      hands each row a link to an existing surface: a trade opens on its own
+ *      strand via `tradeWebHref`, everything else opens on the manager who made it.
  *   2. LEAGUE HEALTH CHECKS. Two signals, both genuinely new arithmetic over
  *      existing fields rather than a new model: a roster's current starting
  *      lineup against `lineupSlots()` (already built for the fragility solver),
@@ -25,7 +25,7 @@
  */
 import type { LeagueHistory } from "./history";
 import { describeTransaction, rosterName } from "./derive/describe";
-import { isNotable } from "./ledger";
+import { buildIsNotable } from "./ledger";
 import { lineupSlots } from "./metrics/fragility";
 import { tradeWebHref } from "./tradegraph/url";
 
@@ -53,13 +53,15 @@ export interface AuditEntry {
 }
 
 /**
- * Notable transactions (trades, and waiver claims above the ledger's own FAAB bar),
- * across every roster in the league, newest first. Same notability rule as
- * `/ledger` by construction - see the file header for why that matters.
+ * Notable transactions (trades, plus whichever waiver signal actually applies to
+ * this league - see `buildIsNotable`), across every roster in the league, newest
+ * first. Same notability rule as `/ledger` by construction - see the file header
+ * for why that matters.
  */
 export function getAuditLog(h: LeagueHistory): AuditEntry[] {
+  const notable = buildIsNotable(h);
   return h.transactions
-    .filter(isNotable)
+    .filter(notable)
     .map((t) => {
       const rosterId = t.type !== "trade" ? (t.rosterIds[0] ?? null) : null;
       return {

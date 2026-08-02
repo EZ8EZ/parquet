@@ -9,6 +9,7 @@ import {
 import { getLeagueHistory } from "@/lib/history";
 import { getTradedPickLineages } from "@/lib/lineage";
 import { getAuditLog, getStaleRosters, type AuditEntry } from "@/lib/commissioner";
+import { notableWaiverLabel } from "@/lib/ledger";
 import { EmptyState, PageHeader, SectionHeader, Tag } from "@/components/ui";
 import { cn, fmtValue } from "@/lib/ui";
 import { LineageCard } from "../drafts/parts";
@@ -77,6 +78,7 @@ export default async function CommissionerPage() {
   );
   const staleRosters = getStaleRosters(h);
   const auditLog = getAuditLog(h);
+  const waiverLabel = notableWaiverLabel(h);
 
   const bySeason = new Map<string, AuditEntry[]>();
   for (const e of auditLog) {
@@ -182,13 +184,13 @@ export default async function CommissionerPage() {
         }
       />
       <p className="-mt-1 mb-1.5 text-[11px] leading-snug text-muted">
-        Trades and big-FAAB waiver claims, across every team - the same bar the ledger
+        Trades and {waiverLabel}, across every team - the same bar the ledger
         uses for what counts as notable. Everything else is real activity too, just not
         the kind a commissioner needs a checklist for.
       </p>
       {auditLog.length === 0 ? (
         <EmptyState icon={<ScrollText size={26} />} title="No notable moves yet">
-          Trades and large waiver claims will show up here as they happen.
+          Trades and {waiverLabel} will show up here as they happen.
         </EmptyState>
       ) : (
         <div className="space-y-3">

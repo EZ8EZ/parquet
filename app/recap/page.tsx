@@ -11,6 +11,7 @@ import {
 import { getLeagueHistory } from "@/lib/history";
 import { ordinal } from "@/lib/derive/describe";
 import { loadSeasonRecap } from "@/lib/recap";
+import { notableWaiverLabel } from "@/lib/ledger";
 import { EmptyState, PageHeader, SectionHeader, Stat, Tag } from "@/components/ui";
 import { AwardBadge, GROUP_TONE, iconForAward } from "@/components/AwardBadge";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
@@ -57,9 +58,11 @@ export default async function RecapPage() {
 
   const possessive = viewerWasOwner ? "Your" : "The";
   const subject = viewerWasOwner ? "you" : "this roster";
-  // Same bar as /ledger and the commissioner audit log: trades and big-FAAB claims
-  // lead, every small waiver claim is real too but would drown the notable ones -
-  // it's tucked behind a disclosure instead of dropped.
+  // Same bar as /ledger and the commissioner audit log: trades lead, plus whichever
+  // waiver signal actually applies to this league (see notableWaiverLabel) - every
+  // small waiver claim is real too but would drown the notable ones, so it's
+  // tucked behind a disclosure instead of dropped.
+  const waiverLabel = notableWaiverLabel(h);
   const notableDecisions = decisions.filter((d) => d.notable);
   const routineDecisions = decisions.filter((d) => !d.notable);
 
@@ -110,7 +113,7 @@ export default async function RecapPage() {
       />
       {notableDecisions.length === 0 ? (
         <EmptyState icon={<ScrollText size={26} />} title="No notable moves">
-          No trades or big-FAAB waiver claims recorded for {subject} in {season}
+          No trades or {waiverLabel} recorded for {subject} in {season}
           {routineDecisions.length > 0 ? " - just the smaller moves below." : "."}
         </EmptyState>
       ) : (

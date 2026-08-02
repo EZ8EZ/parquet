@@ -1,6 +1,6 @@
 import { CheckCircle2 } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
-import { getLedgerEntries, getLedgerSummary } from "@/lib/ledger";
+import { getLedgerEntries, getLedgerSummary, notableWaiverLabel } from "@/lib/ledger";
 import { LedgerItem } from "@/components/LedgerItem";
 import { PageHeader, SectionHeader, Stat, EmptyState } from "@/components/ui";
 
@@ -10,6 +10,7 @@ export default async function LedgerPage() {
   const h = await getLeagueHistory();
   const entries = getLedgerEntries(h);
   const summary = getLedgerSummary(h);
+  const waiverLabel = notableWaiverLabel(h);
 
   const toCapture = entries.filter((e) => e.notable && !e.annotation);
   const captured = entries.filter((e) => e.annotation);
@@ -27,6 +28,10 @@ export default async function LedgerPage() {
         <Stat label="Captured" value={summary.annotated} tone="positive" />
         <Stat label="Notable" value={summary.notable} />
       </div>
+      <p className="-mt-1 mb-2 text-[11px] leading-snug text-muted">
+        Notable means every trade, plus {waiverLabel} - the same bar the
+        commissioner audit log and season recap use.
+      </p>
 
       <SectionHeader title="To capture - newest first" />
       {toCapture.length === 0 ? (
