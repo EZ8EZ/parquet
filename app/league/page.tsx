@@ -27,6 +27,7 @@ const DEEPER = [
   { href: "/drafts", label: "Drafts" },
   { href: "/ledger", label: "Ledger" },
   { href: "/commissioner", label: "Commissioner" },
+  { href: "/recap", label: "Season recap" },
 ] as const;
 
 const POSTURE_TONE = {

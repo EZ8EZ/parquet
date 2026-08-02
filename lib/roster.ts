@@ -3,6 +3,7 @@
  * contend/rebuild window. Provider-agnostic (works off history.players + rosters).
  */
 import type { LeagueHistory } from "./history";
+import type { Roster } from "./providers/types";
 import { valuePlayers, type ValueBreakdown } from "./valuation";
 import { computeTiers, tierResolver } from "./rankings/tiers";
 import { pickCapital, type PickCapital } from "./picks";
@@ -208,6 +209,41 @@ export interface CurrentForm {
   teams: number;
 }
 
+/**
+ * Standings for ONE season's roster snapshot: win differential first, then points as
+ * the tiebreak. Pulled out of `currentFormByRoster` so any caller that already knows
+ * which season it wants (rather than "whichever one was last played") can get the
+ * identical ranking instead of re-deriving it - e.g. a season recap, which needs the
+ * last COMPLETE season specifically, a stricter bar than "played at all".
+ */
+export function rankSeasonRosters(
+  rosters: Roster[],
+  season: string,
+  isLive: boolean,
+): Map<number, CurrentForm> {
+  const ranked = [...rosters].sort((a, b) => {
+    const aw = a.settings.wins - a.settings.losses;
+    const bw = b.settings.wins - b.settings.losses;
+    if (bw !== aw) return bw - aw;
+    return b.settings.fpts - a.settings.fpts;
+  });
+
+  const out = new Map<number, CurrentForm>();
+  ranked.forEach((r, i) => {
+    out.set(r.rosterId, {
+      season,
+      isLive,
+      wins: r.settings.wins,
+      losses: r.settings.losses,
+      ties: r.settings.ties,
+      fpts: r.settings.fpts,
+      rank: i + 1,
+      teams: ranked.length,
+    });
+  });
+  return out;
+}
+
 export async function currentFormByRoster(
   h: LeagueHistory,
 ): Promise<Map<number, CurrentForm>> {
@@ -220,28 +256,7 @@ export async function currentFormByRoster(
       (r) => r.settings.wins + r.settings.losses > 0 || r.settings.fpts > 0,
     );
     if (!played) continue;
-
-    const ranked = [...rosters].sort((a, b) => {
-      const aw = a.settings.wins - a.settings.losses;
-      const bw = b.settings.wins - b.settings.losses;
-      if (bw !== aw) return bw - aw;
-      return b.settings.fpts - a.settings.fpts;
-    });
-
-    const out = new Map<number, CurrentForm>();
-    ranked.forEach((r, i) => {
-      out.set(r.rosterId, {
-        season,
-        isLive: season === h.currentLeague.season,
-        wins: r.settings.wins,
-        losses: r.settings.losses,
-        ties: r.settings.ties,
-        fpts: r.settings.fpts,
-        rank: i + 1,
-        teams: ranked.length,
-      });
-    });
-    return out;
+    return rankSeasonRosters(rosters, season, season === h.currentLeague.season);
   }
   return new Map();
 }
