@@ -7,6 +7,7 @@
  * in ./config. Positional value is computed FROM the league's scoring settings
  * (never hardcoded) so steals/blocks-heavy scoring correctly lifts guards/bigs.
  */
+import type { LeagueHistory } from "../history";
 import type { Player } from "../providers/types";
 import {
   VALUATION_CONFIG,
@@ -188,6 +189,58 @@ export function valuePlayers(
   const out = new Map<string, ValueBreakdown>();
   for (const p of players) out.set(p.playerId, valuePlayer(p, scoring, cfg, posMults));
   return out;
+}
+
+/**
+ * Memoized `valuePlayers` over the WHOLE corpus, at the default config - which is
+ * every production call site (dossiers, timelines, fragility, draft grades, trade
+ * value, the trade graph, /values, /web, search all call `valuePlayers([...h.players
+ * .values()], h.currentLeague.scoringSettings)` with no third argument). Before this,
+ * a single request for the awards page recomputed the full league's value model
+ * TWICE on its own (`draftCaptureProfiles` and `tradeValueProfiles` each called
+ * `valuePlayers` independently inside `performanceMetrics`), on top of every other
+ * page paying for its own copy.
+ *
+ * KEYED ON THE CORPUS ITSELF, not on a TTL. `getLeagueHistory` builds a fresh
+ * wrapper object per request, but the `players` Map inside it is the SAME instance
+ * for as long as the corpus cache holds (history.ts hands back `cachedCorpus.value`
+ * untouched), and a corpus refresh - TTL expiry, `fresh: true`, or
+ * `invalidateHistory()` - always allocates a new one. Keying a WeakMap on that Map
+ * makes the pairing exact by construction: a value map can never outlive the corpus
+ * it was computed from, because the corpus IS its key. (A first cut of this used a
+ * parallel 5-minute TTL and a provider/league/size string key; two clocks that
+ * merely match still allow a refreshed corpus to be served minutes of stale values,
+ * and `players.size` is a weak proxy for content. Identity is not a proxy.)
+ *
+ * `scoringSettings` needs no spot in the key - it comes off the same corpus, so
+ * same players Map implies same scoring. A caller that passes a non-default `cfg`
+ * (only tests do) bypasses the cache entirely rather than risk one caller's custom
+ * config leaking into another's.
+ */
+let valuesByCorpus = new WeakMap<
+  ReadonlyMap<string, Player>,
+  Map<string, ValueBreakdown>
+>();
+
+export function cachedValuePlayers(
+  h: LeagueHistory,
+  cfg: ValuationConfig = VALUATION_CONFIG,
+): Map<string, ValueBreakdown> {
+  if (cfg !== VALUATION_CONFIG) {
+    return valuePlayers([...h.players.values()], h.currentLeague.scoringSettings, cfg);
+  }
+  const hit = valuesByCorpus.get(h.players);
+  if (hit) return hit;
+  const value = valuePlayers([...h.players.values()], h.currentLeague.scoringSettings);
+  valuesByCorpus.set(h.players, value);
+  return value;
+}
+
+/** Drop every memoized value map. Test hook, mirroring the other in-process
+ *  caches' `invalidateX` convention - production code never needs it, since a
+ *  corpus refresh invalidates by identity on its own. */
+export function invalidateValuesCache(): void {
+  valuesByCorpus = new WeakMap();
 }
 
 /** What we know about which slot a pick will land in. */

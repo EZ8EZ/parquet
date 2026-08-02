@@ -1,11 +1,14 @@
 import { describe, expect, it } from "vitest";
 import type { Player } from "../providers/types";
 import { corpus, FIXTURE_LEAGUE_ID } from "../providers/fixture";
+import { buildFixtureHistory } from "../testing/fixtureHistory";
 import {
   VALUATION_CONFIG,
   ageMultiplier,
+  cachedValuePlayers,
   classMultiplier,
   estimateOverallPick,
+  invalidateValuesCache,
   pickValue,
   slotDistribution,
   positionMultipliers,
@@ -391,5 +394,58 @@ describe("tierOf", () => {
   it("labels descending tiers", () => {
     expect(tierOf(8000)).toBe("Franchise");
     expect(tierOf(100)).toBe("Fringe");
+  });
+});
+
+describe("cachedValuePlayers", () => {
+  it("returns a value-identical map to the uncached call", () => {
+    const h = buildFixtureHistory();
+    invalidateValuesCache();
+    const direct = valuePlayers(
+      [...h.players.values()],
+      h.currentLeague.scoringSettings,
+    );
+    const cached = cachedValuePlayers(h);
+    expect([...cached.entries()]).toEqual([...direct.entries()]);
+  });
+
+  it("hits the cache on a second call - the whole point of it existing", () => {
+    const h = buildFixtureHistory();
+    invalidateValuesCache();
+    const first = cachedValuePlayers(h);
+    const second = cachedValuePlayers(h);
+    // Same Map INSTANCE, not just equal content - proof the second call never
+    // touched valuePlayers again.
+    expect(second).toBe(first);
+  });
+
+  it("bypasses the cache entirely for a non-default config", () => {
+    const h = buildFixtureHistory();
+    invalidateValuesCache();
+    const customCfg = { ...VALUATION_CONFIG, maxValue: VALUATION_CONFIG.maxValue / 2 };
+    const custom = cachedValuePlayers(h, customCfg);
+    const defaultAfter = cachedValuePlayers(h);
+    // The custom-config call must never have been written into the shared cache -
+    // the very next default call still has to be the real, default-config values.
+    expect(defaultAfter).not.toBe(custom);
+    const direct = valuePlayers(
+      [...h.players.values()],
+      h.currentLeague.scoringSettings,
+    );
+    expect([...defaultAfter.entries()]).toEqual([...direct.entries()]);
+  });
+
+  it("recomputes after invalidation, and for a different corpus instance", () => {
+    const h = buildFixtureHistory();
+    invalidateValuesCache();
+    const first = cachedValuePlayers(h);
+    invalidateValuesCache();
+    const second = cachedValuePlayers(h);
+    expect(second).not.toBe(first);
+    expect([...second.entries()]).toEqual([...first.entries()]);
+    // A different corpus (new players Map instance, as every corpus refresh
+    // produces) must never see the old corpus's values - identity is the key.
+    const h2 = buildFixtureHistory();
+    expect(cachedValuePlayers(h2)).not.toBe(second);
   });
 });

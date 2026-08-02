@@ -41,7 +41,7 @@
 import type { LeagueHistory } from "../history";
 import { getLeagueProvider } from "../providers";
 import type { Roster } from "../providers/types";
-import { valuePlayers } from "../valuation";
+import { cachedValuePlayers } from "../valuation";
 import { buildDraftIndex } from "../lineage";
 import { getPrincipals, type PrincipalIndex } from "../principals";
 
@@ -488,10 +488,7 @@ export async function draftCaptureProfiles(
   const index = await buildDraftIndex(h);
   if (!index.supported) return new Map();
 
-  const values = valuePlayers(
-    [...h.players.values()],
-    h.currentLeague.scoringSettings,
-  );
+  const values = cachedValuePlayers(h);
   const valueOf = (id: string) => values.get(id)?.value ?? 0;
   const nameOf = (id: string) => h.players.get(id)?.fullName ?? id;
 
@@ -566,10 +563,7 @@ export function tradeValueProfiles(
   h: LeagueHistory,
   principals: PrincipalIndex,
 ): Map<string, TradeValueProfile> {
-  const values = valuePlayers(
-    [...h.players.values()],
-    h.currentLeague.scoringSettings,
-  );
+  const values = cachedValuePlayers(h);
   const valueOf = (id: string) => values.get(id)?.value ?? 0;
   const nameOf = (id: string) => h.players.get(id)?.fullName ?? id;
 

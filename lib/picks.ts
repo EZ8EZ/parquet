@@ -9,7 +9,7 @@
  */
 import type { LeagueHistory } from "./history";
 import { ordinal, rosterName } from "./derive/describe";
-import { pickValue, valuePlayers } from "./valuation";
+import { cachedValuePlayers, pickValue } from "./valuation";
 
 export interface OwnedPick {
   season: string;
@@ -139,10 +139,7 @@ export function strengthRanks(h: LeagueHistory): Map<number, number> {
       return b.settings.fpts - a.settings.fpts;
     });
   } else {
-    const vals = valuePlayers(
-      [...h.players.values()],
-      h.currentLeague.scoringSettings,
-    );
+    const vals = cachedValuePlayers(h);
     const talent = (rosterId: number) => {
       const roster = h.rostersById.get(rosterId);
       if (!roster) return 0;

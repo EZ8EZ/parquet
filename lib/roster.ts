@@ -4,7 +4,7 @@
  */
 import type { LeagueHistory } from "./history";
 import type { Roster } from "./providers/types";
-import { valuePlayers, type ValueBreakdown } from "./valuation";
+import { cachedValuePlayers, type ValueBreakdown } from "./valuation";
 import { computeTiers, tierResolver } from "./rankings/tiers";
 import { pickCapital, type PickCapital } from "./picks";
 import { loadSeasonRosters } from "./metrics/skill";
@@ -74,11 +74,10 @@ function relativeWindow(
 
 export function analyzeRoster(h: LeagueHistory, rosterId: number): RosterAnalysis {
   const roster = h.rostersById.get(rosterId);
-  const scoring = h.currentLeague.scoringSettings;
-  const valuesMap: Map<string, ValueBreakdown> = valuePlayers(
-    [...h.players.values()],
-    scoring,
-  );
+  // Cached: this is called once PER ROSTER by leagueValueRanking below, and every
+  // call needs the identical league-wide value map - see cachedValuePlayers for why
+  // recomputing it 14 times over was the single biggest cold-start cost found.
+  const valuesMap: Map<string, ValueBreakdown> = cachedValuePlayers(h);
   // Tiers break at natural cliffs in the LEAGUE-WIDE value distribution (not at
   // hardcoded thresholds, and not per-roster - a "Franchise" label has to mean the
   // same thing on every team's page). The floor (10% of the top asset) bounds the

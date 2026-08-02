@@ -11,7 +11,7 @@ import {
   type ManagerMetric,
   type PlayerNow,
 } from "@/lib/tradegraph";
-import { valuePlayers } from "@/lib/valuation";
+import { cachedValuePlayers } from "@/lib/valuation";
 import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
 import { leagueTimelines, playerDuration } from "@/lib/metrics/duration";
 import { leagueFragility } from "@/lib/metrics/fragility";
@@ -58,8 +58,7 @@ export default async function TradeWebPage() {
   // trade - so a tree node can say what the asset is worth TODAY, not just what
   // it was called at the time. Priced with the same recipe /values uses, so a
   // tier label here never disagrees with the one on that page.
-  const scoring = h.currentLeague.scoringSettings;
-  const values = valuePlayers([...h.players.values()], scoring);
+  const values = cachedValuePlayers(h);
   const valuesDesc = [...values.values()]
     .map((v) => v.value)
     .filter((v) => v > 0)

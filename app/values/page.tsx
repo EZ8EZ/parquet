@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
-import { valuePlayers } from "@/lib/valuation";
+import { cachedValuePlayers } from "@/lib/valuation";
 import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
 import { ValuesList, type ValueRow } from "@/components/ValuesList";
 import { fmtValue } from "@/lib/ui";
@@ -10,8 +10,7 @@ export const dynamic = "force-dynamic";
 
 export default async function ValuesPage() {
   const h = await getLeagueHistory();
-  const scoring = h.currentLeague.scoringSettings;
-  const values = valuePlayers([...h.players.values()], scoring);
+  const values = cachedValuePlayers(h);
 
   // Tiers break where the value distribution actually cliffs, not at hardcoded
   // thresholds. The floor (10% of the top asset) bounds the cliff search to assets

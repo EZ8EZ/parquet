@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getLeagueHistory, type LeagueHistory } from "@/lib/history";
 import { getPrincipals, tenureLabel } from "@/lib/principals";
-import { valuePlayers, type ValueBreakdown } from "@/lib/valuation";
+import { cachedValuePlayers, type ValueBreakdown } from "@/lib/valuation";
 import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
 import {
   buildDraftIndex,
@@ -80,33 +80,35 @@ export interface SearchResponse {
 // ---------------------------------------------------------------- player values
 //
 // Tiers only mean something relative to the WHOLE league's value distribution (see
-// /values), so this can't be computed on just the matched subset. Memoized the same
-// way lib/principals.ts and lib/lineage memo the corpus derivations they build on -
-// a keystroke-driven endpoint recomputing the full valuation on every request would
-// otherwise be the one search feature that's actually slow.
-let valueCache: {
+// /values), so this can't be computed on just the matched subset. The player values
+// themselves now come from lib/valuation's own shared `cachedValuePlayers` (every
+// caller in the app - dossiers, timelines, fragility, /values, /web, this route -
+// used to memoize the identical computation separately; see DECISIONS for the
+// cold-start pass that consolidated it). Tiers are cheap to rebuild from an already-
+// cached value map, so only the tier resolver is memoized here, still keyed and
+// TTL'd the same way lib/principals.ts and lib/lineage memo the corpus derivations
+// they build on - a keystroke-driven endpoint has no business rebuilding it per key.
+let tierCache: {
   at: number;
   key: string;
-  values: Map<string, ValueBreakdown>;
   tierFor: (v: number) => { label: string } | null;
 } | null = null;
-const VALUE_TTL_MS = 5 * 60_000;
+const TIER_TTL_MS = 5 * 60_000;
 
 function getPlayerValuation(h: LeagueHistory) {
+  const values = cachedValuePlayers(h);
   const key = `${h.provider}|${h.currentLeague.leagueId}`;
-  if (valueCache && valueCache.key === key && Date.now() - valueCache.at < VALUE_TTL_MS) {
-    return valueCache;
+  if (tierCache && tierCache.key === key && Date.now() - tierCache.at < TIER_TTL_MS) {
+    return { values, tierFor: tierCache.tierFor };
   }
-  const scoring = h.currentLeague.scoringSettings;
-  const values = valuePlayers([...h.players.values()], scoring);
   const valuesDesc = [...values.values()]
     .map((v) => v.value)
     .filter((v) => v > 0)
     .sort((a, b) => b - a);
   const tiers = computeTiers(valuesDesc, { floor: (valuesDesc[0] ?? 0) * 0.1 });
   const tierFor = tierResolver(tiers);
-  valueCache = { at: Date.now(), key, values, tierFor };
-  return valueCache;
+  tierCache = { at: Date.now(), key, tierFor };
+  return { values, tierFor };
 }
 
 function searchPlayers(h: LeagueHistory, needle: string): PlayerResult[] {

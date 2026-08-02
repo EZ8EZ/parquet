@@ -22,7 +22,7 @@
  */
 import type { LeagueHistory } from "../history";
 import type { PrincipalIndex } from "../principals";
-import { valuePlayers } from "../valuation";
+import { cachedValuePlayers } from "../valuation";
 import { buildDraftIndex } from "../lineage";
 import { gradeDraft, startupSeasons, type GradedPick } from "./skill";
 
@@ -126,10 +126,7 @@ export async function seasonDraftGrades(
   const index = await buildDraftIndex(h);
   if (!index.supported) return [];
 
-  const values = valuePlayers(
-    [...h.players.values()],
-    h.currentLeague.scoringSettings,
-  );
+  const values = cachedValuePlayers(h);
   const valueOf = (id: string) => values.get(id)?.value ?? 0;
   const nameOf = (id: string) => h.players.get(id)?.fullName ?? id;
 

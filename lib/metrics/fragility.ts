@@ -88,8 +88,8 @@
 import type { LeagueHistory } from "../history";
 import type { Player } from "../providers/types";
 import {
+  cachedValuePlayers,
   injuryMultiplier,
-  valuePlayers,
   VALUATION_CONFIG,
   type ValuationConfig,
 } from "../valuation";
@@ -726,11 +726,7 @@ export function leagueFragility(
   cfg: ValuationConfig = VALUATION_CONFIG,
 ): FragilityProfile[] {
   const slots = lineupSlots(h);
-  const values = valuePlayers(
-    [...h.players.values()],
-    h.currentLeague.scoringSettings,
-    cfg,
-  );
+  const values = cachedValuePlayers(h, cfg);
   const valueOf = (pid: string) => values.get(pid)?.value ?? 0;
 
   const byRoster = h.rosters.map((r) => ({
