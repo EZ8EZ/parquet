@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ChevronRight, GitBranch, Hourglass, Layers } from "lucide-react";
+import { ChevronRight, GitBranch, GraduationCap, Hourglass, Layers } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import {
   buildDraftIndex,
@@ -106,6 +106,21 @@ export default async function DraftsPage() {
               </div>
             ))}
           </div>
+
+          {/* Same nav pattern as /values -> /rank: a pill below the header stats
+              rather than a header action, since this leads to a different question
+              ("how did the drafting go") than the page above it ("what became of
+              this pick"). */}
+          <nav aria-label="Drafts sections" className="mt-2 flex gap-1.5">
+            <Link
+              href="/drafts/grades"
+              className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+            >
+              <GraduationCap size={13} aria-hidden="true" />
+              Draft report cards
+              <ChevronRight size={13} aria-hidden="true" />
+            </Link>
+          </nav>
 
           {/* Boards first: this is the page's navigation, and each tile carries its
               own counts so the shortcut costs no information. */}
