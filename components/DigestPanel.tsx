@@ -11,6 +11,7 @@ import {
   Repeat,
 } from "lucide-react";
 import type { Digest, DigestMoveItem } from "@/lib/digest";
+import { tradeWebHref } from "@/lib/tradegraph/url";
 import { cn } from "@/lib/ui";
 
 /**
@@ -96,7 +97,7 @@ export function DigestPanel({ digest }: { digest: Digest }) {
           href="/ledger"
         >
           {digest.trades.map((t) => (
-            <Row key={t.transactionId} href="/ledger" flagged={t.mine}>
+            <Row key={t.transactionId} href={tradeWebHref(t.transactionId)} flagged={t.mine}>
               <span className="block text-[13px] leading-snug text-ink">
                 {t.description}
               </span>
