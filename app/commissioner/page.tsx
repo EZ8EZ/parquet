@@ -107,26 +107,34 @@ export default async function CommissionerPage() {
           No empty starting slots and every team has moved this season.
         </EmptyState>
       ) : (
-        <div className="space-y-1.5">
-          {staleRosters.map((r) => (
-            <Link
-              key={r.rosterId}
-              href={`/managers/${r.rosterId}`}
-              className="flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-warn/30 bg-surface/60 px-2.5 py-1.5 transition-colors hover:bg-surface-2"
-            >
-              <ShieldAlert size={15} className="shrink-0 text-warn" aria-hidden="true" />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
-                  {r.name}
+        <>
+          {h.rosters.length > 0 && staleRosters.length / h.rosters.length > 0.75 && (
+            <p className="mb-2 text-[12px] leading-snug text-muted">
+              Most of the league is quiet right now. That is the offseason lull,
+              not a pile of separate problems.
+            </p>
+          )}
+          <div className="space-y-1.5">
+            {staleRosters.map((r) => (
+              <Link
+                key={r.rosterId}
+                href={`/managers/${r.rosterId}`}
+                className="flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-warn/30 bg-surface/60 px-2.5 py-1.5 transition-colors hover:bg-surface-2"
+              >
+                <ShieldAlert size={15} className="shrink-0 text-warn" aria-hidden="true" />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+                    {r.name}
+                  </span>
+                  <span className="block truncate text-[11px] leading-tight text-muted">
+                    {r.reasons.map((x) => x.detail).join(" · ")}
+                  </span>
                 </span>
-                <span className="block truncate text-[11px] leading-tight text-muted">
-                  {r.reasons.map((x) => x.detail).join(" · ")}
-                </span>
-              </span>
-              <ChevronRight size={13} className="shrink-0 text-faint" aria-hidden="true" />
-            </Link>
-          ))}
-        </div>
+                <ChevronRight size={13} className="shrink-0 text-faint" aria-hidden="true" />
+              </Link>
+            ))}
+          </div>
+        </>
       )}
 
       <SectionHeader

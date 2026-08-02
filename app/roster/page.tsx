@@ -401,6 +401,9 @@ export default async function RosterPage() {
             share={a.playerValue ? v.value / a.playerValue : 0}
             breakdown={v.breakdown}
             trajectory={valueTrajectory(v)}
+            // Young players' declining trajectory is just the age-curve premium unwinding,
+            // not a warning - show it in muted color instead of red.
+            trajectoryColor={v.age != null && v.age < 26 ? "var(--color-muted)" : undefined}
           />
         ))}
       </ul>

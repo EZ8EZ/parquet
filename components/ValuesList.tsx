@@ -59,6 +59,7 @@ export function ValueAssetRow({
   meta,
   share,
   trajectory,
+  trajectoryColor,
 }: {
   rank?: number;
   name: string;
@@ -80,6 +81,8 @@ export function ValueAssetRow({
    * caller only supplies it when it has a real, defensible series to show.
    */
   trajectory?: number[];
+  /** Optional override color for the trajectory sparkline (CSS variable). */
+  trajectoryColor?: string;
 }) {
   const [open, setOpen] = useState(false);
 
@@ -133,7 +136,7 @@ export function ValueAssetRow({
         </span>
         {trajectory && trajectory.length > 1 && (
           <span className="shrink-0" aria-hidden="true">
-            <Sparkline values={trajectory} width={48} height={20} />
+            <Sparkline values={trajectory} width={48} height={20} color={trajectoryColor} />
           </span>
         )}
         <span className="shrink-0 text-right">
