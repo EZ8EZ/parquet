@@ -18,7 +18,9 @@ import { getLedgerSummary } from "@/lib/ledger";
 import { loadDigest } from "@/lib/digest";
 import { currentFormByRoster } from "@/lib/roster";
 import { ordinal } from "@/lib/derive/describe";
+import { liveStreaks } from "@/lib/streaks";
 import { DigestPanel } from "@/components/DigestPanel";
+import { StreakPanel } from "@/components/StreakPanel";
 import { Wordmark } from "@/components/Brand";
 import { Card, Tag, DeltaValue, SectionHeader } from "@/components/ui";
 
@@ -32,6 +34,10 @@ export default async function HomePage() {
   const roster = h.rostersById.get(p.rosterId);
   const form = (await currentFormByRoster(h)).get(p.rosterId);
   const digest = await loadDigest(h);
+
+  // The clock is read inside lib/streaks (see its `opts.now`), which hands back the
+  // instant it used so the panel's stamp and its numbers describe the same moment.
+  const { streaks, countedAt } = liveStreaks(h, p.rosterId);
 
   const holdYears =
     p.avgHoldingDays != null ? (p.avgHoldingDays / 365).toFixed(1) : null;
@@ -181,8 +187,14 @@ export default async function HomePage() {
             value={`${p.deadline.buys} in/${p.deadline.sells} out`}
           />
         </div>
-        <p className="mt-1 truncate font-mono text-[11px] tnum text-faint">
-          {holdYears ? `avg hold ${holdYears}y · ` : ""}
+        {/* "completed" is load-bearing: avgHoldingDays averages holds that ENDED
+            (mostly churned waiver adds), while the streak panel below shows the
+            longest hold still OPEN. Side by side, "avg hold 0.2y" next to
+            "3y+ still running" reads as a contradiction unless this says which
+            population it measures. The metric itself is untouched - it feeds The
+            Tortoise/Hot Potato and the dossiers, which have their own context. */}
+        <p className="mt-1 font-mono text-[11px] leading-snug tnum text-faint">
+          {holdYears ? `avg completed hold ${holdYears}y · ` : ""}
           {p.acquisitions.count} in / {p.disposals.count} out ·{" "}
           {ledger.annotated}/{ledger.notable} annotated
         </p>
@@ -192,6 +204,12 @@ export default async function HomePage() {
           because every other figure here describes a state rather than a change. */}
       <SectionHeader title="Since your last visit" />
       <DigestPanel digest={digest} />
+
+      {/* The natural sibling of the digest, and the other half of the same question:
+          that panel is what CHANGED while you were gone, this one is what is still
+          running right now. Both are about the present; neither is a ranking. */}
+      <SectionHeader title="Still running" href="/awards" cta="vs. settled awards" />
+      <StreakPanel streaks={streaks} countedAt={countedAt} />
 
       {/* Findings */}
       {report.findings.length > 0 && (

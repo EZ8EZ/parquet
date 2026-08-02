@@ -303,7 +303,19 @@ function derivePosture(
   return out.sort((a, b) => a.season.localeCompare(b.season));
 }
 
-function computeHolding(h: LeagueHistory, rosterId: number) {
+/**
+ * Walk one roster's adds and drops once, yielding every COMPLETED hold and, left over
+ * at the end, every hold still open right now.
+ *
+ * The open ones used to be discarded here. They are the whole basis of a live hold
+ * streak (lib/streaks), and they have to come off the same walk as `avgHoldingDays`
+ * rather than a second one, or "how long you have held him" and "your average hold"
+ * end up disagreeing about what an acquisition even is. Two rules this walk fixes in
+ * one place: the FIRST add wins while a hold is open (a re-add mid-hold does not
+ * restart the clock), and a drop closes the hold so a later re-add legitimately
+ * starts a new one.
+ */
+export function holdingSpans(h: LeagueHistory, rosterId: number) {
   const acquiredAt = new Map<string, number>();
   const spans: { days: number; band: string }[] = [];
   for (const t of h.transactions) {
@@ -320,6 +332,11 @@ function computeHolding(h: LeagueHistory, rosterId: number) {
       }
     }
   }
+  return { spans, openSince: acquiredAt };
+}
+
+function computeHolding(h: LeagueHistory, rosterId: number) {
+  const { spans } = holdingSpans(h, rosterId);
   const avgDays = spans.length ? Math.round(avg(spans.map((s) => s.days))!) : null;
   const byBandMap = new Map<string, number[]>();
   for (const s of spans) {
