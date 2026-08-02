@@ -26,6 +26,7 @@ const DEEPER = [
   { href: "/web", label: "Trade web" },
   { href: "/drafts", label: "Drafts" },
   { href: "/ledger", label: "Ledger" },
+  { href: "/commissioner", label: "Commissioner" },
 ] as const;
 
 const POSTURE_TONE = {
