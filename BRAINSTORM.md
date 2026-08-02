@@ -481,3 +481,153 @@ consensus and the finder back to its rank-the-board invite.
   changed") rather than a drive-by fix, so it is named here instead of made.
   The search route's normalization-helper duplication flagged last round also
   still stands.
+
+## Round 3 - down to four
+
+No new departures this round, but Opus Lead A's hard stop mid-round-2 means
+the roster settles at four without a replacement: Chief Fable, Opus Lead B,
+Sonnet Lead D, Haiku Worker 3. Two Leads means this round targets TWO winning
+features, same scaling logic as round 2 - the vote and assignment shrink with
+the roster instead of forcing a third feature onto someone already carrying
+one. No new hire without asking first, per standing instruction.
+
+### Round 3 candidates
+
+Carried over from round 2's untouched saved-for-later list, plus two new ones
+the round 2 integration review surfaced directly.
+
+24. **Manager Compare** (was 19/2, never argued against). Side-by-side of two
+    managers - values, timelines, fragility, dossier tags. Reuses the
+    dossier/profile stack directly; no new derivation.
+25. **A light/high-contrast toggle, scoped as accessibility, not identity**
+    (was 20). The token layer already exists and only 3 files hold literal
+    hardcoded hex (`PlayerAvatar.tsx`, `Brand.tsx`, `layout.tsx`). Build it as
+    a toggle, not a redesign - the dark editorial identity (D15) stays the
+    default and the committed mood; this is an escape hatch, not a rebrand.
+26. **Live achievements, with the differentiation angle stated up front**
+    (was 21). Must be ONGOING and live-updating (a streak in progress) to
+    not duplicate Superlatives, which is deliberately backward-looking and
+    season-final. If the build can't hold that line, don't ship it.
+27. **Commissioner tools, rescoped around what Sleeper actually exposes**
+    (was 22). Drop trade-veto history (unreliable/unavailable). Keep a
+    transaction audit log and league health checks (stale rosters, unresolved
+    picks) - both buildable off data this corpus already has.
+28. **Digest trade rows link to the exact deal.** Candidate 16 (this round)
+    closed the gap that made this impossible - `lib/digest/`'s trade rows can
+    now point at `tradeWebHref(id)` instead of the blanket `/ledger` link.
+    Small, mechanical, high-value: "what changed" becomes one tap from "here's
+    the actual deal" instead of two.
+29. **Dedupe the search-route and `/values` normalization helpers.** Flagged
+    in both round 1 and round 2's integration reviews as a near-duplicate
+    that should be one shared function. Technical debt, not a feature - if it
+    doesn't win the vote, worth folding into whoever's build happens to touch
+    either file, or into Chief Fable's own review pass directly.
+
+### Round 3 vote
+
+All four remaining agents voted top-2, one line each, before knowing
+assignments. Points: 1st=2, 2nd=1.
+
+| Rank | # | Idea | Points |
+|---|---|---|---|
+| 1 | 24 | Manager Compare | 6 |
+| 2 | 27 | Commissioner tools, rescoped | 3 |
+| 3 | 26 | Live achievements | 2 |
+| 4 | 25 | Light/high-contrast toggle | 1 |
+
+Candidate 24 placed in the top 2 of every single one of the four ballots -
+the strongest consensus of any round so far, stronger even than round 2's
+16/23 tie. Every voter independently flagged 28 as worker-shaped rather than
+Lead-shaped (the same read three separate times, unprompted) and 29 as pure
+tech debt that shouldn't cost a Lead slot at all.
+
+**Assignments:**
+- **Opus Lead B -> 24** (Manager Compare). Their only stated preference among
+  the two winners; no conflict with Sonnet Lead D's pick.
+- **Sonnet Lead D -> 27** (commissioner tools, rescoped). Their own 1st-place
+  vote.
+- **Haiku Worker 3 -> 28** (digest trade rows link to the exact deal via
+  `tradeWebHref`), assigned directly rather than voted, on the team's own
+  unanimous read that it fits this tier - same pattern as candidate 17 in
+  round 2.
+- **Chief Fable** folds 29 (the normalization-helper dedupe) into its own
+  integration review rather than spending a build slot on it, per its own
+  flag and nobody voting it a priority.
+
+### Round 3 - what got built
+
+**Opus Lead B - Manager Compare: done.** `/managers/compare` with the pair in
+the URL (`?a=&b=`), zero new derivation: behaviour from `lib/dossier` (new
+`dossiersByOwner`, the viewer included on purpose - `getAllDossiers` backs a
+scouting list and deliberately leaves you out, and comparing yourself is the
+whole point here), timeline and fragility from the existing league-wide
+passes, head-to-head from the trade graph's own edges. The picker holds no
+state at all - both selects render from the URL and navigate. Two honest
+calls that make the page trustworthy: roster metrics (TCI, duration,
+fragility) render only when BOTH sides currently hold a roster, because a
+former manager's roster numbers belong to their successor now; and the
+head-to-head figure is `edge.tradeIds.length`, NOT `edge.count`, with the
+discrepancy disclosed in prose when the two differ. That second call surfaced
+a general trap worth recording: `buildTradeGraph` sets `count` to
+`max(dossier-derived weight, listable ids)` so a pair is never undersold, but
+a commissioner-executed multi-team deal coalesces several transactions into
+ONE record, so `count` can exceed what any list can show. Also deduped the
+`a-b` edge-key convention into `pairEdgeKey` (three hand-rolled copies) and
+added `pairWebHref`. Verified live: a former-manager comparison shows the
+guard card and the "2 deals, dossiers count 3" disclosure on real data.
+
+**Sonnet Lead D - commissioner tools: done.** `lib/commissioner.ts` (audit
+log via `isNotable` imported from the ledger - one definition of "worth
+showing" for the whole app; stale rosters off `lineupSlots()` and a plainly
+stated 21-day cutoff) plus `/commissioner`, linked from `/league`. Every
+audit row points at the surface that already owns the story: a trade opens
+its own strand via `tradeWebHref`, everything else opens the manager. The
+mid-build self-correction held up in review: unresolved picks split into
+"can't resolve" (orphaned slot or no player - currently zero, honestly shown
+as all clear) versus 63 routine in-flight picks behind a disclosure. Verified
+live at 390px: 91 of 1,151 transactions in the log grouped by season, and the
+audit log's coalesced-trade links resolve end to end (see the review note).
+
+**Haiku Worker 3 - digest deep links: done.** One import and one line in
+`DigestPanel.tsx`: each trade row now links `tradeWebHref(t.transactionId)`
+instead of the blanket `/ledger`. Correct by construction - the digest and
+the trade graph iterate the same post-coalesce `h.transactions`, so their ids
+agree, coalesced commissioner deals included. Verified live with a rewound
+marker: six trade rows, each deep-linked to its exact deal.
+
+**Chief Fable - the dedupe (29) plus review fixes:** the "two" normalization
+helpers were actually three (`TradeBuilder.tsx` had a third copy); all now
+call one shared `fold()` in `lib/ui.ts`, pinned by `lib/ui.test.ts` including
+the combining-mark case that makes "sengun" find Şengün. Verified live
+through the search API.
+
+### Chief Fable's integration review, round 3
+
+- **Ran Lead B's suggested `edge.count` sweep across every surface.** The web
+  itself is safe almost everywhere: its season view REBUILDS edges with
+  `count = filtered tradeIds.length`, so every figure it prints is already
+  the listable one. One real bug found and fixed: the view kept the GRAPH's
+  edge order (sorted by raw count), so after the remap "busiest pairing" was
+  `view.edges[0]` and could name a pair showing a smaller number than a row
+  below it. The view now re-sorts under the remapped counts with the graph's
+  own comparator.
+- **The riskiest cross-feature path this round verified end to end:** an
+  audit-log link to a coalesced multi-team deal
+  (`/web?trade=coalesced-...%2B...`, percent-encoded plus signs and all)
+  opens the right strand and tags the right record - "this deal" and "3-team
+  deal" on the same row, on real data.
+- **Commissioner page, two small fixes:** the unresolved-pick split now takes
+  the complement of "stuck" rather than a second allowlist -
+  `UnresolvedReason` has five values and the two lists only covered four, so
+  a `no-draft-support` pick would have silently vanished from a page whose
+  premise is that nothing gets silently dropped. And literal backticks in UI
+  copy removed.
+- **Full gate:** 459/459 tests, typecheck and lint clean, all four
+  workstreams verified in the browser at 390px against the live league.
+- **Non-blocking notes for later:** the stale-roster recency check reads
+  noisy in the offseason (13 of 14 rosters flagged in August, mostly "no
+  moves in N days") - the two-reason rosters sort first so real anomalies
+  still top the list, but a future pass could put the quiet-lately rows
+  behind a disclosure the way routine picks already are. And the round-2 note
+  stands: whether the digest's Group header should keep pointing at /ledger
+  now that its rows deep-link is a product question, not a bug.
