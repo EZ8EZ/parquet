@@ -36,6 +36,33 @@ waits on or messages the owner - this project's own founding rule already
 covers exactly this case: never block, make a reasonable decision, log it,
 continue.
 
+**Correction after round 1, load-bearing for everything below:** peer Leads
+cannot actually message each other - confirmed when Opus Lead B tried to
+reach Sonnet Lead C mid-build and it silently went nowhere. The orchestrator
+is the only real relay, whether or not a brief says otherwise. "Escalate to
+the Chief" still works, since that always goes through the orchestrator too.
+
+## Round 2 - down to five
+
+Three departures before this round starts. Haiku Worker 1 (the one who
+actually did real work last round - Opus Lead A's independent house-style
+reviewer) left first. Haiku Worker 2 left next, with nothing to distinguish
+the decision from Worker 3 on merit - neither was contacted last round, so
+that one was attrition, not performance. Then a Sonnet Lead left - both C
+(data-viz) and D (global search) shipped clean, well-verified work last
+round with nothing to separate them either, so this is another arbitrary
+call: Sonnet Lead C is out, Sonnet Lead D stays.
+
+The team is five: Chief Fable, Opus Lead A, Opus Lead B, Sonnet Lead D,
+Haiku Worker 3. Three Leads instead of four means this round targets THREE
+winning features, not four - the vote and the assignment both scale down
+with the roster rather than forcing a fourth feature onto someone already
+carrying one.
+
+Final headcount for this round - no more departures expected, and no new
+hire without asking first. If the work genuinely needs a sixth agent, that
+gets raised explicitly (which tier, and why) rather than just spawning one.
+
 ## The candidates
 
 1. **Trade Finder** - auto-suggest mutually beneficial trades between the
@@ -281,3 +308,176 @@ slate.
   eventually wires searchParams-based trade selection into `TradeWeb.tsx`
   closes that gap for free on the search side too - worth remembering these
   two features are actually coupled the next time either comes up.
+
+## Round 2 candidates
+
+Mostly last round's saved-for-later list, carried over with the reasoning
+intact, plus two new ones the team's own work surfaced. Audits (14, 15) are
+deliberately excluded again - confirmed last round they are not Lead-shaped
+work, so they don't compete in this vote.
+
+16. **Wire per-trade deep links into the trade web.** The gap both the digest
+    and global search independently ran into. `TradeWeb.tsx` selection is
+    local `useState`; move it to `searchParams` so a trade has a real URL,
+    and global search's inline-expand compromise upgrades to a real link for
+    free with no changes needed on the search side.
+17. **Approach-message generator** (was 12, 5 pts). Turn a dossier's existing
+    `approachTips` into a copyable draft message.
+18. **Draft report cards** (was 9, 3 pts). Presentation over the draft-capture
+    metric, already built and calibrated twice.
+19. **Manager Compare** (was 2, 1 pt). Reuses the dossier/profile stack.
+20. **A light/high-contrast toggle, rescoped as accessibility, not identity.**
+    Round 1's real disagreement was never about feasibility - the token layer
+    already exists. It was about whether a light theme is a mood the app
+    commits to or a narrow accessibility escape hatch. Scope it as the
+    latter this time: a toggle, not a redesign, and say so in the brief so
+    nobody re-litigates the identity question that already got settled.
+21. **Live achievements, with a real differentiation angle stated up front.**
+    Flagged last round as overlapping Superlatives closely enough to risk two
+    badge systems with different rules. The angle that would make it not a
+    duplicate: ONGOING and live-updating (a streak in progress), where
+    Superlatives is deliberately backward-looking and season-final. State that
+    distinction in the brief, or don't build this one.
+22. **Commissioner tools, rescoped around what Sleeper actually exposes.**
+    Drop trade-veto history (flagged last round as unreliable/unavailable).
+    Keep a transaction audit log and league health checks (stale rosters,
+    unresolved picks) - both genuinely buildable off data this corpus has.
+23. **Wire `/rank`'s disagreement-vs-consensus data into an actual decision
+    surface**, not just its own standalone page. Surface "you're 15 spots
+    higher on this guy than consensus" inside Trade Finder's rationale or a
+    manager dossier, where it can actually inform a trade instead of sitting
+    on a page nobody opens mid-decision.
+
+## Round 2 vote
+
+Two of the five original round-2 spawns stalled with no output (infra, not a
+judgment call) and were retried clean. Points: 1st=3, 2nd=2, 3rd=1.
+
+| Rank | # | Idea | Points |
+|---|---|---|---|
+| 1 | 23 | Rank disagreement wired into decisions | 13 |
+| 2 | 16 | Per-trade deep links | 12 |
+| 3 | 18 | Draft report cards | 3 |
+| 4 | 20 | Light/high-contrast toggle | 1 |
+| 4 | 17 | Approach-message generator | 1 |
+
+Candidates 16 and 23 were the top-2 pick of every single one of the five
+voters - the strongest consensus of either round. Two Opus votes
+independently called 17 pooled-worker-sized rather than Lead-sized ("tips
+already render in three places, `CopyBlock` already exists"); rather than
+leave it on the shelf at 1 point, it's assigned directly to Haiku Worker 3 as
+a fourth, smaller feature this round, since the team's own read is that it
+fits that tier exactly.
+
+**Assignments:**
+- **Opus Lead A -> 23** (rank disagreement into Trade Finder + dossiers).
+  Scoping condition surfaced by the vote itself: custom ranks live only in
+  `localStorage` (`components/RankingBoard.tsx`), but Trade Finder is a
+  server component that cannot read it - this has to be solved with a cookie
+  migration (the `viewing-as`/digest-marker precedent already in this repo),
+  not discovered mid-build.
+- **Opus Lead B -> 16** (per-trade deep links in the trade web). Every voter
+  independently named the same fix: `TradeWeb.tsx`'s `sel` is local
+  `useState`, move it to `searchParams`.
+- **Sonnet Lead D -> 18** (draft report cards). Their own 3rd choice.
+- **Haiku Worker 3 -> 17** (approach-message generator), assigned rather than
+  voted, on the team's own read that it's correctly sized for this tier.
+
+**Haiku Worker 3 - approach-message generator: done.** New
+`lib/dossier/message.ts` (`generateApproachMessage(dossier)`), reusing the
+existing `CopyBlock` component rather than a second clipboard mechanism, one
+additive section on the dossier page. Technically clean - typecheck/lint/372
+tests/browser all pass - but the generated copy itself is thinner than the
+rest of this app's voice: real examples for three different managers
+("pick spender," "pick hoarder," "name chaser") all close on the identical
+line "Interested in talking?" and lean generic ("I've been looking at your
+draft capital") rather than citing the specific number behind the tell (net
+picks, avg acquisition age). Worth Chief Fable's polish pass, not a blocker -
+this was explicitly assigned as worker-tier scope and it met that bar.
+
+**Reorg mid-round:** Opus Lead A stalled twice (a real mid-stream API error,
+then a hard stop) after leaving real, substantial work in the tree -
+`lib/tradefinder/conviction.ts`, the localStorage-to-cookie migration in
+`lib/rankings/customOrderServer.ts` and `app/api/custom-rank/` - but never
+filed a final report or finished its own verification pass. Rather than
+respawn a fresh peer Lead to re-derive a brief and re-verify code that
+mostly already exists, that remaining work folds into Chief Fable's existing
+final-review pass instead: Fable already has full context and real edit
+authority, so finishing and verifying candidate 23 becomes part of
+integration rather than a fourth parallel build. Leaner team for the rest of
+this round: Fable (expanded scope), Opus Lead B, Sonnet Lead D.
+
+**Opus Lead B - per-trade deep links: done.** `lib/tradegraph/url.ts` is the
+one place the URL-to-view mapping lives (mode, season, manager, pair, trade,
+asset - most specific wins, untrusted input degrades to the overview), and
+`TradeWeb.tsx`'s selection moved from `useState` to the query string. Commits
+go through `history.replaceState` rather than the router on purpose: `/web` is
+force-dynamic and prices every traded player on each server render, so routing
+per tap would pay that cost per tap, and selections deliberately don't stack in
+the back button. Global search's inline-expand compromise upgraded to a real
+link (`tradeWebHref`), the pair panel tags the linked deal ("this deal") while
+keeping the list in date order (the order is the pair's history), and a trade
+id with no strand gets an honest warn card instead of a silent overview. 17
+tests. Verified against a real 2024 wk 17 deal: the search result's id lights
+exactly the TTT-GOT strand and marks exactly that row; a garbage id shows the
+warn card.
+
+**Sonnet Lead D - draft report cards: done.** `lib/metrics/draftGrades.ts`
+folds the already-graded picks per SEASON (the per-owner fold already existed
+in `./skill`), carrying two settled decisions verbatim instead of re-arguing
+them: no letter grades (D6) and no slot-surplus headline for the startup draft
+(D27 - there is only one startup, so nothing exists to compare it against).
+New `/drafts/grades` page plus a nav pill on `/drafts`. 6 tests. Verified at
+390px on live data - the 2025 class reads 64.3% captured with Flagg as the
+best take, which matches what the underlying metric already said elsewhere.
+
+**Candidate 23, finished under the reorg (Chief Fable, completing Opus Lead
+A's work):** the tree was more complete than the stall suggested - the
+conviction module, its four-way verdict matrix, the cookie codec, the API
+route, the server reader, and the finder wiring all existed, and the
+"untouched board must produce nothing" honesty test was already written and
+passing (it reproduces the live corpus's rank ties and holes, which is the
+exact drift the 8-place threshold exists to silence). What was genuinely
+unfinished was the brief's one scoping condition: the cookie was built as a
+MIRROR of localStorage, not a replacement - two stores that drift the moment
+one is cleared without the other, plus a debounced mirror whose pending write
+was cancelled on unmount, so the tail of a drag could be lost to fast
+navigation. Fixed: the cookie is now the single store (RankingBoard reads
+`document.cookie` through the same `parseCustomOrderCookie` the server uses,
+so the two sides cannot parse differently), localStorage is demoted to a
+one-time legacy migration read, and the debounced write is flushed on unmount
+and pagehide with `keepalive`. Verified end to end at 390px on the live
+league: a real drag wrote the cookie (120 ids, localStorage untouched); a
+2-place ranking produced honest silence on the finder; a 15-slot move on RJ
+Barrett produced a "supports" note with the exact ranks (you #87, consensus
+#100) on the one package containing him while every package value stayed
+byte-identical to the unranked render; the board rehydrated from the cookie
+across a reload and a full dev-server restart; reset put everything back to
+consensus and the finder back to its rank-the-board invite.
+
+## Chief Fable's integration review, round 2
+
+- **`managerWebHref` was exported but used nowhere** - wired into both manager
+  dossier pages' "Favorite trade partners" links, which had been pointing at
+  the bare ring. A dossier's trade-partner section now lands on that manager's
+  actual strands (verified live: the node selected, all partner strands lit).
+- **#17 polish pass, requested by Worker 3's own report:** every angle now
+  cites the number behind the tell (picks spent, net pick balance, average
+  acquisition age, trades per season) and closes in its own words instead of
+  the identical "Interested in talking?", and `lib/dossier/message.test.ts`
+  now exists - it was the one lib module in the tree without tests. The live
+  check reads right: the pick-hoarder dossier's message cites "+3 net", the
+  same figure the page's own stat row shows.
+- **Cross-feature URL check:** `/web`'s param namespace and the finder's
+  (`with`/`pkg`) don't collide, and global search's trade ids agree with the
+  graph's `tradeIds` by construction - both iterate the same post-coalesce
+  `h.transactions`, so a coalesced commissioner deal gets the same id on both
+  sides.
+- **Full gate:** 440/440 tests, typecheck and lint clean, all four features
+  verified in the browser at 390px against live data.
+- **Non-blocking notes for a future round:** digest trade rows still link to
+  `/ledger` rather than the new per-trade URL - a real candidate upgrade, but
+  it is a product decision (the ledger IS a reasonable destination for "what
+  changed") rather than a drive-by fix, so it is named here instead of made.
+  The search route's normalization-helper duplication flagged last round also
+  still stands.
