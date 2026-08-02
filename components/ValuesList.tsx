@@ -16,7 +16,7 @@ import Link from "next/link";
 import { ChevronDown, Search } from "lucide-react";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { Sparkline } from "./charts";
-import { cn, fmtValue } from "@/lib/ui";
+import { cn, fmtValue, fold } from "@/lib/ui";
 
 /** The multiplier chain `valuePlayer()` returns, flattened for display. */
 export interface AssetBreakdown {
@@ -221,14 +221,6 @@ function Factor({
 
 const FILTERS = ["All", "PG", "SG", "SF", "PF", "C"];
 const PAGE = 60;
-
-/** Fold diacritics so "jokic" finds Jokić and "doncic" finds Dončić. */
-function fold(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
-}
 
 type Sort = "value" | "age";
 

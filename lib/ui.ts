@@ -15,3 +15,19 @@ export function signed(n: number): string {
 export function fmtValue(n: number): string {
   return n.toLocaleString("en-US");
 }
+
+/**
+ * Fold diacritics and case for matching, so "jokic" finds Jokić and "sengun"
+ * finds Şengün. The one shared implementation - this had drifted into three
+ * near-identical private copies (the search route, /values' filter, the trade
+ * builder's picker) before being pulled up here, flagged by two integration
+ * reviews in a row. Any surface that matches a typed query against a name
+ * should call this, not re-fold its own: the moment two folds disagree, the
+ * same query finds a player in one place and not another.
+ */
+export function fold(s: string): string {
+  return s
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase();
+}

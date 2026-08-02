@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { ArrowLeftRight, Check, Copy, Loader2, Plus, X } from "lucide-react";
 import type { TradeEvaluation } from "@/lib/trade";
-import { cn, fmtValue } from "@/lib/ui";
+import { cn, fmtValue, fold } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTradeUrl } from "@/lib/sleeperLinks";
 
@@ -38,14 +38,6 @@ interface ModalItem {
   name: string;
   meta: string;
   value: number;
-}
-
-/** Fold diacritics so "jokic" finds Jokić and "sengun" finds Şengün. */
-function fold(s: string): string {
-  return s
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .toLowerCase();
 }
 
 function PickerModal({

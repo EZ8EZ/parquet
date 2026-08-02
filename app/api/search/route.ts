@@ -11,6 +11,7 @@ import {
   type DraftIndex,
 } from "@/lib/lineage";
 import { describeTransaction, ordinal } from "@/lib/derive/describe";
+import { fold } from "@/lib/ui";
 import { boardHref } from "@/app/drafts/parts";
 
 export const dynamic = "force-dynamic";
@@ -19,20 +20,10 @@ export const dynamic = "force-dynamic";
 // scrollable page - the point is a fast answer, not an exhaustive one.
 const LIMIT = 8;
 
-/**
- * Fold diacritics so "jokic" finds Jokic - same idea as /values' own filter, just
- * written as an explicit code-point strip rather than a regex escape (the combining
- * diacritical marks block is 0x0300-0x036f).
- */
-function fold(s: string): string {
-  let out = "";
-  for (const ch of s.normalize("NFD")) {
-    const code = ch.codePointAt(0) ?? 0;
-    if (code >= 0x0300 && code <= 0x036f) continue;
-    out += ch;
-  }
-  return out.toLowerCase();
-}
+// Query/name matching uses the one shared diacritic fold (lib/ui.ts) - this
+// route, /values' filter and the trade builder's picker previously each carried
+// a private near-copy, and two folds that drift apart mean the same query finds
+// a player in one surface and not another.
 
 export interface PlayerResult {
   kind: "player";
