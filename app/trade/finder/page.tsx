@@ -1,9 +1,16 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ChevronRight, Lightbulb, ThumbsDown } from "lucide-react";
+import { ArrowLeft, ChevronRight, Lightbulb, ListOrdered, ThumbsDown } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getPrincipals } from "@/lib/principals";
-import { findTrades, partnerBoard, type FinderAsset } from "@/lib/tradefinder";
+import {
+  convictionSummary,
+  findTrades,
+  partnerBoard,
+  type ConvictionNote,
+  type FinderAsset,
+} from "@/lib/tradefinder";
+import { readCustomOrder } from "@/lib/rankings/customOrderServer";
 import { PageHeader, SectionHeader, Stat, Tag, DeltaValue } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { CopyBlock } from "@/components/CopyBlock";
@@ -148,12 +155,17 @@ export default async function TradeFinderPage({
   }
 
   // ---------------------------------------------------------- one partner view
+  // Read only on this branch: the partner board does not price individual packages,
+  // so a ranking would have nothing to attach to there.
+  const customOrder = await readCustomOrder();
   const result = findTrades(h, principals, {
     rosterId,
     partnerRosterId: partnerId,
     max: 3,
+    customOrder,
   });
   if (!result) notFound();
+  const hasRanking = customOrder.length > 0;
 
   const ownerId = h.rostersById.get(partnerId)?.ownerId;
   const user = ownerId ? h.usersById.get(ownerId) : undefined;
@@ -220,7 +232,7 @@ export default async function TradeFinderPage({
       </div>
 
       {selected ? (
-        <PackageDetail pkg={selected} />
+        <PackageDetail pkg={selected} hasRanking={hasRanking} />
       ) : (
         <>
           <SectionHeader
@@ -266,6 +278,7 @@ export default async function TradeFinderPage({
                       {p.theirCase[0]}
                     </p>
                   )}
+                  <ConvictionLine notes={p.conviction} />
                 </Link>
               </li>
             ))}
@@ -303,10 +316,117 @@ function AssetLine({ label, assets }: { label: string; assets: FinderAsset[] }) 
   );
 }
 
+/**
+ * One line on a package card, so the viewer's own ranking is visible BEFORE they
+ * drill into a package rather than only after. Renders nothing at all when there is
+ * no gap to report, which is also what a viewer with no saved ranking gets.
+ */
+function ConvictionLine({ notes }: { notes: ConvictionNote[] }) {
+  const summary = convictionSummary(notes);
+  if (!summary) return null;
+  return (
+    <p
+      className={`mt-1.5 text-[12px] leading-snug ${
+        summary.verdict === "supports" ? "text-accent" : "text-warn"
+      }`}
+    >
+      {summary.text}
+    </p>
+  );
+}
+
+/**
+ * The viewer's own ranking as a distinct class of evidence.
+ *
+ * Kept in its own block rather than folded into "Why it helps you" on purpose: every
+ * other line in this rationale is derived from rosters and behaviour, and this one is
+ * derived from an opinion the viewer typed in themselves. Mixing the two would make
+ * it impossible to tell which lines you are allowed to disagree with.
+ */
+function ConvictionBlock({
+  notes,
+  hasRanking,
+}: {
+  notes: ConvictionNote[];
+  hasRanking: boolean;
+}) {
+  // Three genuinely different states, and the difference matters: no ranking at all,
+  // a ranking that simply does not touch this package, and real gaps to report.
+  if (!hasRanking) {
+    return (
+      <>
+        <SectionHeader title="Against your own ranking" />
+        <div className="rounded-[--radius-sm] border border-border bg-surface/60 p-2.5">
+          <p className="text-[12px] leading-snug text-muted">
+            You have not ranked anyone yet, so every value here is consensus only.
+            Rank a board and this package will show you where you and consensus
+            disagree about the players in it.
+          </p>
+          <Link
+            href="/rank"
+            className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-[12px] font-semibold text-accent"
+          >
+            Rank the board
+            <ChevronRight size={13} aria-hidden="true" />
+          </Link>
+        </div>
+      </>
+    );
+  }
+  if (notes.length === 0) {
+    return (
+      <>
+        <SectionHeader title="Against your own ranking" />
+        <p className="text-[12px] leading-snug text-muted">
+          Your board and consensus agree closely on everyone in this package, so
+          there is no edge here either way.
+        </p>
+      </>
+    );
+  }
+  return (
+    <>
+      <SectionHeader title="Against your own ranking" />
+      <ul className="space-y-1">
+        {notes.map((n) => (
+          <li
+            key={`${n.side}-${n.playerId}`}
+            className={`flex gap-1.5 rounded-[--radius-sm] border px-2.5 py-1.5 text-[12px] leading-snug text-muted ${
+              n.verdict === "supports"
+                ? "border-accent/25 bg-accent/10"
+                : "border-warn/25 bg-warn/10"
+            }`}
+          >
+            <ListOrdered
+              size={12}
+              aria-hidden="true"
+              className={`mt-0.5 shrink-0 ${
+                n.verdict === "supports" ? "text-accent" : "text-warn"
+              }`}
+            />
+            {n.text}
+          </li>
+        ))}
+      </ul>
+      <p className="mt-1 text-[11px] leading-snug text-faint">
+        Every value on this page is built from consensus ranks, which is what makes
+        the comparison meaningful. Your ranking annotates the packages here; it does
+        not reprice them, so a package this page suggests still prices identically on{" "}
+        <Link href="/trade" className="text-accent underline">
+          the hand-built trade page
+        </Link>
+        .
+      </p>
+    </>
+  );
+}
+
 function PackageDetail({
   pkg,
+  hasRanking,
 }: {
   pkg: NonNullable<ReturnType<typeof findTrades>>["packages"][number];
+  hasRanking: boolean;
 }) {
   const e = pkg.evaluation;
   return (
@@ -336,6 +456,8 @@ function PackageDetail({
 
       <SectionHeader title="Why it helps you" />
       <Bullets lines={pkg.yourCase} />
+
+      <ConvictionBlock notes={pkg.conviction} hasRanking={hasRanking} />
 
       {pkg.pushback.length > 0 && (
         <>

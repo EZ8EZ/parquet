@@ -517,6 +517,80 @@ describe("findTrades against the fixture league", () => {
     expect(checked).toBeGreaterThan(0);
   });
 
+  it("carries no conviction notes when the viewer has no ranking on record", async () => {
+    const principals = await getPrincipals(h);
+    const r = findTrades(h, principals, { rosterId: me, partnerRosterId: them });
+    for (const pkg of r?.packages ?? []) expect(pkg.conviction).toEqual([]);
+  });
+
+  /**
+   * The invariant that protects the /trade contract above. A custom ranking ANNOTATES
+   * the finder; it must never reprice it. If a saved ranking moved a single value, a
+   * package suggested here and the same package priced by hand on /trade would stop
+   * agreeing, which is the one thing this engine promised not to do.
+   */
+  it("never lets a custom ranking move a single number", async () => {
+    const principals = await getPrincipals(h);
+    // A deliberately violent ranking: the whole board reversed.
+    const reversed = [...h.players.keys()].reverse();
+    let compared = 0;
+    for (const other of h.rosters) {
+      if (other.rosterId === me) continue;
+      const plain = findTrades(h, principals, {
+        rosterId: me,
+        partnerRosterId: other.rosterId,
+      });
+      const ranked = findTrades(h, principals, {
+        rosterId: me,
+        partnerRosterId: other.rosterId,
+        customOrder: reversed,
+      });
+      expect(ranked?.packages.length).toBe(plain?.packages.length);
+      for (let i = 0; i < (plain?.packages.length ?? 0); i++) {
+        const a = plain!.packages[i];
+        const b = ranked!.packages[i];
+        expect(b.headline).toBe(a.headline);
+        expect(b.evaluation.give.total).toBe(a.evaluation.give.total);
+        expect(b.evaluation.get.total).toBe(a.evaluation.get.total);
+        expect(b.evaluation.delta).toBe(a.evaluation.delta);
+        expect(b.fit).toEqual(a.fit);
+        expect(b.score).toBe(a.score);
+        expect(b.yourCase).toEqual(a.yourCase);
+        expect(b.theirCase).toEqual(a.theirCase);
+        expect(b.pushback).toEqual(a.pushback);
+        compared++;
+      }
+    }
+    expect(compared).toBeGreaterThan(0);
+  });
+
+  it("attaches conviction notes only to players actually in the package", async () => {
+    const principals = await getPrincipals(h);
+    const reversed = [...h.players.keys()].reverse();
+    let seen = 0;
+    for (const other of h.rosters) {
+      if (other.rosterId === me) continue;
+      const r = findTrades(h, principals, {
+        rosterId: me,
+        partnerRosterId: other.rosterId,
+        customOrder: reversed,
+      });
+      for (const pkg of r?.packages ?? []) {
+        const ids = new Map(
+          [...pkg.give.map((a) => [a.id, "give"] as const),
+           ...pkg.get.map((a) => [a.id, "get"] as const)],
+        );
+        for (const n of pkg.conviction) {
+          expect(ids.get(n.playerId)).toBe(n.side);
+          seen++;
+        }
+      }
+    }
+    // A fully reversed board must disagree with consensus somewhere, or this test
+    // is passing without exercising anything.
+    expect(seen).toBeGreaterThan(0);
+  });
+
   it("only ever offers assets the two sides actually own", async () => {
     const principals = await getPrincipals(h);
     const r = findTrades(h, principals, { rosterId: me, partnerRosterId: them });

@@ -41,9 +41,9 @@ import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
 import { valuePlayers } from "@/lib/valuation";
 import {
   CUSTOM_RANK_STORAGE_KEY,
+  customOrderFromCookieHeader,
   parseCustomOrder,
   reorder,
-  serializeCustomOrder,
   syncCustomOrder,
 } from "@/lib/rankings/customOrder";
 import { Card, DeltaValue, EmptyState, SectionHeader } from "@/components/ui";
@@ -56,6 +56,18 @@ import { cn, fmtValue } from "@/lib/ui";
 const ROW_HEIGHT = 56;
 const ROW_GAP = 4;
 const ROW_PITCH = ROW_HEIGHT + ROW_GAP;
+
+/**
+ * How long to wait before persisting the order into the cookie.
+ *
+ * One drag gesture crosses several slots and commits a new `order` on each one, so
+ * an undebounced write would fire a dozen requests for a single finger movement.
+ * The debounce is safe because it is never the last line of defence: the pending
+ * write is flushed on unmount and on pagehide (see `flushOrder` below), so neither
+ * a quick tap-through to another page nor closing the tab can drop the tail of a
+ * drag.
+ */
+const COOKIE_WRITE_DEBOUNCE_MS = 600;
 
 function weightCopy(w: number): string {
   if (w === 0) return "0% yours - pure consensus. Drag a few players to start diverging.";
@@ -95,12 +107,19 @@ export function RankingBoard({
   const [resetArmed, setResetArmed] = useState(false);
   const [draggingId, setDraggingId] = useState<string | null>(null);
 
-  // Read localStorage once, after hydration - never on the server render, so
+  // Read the saved order once, after hydration - never on the server render, so
   // the first client paint matches the server's and React has nothing to warn
-  // about. Only adopts the saved order if there IS one; a fresh visit stays on
-  // consensus order without ever touching storage.
+  // about. The cookie is the store (see lib/rankings/customOrder.ts); the
+  // localStorage read behind it is a one-time legacy migration for a board saved
+  // before the cookie existed, which the write effect below then promotes into
+  // the cookie. Only adopts a saved order if there IS one; a fresh visit stays
+  // on consensus order without ever writing anything.
   useEffect(() => {
-    const stored = parseCustomOrder(localStorage.getItem(CUSTOM_RANK_STORAGE_KEY));
+    const fromCookie = customOrderFromCookieHeader(document.cookie);
+    const stored =
+      fromCookie.length > 0
+        ? fromCookie
+        : parseCustomOrder(localStorage.getItem(CUSTOM_RANK_STORAGE_KEY));
     if (stored.length > 0) {
       // Deliberate exception to the "no setState in effects" guidance: this is
       // a one-time sync from a browser-only API (localStorage) that cannot be
@@ -115,14 +134,56 @@ export function RankingBoard({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Persist only once the ranking is actually the user's - otherwise merely
-  // viewing the page (customized still false) would write consensus order to
-  // storage and blur the "no custom ranking yet" state this is supposed to
-  // distinguish.
+  // The write path. Refs rather than deps so the flush sites below (unmount,
+  // pagehide) always see the latest order without re-subscribing per drag.
+  const orderRef = useRef(order);
+  const customizedRef = useRef(customized);
+  useEffect(() => {
+    orderRef.current = order;
+    customizedRef.current = customized;
+  });
+  const lastWrittenRef = useRef<string | null>(null);
+
+  // Persist the order into the cookie - the one store, and the only form a
+  // SERVER component can read, which is what lets /trade/finder tell you a
+  // package is selling a player you rate well above consensus. Guarded on
+  // `customized`: writing consensus order for a viewer who has only looked at
+  // this page would manufacture an opinion they never expressed, and every
+  // reader downstream would then report gaps that are really just the ties and
+  // holes in the consensus ranks themselves.
+  const flushOrder = useCallback((keepalive: boolean) => {
+    if (!customizedRef.current) return;
+    const body = JSON.stringify({ order: orderRef.current });
+    if (body === lastWrittenRef.current) return;
+    lastWrittenRef.current = body;
+    // Fire and forget: a failed write is not worth interrupting a drag over -
+    // the order lives in state, and the next reorder or flush retries.
+    void fetch("/api/custom-rank", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body,
+      keepalive,
+    }).catch(() => {});
+  }, []);
+
   useEffect(() => {
     if (!customized) return;
-    localStorage.setItem(CUSTOM_RANK_STORAGE_KEY, serializeCustomOrder(order));
-  }, [order, customized]);
+    const t = setTimeout(() => flushOrder(false), COOKIE_WRITE_DEBOUNCE_MS);
+    return () => clearTimeout(t);
+  }, [order, customized, flushOrder]);
+
+  // The debounce's safety net: a client-side navigation unmounts this component
+  // and a reload or tab close fires pagehide, both inside the debounce window if
+  // the user moves fast. `keepalive: true` is what lets the request outlive the
+  // page it was sent from.
+  useEffect(() => {
+    const onPageHide = () => flushOrder(true);
+    window.addEventListener("pagehide", onPageHide);
+    return () => {
+      window.removeEventListener("pagehide", onPageHide);
+      flushOrder(true);
+    };
+  }, [flushOrder]);
 
   useEffect(() => {
     if (!resetArmed) return;
@@ -138,7 +199,13 @@ export function RankingBoard({
     setOrder(poolIds);
     setCustomized(false);
     setResetArmed(false);
+    // Clear the legacy localStorage save too, or the migration read on the next
+    // mount would resurrect the exact ranking the user just asked to forget.
     localStorage.removeItem(CUSTOM_RANK_STORAGE_KEY);
+    // The cookie was just deleted, so the dedupe memory must go with it: an
+    // identical order re-dragged later is a genuinely new write, not a repeat.
+    lastWrittenRef.current = null;
+    void fetch("/api/custom-rank", { method: "DELETE" }).catch(() => {});
   }
 
   /* ---------------------------------------------------------------- */

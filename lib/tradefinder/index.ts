@@ -26,6 +26,21 @@ import { buildDossier, type Dossier } from "../dossier";
 import { STAR_THRESHOLD, type Direction } from "../gameplan";
 import type { PrincipalIndex } from "../principals";
 import { evaluateTrade, type PickInput, type TradeEvaluation } from "../trade";
+import {
+  convictionIndex,
+  convictionNotes,
+  type ConvictionNote,
+} from "./conviction";
+
+export {
+  convictionIndex,
+  convictionNotes,
+  convictionSummary,
+  CONVICTION_MIN_GAP,
+  MAX_CONVICTION_NOTES,
+  type ConvictionNote,
+  type ConvictionVerdict,
+} from "./conviction";
 
 // ------------------------------------------------------------------------ types
 
@@ -89,6 +104,13 @@ export interface SuggestedPackage {
   pushback: string[];
   /** Fit gain in value-equivalent points, per side. */
   fit: { yours: number; theirs: number; mutual: number };
+  /**
+   * Where this package touches a player the viewer ranks well away from consensus.
+   * Empty whenever the viewer has no ranking on record, which is the common case
+   * and is deliberately indistinguishable from "no meaningful gaps" at the type
+   * level - the surface decides how to say each of those, not the engine.
+   */
+  conviction: ConvictionNote[];
   score: number;
 }
 
@@ -641,7 +663,17 @@ function appetiteOf(
 export function findTrades(
   h: LeagueHistory,
   principals: PrincipalIndex,
-  opts: { rosterId: number; partnerRosterId: number; max?: number },
+  opts: {
+    rosterId: number;
+    partnerRosterId: number;
+    max?: number;
+    /**
+     * The viewer's own ranking, best first, as /rank saved it. Optional so every
+     * existing caller keeps working unchanged; absent or empty means the viewer has
+     * no opinion on record and no package carries a conviction note.
+     */
+    customOrder?: string[];
+  },
 ): FinderResult | null {
   const { rosterId, partnerRosterId } = opts;
   if (rosterId === partnerRosterId) return null;
@@ -657,6 +689,10 @@ export function findTrades(
   const theirs = price(assetsOf(theirsA), partner, you);
 
   const raw = searchPackages(mine, theirs, you, partner, opts.max ?? 3);
+  // Built once for the whole result rather than per package: the index is a scan of
+  // the viewer's ranking, and three packages asking for it separately would pay for
+  // the same scan three times.
+  const conviction = convictionIndex(opts.customOrder ?? [], h.players);
   const packages: SuggestedPackage[] = raw.map((pkg, i) => {
     const give = pkg.give.map((p) => p.asset);
     const get = pkg.get.map((p) => p.asset);
@@ -670,6 +706,7 @@ export function findTrades(
       headline: `${listOf(give)} for ${listOf(get)}`,
       ...cases,
       fit: { yours: pkg.yourGain, theirs: pkg.theirGain, mutual: pkg.mutual },
+      conviction: convictionNotes({ give, get }, conviction),
       score: pkg.score,
     };
   });
