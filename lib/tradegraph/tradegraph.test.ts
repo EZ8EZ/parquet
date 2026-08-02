@@ -11,6 +11,7 @@ import {
   buildHoldings,
   buildTradeGraph,
   buildTradeTree,
+  pairEdgeKey,
   playerKey,
   rankTradeRoots,
   ringOrder,
@@ -338,6 +339,32 @@ describe("asset lineage", () => {
 
   it("returns null for an unknown root", () => {
     expect(buildTradeTree(ctx, "nope")).toBeNull();
+  });
+});
+
+describe("pairEdgeKey", () => {
+  it("gives a pair one key however the two sides are named", () => {
+    expect(pairEdgeKey("111", "222")).toBe("111-222");
+    expect(pairEdgeKey("222", "111")).toBe("111-222");
+  });
+
+  it("sorts lexicographically, not numerically - the keys real ids produce", () => {
+    // Platform owner ids are 18-digit strings and are compared as strings everywhere
+    // in this module. Pinned because a "helpful" numeric sort here would silently stop
+    // matching the keys already sitting in shared URLs.
+    expect(pairEdgeKey("882785740399087616", "882695796544577536")).toBe(
+      "882695796544577536-882785740399087616",
+    );
+  });
+
+  it("agrees with the keys buildTradeGraph actually emits", () => {
+    const h = buildFixtureHistory();
+    const graph = buildTradeGraph(h, principalsFor(h));
+    expect(graph.edges.length).toBeGreaterThan(0);
+    for (const e of graph.edges) {
+      expect(pairEdgeKey(e.a, e.b)).toBe(e.key);
+      expect(pairEdgeKey(e.b, e.a)).toBe(e.key);
+    }
   });
 });
 

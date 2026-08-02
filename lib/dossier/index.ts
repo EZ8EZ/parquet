@@ -230,3 +230,32 @@ export function getAllDossiers(h: LeagueHistory, principals: PrincipalIndex): Do
 
   return [...current, ...former];
 }
+
+/**
+ * Every principal's dossier keyed by owner id, THE VIEWER INCLUDED.
+ *
+ * `getAllDossiers` deliberately leaves the viewer out - it backs a scouting list, and
+ * scouting yourself is not the point of that page. Comparing yourself against a
+ * leaguemate is very much the point of comparing two managers, so this is a second,
+ * narrower contract over the same two builders rather than a filter argument bolted
+ * onto the first: both entry points keep saying exactly what they mean.
+ *
+ * Keyed by owner id because that is the identity that survives a handover. Both kinds
+ * funnel through the existing builders, so a dossier read here can never disagree with
+ * the same manager's own page.
+ */
+export function dossiersByOwner(
+  h: LeagueHistory,
+  principals: PrincipalIndex,
+): Map<string, Dossier> {
+  const out = new Map<string, Dossier>();
+  for (const pr of principals.principals) {
+    const d = pr.isFormer
+      ? buildFormerDossier(h, pr.ownerId, principals)
+      : pr.currentRosterId != null
+        ? buildDossier(h, pr.currentRosterId, principals)
+        : null;
+    if (d) out.set(pr.ownerId, d);
+  }
+  return out;
+}

@@ -447,7 +447,7 @@ export function buildTradeGraph(h: LeagueHistory, principals: PrincipalIndex): T
       for (let j = i + 1; j < ownerParties.length; j++) {
         const a = ownerParties[i];
         const b = ownerParties[j];
-        const key = `${a}-${b}`;
+        const key = pairEdgeKey(a, b);
         const entry = pairTrades.get(key) ?? { a, b, ids: [] };
         entry.ids.push(t.transactionId);
         pairTrades.set(key, entry);
@@ -490,8 +490,7 @@ export function buildTradeGraph(h: LeagueHistory, principals: PrincipalIndex): T
 
   // Ring layout, seriated on the same weights.
   const w = new Map(edges.map((e) => [e.key, e.count]));
-  const weight = (a: string, b: string) =>
-    w.get(a < b ? `${a}-${b}` : `${b}-${a}`) ?? 0;
+  const weight = (a: string, b: string) => w.get(pairEdgeKey(a, b)) ?? 0;
   const ownerIds = principals.principals.map((pr) => pr.ownerId);
   const order = ringOrder(ownerIds, weight);
 
@@ -548,6 +547,16 @@ function round2(v: number): number {
 }
 
 // ---------------------------------------------------------------- asset moves
+
+/**
+ * The canonical key for the strand between two managers, order-independent: a pair has
+ * one key however you name it. Three call sites were building this by hand (the edge
+ * fold below, the ring weight lookup, and the web's own partner rows), which is one
+ * convention too many for something a URL now has to round-trip.
+ */
+export function pairEdgeKey(a: string, b: string): string {
+  return a < b ? `${a}-${b}` : `${b}-${a}`;
+}
 
 export const playerKey = (playerId: string) => `p:${playerId}`;
 export const pickKey = (season: string, round: number, orig: number) =>

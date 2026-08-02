@@ -156,6 +156,19 @@ export function tradeWebHref(tradeId: string): string {
   return `/web${webQueryString({ ...EMPTY_WEB_URL, tradeId })}`;
 }
 
+/**
+ * The canonical URL for one pair's strand. Takes an already-built edge key rather than
+ * two owner ids: the key convention belongs to the graph (`pairEdgeKey`), and this
+ * module stays free of that import on purpose - a client bundle that only wants a
+ * trade link must not pull the whole trade-graph derivation in behind it.
+ */
+export function pairWebHref(edgeKey: string): string {
+  return `/web${webQueryString({
+    ...EMPTY_WEB_URL,
+    selection: { kind: "edge", key: edgeKey },
+  })}`;
+}
+
 /** The canonical URL for a manager's strands on the web. */
 export function managerWebHref(ownerId: string): string {
   return `/web${webQueryString({

@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
 import { buildFixtureHistory } from "../testing/fixtureHistory";
-import { buildDossier, buildFormerDossier, getAllDossiers } from "./index";
+import {
+  buildDossier,
+  buildFormerDossier,
+  dossiersByOwner,
+  getAllDossiers,
+} from "./index";
 import { MANAGERS } from "../providers/fixture/data";
 import { getPrincipals, buildPrincipals, type SeasonOwnership } from "../principals";
 import type { LeagueHistory } from "../history";
@@ -268,6 +273,34 @@ describe("a handover splits into two independently-scoped dossiers", () => {
   it("returns null for a current principal or an unknown owner id", () => {
     expect(buildFormerDossier(h, "successor", principals)).toBeNull();
     expect(buildFormerDossier(h, "nobody", principals)).toBeNull();
+  });
+
+  it("keys every principal by owner id, THE VIEWER INCLUDED", () => {
+    // The whole reason this exists next to getAllDossiers: comparing yourself against
+    // a leaguemate is the point of Manager Compare, and getAllDossiers deliberately
+    // leaves you out.
+    const byOwner = dossiersByOwner(h, principals);
+    expect(byOwner.has(h.me.userId!)).toBe(true);
+    expect(
+      getAllDossiers(h, principals).some((d) => d.profile.userId === h.me.userId),
+    ).toBe(false);
+    // A departed principal is keyed by their own owner id, not the seat they left.
+    expect(byOwner.get("departed")?.identity.kind).toBe("former");
+    expect(byOwner.get("successor")?.identity).toEqual({
+      kind: "current",
+      rosterId: 2,
+    });
+  });
+
+  it("reads identically to each manager's own dossier", () => {
+    // Two surfaces describing one manager must not be able to disagree.
+    const byOwner = dossiersByOwner(h, principals);
+    expect(JSON.stringify(byOwner.get("successor"))).toBe(
+      JSON.stringify(buildDossier(h, 2, principals)),
+    );
+    expect(JSON.stringify(byOwner.get("departed"))).toBe(
+      JSON.stringify(buildFormerDossier(h, "departed", principals)),
+    );
   });
 
   it("lists current managers before former ones, viewer excluded", () => {

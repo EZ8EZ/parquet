@@ -50,6 +50,7 @@ import {
   assetPlayerId,
   buildTradeTree,
   countTreeNodes,
+  pairEdgeKey,
   rankTradeRoots,
   type AssetMove,
   type ManagerMetric,
@@ -424,7 +425,14 @@ function WebMode({
         const ids = e.tradeIds.filter((id) => keep.has(id));
         return { ...e, tradeIds: ids, count: ids.length };
       })
-      .filter((e) => e.count > 0);
+      .filter((e) => e.count > 0)
+      // Re-sort under the REMAPPED counts. The graph's own order sorts by the raw
+      // max(dossier-derived, listable) count, which can disagree with the listable
+      // figure this view just adopted (see lib/tradegraph on why the raw count can
+      // exceed what anyone could list) - without this, "busiest pairing" is
+      // view.edges[0] and could name a pair showing a smaller number than the row
+      // right below it.
+      .sort((x, y) => y.count - x.count || x.key.localeCompare(y.key));
 
     // Keyed by owner id, not roster id: `ownerParties` is already resolved to
     // whoever actually held each seat that season (lib/tradegraph#buildTradeGraph),
@@ -996,13 +1004,7 @@ function NodePanel({
               <li key={p.oid}>
                 <button
                   type="button"
-                  onClick={() =>
-                    onPickEdge(
-                      ownerId < p.oid
-                        ? `${ownerId}-${p.oid}`
-                        : `${p.oid}-${ownerId}`,
-                    )
-                  }
+                  onClick={() => onPickEdge(pairEdgeKey(ownerId, p.oid))}
                   className="flex w-full items-center gap-2 rounded-[--radius-sm] px-2 py-1.5 text-left transition-colors hover:bg-surface-2 motion-reduce:transition-none"
                 >
                   <span className="min-w-0 flex-1 truncate text-[13px] text-ink">

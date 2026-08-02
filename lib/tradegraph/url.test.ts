@@ -3,6 +3,7 @@ import {
   EMPTY_WEB_URL,
   edgeKeyForTrade,
   managerWebHref,
+  pairWebHref,
   parseWebParams,
   tradeWebHref,
   webQueryString,
@@ -156,5 +157,14 @@ describe("hrefs", () => {
 
   it("builds a manager URL", () => {
     expect(managerWebHref("999")).toBe("/web?manager=999");
+  });
+
+  it("builds a pair URL that parses back to the same strand", () => {
+    const href = pairWebHref("111-222");
+    expect(href).toBe("/web?pair=111-222");
+    expect(parseWebParams(read(href.split("?")[1])).selection).toEqual({
+      kind: "edge",
+      key: "111-222",
+    });
   });
 });

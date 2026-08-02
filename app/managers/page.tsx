@@ -25,15 +25,24 @@ export default async function ManagersPage() {
           <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
             Manager dossiers
           </p>
-          {me != null && (
+          <div className="flex shrink-0 items-center gap-3">
             <Link
-              href={`/managers/${me}`}
+              href="/managers/compare"
               className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
             >
-              your own file
+              compare two
               <ChevronRight size={12} aria-hidden="true" />
             </Link>
-          )}
+            {me != null && (
+              <Link
+                href={`/managers/${me}`}
+                className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+              >
+                your own file
+                <ChevronRight size={12} aria-hidden="true" />
+              </Link>
+            )}
+          </div>
         </div>
         <h1 className="font-display text-[26px] font-semibold leading-[1.1] text-ink">
           Scout the managers
