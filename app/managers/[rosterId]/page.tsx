@@ -3,10 +3,13 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, Lightbulb } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildDossier } from "@/lib/dossier";
+import { generateApproachMessage } from "@/lib/dossier/message";
 import { getPrincipals } from "@/lib/principals";
+import { managerWebHref } from "@/lib/tradegraph/url";
 import { Tag, DeltaValue, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { BarChart } from "@/components/charts";
+import { CopyBlock } from "@/components/CopyBlock";
 import { cn, signed } from "@/lib/ui";
 import type { ReactNode } from "react";
 
@@ -158,6 +161,13 @@ export default async function ManagerDetailPage({
         ))}
       </ul>
 
+      <div className="mt-2">
+        <CopyBlock
+          text={generateApproachMessage(d)}
+          label="Draft message"
+        />
+      </div>
+
       <SectionHeader title="The numbers" />
       <div className="grid grid-cols-2 gap-1.5">
         <Metric
@@ -245,7 +255,9 @@ export default async function ManagerDetailPage({
             title="Favorite trade partners"
             action={
               <Link
-                href="/web"
+                // Straight to this manager's strands, not the bare ring - the URL
+                // helper the trade web now exposes exists for exactly this link.
+                href={p.userId ? managerWebHref(p.userId) : "/web"}
                 className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-accent"
               >
                 trade web
