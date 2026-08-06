@@ -15,10 +15,14 @@ export function ordinal(n: number): string {
   return n + (s[(v - 20) % 10] ?? s[v] ?? s[0]);
 }
 
-export function pickLabel(dp: DraftPickRef): string {
+export function pickLabel(dp: DraftPickRef, via?: string | null): string {
   // Inferred picks are flagged in the label itself so an inference can never be
-  // read as a recorded fact, wherever it surfaces.
-  return `${dp.season} ${ordinal(dp.round)}${dp.inferred ? " (inferred)" : ""}`;
+  // read as a recorded fact, wherever it surfaces. `via` names the pick's ORIGINAL
+  // roster (the /drafts lineage convention) - without it, a trade moving two
+  // different picks that share a season and round reads as a no-op ("acquired the
+  // 2027 3rd for the 2027 3rd"), when the two are distinct assets.
+  const origin = via ? ` (via ${via})` : "";
+  return `${dp.season} ${ordinal(dp.round)}${origin}${dp.inferred ? " (inferred)" : ""}`;
 }
 
 export function rosterName(h: LeagueHistory, rosterId: number): string {
@@ -51,10 +55,14 @@ export function tradeSide(
   const gotPicks: string[] = [];
   const gavePicks: string[] = [];
   for (const dp of t.draftPicks) {
+    // A pick that isn't this side's own natural pick is named by its origin, so
+    // two same-round picks in one deal can never read as the same asset. Your own
+    // pick stays unqualified - "the 2027 3rd" from your perspective IS yours.
+    const via = dp.rosterId !== rosterId ? rosterName(h, dp.rosterId) : null;
     if (dp.ownerId === rosterId && dp.previousOwnerId !== rosterId)
-      gotPicks.push(pickLabel(dp));
+      gotPicks.push(pickLabel(dp, via));
     else if (dp.previousOwnerId === rosterId && dp.ownerId !== rosterId)
-      gavePicks.push(pickLabel(dp));
+      gavePicks.push(pickLabel(dp, via));
   }
   return { got, gave, gotPicks, gavePicks };
 }
