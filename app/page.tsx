@@ -1,18 +1,5 @@
 import Link from "next/link";
-import {
-  AlertTriangle,
-  Award,
-  BookText,
-  ChevronRight,
-  GitBranch,
-  MessageSquareText,
-  Repeat,
-  ScrollText,
-  Settings,
-  Share2,
-  Target,
-  Users,
-} from "lucide-react";
+import { AlertTriangle, ChevronRight, Repeat, ScrollText, Settings } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getStrategyReport } from "@/lib/strategy";
 import { getLedgerSummary } from "@/lib/ledger";
@@ -20,6 +7,8 @@ import { loadDigest } from "@/lib/digest";
 import { currentFormByRoster } from "@/lib/roster";
 import { ordinal } from "@/lib/derive/describe";
 import { liveStreaks } from "@/lib/streaks";
+import { curatedSurfaces } from "@/lib/nav";
+import { iconForSurface } from "@/components/nav-icons";
 import { DigestPanel } from "@/components/DigestPanel";
 import { StreakPanel } from "@/components/StreakPanel";
 import { Wordmark } from "@/components/Brand";
@@ -264,18 +253,34 @@ export default async function HomePage() {
         </>
       )}
 
-      {/* Explore */}
+      {/* Explore - rendered from lib/nav.ts's curated set, not a hand-kept list of
+          its own. That registry is also what League's pill row and the /more index
+          read, which is the actual fix behind round 6's candidate 53: this grid and
+          League's used to be two independently maintained lists that had already
+          silently diverged (neither included Manager Compare or /rank). One shared
+          source means they can't drift apart again. */}
       <SectionHeader title="Go deeper" />
       <div className="grid grid-cols-2 gap-1.5">
-        <HomeLink href="/plan" icon={<Target size={15} />} title="Game plan" sub="How to improve this team" />
-        <HomeLink href="/analyst" icon={<MessageSquareText size={15} />} title="The Analyst" sub="Audit your thinking" />
-        <HomeLink href="/managers" icon={<Users size={15} />} title="Dossiers" sub="Scout your rivals" />
-        <HomeLink href="/awards" icon={<Award size={15} />} title="League awards" sub="Who's who, statistically" />
-        <HomeLink href="/ledger" icon={<ScrollText size={15} />} title="Decision ledger" sub={`${ledger.annotated}/${ledger.notable} annotated`} />
-        <HomeLink href="/drafts" icon={<GitBranch size={15} />} title="Draft history" sub="What your picks became" />
-        <HomeLink href="/values" icon={<BookText size={15} />} title="Asset values" sub="Players + picks" />
-        <HomeLink href="/web" icon={<Share2 size={15} />} title="Trade web" sub="Beta: see the connections" />
+        {curatedSurfaces().map((s) => {
+          const Icon = iconForSurface(s.href);
+          return (
+            <HomeLink
+              key={s.href}
+              href={s.href}
+              icon={<Icon size={15} />}
+              title={s.label}
+              sub={s.href === "/ledger" ? `${ledger.annotated}/${ledger.notable} annotated` : s.sub}
+            />
+          );
+        })}
       </div>
+      <Link
+        href="/more"
+        className="mt-1.5 flex min-h-11 items-center justify-center gap-1 rounded-[--radius-sm] border border-dashed border-border text-[12px] font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+      >
+        See everything
+        <ChevronRight size={13} aria-hidden="true" />
+      </Link>
 
       <p className="mt-5 text-center text-[11px] leading-relaxed text-faint">
         Parquet advises; it can&apos;t act. Sleeper has no write API - every

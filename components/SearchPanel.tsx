@@ -1,14 +1,17 @@
 "use client";
 
 /**
- * GLOBAL SEARCH - one surface, reachable from anywhere, for the four things a
- * manager actually looks up mid-conversation: a player, a manager, a trade, or a
- * draft pick.
+ * SEARCH PANEL - one surface, for the four things a manager actually looks up mid-
+ * conversation: a player, a manager, a trade, or a draft pick.
  *
- * Mounted once in the root layout (not per page) so the trigger survives
- * navigation. Placed as a floating button above the bottom tab bar rather than a
- * header icon - there is no shared page header to hang it from (every page owns
- * its own), and the bottom-right corner is clear on every screen this app has.
+ * Formerly a floating button + full-screen modal (GlobalSearch, mounted globally in
+ * the root layout). Round 6 folded it into the top of `/more`, the new unified
+ * surface index, instead: a floating action button collided with real content on
+ * every content-heavy page added since round 1 (flagged twice), and a search box
+ * living at the top of "every destination in the app" is the same job - "get me to
+ * the thing I'm thinking of" - as the rest of that page, not a separate affordance
+ * competing for the same screen space. The search logic itself is unchanged, just
+ * un-mounted from a modal: same debounce, same endpoint, same result rendering.
  *
  * Matching happens server-side (app/api/search/route.ts): the player pool alone is
  * in the thousands, so shipping it to the client and filtering there would mean a
@@ -24,14 +27,7 @@
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import {
-  ArrowLeftRight,
-  ChevronRight,
-  GitBranch,
-  Loader2,
-  Search,
-  X,
-} from "lucide-react";
+import { ArrowLeftRight, ChevronRight, GitBranch, Loader2, Search } from "lucide-react";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { TeamAvatar } from "./TeamAvatar";
 import { Tag } from "./ui";
@@ -59,13 +55,11 @@ function totalCount(r: SearchResponse): number {
   return r.players.length + r.managers.length + r.trades.length + r.picks.length;
 }
 
-export function GlobalSearch() {
-  const [open, setOpen] = useState(false);
+export function SearchPanel() {
   const [query, setQuery] = useState("");
   const [result, setResult] = useState<SearchResponse>(EMPTY);
   const [loading, setLoading] = useState(false);
   const [expandedTrade, setExpandedTrade] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
   const abortRef = useRef<AbortController | null>(null);
 
   const handleQueryChange = useCallback((value: string) => {
@@ -84,36 +78,7 @@ export function GlobalSearch() {
     }
   }, []);
 
-  const close = useCallback(() => {
-    setOpen(false);
-    setQuery("");
-    setResult(EMPTY);
-    setExpandedTrade(null);
-    abortRef.current?.abort();
-  }, []);
-
-  // Body scroll lock while the overlay is up - a full-screen panel with its own
-  // internal scroller shouldn't also let the page behind it scroll.
-  useEffect(() => {
-    if (!open) return;
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    inputRef.current?.focus();
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, [open]);
-
-  useEffect(() => {
-    if (!open) return;
-    function onKey(e: KeyboardEvent) {
-      if (e.key === "Escape") close();
-    }
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
-  }, [open, close]);
-
-  // The empty-query reset lives in the input's own onChange (below), not here -
+  // The empty-query reset lives in the input's own onChange (above), not here -
   // deriving it from a state change inside an effect is the exact cascading-render
   // anti-pattern the react-hooks lint rule flags. This effect only ever subscribes
   // to the debounced fetch for a non-empty query.
@@ -139,125 +104,91 @@ export function GlobalSearch() {
   }, [query]);
 
   return (
-    <>
-      <button
-        type="button"
-        onClick={() => setOpen(true)}
-        aria-label="Search players, managers, trades and picks"
-        className="fixed right-4 z-40 flex h-14 w-14 items-center justify-center rounded-full bg-accent text-accent-ink shadow-lg shadow-black/40 transition-transform active:scale-95"
-        style={{ bottom: "calc(env(safe-area-inset-bottom) + 84px)" }}
-      >
-        <Search size={22} aria-hidden="true" />
-      </button>
-
-      {open && (
-        <div
-          role="dialog"
-          aria-modal="true"
+    <div>
+      <div className="relative">
+        <Search
+          size={15}
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"
+        />
+        <input
+          value={query}
+          onChange={(e) => handleQueryChange(e.target.value)}
+          placeholder="Search a player, manager, trade or pick"
           aria-label="Search"
-          className="fixed inset-0 z-[60] flex flex-col bg-bg/98 backdrop-blur-sm"
-        >
-          <div
-            className="flex items-center gap-2 border-b border-border px-4 pb-3"
-            style={{ paddingTop: "calc(env(safe-area-inset-top) + 14px)" }}
-          >
-            <div className="relative flex-1">
-              <Search
-                size={15}
-                aria-hidden="true"
-                className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"
-              />
-              <input
-                ref={inputRef}
-                value={query}
-                onChange={(e) => handleQueryChange(e.target.value)}
-                placeholder="Search a player, manager, trade or pick"
-                aria-label="Search"
-                className="h-11 w-full rounded-full border border-border bg-surface pl-9 pr-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
-              />
-              {loading && (
-                <Loader2
-                  size={15}
-                  aria-hidden="true"
-                  className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-faint"
+          className="h-11 w-full rounded-full border border-border bg-surface pl-9 pr-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+        />
+        {loading && (
+          <Loader2
+            size={15}
+            aria-hidden="true"
+            className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-faint"
+          />
+        )}
+      </div>
+
+      <div className="mt-2">
+        {!query.trim() && (
+          <p className="px-1 text-[12.5px] leading-snug text-muted">
+            Start typing to search across every player, manager, trade and draft
+            pick in the league.
+          </p>
+        )}
+
+        {query.trim() && !loading && totalCount(result) === 0 && (
+          <p className="px-1 text-[12.5px] leading-snug text-muted">
+            No matches for &ldquo;{result.query || query}&rdquo;.
+          </p>
+        )}
+
+        {result.players.length > 0 && (
+          <Section title="Players">
+            <ul className="space-y-1">
+              {result.players.map((p) => (
+                <PlayerRow key={p.id} p={p} />
+              ))}
+            </ul>
+          </Section>
+        )}
+
+        {result.managers.length > 0 && (
+          <Section title="Managers">
+            <ul className="space-y-1">
+              {result.managers.map((m) => (
+                <ManagerRow key={m.id} m={m} />
+              ))}
+            </ul>
+          </Section>
+        )}
+
+        {result.trades.length > 0 && (
+          <Section title="Trades">
+            <ul className="space-y-1">
+              {result.trades.map((t) => (
+                <TradeRow
+                  key={t.id}
+                  t={t}
+                  expanded={expandedTrade === t.id}
+                  onToggle={() =>
+                    setExpandedTrade((cur) => (cur === t.id ? null : t.id))
+                  }
                 />
-              )}
-            </div>
-            <button
-              type="button"
-              onClick={close}
-              aria-label="Close search"
-              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-muted transition-colors hover:bg-surface-2 hover:text-ink"
-            >
-              <X size={19} aria-hidden="true" />
-            </button>
-          </div>
+              ))}
+            </ul>
+          </Section>
+        )}
 
-          <div className="flex-1 overflow-y-auto px-4 pb-8 pt-3">
-            {!query.trim() && (
-              <p className="px-1 text-[12.5px] leading-snug text-muted">
-                Start typing to search across every player, manager, trade and
-                draft pick in the league.
-              </p>
-            )}
-
-            {query.trim() && !loading && totalCount(result) === 0 && (
-              <p className="px-1 text-[12.5px] leading-snug text-muted">
-                No matches for &ldquo;{result.query || query}&rdquo;.
-              </p>
-            )}
-
-            {result.players.length > 0 && (
-              <Section title="Players">
-                <ul className="space-y-1">
-                  {result.players.map((p) => (
-                    <PlayerRow key={p.id} p={p} onNavigate={close} />
-                  ))}
-                </ul>
-              </Section>
-            )}
-
-            {result.managers.length > 0 && (
-              <Section title="Managers">
-                <ul className="space-y-1">
-                  {result.managers.map((m) => (
-                    <ManagerRow key={m.id} m={m} onNavigate={close} />
-                  ))}
-                </ul>
-              </Section>
-            )}
-
-            {result.trades.length > 0 && (
-              <Section title="Trades">
-                <ul className="space-y-1">
-                  {result.trades.map((t) => (
-                    <TradeRow
-                      key={t.id}
-                      t={t}
-                      expanded={expandedTrade === t.id}
-                      onToggle={() =>
-                        setExpandedTrade((cur) => (cur === t.id ? null : t.id))
-                      }
-                      onNavigate={close}
-                    />
-                  ))}
-                </ul>
-              </Section>
-            )}
-
-            {result.picks.length > 0 && (
-              <Section title="Picks">
-                <ul className="space-y-1">
-                  {result.picks.map((p) => (
-                    <PickRow key={p.id} p={p} onNavigate={close} />
-                  ))}
-                </ul>
-              </Section>
-            )}
-          </div>
-        </div>
-      )}
-    </>
+        {result.picks.length > 0 && (
+          <Section title="Picks">
+            <ul className="space-y-1">
+              {result.picks.map((p) => (
+                <PickRow key={p.id} p={p} />
+              ))}
+            </ul>
+          </Section>
+        )}
+      </div>
+    </div>
   );
 }
 
@@ -272,12 +203,11 @@ function Section({ title, children }: { title: string; children: React.ReactNode
   );
 }
 
-function PlayerRow({ p, onNavigate }: { p: PlayerResult; onNavigate: () => void }) {
+function PlayerRow({ p }: { p: PlayerResult }) {
   return (
     <li>
       <Link
         href="/values"
-        onClick={onNavigate}
         className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
       >
         <PlayerAvatar name={p.name} team={p.team} playerId={p.id} size="sm" />
@@ -304,12 +234,11 @@ function PlayerRow({ p, onNavigate }: { p: PlayerResult; onNavigate: () => void 
   );
 }
 
-function ManagerRow({ m, onNavigate }: { m: ManagerResult; onNavigate: () => void }) {
+function ManagerRow({ m }: { m: ManagerResult }) {
   return (
     <li>
       <Link
         href={m.href}
-        onClick={onNavigate}
         className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
       >
         <TeamAvatar name={m.name} avatarId={m.avatar} teamLogoUrl={m.teamLogoUrl} size="sm" />
@@ -338,12 +267,10 @@ function TradeRow({
   t,
   expanded,
   onToggle,
-  onNavigate,
 }: {
   t: TradeResult;
   expanded: boolean;
   onToggle: () => void;
-  onNavigate: () => void;
 }) {
   return (
     <li
@@ -372,7 +299,6 @@ function TradeRow({
         <div className="border-t border-border px-2.5 py-1.5">
           <Link
             href={tradeWebHref(t.id)}
-            onClick={onNavigate}
             className="inline-flex min-h-11 items-center gap-1 text-[11.5px] font-semibold text-accent"
           >
             Open this deal on the trade web
@@ -384,12 +310,11 @@ function TradeRow({
   );
 }
 
-function PickRow({ p, onNavigate }: { p: PickResult; onNavigate: () => void }) {
+function PickRow({ p }: { p: PickResult }) {
   return (
     <li>
       <Link
         href={p.href}
-        onClick={onNavigate}
         className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
       >
         <GitBranch size={16} aria-hidden="true" className="shrink-0 text-faint" />
