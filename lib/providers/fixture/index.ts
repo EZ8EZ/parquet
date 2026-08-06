@@ -3,6 +3,8 @@
  * test is ever blocked on network/API access. It is the DEFAULT provider.
  */
 import type {
+  BracketGame,
+  BracketKind,
   DraftMeta,
   DraftPick,
   League,
@@ -93,6 +95,16 @@ export class FixtureProvider implements LeagueProvider {
 
   async getDraftPicks(draftId: string): Promise<DraftPick[]> {
     return corpus().draftPicks[draftId] ?? [];
+  }
+
+  /**
+   * Winners bracket only. The fixture has no consolation bracket: nothing in the app
+   * reads one, and a synthetic loser's bracket would be invented data serving no
+   * feature.
+   */
+  async getBracket(leagueId: string, kind: BracketKind): Promise<BracketGame[]> {
+    if (kind !== "winners") return [];
+    return corpus().brackets[leagueId] ?? [];
   }
 }
 

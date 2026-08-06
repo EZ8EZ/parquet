@@ -4,6 +4,7 @@
  * purely and deterministically.
  */
 import type { Annotation, HistoryMatchup, LeagueHistory } from "../history";
+import type { BracketGame } from "../providers/types";
 import {
   corpus,
   FIXTURE_LEAGUE_ID,
@@ -23,9 +24,12 @@ export function buildFixtureHistory(
     .sort((a, b) => a.created - b.created);
 
   const matchups: HistoryMatchup[] = [];
+  const brackets = new Map<string, BracketGame[]>();
   for (const s of SEASONS) {
     const id = leagueIdFor(s);
     for (const m of c.matchups[id] ?? []) matchups.push({ ...m, season: s });
+    const games = c.brackets[id] ?? [];
+    if (games.length) brackets.set(s, games);
   }
 
   const players = new Map<string, Player>(c.players.map((p) => [p.playerId, p]));
@@ -44,6 +48,7 @@ export function buildFixtureHistory(
     tradedPicks: c.tradedPicks[FIXTURE_LEAGUE_ID],
     tradedPicksHistory: SEASONS.flatMap((s) => c.tradedPicks[leagueIdFor(s)] ?? []),
     matchups,
+    brackets,
     annotations,
     me: {
       userId: "u1",

@@ -14,6 +14,7 @@
  * Everything is seeded — same output every run, so tests are stable.
  */
 import type {
+  BracketGame,
   DraftMeta,
   DraftPick,
   DraftPickRef,
@@ -138,6 +139,65 @@ export interface FixtureCorpus {
   drafts: Record<string, DraftMeta[]>;
   /** Keyed by draftId. */
   draftPicks: Record<string, DraftPick[]>;
+  /** Winners bracket per leagueId. Keyed the same way rosters and matchups are. */
+  brackets: Record<string, BracketGame[]>;
+}
+
+/**
+ * A synthetic six-team winners bracket from the fixture's own standings.
+ *
+ * The fixture exists so every feature works offline, and a champion is now one of
+ * those features - without this, the demo's Season Recap would have to say "no
+ * champion on record" while the live league shows four.
+ *
+ * Deterministic, like everything else here (no randomness, house rule). Seeds come
+ * from the season's real fixture standings; the higher seed advances, EXCEPT that in
+ * the semi-finals of odd-indexed seasons the lower seed wins. That single documented
+ * upset is what makes the demo exercise the case this feature exists for: a champion
+ * who did not have the best regular-season record, and therefore should pick last
+ * anyway.
+ */
+function buildBracket(rosters: Roster[], seasonIndex: number): BracketGame[] {
+  const seeds = [...rosters]
+    .sort(
+      (a, b) =>
+        b.settings.wins - a.settings.wins ||
+        b.settings.fpts - a.settings.fpts ||
+        a.rosterId - b.rosterId,
+    )
+    .slice(0, 6)
+    .map((r) => r.rosterId);
+  if (seeds.length < 6) return [];
+
+  const [s1, s2, s3, s4, s5, s6] = seeds;
+  const upset = seasonIndex % 2 === 1;
+  const game = (
+    matchId: number,
+    round: number,
+    t1: number,
+    t2: number,
+    winner: number,
+    placement: number | null = null,
+  ): BracketGame => ({
+    matchId,
+    round,
+    placement,
+    team1: t1,
+    team2: t2,
+    winner,
+    loser: winner === t1 ? t2 : t1,
+  });
+
+  // Round 1: seeds 1 and 2 have byes.
+  const g1 = game(1, 1, s3, s6, s3);
+  const g2 = game(2, 1, s4, s5, s4);
+  // Semi-finals: the documented upset flips these, and only these.
+  const g3 = game(3, 2, s1, g2.winner!, upset ? g2.winner! : s1);
+  const g4 = game(4, 2, s2, g1.winner!, upset ? g1.winner! : s2);
+  // Final and third-place game.
+  const g5 = game(5, 3, g3.winner!, g4.winner!, g3.winner!, 1);
+  const g6 = game(6, 3, g3.loser!, g4.loser!, g3.loser!, 3);
+  return [g1, g2, g3, g4, g5, g6];
 }
 
 /**
@@ -587,12 +647,19 @@ export function generateCorpus(): FixtureCorpus {
   const txOut: Record<string, Transaction[]> = {};
   const mOut: Record<string, Matchup[]> = {};
   const tpOut: Record<string, TradedPick[]> = {};
+  const bracketsOut: Record<string, BracketGame[]> = {};
   for (const season of SEASONS) {
     const id = leagueIdFor(season);
     rostersOut[id] = rosterSnapshots[season];
     txOut[id] = transactions[season] ?? [];
     mOut[id] = matchups[season] ?? [];
     tpOut[id] = tradedPickSnapshots[season];
+    // Only a COMPLETE season has a decided bracket - the current one is still being
+    // played, and inventing a champion for it is the one thing this must not do.
+    bracketsOut[id] =
+      season === CURRENT_SEASON
+        ? []
+        : buildBracket(rosterSnapshots[season], SEASONS.indexOf(season));
   }
 
   // ---------- Drafts (so pick lineage works fully offline) ----------
@@ -696,6 +763,7 @@ export function generateCorpus(): FixtureCorpus {
     tradedPicks: tpOut,
     drafts: draftsOut,
     draftPicks: draftPicksOut,
+    brackets: bracketsOut,
   };
 
   // ----- inner helpers that close over state -----

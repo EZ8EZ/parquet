@@ -193,6 +193,43 @@ export interface LeagueProvider {
   getDrafts?(leagueId: string): Promise<DraftMeta[]>;
   /** Picks actually made in a draft. Optional for the same reason. */
   getDraftPicks?(draftId: string): Promise<DraftPick[]>;
+  /**
+   * A season's playoff bracket. OPTIONAL for the same reason as drafts: a provider
+   * with no bracket data (CSV) must keep compiling, and callers treat `undefined` as
+   * "this league has no decided champion on record" rather than inventing one.
+   */
+  getBracket?(leagueId: string, kind: BracketKind): Promise<BracketGame[]>;
+}
+
+export type BracketKind = "winners" | "losers";
+
+/**
+ * One game in a playoff bracket.
+ *
+ * Sleeper's shape, normalised: `m`/`r`/`p`/`t1`/`t2`/`w`/`l`. Verified live across all
+ * four complete seasons of the real league.
+ *
+ * `t1_from`/`t2_from` are deliberately NOT mapped. They exist to draw a bracket tree,
+ * and nothing in this app draws one (a 14-team tree does not fit 390px). This round's
+ * whole premise is that fields parsed and read by nobody are a liability, so they stay
+ * unmapped until something actually renders them.
+ */
+export interface BracketGame {
+  /** Match id within the bracket. */
+  matchId: number;
+  /** Round number, 1-based. */
+  round: number;
+  /**
+   * The place this game decides, when it decides one: 1 is the championship, 3 the
+   * third-place game, and so on. The winner takes `placement`, the loser
+   * `placement + 1`. Null for a game that only advances teams.
+   */
+  placement: number | null;
+  /** Roster ids. Null while a bracket is still being filled in. */
+  team1: number | null;
+  team2: number | null;
+  winner: number | null;
+  loser: number | null;
 }
 
 /**

@@ -15,7 +15,9 @@ import {
   providerName,
 } from "./providers";
 import type {
+  BracketGame,
   LeagueDetail,
+  LeagueProvider,
   LeagueUser,
   Matchup,
   Player,
@@ -63,6 +65,15 @@ export interface LeagueHistory {
   /** Pick movement across every season in the chain (incl. historical hops). */
   tradedPicksHistory: TradedPick[];
   matchups: HistoryMatchup[];
+  /**
+   * Winners bracket per season, for every season in the chain that has one.
+   *
+   * Lives on the corpus rather than behind its own loader because `strengthRanks` (a
+   * synchronous function reached from half the app) needs it: draft order is set by
+   * the last completed season's FINAL standings, and the bracket is the only place
+   * those exist. Costs one request per season on the cold path.
+   */
+  brackets: Map<string, BracketGame[]>;
   annotations: Map<string, Annotation>;
   me: Me;
   currentSeasonYear: number;
@@ -132,6 +143,37 @@ async function loadMatchups(chain: LeagueDetail[]): Promise<HistoryMatchup[]> {
   return out;
 }
 
+/**
+ * Winners brackets across the chain.
+ *
+ * Unlike matchups (deliberately fixture-only - see above), this is cheap: ONE request
+ * per season, not one per week, and it answers the single question a dynasty league
+ * cares most about. Every failure mode degrades to "no bracket for that season":
+ * providers without the method (CSV), seasons whose playoffs have not been generated,
+ * and a rate-limited response that comes back `null` rather than an array.
+ */
+async function loadBrackets(
+  provider: LeagueProvider,
+  chain: LeagueDetail[],
+): Promise<Map<string, BracketGame[]>> {
+  const out = new Map<string, BracketGame[]>();
+  if (!provider.getBracket) return out;
+  const results = await Promise.all(
+    chain.map(async (league) => {
+      try {
+        return {
+          season: league.season,
+          games: await provider.getBracket!(league.leagueId, "winners"),
+        };
+      } catch {
+        return { season: league.season, games: [] as BracketGame[] };
+      }
+    }),
+  );
+  for (const r of results) if (r.games.length) out.set(r.season, r.games);
+  return out;
+}
+
 function resolveMe(
   meUserId: string,
   users: LeagueUser[],
@@ -186,6 +228,7 @@ async function getCorpus(fresh = false): Promise<Corpus> {
   const { transactions } = coalesceCommissionerTrades(rawTransactions);
   const annotations = await loadAnnotations(provider.name);
   const matchups = await loadMatchups(chain);
+  const brackets = await loadBrackets(provider, chain);
 
   // Default "me" identity from the configured username (fixture=EZ8; sleeper env).
   const username = defaultUsername();
@@ -209,6 +252,7 @@ async function getCorpus(fresh = false): Promise<Corpus> {
     tradedPicks,
     tradedPicksHistory,
     matchups,
+    brackets,
     annotations,
     currentSeasonYear: parseInt(currentLeague.season, 10),
     defaultMeUserId,

@@ -5,6 +5,8 @@
  */
 import { z } from "zod";
 import type {
+  BracketGame,
+  BracketKind,
   DraftMeta,
   DraftPick,
   League,
@@ -19,6 +21,7 @@ import type {
   User,
 } from "../types";
 import {
+  RawBracketArr,
   RawDraft,
   RawDraftArr,
   RawLeague,
@@ -31,6 +34,7 @@ import {
   RawTradedPickArr,
   RawTransactionArr,
   RawUser,
+  toBracketGame,
   toDraftMeta,
   toLeague,
   toLeagueDetail,
@@ -145,6 +149,14 @@ export class SleeperProvider implements LeagueProvider {
       RawMatchupArr,
     );
     return raw.map((m) => toMatchup(m, week));
+  }
+
+  async getBracket(leagueId: string, kind: BracketKind): Promise<BracketGame[]> {
+    const raw = await getJson(
+      `/league/${leagueId}/${kind}_bracket`,
+      RawBracketArr,
+    );
+    return (raw ?? []).map(toBracketGame);
   }
 
   async getTradedPicks(leagueId: string): Promise<TradedPick[]> {

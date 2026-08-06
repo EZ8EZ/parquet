@@ -54,6 +54,7 @@ export default async function RecapPage() {
     awardsHeld,
     timelineToday,
     fragilityToday,
+    champion,
   } = recap;
 
   const possessive = viewerWasOwner ? "Your" : "The";
@@ -83,6 +84,42 @@ export default async function RecapPage() {
           You weren&apos;t managing this roster yet in {season} - the numbers below are
           the team&apos;s, not yours, from before you took over.
         </p>
+      )}
+
+      {/* How the season ENDED, above the viewer's own numbers on purpose: a recap that
+          opens with your record before saying who won the thing buries the headline. */}
+      {champion && (
+        <div
+          className={
+            champion.isViewer
+              ? "mb-1 rounded-[--radius] border border-accent/45 bg-accent/[0.09] p-3"
+              : "mb-1 rounded-[--radius] border border-border bg-surface/60 p-3"
+          }
+        >
+          <div className="flex items-start gap-2.5">
+            <Trophy
+              size={18}
+              aria-hidden="true"
+              className={champion.isViewer ? "mt-0.5 shrink-0 text-accent" : "mt-0.5 shrink-0 text-faint"}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-faint">
+                {season} champion
+              </div>
+              <div className="mt-0.5 font-display text-[19px] font-semibold leading-tight text-ink">
+                {champion.isViewer ? `${champion.name} - you won it` : champion.name}
+              </div>
+              <p className="mt-0.5 text-[12px] leading-snug text-muted">
+                {champion.runnerUpName
+                  ? `Beat ${champion.runnerUpName} in the final.`
+                  : "Took the title."}
+                {champion.viewerPlace != null &&
+                  !champion.isViewer &&
+                  ` You finished ${ordinal(champion.viewerPlace)} in the playoffs.`}
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
       <SectionHeader title={`${possessive} record`} />

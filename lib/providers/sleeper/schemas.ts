@@ -8,6 +8,7 @@
  */
 import { z } from "zod";
 import type {
+  BracketGame,
   DraftMeta,
   DraftPick,
   DraftPickRef,
@@ -232,6 +233,34 @@ export function toTradedPick(r: z.infer<typeof RawTradedPick>): TradedPick {
   };
 }
 
+// ---------- Playoff bracket ----------
+/**
+ * Every field nullish except the two that identify the game. A bracket for a season
+ * still being played returns games whose teams and result are not decided yet, and a
+ * schema that demanded them would throw on exactly the league state the app has to
+ * survive (the current season, mid-playoffs).
+ */
+export const RawBracketGame = z.object({
+  m: num,
+  r: num,
+  p: num.nullish(),
+  t1: num.nullish(),
+  t2: num.nullish(),
+  w: num.nullish(),
+  l: num.nullish(),
+});
+export function toBracketGame(r: z.infer<typeof RawBracketGame>): BracketGame {
+  return {
+    matchId: r.m,
+    round: r.r,
+    placement: r.p ?? null,
+    team1: r.t1 ?? null,
+    team2: r.t2 ?? null,
+    winner: r.w ?? null,
+    loser: r.l ?? null,
+  };
+}
+
 // ---------- Matchup ----------
 export const RawMatchup = z.object({
   roster_id: num,
@@ -389,4 +418,10 @@ export const RawLeagueUserArr = z.array(RawLeagueUser);
 export const RawTransactionArr = z.array(RawTransaction);
 export const RawTradedPickArr = z.array(RawTradedPick);
 export const RawMatchupArr = z.array(RawMatchup);
+/**
+ * Nullable at the top level, not just per game: Sleeper answers `null` (not `[]`) for a
+ * league whose playoffs have not been generated yet - and, observed while building
+ * this, for a rate-limited request too. Both have to read as "no bracket", never throw.
+ */
+export const RawBracketArr = z.array(RawBracketGame).nullish();
 export const RawPlayerMap = z.record(str, RawPlayer);
