@@ -178,6 +178,39 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * THEME TOGGLE selection state - CSS, not React, on purpose.
+ *
+ * Switching themes swaps every token on the page in one full-document style
+ * recalc, which can hold the main thread long enough that a React-rendered
+ * selection ring visibly trails the repaint it is supposed to describe (1-2s
+ * on a slow device). Keying the ring off the same [data-theme] attribute that
+ * applies the theme means both move in the same recalc - the ring cannot lag
+ * by construction. React still owns aria-checked; only the paint is CSS.
+ */
+[data-theme-choice] .theme-active-check {
+  display: none;
+}
+:root[data-theme="dark"] [data-theme-choice="dark"],
+:root[data-theme="light"] [data-theme-choice="light"],
+:root[data-theme="contrast"] [data-theme-choice="contrast"] {
+  color: var(--color-accent);
+}
+:root[data-theme="dark"] button[data-theme-choice="dark"],
+:root[data-theme="light"] button[data-theme-choice="light"],
+:root[data-theme="contrast"] button[data-theme-choice="contrast"] {
+  border-color: var(--color-accent);
+  /* Each theme's own wash token, NOT color-mix(var(--color-accent)...): the build
+   * constant-folds that to the default theme's literal gold, which would tint the
+   * active button with dark's accent under every theme. */
+  background-color: var(--accent-wash);
+}
+:root[data-theme="dark"] [data-theme-choice="dark"] .theme-active-check,
+:root[data-theme="light"] [data-theme-choice="light"] .theme-active-check,
+:root[data-theme="contrast"] [data-theme-choice="contrast"] .theme-active-check {
+  display: inline;
+}
+
 /* Accessible focus states */
 :where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
   outline: 2px solid var(--color-accent);
