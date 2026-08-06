@@ -892,3 +892,271 @@ brainstorm is the right move before any round 6; the seeds already banked:
 the FAB's mid-scroll design question, the structural pill-ground contrast
 fix, the em-dash comment sweep, and whether the digest's group header should
 follow its rows to the trade web.
+
+## Round 6 - a fresh brainstorm, three angles at once
+
+Same four (Chief Fable, Opus Lead B, Sonnet Lead D, Haiku Worker 3), no
+departures this round. Rather than one pass, three independent research
+agents swept the codebase from three different lenses in parallel, each
+blind to the other two, so overlap would be a real signal rather than an
+artifact of one angle's blind spot. Numbering continues from 34; each
+candidate below survived a check against everything already proposed in
+rounds 1-5.
+
+### Metrics-depth lens (the two proprietary metrics, underused)
+
+35. **A league-wide TCI x RFI quadrant chart.** No surface plots every
+    roster on both axes at once - `/league` is TCI-only, Manager Compare is
+    two-managers-only. The genuinely worst quadrant (incoherent AND brittle)
+    is currently unseeable in one view.
+36. **Fragility- and coherence-aware Trade Finder scoring.** `lib/tradefinder/`
+    has zero references to either metric module despite three rounds of work
+    on its rationale engine - a suggested package could say whether it
+    relieves or creates a single point of failure.
+37. **Live TCI/RFI header stat on the manager dossier page itself.** The one
+    place a viewer lands on a single manager carries neither number anywhere
+    except when a trade happens to reference them.
+38. **Commissioner health checks extended to metric outliers.** `/commissioner`
+    flags stale rosters and unresolved picks only - extend the same framing
+    to rosters sitting in the worst TCI/RFI bands as a league-wide watchlist.
+39. **A real, honest snapshot history.** The digest only ever diffs two
+    points (last-seen vs now). An opt-in, append-only log starting from
+    first use - explicitly labeled "since you started tracking," never
+    backfilled - could eventually chart a real TCI/RFI trend.
+40. **Band-crossing alerts, distinct from raw point movement.** The digest
+    reports raw drift but can't currently say "your posture just flipped"
+    (balanced to brittle, ascending to straddling) versus a same-band wobble.
+41. **Draft report cards cross-referenced against current fragility.**
+    `draftGrades.ts` and `fragility.ts` have never been read together - "your
+    best pick from this class is now your team's single point of failure."
+42. **TCI/RFI pills in global search's manager results.** The trade web
+    already proved out the compact pill pair (D30); search results show none
+    of it today.
+
+### Untapped-data lens (what the provider already returns and nothing reads)
+
+43. **Playoff brackets, and for the first time, a champion.** No provider
+    fetches `winners_bracket`/`losers_bracket`; every "best season" figure in
+    the app, Season Recap included, is regular-season record only. Confirmed
+    live: all four complete seasons return a full bracket with a decided
+    champion. The one league fact a dynasty league cares most about is
+    entirely missing.
+44. **Draft order that knows the champion picks last.** `pickValue` already
+    has a test asserting this, but the rank it's fed (`strengthRanks` in
+    `lib/picks.ts`) has no idea the playoffs happened - a title-winning
+    6-seed is priced as if it drafts sixth-from-last. Same fetch as 43, cheap
+    together.
+45. **Schedule luck.** `RosterSettings.fptsAgainst` is parsed and read by
+    nothing. Confirmed live: a 655-point spread across 14 rosters in 2025
+    alone - the missing third leg alongside fpts and ppts.
+46. **A real "who else wanted him" signal from losing waiver claims.** Partly
+    addressed already this round (contested claims now drive `isNotable` for
+    non-FAAB leagues) - the open part is a dedicated surface: 41 contested
+    player-weeks in 2025 alone, visible on no page today.
+47. **Waiver priority as this league's actual scarce resource.** Confirmed
+    live and populated (`waiverPosition`, 1-14 every roster) in a
+    rolling-priority league where priority IS the currency FAAB would
+    otherwise be. Note: `waiver_budget_used`/`total_moves` are confirmed
+    always-zero on this provider - don't build on those two.
+48. **Taxi squad and IR, two roster sections the app doesn't know exist.**
+    `Roster.taxi`/`Roster.reserve` are parsed and read by zero consumers;
+    `lineupSlots()` (which fragility and commissioner both build on) can't
+    tell a stashed rookie from bench clutter. Confirmed populated live.
+    Note: `keepers`/`is_keeper` confirmed always-null on this provider - a
+    dead end, don't build on it.
+49. **Per-player weekly scoring from the matchups endpoint.** Confirmed
+    present live but actively dropped by the current mapper
+    (`players_points`/`starters_points`). Real production data, not a
+    projection - could check valuation against what players actually scored.
+    Two real costs already documented in `lib/history.ts`: matchups are
+    fixture-only today (~110 requests, ~15s cold) - scope to one season, one
+    page, not the whole corpus.
+50. **Injury detail beyond a one-word badge.** `injury_body_part`/
+    `injury_notes`/`news_updated` are all populated in the already-fetched
+    player payload and entirely unmapped. Note: `injury_start_date`
+    confirmed empty on all players - "how long has he been out" isn't
+    derivable, don't promise it.
+
+### Mobile-UX lens (visual polish, verified live at 390px)
+
+51. **A collision-aware search FAB, not another flat-padding patch.**
+    Round 1 fixed one collision with fixed clearance; verified live this
+    round that it still overlaps real content on Home, League, and Roster -
+    every panel added since round 1 re-collides. Already flagged once by
+    Fable's round-5 review as a fresh-brainstorm item, not a patch.
+52. **Split Home into "what changed" vs. "what's running."** Confirmed live:
+    Home now stacks a stat grid, moves grid, digest, five streak cards,
+    record bullets, a partner row, and an 8-tile deeper grid - one long
+    scroll that didn't exist before rounds 3-4 landed on the same page.
+53. **A real "all surfaces" index.** Grepped confirmed: Manager Compare and
+    `/rank` have no nav entry anywhere except buried contextual links: Home's
+    "Go Deeper" grid and League's pill row are two different, incomplete
+    lists of the same idea, and neither includes Compare or Rank.
+54. **A scroll affordance on the horizontally-scrolling pill navs.** `/league`'s
+    pill row has zero visual cue that it scrolls; the last pill is simply
+    cropped mid-word at 390px.
+55. **A loading state for the compute-heavy force-dynamic pages.** `/trade/finder`,
+    `/web`, and `/league` price everything server-side per request with no
+    skeleton or "crunching the numbers" placeholder - a blank page on a slow
+    connection reads as broken, not busy.
+56. **A truncation/overflow sweep at exactly the 390px breakpoint.** Found
+    live: `/roster`'s positional radar clips its last count with an ellipsis
+    inside a fixed-width line instead of wrapping - smaller and more
+    mechanical than the accessibility audit already completed.
+57. **A "quiet lately" pass for Home's own long tail.** Round 4 (candidate 34)
+    fixed this exact shape on the commissioner page; Home's own bottom half
+    has three separate panels independently saying "nothing happened"
+    (0 trades, quiet trade desk, no moves) with no single acknowledgment
+    that the whole page is quiet because it's the offseason.
+
+**One overlap worth naming:** all three lenses independently flagged the
+app outgrowing its own navigation in some form (53's missing index, 52's
+Home density, and metrics-lens candidates 37/42 all wanting a place to put a
+number that currently has nowhere to live) - worth reading as one signal,
+not three separate asks, whenever this gets voted on.
+
+### Round 6 vote
+
+All four voted top-3, one line each. Points: 1st=3, 2nd=2, 3rd=1.
+
+| Rank | # | Idea | Points |
+|---|---|---|---|
+| 1 | 43 | Playoff brackets and a real champion | 12 |
+| 2 | 52 | Split Home into "changed" vs "running" | 3 |
+| 2 | 53 | A real "all surfaces" nav index | 3 |
+| 4 | 37 | TCI/RFI header stat on the dossier | 2 |
+| 4 | 45 | Schedule luck (fptsAgainst) | 2 |
+| 6 | 35 | League-wide TCI x RFI quadrant | 1 |
+| 6 | 36 | Fragility/coherence into Trade Finder | 1 |
+
+**Candidate 43 was every single voter's 1st-place pick - the strongest
+consensus of any round to date, ahead of even round 2's 16/23 tie and round
+3's candidate 24.** A dynasty memory app with no concept of who actually won
+a title was the one gap all three brainstorm lenses converged toward without
+coordinating.
+
+**43/44 bundled, per Opus Lead B's own scoping:** candidate 44 (draft order
+that accounts for playoff finish) rides the identical bracket fetch 43
+needs, and repairs a real, already-documented bug - `strengthRanks` prices a
+title-winning low seed as if it drafts near-last, while `pickValue` already
+has a test asserting the opposite. One Lead takes both.
+
+**Second slot: 52 and 53 tied at 3.** Both Chief Fable and Opus Lead B
+independently named the cross-lens navigation finding as the strongest
+non-43 signal in the document; tie broken toward **53** (the unified index)
+since it has the larger blast radius - Compare and `/rank` are two shipped
+features Opus Lead B called "reachable from no nav at all, which means
+features that effectively do not exist," and Fable's own flag notes 53
+could retire the FAB collision problem (51) structurally rather than
+patching it. 52 (Home's own density) goes on the list for whenever this
+comes up again, not lost.
+
+**Assignments:**
+- **Opus Lead B -> 43 + 44** (playoff bracket, champion, and the draft-order
+  fix that rides the same fetch). Their own unanimous 1st-place pick,
+  deepest technical scoping of anyone (the bundled bug fix).
+- **Sonnet Lead D -> 53** (the unified nav index). Not their top pick (43
+  was, same as everyone), but the only other winner on the board - same
+  precedent as prior rounds, assignment follows the winning slate, not a
+  full personal ranking.
+- **Haiku Worker 3 -> 51 + a scoped slice of 48**, both direct-assigned, no
+  vote needed. 51 (FAB collision) was independently called a defect needing
+  a real containment rule by both Fable and Lead B, not a fresh vote item -
+  same pattern as 33/34/17/28. 48's scope is cut down to just the
+  correctness bug Lead B named (`lineupSlots()` counting taxi-squad players
+  as startable depth, understating fragility) - NOT the full taxi/IR
+  display feature from the original candidate, which stays on the list for
+  later.
+
+**Saved for later, explicitly:** 39 (snapshot history) needs a real
+architecture conversation before assignment - it's the one candidate
+requiring new persistence semantics in a deliberately DB-free app (D18),
+flagged by both Opus Lead B and Sonnet Lead D as out of scope for a routine
+build. 49 (per-player weekly scoring) stays shelved - real cost (~110
+requests, ~15s cold) that two separate voters called too risky for a single
+session even at its already-narrowed scope. 40/42 (worker-shaped metrics
+candidates) and 52 (Home density) carry forward untouched.
+
+### Round 6 - what got built
+
+**Opus Lead B - 43 + 44 (playoff brackets, a champion, and draft order that
+knows it): done.** `lib/playoffs.ts` reads final placements off the bracket's
+placement games only (a game carrying `p` decides that place - advancement
+games say who moved on, not where anyone finished, and inferring a place from
+"lost in round 2" would mean assuming a bracket shape the function cannot
+see). Titles are credited through `principals.ownerAt`, D22's primitive, so
+roster 11's departed manager keeps their history. The brackets ride the
+corpus (one request per season - unlike matchups this is cheap) because
+`strengthRanks` is synchronous and reached from half the app.
+`playoffPlaces()` deliberately ranks ONLY the playoff finishers; the teams
+that missed keep the record-or-talent order `strengthRanks` already computed,
+which is what stopped the fix for eight teams becoming a regression for six -
+the offseason fallback regression flagged mid-round was fixed before the
+final tree and verified against the live league (non-playoff tail follows
+talent order exactly, not roster ids). Verified live across ALL FOUR complete
+seasons: four distinct champions (2022 Flick the Clint, 2023 Giddler on the
+Roof, 2024 Jalen Squadron, 2025 mjrooney20), each with a runner-up and 8
+decided places, and the recap page now opens on "2025 CHAMPION" - the single
+fact this app could never state before.
+
+**Sonnet Lead D - 53 (the unified nav index): done.** `lib/nav.ts` is the one
+registry of every surface; Home's "Go deeper" grid and League's pill row both
+filter it (`curated: true`) instead of keeping the two hand-rolled lists that
+had already silently diverged, and the new `/more` page (a sixth tab) renders
+the whole thing - including Manager Compare and `/rank`, the two confirmed
+orphans. Search moved into `/more` as `SearchPanel`; `GlobalSearch.tsx` and
+its floating button are deleted outright.
+
+**Haiku Worker 3 - the 48 slice: done. 51: correctly not built.** Taxi-squad
+players no longer count as startable depth in `lib/metrics/fragility.ts`
+(they cannot be started without leaving the taxi squad first), with a test
+pinning the direction of the change. 51 (FAB containment) became moot the
+moment Lead D's nav work deleted the FAB - the sequencing flag from the vote
+("53 first, or 51 collapses to a removal") played out exactly that way, and
+nothing was built to be thrown away.
+
+### Chief Fable's integration review, round 6
+
+- **The tree the coordinator snapshotted was mid-write** - the first gate run
+  caught 37 failing tests and two typecheck errors that had resolved
+  themselves by the time the writes settled. Worth recording as process: a
+  "appears complete based on file state" report is not a report, and the gate
+  was re-run from zero once the tree went quiet before anything else was
+  trusted.
+- **The pick-label bug (QA sweep), fixed at the source:** `pickLabel` in
+  `lib/derive/describe.ts` now takes an origin, and `tradeSide` names any
+  pick that is not the perspective side's own natural pick "via" its original
+  roster - the same disambiguation `/drafts`' lineage page already used, via
+  the same `rosterName`. "You acquired the 2027 3rd for the 2027 3rd" on the
+  live recap now reads "acquired the 2027 3rd (via 6-Month Plan) for the 2027
+  3rd", and a real wk-1 deal moving four same-season firsts is finally
+  legible. The fix lands once and feeds the ledger, recap, digest,
+  commissioner log, analyst corpus, and the trade web's pick nodes (sender
+  convention there); `lib/derive/describe.test.ts` now exists and pins the
+  regression.
+- **StreakPanel's "Counted to" date (QA):** was `.toISOString()`, which reads
+  as tomorrow's date in a US evening. New `components/LocalDate.tsx` renders
+  the viewer's local calendar day while the server HTML keeps the UTC
+  reading (the panel's server-decided-instant contract survives),
+  `suppressHydrationWarning` owning the deliberate one-day mismatch.
+- **Theme switcher lag (QA), fixed structurally:** the selection ring is now
+  CSS keyed off the same root `[data-theme]` attribute that applies the
+  theme, so ring and repaint move in the same style recalc and cannot
+  diverge - a React-rendered ring trails the full-document token swap by
+  however long the recalc holds the main thread, which is the 1-2s the sweep
+  saw. One real sub-bug found doing it: the build constant-folds
+  `color-mix(var(--color-accent)...)` to the DEFAULT theme's literal gold,
+  so the active wash now uses each theme's own `--accent-wash` token
+  instead. Verified in all three themes: own accent ring, own wash, check
+  moves instantly, choice persists.
+- **Full gate:** 533/533 tests, typecheck and lint clean, dash sweep (three
+  encodings, both dash types) clean across every file this round touched.
+  Verified live at 390px: recap champion + disambiguated picks, `/more` with
+  search (Şengün via "sengun"), zero fixed non-nav elements on any page (the
+  FAB is really gone), draft order and titles against the real league.
+- **Non-blocking for later:** `Roster.reserve` (IR) is still counted as
+  startable depth by fragility - the 48 slice was scoped to taxi only, and
+  whether IR deserves the same exclusion (injury already discounts value) is
+  a real metrics question, not an oversight. The digest's group-header
+  question from round 2 still stands. And 39/49/40/42/52 carry forward as
+  the round-6 vote left them.
