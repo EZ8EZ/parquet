@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildFixtureHistory } from "../testing/fixtureHistory";
+import type { LeagueHistory } from "../history";
 import {
   availabilityExposure,
   concentration,
@@ -642,5 +643,49 @@ describe("Roster Fragility Index over the league", () => {
     // bodies and the surpluses and deficits offset.
     const netDepth = all.reduce((s, p) => s + p.depthBeyondStarters, 0);
     expect(Math.abs(netDepth)).toBeLessThanOrEqual(h.rosters.length);
+  });
+
+  it("excludes taxi-squad players from startable depth", () => {
+    // Create a history where one roster has a valuable player on taxi
+    const h1 = buildFixtureHistory();
+    const targetRoster = h1.rosters[0];
+    if (!targetRoster || targetRoster.players.length === 0) {
+      throw new Error("Test fixture has no rosters with players");
+    }
+
+    // Move a player from active to taxi: this player should not count as startable depth
+    const playerToTaxi = targetRoster.players[0];
+    const beforeWithTaxi: LeagueHistory = {
+      ...h1,
+      rosters: h1.rosters.map((r) =>
+        r.rosterId === targetRoster.rosterId
+          ? { ...r, taxi: [playerToTaxi, ...r.taxi] }
+          : r,
+      ),
+      rostersById: new Map(
+        h1.rosters.map((r) =>
+          r.rosterId === targetRoster.rosterId
+            ? [
+                r.rosterId,
+                { ...r, taxi: [playerToTaxi, ...r.taxi] },
+              ]
+            : [r.rosterId, r],
+        ),
+      ),
+    };
+
+    // Calculate fragility before and after moving to taxi
+    const fragBefore = leagueFragility(h1);
+    const fragAfter = leagueFragility(beforeWithTaxi);
+
+    const profileBefore = fragBefore.find((p) => p.rosterId === targetRoster.rosterId);
+    const profileAfter = fragAfter.find((p) => p.rosterId === targetRoster.rosterId);
+
+    if (!profileBefore || !profileAfter) {
+      throw new Error("Could not find roster profiles");
+    }
+
+    // After moving a player to taxi, depth should decrease (fewer startable bodies)
+    expect(profileAfter.depthBeyondStarters).toBeLessThan(profileBefore.depthBeyondStarters);
   });
 });

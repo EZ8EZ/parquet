@@ -681,12 +681,17 @@ export function scoreFragility(
 // ---------------------------------------------------------------------------------
 
 function assetsOf(
-  roster: { players: string[] } | undefined,
+  roster: { players: string[]; taxi: string[] } | undefined,
   h: LeagueHistory,
   valueOf: (playerId: string) => number,
 ): FragilityAsset[] {
   const out: FragilityAsset[] = [];
+  const taxiSet = new Set(roster?.taxi ?? []);
   for (const pid of roster?.players ?? []) {
+    // Exclude taxi-squad players: they are stashed and cannot be started without
+    // moving them off the taxi squad first. Including them overstates startable depth.
+    if (taxiSet.has(pid)) continue;
+
     const p: Player | undefined = h.players.get(pid);
     if (!p) continue;
     const value = valueOf(pid);
