@@ -1,0 +1,79 @@
+name: CI
+
+# Runs on every PR and on direct pushes to main. The three gates here are the
+# same three the team runs locally before every commit, so a green check means
+# the same thing in both places - no CI-only rules, no locally-only rules.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+# A new push to a PR makes the in-flight run pointless; cancel it rather than
+# paying for a result nobody will read.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gate:
+    name: typecheck / lint / test
+    runs-on: ubuntu-latest
+    env:
+      # prisma generate reads the datasource url even though it never connects.
+      # A syntactically valid placeholder keeps generate happy without a real DB.
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      # The Prisma client is generated code that nothing commits, so typecheck
+      # cannot see the model types until this runs.
+      - name: Generate Prisma client
+        run: pnpm db:generate
+
+      - name: Typecheck
+        run: pnpm typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      - name: Test
+        run: pnpm test
+
+  build:
+    name: build
+    runs-on: ubuntu-latest
+    env:
+      DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
+      # The fixture provider needs no network and no league credentials, which is
+      # exactly why it exists: a build check that cannot fail on someone else's
+      # rate limit is the only kind worth blocking a merge on.
+      LEAGUE_PROVIDER: fixture
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 11
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: Install
+        run: pnpm install --frozen-lockfile
+
+      - name: Build
+        run: pnpm build
