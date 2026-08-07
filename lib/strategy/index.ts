@@ -6,9 +6,9 @@
  * places where stated intent and revealed behavior diverge, and surfaces them
  * prominently. It never rationalizes the stated strategy.
  */
-import type { LeagueHistory } from "../history";
+import { myAnnotation, type LeagueHistory } from "../history";
 import type { Transaction } from "../providers/types";
-import { ageAtSeason, deriveManagerProfile, type ManagerProfile } from "../derive/manager";
+import { ageAtSeason, deriveManagerProfile, involves, type ManagerProfile } from "../derive/manager";
 import { describeTradeForRoster, tradeSide } from "../derive/describe";
 
 export interface StatedPosture {
@@ -97,10 +97,16 @@ export function getStrategyReport(h: LeagueHistory): StrategyReport {
     (t) => t.type === "trade" && t.rosterIds.includes(rosterId),
   );
 
-  // Stated postures from annotations.
+  // Stated postures from annotations — the VIEWER's own decisions with the
+  // VIEWER's own reasoning attached, never a trade partner's transaction or a trade
+  // partner's annotation on a shared transactionId. Both halves of that filter
+  // matter: `involves` keeps someone else's whole trade out, and `myAnnotation`
+  // keeps someone else's reasoning on the viewer's OWN trade out (a trade has two
+  // sides that share one transactionId, and each side may have annotated it).
   const statedPostures: StatedPosture[] = [];
   for (const t of h.transactions) {
-    const ann = h.annotations.get(t.transactionId);
+    if (!involves(t, rosterId)) continue;
+    const ann = myAnnotation(h, t.transactionId);
     if (!ann) continue;
     const posture = statedPostureFrom(ann.posture, ann.reasoning);
     statedPostures.push({

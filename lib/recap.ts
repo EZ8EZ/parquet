@@ -31,6 +31,7 @@ import { getFragilityProfile, type FragilityProfile } from "./metrics/fragility"
 import { loadSeasonRosters, foldStartRate } from "./metrics/skill";
 import { rankSeasonRosters, type CurrentForm } from "./roster";
 import { resolvedPickTimeline, type PickResolution } from "./digest";
+import { seasonResult } from "./playoffs";
 
 /** Plain-language read of a league status that isn't "complete", for the header's
  *  dateline note. Widened rather than a strict union - see TransactionType for the
@@ -69,6 +70,19 @@ export interface SeasonRecap {
   /** Present-day reading, explicitly NOT historical - see file header. */
   timelineToday: TimelineProfile | null;
   fragilityToday: FragilityProfile | null;
+  /**
+   * How the season actually ENDED - the one thing a recap could not say before the
+   * bracket was fetched. Null for a season whose playoffs left no decided champion.
+   */
+  champion: {
+    rosterId: number;
+    /** The person who held that roster that season, via `ownerAt`. */
+    name: string;
+    isViewer: boolean;
+    runnerUpName: string | null;
+    /** The viewer's own finish, when a placement game decided one. */
+    viewerPlace: number | null;
+  } | null;
 }
 
 export async function loadSeasonRecap(h: LeagueHistory): Promise<SeasonRecap | null> {
@@ -130,6 +144,29 @@ export async function loadSeasonRecap(h: LeagueHistory): Promise<SeasonRecap | n
 
   const isNewestSeason = season === h.chain[h.chain.length - 1].season;
 
+  // The champion, named as the PERSON who held that roster that season rather than
+  // whoever holds it today - the same `ownerAt` rule the rest of this file follows.
+  const bracket = h.brackets.get(season) ?? [];
+  const result = seasonResult(season, bracket);
+  const nameOfRoster = (rosterId: number | null): string | null => {
+    if (rosterId == null) return null;
+    const ownerId = principals.ownerAt(season, rosterId);
+    const pr = ownerId ? principals.byOwnerId.get(ownerId) : undefined;
+    if (pr) return pr.teamName || pr.displayName;
+    return h.rostersById.get(rosterId) ? `Roster ${rosterId}` : null;
+  };
+  const champion =
+    result.championRosterId != null
+      ? {
+          rosterId: result.championRosterId,
+          name: nameOfRoster(result.championRosterId) ?? `Roster ${result.championRosterId}`,
+          isViewer:
+            principals.ownerAt(season, result.championRosterId) === h.me.userId,
+          runnerUpName: nameOfRoster(result.runnerUpRosterId),
+          viewerPlace: result.placeByRoster.get(meRosterId) ?? null,
+        }
+      : null;
+
   return {
     season,
     isNewestSeason,
@@ -145,5 +182,6 @@ export async function loadSeasonRecap(h: LeagueHistory): Promise<SeasonRecap | n
     awardsHeld,
     timelineToday,
     fragilityToday,
+    champion,
   };
 }

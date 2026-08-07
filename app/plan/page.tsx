@@ -5,6 +5,7 @@ import { buildGamePlan } from "@/lib/gameplan";
 import { getPrincipals } from "@/lib/principals";
 import { leagueTimelines } from "@/lib/metrics/duration";
 import { Tag } from "@/components/ui";
+import { MetricGloss } from "@/components/MetricGloss";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { CopyBlock } from "@/components/CopyBlock";
 import { cn, fmtValue } from "@/lib/ui";
@@ -187,6 +188,9 @@ export default async function PlanPage() {
           </p>
         </div>
       )}
+      {/* The index appears here as a bare figure - give a first-time reader the
+          definition in place instead of a detour. Closed by default, one faint line. */}
+      {tl && <MetricGloss metrics={["tci"]} className="mt-0.5" />}
 
       {(dx.weakPositions.length > 0 || dx.strengthPositions.length > 0) && (
         <div className="mt-1.5 flex flex-wrap gap-1">

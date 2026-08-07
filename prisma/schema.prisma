@@ -1,6 +1,14 @@
-// Prisma schema. SQLite for local dev; Postgres-portable by design.
-// To move to Postgres: set provider = "postgresql" and a postgres:// DATABASE_URL.
-// No SQLite-only column types are used — JSON is stored as String, ids are String.
+// Prisma schema. POSTGRES - the move D10 planned for has happened, and the datasource
+// below is no longer switchable by editing one word.
+//
+// Still portable by construction: no engine-specific column types are used, JSON is
+// stored as String, ids are String, timestamps are DateTime. What changed is the
+// setup instruction. DATABASE_URL must now be a postgres:// URL; the `file:./dev.db`
+// value this comment used to recommend cannot connect, and since D36 a DATABASE_URL
+// that is set but unusable fails a ledger write loudly (500, "Your note was NOT
+// saved") rather than falling through to the friendly no-database path. Leaving
+// DATABASE_URL UNSET is still fully supported and still gets that friendly path:
+// reads are DB-free (D18) and a zero-config deploy works (D21).
 
 generator client {
   provider = "prisma-client-js"
@@ -13,9 +21,21 @@ datasource db {
 
 /// The user's captured reasoning for a transaction — the Decision Ledger.
 /// Keyed by the immutable Sleeper transaction_id so re-ingests never orphan it.
+///
+/// One row per (transactionId, ownerId), NOT per transactionId alone. A trade has
+/// two sides that share one transactionId, so without an author column a note
+/// written by one participant is indistinguishable from a note written by the
+/// other — the exact bug this column exists to fix (an annotation captured under
+/// one manager's own team was rendered as another manager's "stated posture" the
+/// moment the viewer switched teams).
 model Annotation {
   id            String   @id @default(cuid())
-  transactionId String   @unique
+  transactionId String
+  /// The durable author identity — the Sleeper platform user id, i.e. a PRINCIPAL's
+  /// ownerId (DECISIONS.md D22), never a roster id. Roster ids get REASSIGNED
+  /// between seasons on a handover; ownerId does not, so it is the only identity
+  /// that stays correct for as long as the annotation itself does.
+  ownerId       String
   /// Free text — "what has to be true for this to work" reasoning.
   reasoning     String
   /// Optional one-tap posture tag captured alongside the free text.
@@ -23,7 +43,9 @@ model Annotation {
   createdAt     DateTime @default(now())
   updatedAt     DateTime @updatedAt
 
+  @@unique([transactionId, ownerId])
   @@index([createdAt])
+  @@index([ownerId])
 }
 
 /// Persisted copy of every ingested transaction. Enables (a) new-transaction

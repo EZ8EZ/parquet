@@ -224,6 +224,7 @@ function buildHandoverHistory(): { h: LeagueHistory; principals: ReturnType<type
     tradedPicks: [],
     tradedPicksHistory: [],
     matchups: [],
+    brackets: new Map(),
     annotations: new Map(),
     me: { userId: "stable", rosterId: 1, displayName: "stable", teamName: "stable FC" },
     currentSeasonYear: 2024,

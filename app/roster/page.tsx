@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
 import { leagueTimelines } from "@/lib/metrics/duration";
+import { leagueFragility, lineupSlots } from "@/lib/metrics/fragility";
 import { Card, SectionHeader, Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { ValueAssetRow } from "@/components/ValuesList";
@@ -67,6 +68,19 @@ function valueTrajectory(v: { age: number | null; value: number; breakdown: { ag
   );
 }
 
+/**
+ * Startable depth, said the way a manager would say it. Negative is the case worth
+ * having the phrase for: it means the lineup is already short and there is no slack
+ * left to absorb anything.
+ */
+function depthPhrase(depth: number, slots: number): string {
+  if (depth > 0)
+    return `${depth} startable ${depth === 1 ? "body" : "bodies"} beyond your ${slots} slots`;
+  if (depth === 0) return `exactly ${slots} startable bodies and no spares`;
+  const short = Math.abs(depth);
+  return `${short} ${short === 1 ? "body" : "bodies"} short of filling your ${slots} slots with startable quality`;
+}
+
 export default async function RosterPage() {
   const h = await getLeagueHistory();
   const rosterId = h.me.rosterId;
@@ -88,11 +102,19 @@ export default async function RosterPage() {
 
   const top5 = a.valued.slice(0, 5).reduce((s, v) => s + v.value, 0);
   const top5Share = a.playerValue ? Math.round((top5 / a.playerValue) * 100) : 0;
-  const injured = a.valued.filter((v) => v.injuryStatus).length;
+  // Counts INJURIES, not flags. `injury` is null for load management ("Rest"), so a
+  // roster stashing four young players on the inactive list no longer reads as an
+  // infirmary. Five rostered players in this league carry that flag today.
+  const injured = a.valued.filter((v) => v.injury).length;
 
   // Timeline profile, classified against the whole league (posture is relative).
   const timelines = leagueTimelines(h);
   const tl = timelines.find((t) => t.rosterId === rosterId);
+  // Fragility, from the same league-wide pass for the same reason: the band is a
+  // percentile. Only the SPOF and the depth are surfaced here - the 0-100 index is
+  // ambiguous on its own and has its own homes.
+  const fr = leagueFragility(h).find((f) => f.rosterId === rosterId);
+  const slotCount = lineupSlots(h).length;
   const tciRank = timelines.findIndex((t) => t.rosterId === rosterId) + 1;
   const longest = tl?.assets.slice(0, 3) ?? [];
   const shortest = tl ? [...tl.assets].slice(-3).reverse() : [];
@@ -145,7 +167,7 @@ export default async function RosterPage() {
                 {/* Separator inside the nowrap span so a wrap never leaves it
                     stranded at the end of a line. */}
                 <span className="whitespace-nowrap">
-                  · <span className="text-negative">{injured} flagged</span>
+                  · <span className="text-negative">{injured} injured</span>
                 </span>
               </>
             )}
@@ -219,6 +241,23 @@ export default async function RosterPage() {
               {tl.dispersion.toFixed(2)}s
             </p>
             <p className="mt-1.5 text-[12.5px] leading-snug text-ink/85">{tl.read}</p>
+            {/* Fragility's actionable half, on the page that owns your roster.
+                Deliberately the two numbers and not the 0-100 index: a name and a
+                share are directional and a score is not (D23), and both of these are
+                already computed for every roster by leagueFragility(). */}
+            {fr && fr.singlePointOfFailure && (
+              <p className="mt-1 text-[12px] leading-snug text-muted">
+                Season hinges on{" "}
+                <span className="font-semibold text-ink">
+                  {fr.singlePointOfFailure.name}
+                </span>{" "}
+                <span className="font-mono tnum">
+                  ({Math.round(fr.singlePointOfFailure.damageShare * 100)}% of startable
+                  value)
+                </span>{" "}
+                · {depthPhrase(fr.depthBeyondStarters, slotCount)}
+              </p>
+            )}
             <div className="rule my-2.5" />
             <div className="grid grid-cols-2 gap-2">
               <div className="min-w-0">
@@ -231,7 +270,11 @@ export default async function RosterPage() {
                       key={as.id}
                       className="flex items-baseline justify-between gap-1.5 text-[11.5px] leading-snug"
                     >
-                      <span className="min-w-0 truncate text-ink/85">{as.label}</span>
+                      {/* Wraps instead of truncating: a pick label carrying an origin
+                          qualifier ("2027 2nd (via 5-Year Plan)") no longer fits this
+                          narrow column on one line, and clipping it loses exactly the
+                          part that makes the qualifier worth having. */}
+                      <span className="min-w-0 text-ink/85">{as.label}</span>
                       <span className="shrink-0 font-mono text-[11px] tnum text-muted">
                         {as.duration.toFixed(1)}s
                       </span>
@@ -249,7 +292,7 @@ export default async function RosterPage() {
                       key={as.id}
                       className="flex items-baseline justify-between gap-1.5 text-[11.5px] leading-snug"
                     >
-                      <span className="min-w-0 truncate text-ink/85">{as.label}</span>
+                      <span className="min-w-0 text-ink/85">{as.label}</span>
                       <span className="shrink-0 font-mono text-[11px] tnum text-muted">
                         {as.duration.toFixed(1)}s
                       </span>
@@ -383,8 +426,7 @@ export default async function RosterPage() {
       />
       <p className="-mt-1 mb-1.5 font-mono text-[11px] tnum text-faint">
         {a.valued.length} players · bar = share of {fmtValue(a.playerValue)} player
-        value · line = {TRAJECTORY_SEASONS}-season age-curve trajectory · tap for
-        multipliers
+        value · line = {TRAJECTORY_SEASONS}-season age-curve trajectory
       </p>
       <ul className="space-y-1">
         {a.valued.map((v) => (
@@ -397,9 +439,10 @@ export default async function RosterPage() {
             value={v.value}
             tier={v.tier}
             playerId={v.playerId}
-            injuryStatus={v.injuryStatus}
+            injury={v.injury}
+            injuryDetail={v.injuryDetail}
             share={a.playerValue ? v.value / a.playerValue : 0}
-            breakdown={v.breakdown}
+            consensusRank={v.consensusRank}
             trajectory={valueTrajectory(v)}
             // Young players' declining trajectory is just the age-curve premium unwinding,
             // not a warning - show it in muted color instead of red.

@@ -3,6 +3,8 @@ import { buildFixtureHistory } from "../testing/fixtureHistory";
 import {
   buildDigest,
   currentMetrics,
+  DIGEST_COOKIE,
+  digestCookieName,
   encodeMarker,
   formatSince,
   FRAGILITY_MOVE_THRESHOLD,
@@ -368,5 +370,43 @@ describe("currentMetrics", () => {
   it("survives a round trip through the cookie unchanged", () => {
     const rows = currentMetrics(h);
     expect(parseMarker(encodeMarker(marker(NOW, rows)))?.metrics).toEqual(rows);
+  });
+});
+
+describe("digestCookieName - one marker per identity, not one per browser", () => {
+  it("keeps the historical bare name for a browser with no identity at all", () => {
+    // A returning reader who somehow has neither a seat nor a lens keeps whatever
+    // marker they already had, rather than being handed a spurious first visit.
+    expect(digestCookieName("default")).toBe(DIGEST_COOKIE);
+    expect(digestCookieName("")).toBe(DIGEST_COOKIE);
+  });
+
+  it("gives each identity its own cookie - the cross-contamination bug, pinned", () => {
+    // The live symptom: flip the lens to a leaguemate and the panel announced
+    // "nothing has moved since just now", because your own visit thirty seconds
+    // earlier had already advanced the only marker in the browser.
+    const mine = digestCookieName("462383675828461568");
+    const lens = digestCookieName("r7");
+    expect(mine).not.toBe(lens);
+    expect(mine).not.toBe(DIGEST_COOKIE);
+    expect(lens).not.toBe(DIGEST_COOKIE);
+  });
+
+  it("is stable for one identity, so a marker survives a reload", () => {
+    expect(digestCookieName("r7")).toBe(digestCookieName("r7"));
+  });
+
+  it("emits a legal cookie NAME whatever it is handed", () => {
+    // Cookie names have a narrower legal set than values and no encoding layer to
+    // lean on, so anything outside it is dropped rather than escaped.
+    for (const hostile of ["a b", "a;b=c", "a=b", "a\nb", "../../etc", "ü"]) {
+      expect(digestCookieName(hostile)).toMatch(/^parquet_digest_seen(_[A-Za-z0-9_-]+)?$/);
+    }
+  });
+
+  it("bounds the name, so a hand-edited cookie cannot grow the header", () => {
+    expect(digestCookieName("x".repeat(500)).length).toBeLessThanOrEqual(
+      DIGEST_COOKIE.length + 65,
+    );
   });
 });

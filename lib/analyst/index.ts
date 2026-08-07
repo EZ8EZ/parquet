@@ -10,13 +10,14 @@
  * audit — so the app works with zero keys and deploys free on Vercel. No paid
  * dependency, no vendor lock-in (DECISIONS.md D17).
  */
-import type { LeagueHistory } from "../history";
+import { myAnnotation, type LeagueHistory } from "../history";
 import { getStrategyReport } from "../strategy";
 import { getAllDossiers } from "../dossier";
 import { getPrincipals, type PrincipalIndex } from "../principals";
 import { describeTransaction, describeTradeForRoster } from "../derive/describe";
 import { valuePlayer, tierOf } from "../valuation";
 import { ADVERSARIAL_REMINDER, ANALYST_SYSTEM_PROMPT } from "./system-prompt";
+import { traceLLMRun } from "../observability/trace";
 
 export interface AnalystMessage {
   role: "user" | "assistant";
@@ -55,15 +56,20 @@ export function buildCorpus(h: LeagueHistory, principals: PrincipalIndex): strin
     lines.push("");
   }
 
+  // ONLY the viewer's own annotations. This corpus is fed straight into an LLM
+  // prompt (or the deterministic fallback), so a trade partner's private captured
+  // reasoning leaking in here is not just a wrong attribution - it is that
+  // partner's own words handed to the viewer without their knowledge. Never widen
+  // this to `h.annotations.has(t.transactionId)` (any author) again.
   lines.push(`## YOUR ANNOTATED DECISIONS (your own recorded reasoning)`);
   const annotated = h.transactions
-    .filter((t) => h.annotations.has(t.transactionId))
+    .filter((t) => myAnnotation(h, t.transactionId) != null)
     .sort((a, b) => a.created - b.created);
   if (annotated.length === 0) {
     lines.push(`(none yet - the user has annotated no decisions)`);
   } else {
     for (const t of annotated) {
-      const ann = h.annotations.get(t.transactionId)!;
+      const ann = myAnnotation(h, t.transactionId)!;
       const desc = rosterId != null && t.type === "trade"
         ? `you ${describeTradeForRoster(h, t, rosterId)}`
         : describeTransaction(h, t);
@@ -80,7 +86,7 @@ export function buildCorpus(h: LeagueHistory, principals: PrincipalIndex): strin
   if (myTrades.length) {
     lines.push(`## YOUR TRADE LOG`);
     for (const t of myTrades.slice(-25)) {
-      lines.push(`- [${t.season} wk${t.week}] you ${describeTradeForRoster(h, t, rosterId!)}${h.annotations.has(t.transactionId) ? "" : "  (UNANNOTATED)"}`);
+      lines.push(`- [${t.season} wk${t.week}] you ${describeTradeForRoster(h, t, rosterId!)}${myAnnotation(h, t.transactionId) ? "" : "  (UNANNOTATED)"}`);
     }
     lines.push("");
   }
@@ -129,30 +135,44 @@ export async function runAnalyst(
   }
   const apiKey = process.env.LLM_API_KEY; // optional (local Ollama needs none)
   const model = process.env.LLM_MODEL || "llama-3.3-70b-versatile";
+  // Hoisted out of the try so the failure trace can carry the exact messages too -
+  // a traced error without its prompt is the half that can't be debugged.
+  const messages = [
+    { role: "system", content: ANALYST_SYSTEM_PROMPT },
+    {
+      role: "system",
+      content: `The user's dynasty history corpus follows. Ground every answer in it; cite specific transactions and seasons.\n\n<corpus>\n${corpus}\n</corpus>`,
+    },
+    ...prior.map((m) => ({ role: m.role, content: m.content })),
+    { role: "user", content: `${question}\n\n(${ADVERSARIAL_REMINDER})` },
+  ];
+  const params = { max_tokens: 1024, temperature: 0.4 };
+  const startedAt = new Date();
   try {
-    const messages = [
-      { role: "system", content: ANALYST_SYSTEM_PROMPT },
-      {
-        role: "system",
-        content: `The user's dynasty history corpus follows. Ground every answer in it; cite specific transactions and seasons.\n\n<corpus>\n${corpus}\n</corpus>`,
-      },
-      ...prior.map((m) => ({ role: m.role, content: m.content })),
-      { role: "user", content: `${question}\n\n(${ADVERSARIAL_REMINDER})` },
-    ];
     const res = await fetch(`${baseUrl.replace(/\/$/, "")}/chat/completions`, {
       method: "POST",
       headers: {
         "content-type": "application/json",
         ...(apiKey ? { authorization: `Bearer ${apiKey}` } : {}),
       },
-      body: JSON.stringify({ model, messages, max_tokens: 1024, temperature: 0.4 }),
+      body: JSON.stringify({ model, messages, ...params }),
       signal: AbortSignal.timeout(45_000),
     });
     if (!res.ok) throw new Error(`LLM HTTP ${res.status}`);
     const data = await res.json();
     const text: string = data?.choices?.[0]?.message?.content?.trim() ?? "";
+    await traceLLMRun(
+      { name: "analyst", model, messages, params },
+      { text },
+      { startedAt, endedAt: new Date() },
+    );
     return { text: text || rulesFallback(h, question, principals), mode: "llm", model };
-  } catch {
+  } catch (err) {
+    await traceLLMRun(
+      { name: "analyst", model, messages, params },
+      { error: String(err) },
+      { startedAt, endedAt: new Date() },
+    );
     // Never error the UI — degrade to rules with a note.
     return {
       text:
@@ -198,11 +218,13 @@ export function rulesFallback(
     out.push(`First, the uncomfortable part: ${report.contradictions[0].narrative}`);
     out.push("");
   } else {
-    // Count only annotations that match a transaction in THIS corpus - the raw
-    // table can hold rows from other providers (fixture seeds), and quoting a
-    // number the ledger page contradicts would undermine the audit's authority.
-    const annotatedCount = h.transactions.filter((t) =>
-      h.annotations.has(t.transactionId),
+    // Count only the viewer's OWN annotations that match a transaction in THIS
+    // corpus - the raw table can hold rows from other providers (fixture seeds) and
+    // other authors (a trade partner's own note on a shared transactionId), and
+    // quoting a number the ledger page contradicts would undermine the audit's
+    // authority.
+    const annotatedCount = h.transactions.filter(
+      (t) => myAnnotation(h, t.transactionId) != null,
     ).length;
     out.push(
       `No stated-vs-revealed contradiction yet - but that's partly because you've annotated ${annotatedCount === 0 ? "nothing" : `only ${annotatedCount} decision${annotatedCount === 1 ? "" : "s"}`}. Annotate more and I can hold you to your own words.`,

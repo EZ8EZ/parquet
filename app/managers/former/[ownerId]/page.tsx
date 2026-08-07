@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ChevronRight, Lightbulb } from "lucide-react";
+import { ArrowLeft, ChevronRight, Lightbulb, Trophy } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildFormerDossier } from "@/lib/dossier";
+import { titleSummariesByOwner } from "@/lib/dossier/titles";
 import { getPrincipals } from "@/lib/principals";
 import { managerWebHref } from "@/lib/tradegraph/url";
 import { Tag, DeltaValue, SectionHeader } from "@/components/ui";
@@ -70,6 +71,9 @@ export default async function FormerManagerDetailPage({
   const p = d.profile;
   const principal = principals.byOwnerId.get(ownerId);
   const tradesData = p.tradesBySeason.map((s) => ({ label: s.season, value: s.count }));
+  // Keyed by ownerId directly - the identity that survives the handover this page
+  // exists to represent. See lib/dossier/titles.ts.
+  const titles = titleSummariesByOwner(h, principals).get(ownerId);
 
   /** Team identity for any CURRENT roster (used by the partner rows). */
   const teamOf = (id: number) => {
@@ -135,6 +139,13 @@ export default async function FormerManagerDetailPage({
         No longer in the league - ran this roster {identity.tenureLabel}, then handed
         it off. Everything below is scoped to their own seasons only.
       </p>
+
+      {titles && (
+        <p className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-accent">
+          <Trophy size={14} aria-hidden="true" className="shrink-0" />
+          {titles.label}
+        </p>
+      )}
 
       {d.tags.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1">

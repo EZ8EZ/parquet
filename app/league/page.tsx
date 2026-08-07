@@ -3,6 +3,9 @@ import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
 import { leagueTimelines } from "@/lib/metrics/duration";
+import { leagueFragility } from "@/lib/metrics/fragility";
+import { buildQuadrantView } from "@/lib/metrics/quadrant";
+import { CoherenceFragilityQuadrant } from "@/components/CoherenceFragilityQuadrant";
 import { DeltaValue, SectionHeader, Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { TimelineQuadrant } from "@/components/TimelineChart";
@@ -10,6 +13,7 @@ import { fmtValue } from "@/lib/ui";
 import { ordinal } from "@/lib/derive/describe";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperLeagueUrl } from "@/lib/sleeperLinks";
+import { curatedSurfaces } from "@/lib/nav";
 
 export const dynamic = "force-dynamic";
 
@@ -18,17 +22,6 @@ const WINDOW_INK = {
   "win-now": "text-accent",
   balanced: "text-muted",
 } as const;
-
-/** League-level destinations. Every one of these routes exists. */
-const DEEPER = [
-  { href: "/managers", label: "Dossiers" },
-  { href: "/awards", label: "Awards" },
-  { href: "/web", label: "Trade web" },
-  { href: "/drafts", label: "Drafts" },
-  { href: "/ledger", label: "Ledger" },
-  { href: "/commissioner", label: "Commissioner" },
-  { href: "/recap", label: "Season recap" },
-] as const;
 
 const POSTURE_TONE = {
   contending: "accent",
@@ -41,6 +34,7 @@ export default async function LeaguePage() {
   const h = await getLeagueHistory();
   const ranked = leagueValueRanking(h);
   const timelines = leagueTimelines(h);
+  const fragility = leagueFragility(h);
   const form = await currentFormByRoster(h);
   const meId = h.me.rosterId;
   // Most of a dynasty league's calendar has the live season sitting at 0-0 in
@@ -57,6 +51,21 @@ export default async function LeaguePage() {
     ? ranked[Math.floor(ranked.length / 2)].totalValue
     : 0;
   const myRank = meId != null ? ranked.findIndex((r) => r.rosterId === meId) + 1 : 0;
+
+  // The two proprietary metrics on one pair of axes. Both passes are already computed
+  // above / here, so the board costs a join rather than a third walk of the league.
+  const board = buildQuadrantView(
+    timelines,
+    fragility.map((f) => ({
+      rosterId: f.rosterId,
+      fragility: f.fragility,
+      percentile: f.percentile,
+      band: f.band,
+      spofName: f.singlePointOfFailure?.name ?? null,
+      spofShare: f.singlePointOfFailure?.damageShare ?? null,
+    })),
+    meId,
+  );
 
   return (
     <div>
@@ -102,16 +111,28 @@ export default async function LeaguePage() {
         )}
       </p>
 
+      {/* Same registry Home's grid and /more read (lib/nav.ts) - this pill row and
+          Home's grid used to be two independently hand-kept lists that had already
+          silently diverged before round 6 (neither included Manager Compare or
+          /rank). One shared source instead of two, plus a real full index for
+          everything not curated here. */}
       <nav aria-label="League sections" className="scroll-x mt-2 flex gap-1.5">
-        {DEEPER.map((d) => (
+        {curatedSurfaces().map((s) => (
           <Link
-            key={d.href}
-            href={d.href}
+            key={s.href}
+            href={s.href}
             className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border bg-surface/60 px-3 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
           >
-            {d.label}
+            {s.label}
           </Link>
         ))}
+        <Link
+          href="/more"
+          className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-full border border-dashed border-border px-3 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+        >
+          All surfaces
+          <ChevronRight size={12} aria-hidden="true" />
+        </Link>
       </nav>
 
       {/* Timelines: WHEN each roster's value arrives, and whether its assets agree.
@@ -175,6 +196,16 @@ export default async function LeaguePage() {
           );
         })}
       </ul>
+
+      {/* The duration board above says WHEN each roster wins. This one crosses that
+          with WHAT BREAKS FIRST, which is the pairing no surface in this app has ever
+          shown for more than two managers at a time. */}
+      <SectionHeader
+        title="Coherence x fragility - the whole board"
+        href="/methodology"
+        cta="how RFI works"
+      />
+      <CoherenceFragilityQuadrant view={board} />
 
       <h2 className="mb-1.5 mt-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-muted">
         Power ranking - by roster value

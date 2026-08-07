@@ -67,8 +67,21 @@ const HORIZON = 12;
  * compressed every observed team into TCI 62-80, which is useless resolution.
  *
  * At 3 the index spreads properly: dispersion 0 -> 100, 1.0 -> 67, 1.5 -> 50,
- * 2.5 -> 17, 3.0+ -> 0. TCI stays ABSOLUTE (not league-relative) so it is comparable
- * across leagues and across seasons.
+ * 2.5 -> 17, 3.0+ -> 0.
+ *
+ * TCI is ABSOLUTE in construction, in the narrow sense that a roster's score depends
+ * only on its own assets and not on the other thirteen: the same roster scores the same
+ * in any league. That makes it comparable ACROSS SEASONS of this league, and it is why
+ * the digest can subtract two readings and get a real movement.
+ *
+ * It does NOT establish cross-league comparability, and an earlier version of this
+ * comment claimed it did. The constant is a calibration, and it was calibrated to the
+ * dispersion actually observed across THIS league's fourteen rosters - 3 was chosen
+ * because 4 compressed them all into TCI 62-80. A league with a different roster size,
+ * different lineup shape, or a different pick-to-player mix would produce a different
+ * observed spread, and its rosters would be graded on a scale tuned to somebody else's.
+ * Two leagues' TCIs are on the same formula; whether they are on the same scale is
+ * unverified, and we have exactly one league to check against.
  */
 const SIGMA_REF = 3;
 /** Age at which an incoming rookie enters the league. */
@@ -322,6 +335,23 @@ function classify(
   const isShort = pct != null ? pct >= 0.75 : duration < 2.6;
   const isLong = pct != null ? pct <= 0.25 : duration >= 4.2;
 
+  /**
+   * The forced curve, stated out loud.
+   *
+   * Percentile classification is what made posture work at all (absolute cutoffs once
+   * found zero contenders in a fourteen-team league), and it has a cost nothing in the
+   * app admitted to: the quartile boundaries mean roughly a quarter of coherent rosters
+   * are labelled contending no matter how the league is actually built. In a league of
+   * pure rebuilders, somebody is still "contending". The label is a RANK, and a reader
+   * who takes it as a standard is reading something we did not say.
+   */
+  const relative = (label: string, share: string) =>
+    pct != null
+      ? ` One thing "${label}" does not mean: an absolute standard. It is the ${share} ` +
+        `of THIS league by duration, so somebody carries the label in every league, ` +
+        `however that league is built.`
+      : "";
+
   if (isShort) {
     return {
       posture: "contending",
@@ -329,7 +359,7 @@ function classify(
         `A coherent win-now roster: ${pctNow}% of your value pays off within two ` +
         `seasons and the assets are aligned about it. That is a real plan, but it has an ` +
         `expiry date, and every season you do not convert it costs you value that cannot ` +
-        `be recovered.`,
+        `be recovered.` + relative("contending", "shortest-dated quarter"),
     };
   }
   if (isLong) {
@@ -339,7 +369,8 @@ function classify(
         `A coherent rebuild: ${pctLater}% of your value arrives four or more seasons out ` +
         `and your assets agree on the timeline. The risk here is not incoherence, it is ` +
         `patience. Value this far out is probabilistic, and a rebuild that never picks a ` +
-        `window to open just keeps deferring.`,
+        `window to open just keeps deferring.` +
+        relative("rebuilding", "longest-dated quarter"),
     };
   }
   return {
@@ -348,7 +379,8 @@ function classify(
       `An ascending roster: value concentrated around ${duration.toFixed(1)} seasons ` +
       `out, with the assets broadly aligned. This is the strongest place to be, because ` +
       `your core matures together rather than in sequence. The decision ahead is when to ` +
-      `convert future capital into the last piece, not whether to blow it up.`,
+      `convert future capital into the last piece, not whether to blow it up.` +
+      relative("ascending", "middle half"),
   };
 }
 

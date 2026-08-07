@@ -112,27 +112,23 @@ export function foldStartRate(
  * performance need it, and folding it into `getLeagueHistory` would add a request per
  * season to every cold start in the app. Cached like the draft index, and never
  * throws - a season that fails to load is simply absent.
+ *
+ * SINGLE-FLIGHT: stores the in-flight PROMISE, not the resolved value (mirrors the
+ * fix to `getCorpus` in lib/history.ts), so N concurrent cold readers join one load
+ * instead of each issuing their own per-season request. `resolvedAt` is only set once
+ * the promise settles: a caller arriving mid-load always joins it, and the TTL is
+ * anchored to completion time exactly as before once there is a value that can go
+ * stale.
  */
-let seasonRosterCache: {
-  at: number;
+interface SeasonRosterSlot {
   key: string;
-  value: Map<string, Roster[]>;
-} | null = null;
+  promise: Promise<Map<string, Roster[]>>;
+  resolvedAt?: number;
+}
+let seasonRosterSlot: SeasonRosterSlot | null = null;
 const SEASON_ROSTER_TTL_MS = 5 * 60_000;
 
-export async function loadSeasonRosters(
-  h: LeagueHistory,
-  opts: { fresh?: boolean } = {},
-): Promise<Map<string, Roster[]>> {
-  const key = `${h.provider}|${h.currentLeague.leagueId}`;
-  if (
-    !opts.fresh &&
-    seasonRosterCache &&
-    seasonRosterCache.key === key &&
-    Date.now() - seasonRosterCache.at < SEASON_ROSTER_TTL_MS
-  ) {
-    return seasonRosterCache.value;
-  }
+async function assembleSeasonRosters(h: LeagueHistory): Promise<Map<string, Roster[]>> {
   const provider = getLeagueProvider();
   const out = new Map<string, Roster[]>();
   const results = await Promise.all(
@@ -145,13 +141,40 @@ export async function loadSeasonRosters(
     }),
   );
   for (const r of results) if (r.rosters.length) out.set(r.season, r.rosters);
-  seasonRosterCache = { at: Date.now(), key, value: out };
   return out;
+}
+
+export async function loadSeasonRosters(
+  h: LeagueHistory,
+  opts: { fresh?: boolean } = {},
+): Promise<Map<string, Roster[]>> {
+  const key = `${h.provider}|${h.currentLeague.leagueId}`;
+  if (!opts.fresh && seasonRosterSlot && seasonRosterSlot.key === key) {
+    if (seasonRosterSlot.resolvedAt === undefined) return seasonRosterSlot.promise;
+    if (Date.now() - seasonRosterSlot.resolvedAt < SEASON_ROSTER_TTL_MS) {
+      return seasonRosterSlot.promise;
+    }
+  }
+
+  const slot: SeasonRosterSlot = { key } as SeasonRosterSlot;
+  slot.promise = assembleSeasonRosters(h)
+    .then((value) => {
+      slot.resolvedAt = Date.now();
+      return value;
+    })
+    .catch((err) => {
+      // Clear the slot on rejection so a transient failure doesn't pin a rejected
+      // promise for the rest of the TTL window (mirrors `ensureIngested`).
+      if (seasonRosterSlot === slot) seasonRosterSlot = null;
+      throw err;
+    });
+  seasonRosterSlot = slot;
+  return slot.promise;
 }
 
 /** Reset the season-roster memo. Test and "fresh reload" hook. */
 export function invalidateSeasonRosters(): void {
-  seasonRosterCache = null;
+  seasonRosterSlot = null;
 }
 
 /**

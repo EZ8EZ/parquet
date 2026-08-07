@@ -25,10 +25,18 @@ export function TeamPicker({
   teams,
   currentRosterId,
   username,
+  nextHref = "/",
 }: {
   teams: TeamOption[];
   currentRosterId: number | null;
   username: string;
+  /**
+   * Where to go once a team is chosen. Defaults to Home, which is what this page
+   * has always done; a reader bounced here from a deep link by the front-door
+   * middleware gets sent on to the page they actually opened instead. Already
+   * sanitized by the server component - see `safeNextPath`.
+   */
+  nextHref?: string;
 }) {
   const router = useRouter();
   const [pending, setPending] = useState<number | null>(null);
@@ -45,7 +53,7 @@ export function TeamPicker({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ rosterId }),
       });
-      router.push("/");
+      router.push(nextHref);
       router.refresh();
     } finally {
       setPending(null);
@@ -68,7 +76,7 @@ export function TeamPicker({
         setError(data.error ?? "Couldn't find that username.");
         return;
       }
-      router.push("/");
+      router.push(nextHref);
       router.refresh();
     } catch {
       setError("Something went wrong. Try again.");

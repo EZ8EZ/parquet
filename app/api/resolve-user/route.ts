@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { getLeagueHistory, invalidateHistory } from "@/lib/history";
+import { getLeagueHistory } from "@/lib/history";
 import { getLeagueProvider } from "@/lib/providers";
 
 export const dynamic = "force-dynamic";
@@ -88,6 +88,8 @@ export async function POST(req: Request) {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
-  invalidateHistory();
+  // No `invalidateHistory()` here on purpose — see the docstring on
+  // app/api/viewing-as/route.ts's POST: the corpus is identity-independent by
+  // construction, so switching the lens can never stale it.
   return res;
 }

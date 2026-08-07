@@ -2,9 +2,11 @@
  * Ingest: assemble the FULL multi-season history by walking previous_league_id
  * backward, then persist idempotently to the DB.
  *
- * Re-runnable safely (upserts by transaction_id). `pnpm ingest` calls ingestAll.
- * The app also calls ensureIngested() lazily so a fresh clone works with no
- * manual ingest step against the default fixture provider.
+ * Re-runnable safely (upserts by transaction_id). `pnpm ingest` (scripts/ingest.ts)
+ * and `pnpm seed` (scripts/seed.ts) are the only callers of `ingestAll` — reads never
+ * touch the DB (D18: the corpus is read live from the provider on every request, with
+ * the provider doing its own in-process caching), so there is no lazy on-first-read
+ * ingest path here anymore.
  */
 import { prisma } from "./db";
 import { activeLeagueId, getLeagueProvider } from "./providers";
@@ -223,24 +225,4 @@ async function setMeta(key: string, value: string) {
     create: { key, value },
     update: { value },
   });
-}
-
-/**
- * Lazily ingest on first read so the app works with zero manual steps against
- * the default fixture provider. Idempotent and cheap once populated.
- */
-let ensuring: Promise<void> | null = null;
-export async function ensureIngested(): Promise<void> {
-  if (ensuring) return ensuring;
-  ensuring = (async () => {
-    const count = await prisma.ingestedTransaction.count();
-    if (count === 0) {
-      await ingestAll();
-    }
-  })().catch((e) => {
-    // Reset so a transient failure can be retried on the next request.
-    ensuring = null;
-    throw e;
-  });
-  return ensuring;
 }

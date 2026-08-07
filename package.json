@@ -10,10 +10,12 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
+    "e2e": "playwright test",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
     "ingest": "tsx scripts/ingest.ts",
     "seed": "tsx scripts/seed.ts",
+    "claim-links": "tsx scripts/claim-links.ts",
     "gen:icons": "tsx scripts/gen-icons.ts",
     "setup": "prisma db push && pnpm seed"
   },
@@ -30,6 +32,7 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@types/node": "^20",
     "@types/react": "^19",

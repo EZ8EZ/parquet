@@ -1,11 +1,12 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import {
-  DIGEST_COOKIE,
+  digestCookieName,
   encodeMarker,
   MAX_TRACKED_ROSTERS,
   type MetricRow,
 } from "@/lib/digest";
+import { readMarkerIdentity } from "@/lib/auth/server";
 
 export const dynamic = "force-dynamic";
 
@@ -54,7 +55,11 @@ export async function POST(req: Request) {
   const metrics: MetricRow[] = parsed.data.metrics;
   const seenAt = Date.now();
   const res = NextResponse.json({ ok: true, seenAt });
-  res.cookies.set(DIGEST_COOKIE, encodeMarker({ seenAt, metrics }), {
+  // Filed under the reader's own identity (seat, else lens), so switching who you
+  // are looking at can no longer stamp "seen" on someone else's behalf - see
+  // `digestCookieName`. Cookie-derived, so this stays a corpus-free write.
+  const name = digestCookieName(await readMarkerIdentity());
+  res.cookies.set(name, encodeMarker({ seenAt, metrics }), {
     httpOnly: false,
     sameSite: "lax",
     path: "/",
@@ -63,9 +68,14 @@ export async function POST(req: Request) {
   return res;
 }
 
-/** Forget the marker, which puts the digest back into its first-visit state. */
+/** Forget the marker, which puts the digest back into its first-visit state. Clears
+ *  the CALLER's marker only - one identity forgetting its own last visit is not a
+ *  reason to reset everyone else's. */
 export async function DELETE() {
   const res = NextResponse.json({ ok: true });
-  res.cookies.set(DIGEST_COOKIE, "", { path: "/", maxAge: 0 });
+  res.cookies.set(digestCookieName(await readMarkerIdentity()), "", {
+    path: "/",
+    maxAge: 0,
+  });
   return res;
 }

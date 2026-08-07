@@ -17,11 +17,14 @@ async function main() {
   await ingestAll({ log: () => {} });
 
   // The 2022 rebuild trade — user's STATED strategy at the moment of conviction.
+  // Authored by "u1", the fixture's own EZ8 seat (see providers/fixture/generate.ts
+  // and history.ts's FIXTURE_SEED_ANNOTATIONS, which this mirrors).
   const demo = {
     transactionId: "fx-2022-rebuildA",
+    ownerId: "u1",
     reasoning:
       "Full rebuild. I'm getting younger and stockpiling first-round picks. " +
-      "Not chasing wins for the next 2-3 years — the goal is a young core that " +
+      "Not chasing wins for the next 2-3 years - the goal is a young core that " +
       "peaks together. Moving every veteran who isn't part of the future.",
     posture: "rebuild",
   };
@@ -35,7 +38,7 @@ async function main() {
     return;
   }
   await prisma.annotation.upsert({
-    where: { transactionId: demo.transactionId },
+    where: { transactionId_ownerId: { transactionId: demo.transactionId, ownerId: demo.ownerId } },
     create: demo,
     update: { reasoning: demo.reasoning, posture: demo.posture },
   });

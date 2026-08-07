@@ -14,6 +14,7 @@
  */
 import Link from "next/link";
 import { Circle, Hourglass, TrendingUp } from "lucide-react";
+import { LocalDate } from "@/components/LocalDate";
 import type { LiveStreak, StreakState } from "@/lib/streaks";
 import { cn } from "@/lib/ui";
 
@@ -90,12 +91,15 @@ export function StreakPanel({
         <Hourglass size={12} aria-hidden="true" className="mt-px shrink-0" />
         <span>
           Counted to{" "}
-          <span className="font-mono tnum text-muted">
-            {new Date(countedAt).toISOString().slice(0, 10)}
-          </span>
-          . These move on their own - four of them change with nothing but the passing
+          <LocalDate ts={countedAt} className="font-mono tnum text-muted" />. These move on their own - four of them change with nothing but the passing
           of a day. The{" "}
-          <Link href="/awards" className="font-semibold text-accent">
+          {/* py-4/-my-4: grows the tap target to 44px without pushing the
+              surrounding sentence apart - the negative margin cancels the padding's
+              contribution to line flow, so only the hit area gets bigger. */}
+          <Link
+            href="/awards"
+            className="inline-block py-4 -my-4 font-semibold text-accent"
+          >
             Superlatives
           </Link>{" "}
           are the opposite: settled, ranked, and season-final.

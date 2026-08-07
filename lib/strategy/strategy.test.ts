@@ -1,5 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { annotation, buildFixtureHistory } from "../testing/fixtureHistory";
+import { annotationKey, type Annotation, type LeagueHistory } from "../history";
+import type { Transaction } from "../providers/types";
 import { getStrategyReport } from "./index";
 
 describe("revealed-vs-stated strategy engine", () => {
@@ -47,5 +49,134 @@ describe("revealed-vs-stated strategy engine", () => {
     const report = getStrategyReport(h);
     expect(report.profile.acquisitions.ageBySeason.length).toBeGreaterThan(0);
     expect(report.profile.acquisitions.avgAge).not.toBeNull();
+  });
+});
+
+/**
+ * THE EXACT SHAPE OF THE BUG: a trade has two sides that share one transactionId.
+ * Roster 1 (owner "u1") and roster 2 (owner "u2") are BOTH participants in the same
+ * trade, and BOTH annotated it with their own reasoning. Before the fix, the
+ * annotations map was keyed by transactionId alone, so whichever author's row
+ * happened to be in the map got attributed to whoever the viewer currently was -
+ * concretely, the owner's own captured reasoning rendered as if a different
+ * manager had said it the moment "viewing as" switched teams.
+ */
+describe("annotation authorship — one trade, two authors, shared transactionId", () => {
+  const SHARED_TX_ID = "t-shared-both-sides";
+
+  function buildSharedTradeHistory(): LeagueHistory {
+    const base = buildFixtureHistory();
+    const trade: Transaction = {
+      transactionId: SHARED_TX_ID,
+      type: "trade",
+      status: "complete",
+      season: base.currentLeague.season,
+      week: 3,
+      created: Date.now(),
+      statusUpdated: Date.now(),
+      creator: "u1",
+      rosterIds: [1, 2],
+      consenterIds: [1, 2],
+      adds: { px: 1, py: 2 },
+      drops: { px: 2, py: 1 },
+      draftPicks: [],
+    };
+    const annotations = new Map<string, Annotation>([
+      [
+        annotationKey(SHARED_TX_ID, "u1"),
+        {
+          transactionId: SHARED_TX_ID,
+          ownerId: "u1",
+          reasoning: "OWNER-U1-ONLY: rebuilding, stockpiling picks for the future.",
+          posture: "rebuild",
+          createdAt: new Date(0),
+          updatedAt: new Date(0),
+        },
+      ],
+      [
+        annotationKey(SHARED_TX_ID, "u2"),
+        {
+          transactionId: SHARED_TX_ID,
+          ownerId: "u2",
+          reasoning: "OWNER-U2-ONLY: also rebuilding, my own separate reasoning.",
+          posture: "rebuild",
+          createdAt: new Date(0),
+          updatedAt: new Date(0),
+        },
+      ],
+    ]);
+    return { ...base, transactions: [...base.transactions, trade], annotations };
+  }
+
+  it("viewing as roster 1 (owner u1) sees only u1's own annotation on the shared trade", () => {
+    const h = buildSharedTradeHistory(); // default me: userId "u1", rosterId 1
+    const report = getStrategyReport(h);
+    const mine = report.statedPostures.filter((sp) => sp.transactionId === SHARED_TX_ID);
+    expect(mine).toHaveLength(1);
+    expect(mine[0].excerpt).toContain("OWNER-U1-ONLY");
+    // The other participant's own reasoning must never surface as "my" stated posture.
+    expect(report.statedPostures.some((sp) => sp.excerpt.includes("OWNER-U2-ONLY"))).toBe(
+      false,
+    );
+  });
+
+  it("viewing as roster 2 (owner u2) sees only u2's own annotation on the SAME shared trade", () => {
+    const base = buildSharedTradeHistory();
+    const h: LeagueHistory = {
+      ...base,
+      me: { userId: "u2", rosterId: 2, displayName: "u2", teamName: null },
+    };
+    const report = getStrategyReport(h);
+    const theirs = report.statedPostures.filter((sp) => sp.transactionId === SHARED_TX_ID);
+    expect(theirs).toHaveLength(1);
+    expect(theirs[0].excerpt).toContain("OWNER-U2-ONLY");
+    // The first participant's reasoning must never leak into the second's view,
+    // even though it is the exact same transactionId.
+    expect(report.statedPostures.some((sp) => sp.excerpt.includes("OWNER-U1-ONLY"))).toBe(
+      false,
+    );
+  });
+
+  it("a leaguemate's annotation on a trade the viewer had NO part in never surfaces at all", () => {
+    // Defect 2, standalone: statedPostures must be built from the viewer's own
+    // trades, not every transaction in the league corpus.
+    const base = buildFixtureHistory();
+    const othersTrade: Transaction = {
+      transactionId: "t-not-mine",
+      type: "trade",
+      status: "complete",
+      season: base.currentLeague.season,
+      week: 4,
+      created: Date.now(),
+      statusUpdated: Date.now(),
+      creator: "u3",
+      rosterIds: [3, 4],
+      consenterIds: [3, 4],
+      adds: { pa: 3, pb: 4 },
+      drops: { pa: 4, pb: 3 },
+      draftPicks: [],
+    };
+    const annotations = new Map<string, Annotation>([
+      [
+        annotationKey("t-not-mine", "u3"),
+        {
+          transactionId: "t-not-mine",
+          ownerId: "u3",
+          reasoning: "OWNER-U3-ONLY: rebuild statement on a trade I made.",
+          posture: "rebuild",
+          createdAt: new Date(0),
+          updatedAt: new Date(0),
+        },
+      ],
+    ]);
+    const h: LeagueHistory = {
+      ...base,
+      transactions: [...base.transactions, othersTrade],
+      annotations,
+    };
+    const report = getStrategyReport(h); // viewing as roster 1 (u1) by default
+    expect(report.statedPostures.some((sp) => sp.transactionId === "t-not-mine")).toBe(
+      false,
+    );
   });
 });

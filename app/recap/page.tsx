@@ -12,20 +12,15 @@ import { getLeagueHistory } from "@/lib/history";
 import { ordinal } from "@/lib/derive/describe";
 import { loadSeasonRecap } from "@/lib/recap";
 import { notableWaiverLabel } from "@/lib/ledger";
+import { fragilityTone } from "@/lib/metrics/fragility";
 import { EmptyState, PageHeader, SectionHeader, Stat, Tag } from "@/components/ui";
+import { MetricGloss } from "@/components/MetricGloss";
 import { AwardBadge, GROUP_TONE, iconForAward } from "@/components/AwardBadge";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { fmtValue } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-// Same three-way mapping `/managers/compare` and the trade web already use for a
-// fragility band - "balanced" is deliberately neutral, not a color judgment.
-const FRAGILITY_TONE = {
-  resilient: "positive",
-  balanced: "neutral",
-  brittle: "negative",
-} as const;
 
 export default async function RecapPage() {
   const h = await getLeagueHistory();
@@ -54,6 +49,7 @@ export default async function RecapPage() {
     awardsHeld,
     timelineToday,
     fragilityToday,
+    champion,
   } = recap;
 
   const possessive = viewerWasOwner ? "Your" : "The";
@@ -83,6 +79,42 @@ export default async function RecapPage() {
           You weren&apos;t managing this roster yet in {season} - the numbers below are
           the team&apos;s, not yours, from before you took over.
         </p>
+      )}
+
+      {/* How the season ENDED, above the viewer's own numbers on purpose: a recap that
+          opens with your record before saying who won the thing buries the headline. */}
+      {champion && (
+        <div
+          className={
+            champion.isViewer
+              ? "mb-1 rounded-[--radius] border border-accent/45 bg-accent/[0.09] p-3"
+              : "mb-1 rounded-[--radius] border border-border bg-surface/60 p-3"
+          }
+        >
+          <div className="flex items-start gap-2.5">
+            <Trophy
+              size={18}
+              aria-hidden="true"
+              className={champion.isViewer ? "mt-0.5 shrink-0 text-accent" : "mt-0.5 shrink-0 text-faint"}
+            />
+            <div className="min-w-0 flex-1">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-faint">
+                {season} champion
+              </div>
+              <div className="mt-0.5 font-display text-[19px] font-semibold leading-tight text-ink">
+                {champion.isViewer ? `${champion.name} - you won it` : champion.name}
+              </div>
+              <p className="mt-0.5 text-[12px] leading-snug text-muted">
+                {champion.runnerUpName
+                  ? `Beat ${champion.runnerUpName} in the final.`
+                  : "Took the title."}
+                {champion.viewerPlace != null &&
+                  !champion.isViewer &&
+                  ` You finished ${ordinal(champion.viewerPlace)} in the playoffs.`}
+              </p>
+            </div>
+          </div>
+        </div>
       )}
 
       <SectionHeader title={`${possessive} record`} />
@@ -282,13 +314,19 @@ export default async function RecapPage() {
           </div>
           <div className="mt-0.5 text-[11px] leading-snug text-muted">
             {fragilityToday ? (
-              <Tag tone={FRAGILITY_TONE[fragilityToday.band]}>{fragilityToday.band}</Tag>
+              // Posture-conditioned: brittle is an alarm on a roster playing for this
+              // season and a plain description on one that has already sold (D23).
+              <Tag tone={fragilityTone(fragilityToday.band, timelineToday?.posture)}>
+                {fragilityToday.band}
+              </Tag>
             ) : (
               "no roster data"
             )}
           </div>
         </Link>
       </div>
+      {/* Both indexes land here as bare numbers - define them in place, quietly. */}
+      <MetricGloss className="mt-1" />
     </div>
   );
 }

@@ -4,7 +4,7 @@
  */
 import type { LeagueHistory } from "./history";
 import type { Roster } from "./providers/types";
-import { cachedValuePlayers, type ValueBreakdown } from "./valuation";
+import { cachedValuePlayers, injuryLabel, type ValueBreakdown } from "./valuation";
 import { computeTiers, tierResolver } from "./rankings/tiers";
 import { pickCapital, type PickCapital } from "./picks";
 import { loadSeasonRosters } from "./metrics/skill";
@@ -15,10 +15,23 @@ export interface ValuedPlayer {
   team: string | null;
   position: string | null;
   age: number | null;
-  injuryStatus: string | null;
+  /**
+   * What is wrong, from `injuryLabel()`. Null when healthy and null for load
+   * management, which is a flag but not an injury. Deliberately not the raw
+   * `injury_status`: that word is "DTD" for 110 of the 120 live flags, including
+   * season-ending ones, so it carried no information worth showing.
+   *
+   * Two forms because the badge and the detail have different budgets: `injury` is
+   * the body part alone ("Knee") for a badge sharing a 390px row with a name, and
+   * `injuryDetail` is the full "Knee · Surgery" for the expanded row.
+   */
+  injury: string | null;
+  injuryDetail: string | null;
   value: number;
   tier: string;
   espnId: string | null;
+  /** Sleeper's consensus rank. A fact about the player, not a model output. */
+  consensusRank: number | null;
   /** The multiplier chain behind `value`, so rows can explain their own number
    *  without callers re-running the whole valuation pass. */
   breakdown: {
@@ -101,10 +114,23 @@ export function analyzeRoster(h: LeagueHistory, rosterId: number): RosterAnalysi
         team: p.team,
         position: p.position,
         age: p.age,
-        injuryStatus: p.injuryStatus,
+        injury: injuryLabel(
+          {
+            status: p.injuryStatus,
+            bodyPart: p.injuryBodyPart,
+            notes: p.injuryNotes,
+          },
+          { short: true },
+        ),
+        injuryDetail: injuryLabel({
+          status: p.injuryStatus,
+          bodyPart: p.injuryBodyPart,
+          notes: p.injuryNotes,
+        }),
         value: v.value,
         tier: tierFor(v.value)?.label ?? "Fringe",
         espnId: p.espnId,
+        consensusRank: p.searchRank,
         breakdown: {
           base: v.base,
           age: v.ageMultiplier,

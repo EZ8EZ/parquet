@@ -34,6 +34,30 @@ import { buildDraftIndex, getTradedPickLineages, type DraftIndex } from "../line
 export const DIGEST_COOKIE = "parquet_digest_seen";
 
 /**
+ * The marker is PER IDENTITY, not per browser.
+ *
+ * One global marker was a real bug the moment the app grew a second identity: flip
+ * the lens to a leaguemate and the panel would announce "nothing has moved since just
+ * now", because YOUR visit thirty seconds ago had already advanced the only marker
+ * there was. "Since your last visit" has to mean since *this* reader's last visit, so
+ * each identity gets its own cookie and they cannot overwrite each other.
+ *
+ * The identity comes from `readMarkerIdentity` in lib/auth/server.ts: the seat where
+ * one exists, else the lens roster, else `default`. Both halves are cookie-derived,
+ * so keying the marker costs no corpus read on either the write or the read path.
+ *
+ * The suffix is sanitized because it lands in a cookie NAME, where the legal
+ * character set is narrower than a value's and there is no encoding layer to lean on.
+ * `default` keeps the bare historical name, so the one browser that has neither a
+ * seat nor a lens - which after the front-door redirect is essentially only a reader
+ * sitting on /about - keeps whatever marker it already had.
+ */
+export function digestCookieName(identity: string): string {
+  const safe = identity.replace(/[^A-Za-z0-9_-]/g, "").slice(0, 64);
+  return !safe || safe === "default" ? DIGEST_COOKIE : `${DIGEST_COOKIE}_${safe}`;
+}
+
+/**
  * Movement worth interrupting someone for, in index points. Both indices are 0..100 and
  * absolute (not league-relative), so a move here means the roster itself changed rather
  * than its neighbours moving around it.
@@ -372,8 +396,10 @@ export async function resolvedPickTimeline(
 /** Read the marker from the request cookies. Null outside a request scope (e.g. tests). */
 export async function readMarker(): Promise<DigestMarker | null> {
   try {
+    const { readMarkerIdentity } = await import("../auth/server");
     const { cookies } = await import("next/headers");
-    return parseMarker((await cookies()).get(DIGEST_COOKIE)?.value);
+    const name = digestCookieName(await readMarkerIdentity());
+    return parseMarker((await cookies()).get(name)?.value);
   } catch {
     return null;
   }

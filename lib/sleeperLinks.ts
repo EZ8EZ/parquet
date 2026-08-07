@@ -130,8 +130,9 @@ export function sleeperTeamUrl(
  * singular is a SPA catch-all, not a real route).
  *
  * Sleeper has no write API, so we cannot prefill a proposal. This just lands the
- * user on the correct screen with our copyable summary already on their
- * clipboard.
+ * user on the correct screen; the thesis they read on /trade is what they carry
+ * over in their head (the copyable summary that used to sit beside this link was
+ * removed from /trade - see DECISIONS D37).
  */
 export function sleeperTradeUrl(leagueId: string | null | undefined): string | null {
   const league = sleeperLeagueUrl(leagueId);

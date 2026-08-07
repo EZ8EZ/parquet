@@ -47,6 +47,32 @@
   --selection: rgba(230, 179, 77, 0.28);
   /* The accent at low alpha, used to tint a surface that belongs to the viewer. */
   --accent-wash: rgba(230, 179, 77, 0.16);
+
+  /*
+   * TCI HEAT RAMP - four steps, red to green, used by the coherence x fragility
+   * board (components/CoherenceFragilityQuadrant.tsx) and nowhere else yet.
+   *
+   * Owner asked for a red-to-green scale. Hue alone is not a scale: roughly 8% of men
+   * cannot separate these two hues, so the ORDERING is carried by lightness, and the
+   * hue only makes it feel intuitive to everyone else. OKLCH L runs 0.55 -> 0.82 in
+   * even 0.09 steps here, and the same direction (darker = less coherent) is used in
+   * every theme, so a colour-blind reader learns one ordering rather than three.
+   *
+   * Verified, not eyeballed. Under Machado 2009 protanopia and deuteranopia at
+   * severity 1.0 the simulated OKLab lightness stays strictly increasing across all
+   * four steps in all three themes (smallest simulated gap 0.071), adjacent OKLab
+   * dE stays above the 6.0 floor (worst 7.7), and every step clears 3:1 against its
+   * own theme's chart surface (worst 3.42 here). Because three adjacent pairs land in
+   * the 6-8 dE warn band, the ramp is never the only encoding: the same value is the
+   * dot's y position, and the list under the chart prints the number.
+   *
+   * Only TCI gets a ramp. Fragility deliberately has no colour - see D23, and the
+   * comment at the top of lib/metrics/quadrant.ts.
+   */
+  --tci-1: #c92f30;
+  --tci-2: #ca7400;
+  --tci-3: #84bb50;
+  --tci-4: #53e39c;
 }
 
 :root {
@@ -89,7 +115,11 @@
   --color-accent-dim: #a8842c;
   --color-accent-ink: #fffdf6;
   --color-positive: #0f7040;
-  --color-negative: #b3252c;
+  /* Darkened from #b3252c by measurement: at the old value, positive and negative
+   * were near-identical under red-green color blindness (CVD deltaE 3.3 against a
+   * floor of 6). Dropping only lightness keeps the hue and pushes deltaE to 10.1
+   * while holding 7.9:1 text contrast on paper. */
+  --color-negative: #a30d1e;
   --color-info: #1a5aa8;
   --color-warn: #855400;
 
@@ -97,6 +127,15 @@
   --grain-2: rgba(26, 90, 168, 0.035);
   --selection: rgba(122, 88, 16, 0.22);
   --accent-wash: rgba(122, 88, 16, 0.12);
+
+  /* Same ramp, same direction, re-stepped for a near-white chart surface: OKLCH L
+   * 0.36 -> 0.60. The dark theme's values are invisible on paper and vice versa, so
+   * the ramp is a themed token like every other colour here rather than a constant in
+   * a component. Worst contrast 3.64:1 vs #fffefb; simulated-L still monotone. */
+  --tci-1: #78000a;
+  --tci-2: #794300;
+  --tci-3: #477900;
+  --tci-4: #00995f;
 }
 
 /*
@@ -134,7 +173,10 @@
   --color-accent-dim: #c99b3f;
   --color-accent-ink: #000000;
   --color-positive: #7cf2b6;
-  --color-negative: #ffaeb2;
+  /* Darkened from #ffaeb2 by measurement: the contrast theme's red and green were
+   * the WORST red-green-blind pairing of the three themes (CVD deltaE 2.9). Only
+   * lightness moved; deltaE is now 10.4 with 8.4:1 text contrast on black. */
+  --color-negative: #e5979b;
   --color-info: #a9d4ff;
   --color-warn: #ffd07a;
 
@@ -143,6 +185,15 @@
   --grain-2: transparent;
   --selection: rgba(255, 210, 122, 0.35);
   --accent-wash: rgba(255, 210, 122, 0.22);
+
+  /* Lifted a full window brighter than the default's ramp (OKLCH L 0.66 -> 0.90), so
+   * the reddest step clears 5.65:1 on pure black instead of the default's 3.42:1.
+   * This is the theme people reach for when the default's separation is not enough,
+   * and a heat ramp is exactly where that bites. */
+  --tci-1: #f05751;
+  --tci-2: #f19024;
+  --tci-3: #9fd86d;
+  --tci-4: #72feb5;
 }
 
 html {
@@ -176,6 +227,39 @@ body {
 }
 .tnum {
   font-variant-numeric: tabular-nums;
+}
+
+/*
+ * THEME TOGGLE selection state - CSS, not React, on purpose.
+ *
+ * Switching themes swaps every token on the page in one full-document style
+ * recalc, which can hold the main thread long enough that a React-rendered
+ * selection ring visibly trails the repaint it is supposed to describe (1-2s
+ * on a slow device). Keying the ring off the same [data-theme] attribute that
+ * applies the theme means both move in the same recalc - the ring cannot lag
+ * by construction. React still owns aria-checked; only the paint is CSS.
+ */
+[data-theme-choice] .theme-active-check {
+  display: none;
+}
+:root[data-theme="dark"] [data-theme-choice="dark"],
+:root[data-theme="light"] [data-theme-choice="light"],
+:root[data-theme="contrast"] [data-theme-choice="contrast"] {
+  color: var(--color-accent);
+}
+:root[data-theme="dark"] button[data-theme-choice="dark"],
+:root[data-theme="light"] button[data-theme-choice="light"],
+:root[data-theme="contrast"] button[data-theme-choice="contrast"] {
+  border-color: var(--color-accent);
+  /* Each theme's own wash token, NOT color-mix(var(--color-accent)...): the build
+   * constant-folds that to the default theme's literal gold, which would tint the
+   * active button with dark's accent under every theme. */
+  background-color: var(--accent-wash);
+}
+:root[data-theme="dark"] [data-theme-choice="dark"] .theme-active-check,
+:root[data-theme="light"] [data-theme-choice="light"] .theme-active-check,
+:root[data-theme="contrast"] [data-theme-choice="contrast"] .theme-active-check {
+  display: inline;
 }
 
 /* Accessible focus states */

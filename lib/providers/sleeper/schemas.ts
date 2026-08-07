@@ -8,6 +8,7 @@
  */
 import { z } from "zod";
 import type {
+  BracketGame,
   DraftMeta,
   DraftPick,
   DraftPickRef,
@@ -232,6 +233,34 @@ export function toTradedPick(r: z.infer<typeof RawTradedPick>): TradedPick {
   };
 }
 
+// ---------- Playoff bracket ----------
+/**
+ * Every field nullish except the two that identify the game. A bracket for a season
+ * still being played returns games whose teams and result are not decided yet, and a
+ * schema that demanded them would throw on exactly the league state the app has to
+ * survive (the current season, mid-playoffs).
+ */
+export const RawBracketGame = z.object({
+  m: num,
+  r: num,
+  p: num.nullish(),
+  t1: num.nullish(),
+  t2: num.nullish(),
+  w: num.nullish(),
+  l: num.nullish(),
+});
+export function toBracketGame(r: z.infer<typeof RawBracketGame>): BracketGame {
+  return {
+    matchId: r.m,
+    round: r.r,
+    placement: r.p ?? null,
+    team1: r.t1 ?? null,
+    team2: r.t2 ?? null,
+    winner: r.w ?? null,
+    loser: r.l ?? null,
+  };
+}
+
 // ---------- Matchup ----------
 export const RawMatchup = z.object({
   roster_id: num,
@@ -263,6 +292,8 @@ export const RawPlayer = z.object({
   years_exp: num.nullish(),
   birth_date: str.nullish(),
   injury_status: str.nullish(),
+  injury_body_part: str.nullish(),
+  injury_notes: str.nullish(),
   depth_chart_order: num.nullish(),
   status: str.nullish(),
   number: num.nullish(),
@@ -284,6 +315,12 @@ export function toPlayer(r: z.infer<typeof RawPlayer>): Player {
     yearsExp: r.years_exp ?? null,
     birthDate: r.birth_date ?? null,
     injuryStatus: r.injury_status ?? null,
+    // Both populated live and both previously dropped on the floor. `injury_start_date`
+    // is NOT mapped: it is present on the raw payload and populated on exactly 0 of
+    // 2,106 players, so parsing it would only create the impression that injury dating
+    // is available (see lib/valuation/injury.ts).
+    injuryBodyPart: r.injury_body_part ?? null,
+    injuryNotes: r.injury_notes ?? null,
     depthChartOrder: r.depth_chart_order ?? null,
     status: r.status ?? null,
     number: r.number ?? null,
@@ -389,4 +426,10 @@ export const RawLeagueUserArr = z.array(RawLeagueUser);
 export const RawTransactionArr = z.array(RawTransaction);
 export const RawTradedPickArr = z.array(RawTradedPick);
 export const RawMatchupArr = z.array(RawMatchup);
+/**
+ * Nullable at the top level, not just per game: Sleeper answers `null` (not `[]`) for a
+ * league whose playoffs have not been generated yet - and, observed while building
+ * this, for a rate-limited request too. Both have to read as "no bracket", never throw.
+ */
+export const RawBracketArr = z.array(RawBracketGame).nullish();
 export const RawPlayerMap = z.record(str, RawPlayer);

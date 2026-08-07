@@ -45,6 +45,7 @@ import { Card, EmptyState, SectionHeader, Stat, Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { cn, fmtValue } from "@/lib/ui";
+import { fragilityTone } from "@/lib/metrics/bands";
 import {
   RING,
   assetPlayerId,
@@ -75,20 +76,26 @@ const POSTURE_TONE = {
   straddling: "negative",
 } as const;
 
-const BAND_TONE = {
-  resilient: "positive",
-  balanced: "neutral",
-  brittle: "negative",
-} as const;
-
 /**
  * Both proprietary metrics, as two small tappable pills. This is the one place the
  * web/tree connects PAST decisions to WHERE THINGS STAND TODAY - a trade tree is
  * otherwise pure history, and the two metrics are otherwise nowhere outside their own
- * pages. Every pill routes to the metric's home page rather than trying to explain
- * the number inline a second time.
+ * pages.
+ *
+ * The RFI pill routes to the MANAGER'S DOSSIER rather than to /awards. It pointed at
+ * the House of Cards award, which ranks the league on the score and can say nothing
+ * about this roster in particular; the dossier is where this roster's fragility has an
+ * actionable home. The band's colour is conditioned on posture for the same reason the
+ * lead is on /managers/compare: brittle is a threat to a team playing for this season
+ * and a description of one that has already sold.
  */
-function ManagerMetricPills({ metric }: { metric: ManagerMetric | undefined }) {
+function ManagerMetricPills({
+  metric,
+  rosterId,
+}: {
+  metric: ManagerMetric | undefined;
+  rosterId: number;
+}) {
   if (!metric) return null;
   return (
     <span className="inline-flex flex-wrap items-center gap-1">
@@ -101,11 +108,13 @@ function ManagerMetricPills({ metric }: { metric: ManagerMetric | undefined }) {
       </Link>
       {metric.fragility != null && metric.fragilityBand && (
         <Link
-          href="/awards"
+          href={`/managers/${rosterId}`}
           className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2/70 px-1.5 py-0.5 text-[10px] font-semibold text-muted transition-colors hover:text-ink"
         >
           <Layers size={10} className="shrink-0" />
-          <Tag tone={BAND_TONE[metric.fragilityBand]}>{Math.round(metric.fragility)} RFI</Tag>
+          <Tag tone={fragilityTone(metric.fragilityBand, metric.posture)}>
+            {Math.round(metric.fragility)} RFI
+          </Tag>
         </Link>
       )}
     </span>
@@ -172,7 +181,9 @@ function ManagerLink({
           )}
         </span>
       </Link>
-      {!node.isFormer && <ManagerMetricPills metric={metric} />}
+      {!node.isFormer && (
+        <ManagerMetricPills metric={metric} rosterId={node.rosterId} />
+      )}
     </span>
   );
 }

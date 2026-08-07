@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
@@ -96,13 +97,24 @@ export default async function TradePage() {
           <ChevronRight size={13} aria-hidden="true" />
         </Link>
       </nav>
-      <TradeBuilder
-        myPlayers={myPlayers}
-        otherPlayers={otherPlayers}
-        myPicks={myPicks}
-        otherPicks={otherPicks}
-        leagueId={h.currentLeague.leagueId}
-      />
+      {/*
+        Suspense because TradeBuilder reads the query string through useSearchParams -
+        the give/get package is addressable now (lib/trade/url.ts), so checking a
+        value or a dossier mid-build and coming back does not lose the package, and
+        a pasted link reproduces it on another phone. This page is force-dynamic, so
+        the boundary never actually suspends in practice; it is here so that
+        dependency can never turn into a render-mode surprise later (same reasoning
+        as /web - see app/web/page.tsx).
+      */}
+      <Suspense fallback={null}>
+        <TradeBuilder
+          myPlayers={myPlayers}
+          otherPlayers={otherPlayers}
+          myPicks={myPicks}
+          otherPicks={otherPicks}
+          leagueId={h.currentLeague.leagueId}
+        />
+      </Suspense>
 
       {/* Below the builder: who to actually call. Lowest-TCI rosters are the
           league's most motivated partners - their assets disagree about when they

@@ -2,17 +2,22 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Users, ArrowLeftRight, Trophy, Target } from "lucide-react";
+import { Home, Users, ArrowLeftRight, Trophy, Target, Compass } from "lucide-react";
 import { cn } from "@/lib/ui";
 
-// Five tabs max — the Plan replaces Analyst here because "how do I improve?" is the
-// job users come with; the Analyst stays one tap away from Home.
+// Six tabs, not five: the Plan replaces Analyst here because "how do I improve?" is
+// the job users come with, and Analyst stays one tap away from Home. "More" is the
+// sixth (round 6) - it is both the search entry point (retired from a floating
+// button, see components/SearchPanel.tsx) and the one destination that lists every
+// other page in the app (lib/nav.ts), so Manager Compare and /rank stop being one
+// buried link away from nowhere.
 const TABS = [
   { href: "/", label: "Home", icon: Home },
   { href: "/roster", label: "Roster", icon: Users },
   { href: "/plan", label: "Plan", icon: Target },
   { href: "/trade", label: "Trade", icon: ArrowLeftRight },
   { href: "/league", label: "League", icon: Trophy },
+  { href: "/more", label: "More", icon: Compass },
 ] as const;
 
 function isActive(pathname: string, href: string): boolean {

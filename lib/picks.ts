@@ -10,6 +10,7 @@
 import type { LeagueHistory } from "./history";
 import { ordinal, rosterName } from "./derive/describe";
 import { cachedValuePlayers, pickValue } from "./valuation";
+import { playoffPlaces } from "./playoffs";
 
 export interface OwnedPick {
   season: string;
@@ -155,7 +156,30 @@ export function strengthRanks(h: LeagueHistory): Map<number, number> {
     ordered = scored.map((s) => s.r);
   }
 
+  /*
+   * CANDIDATE 44. `pickValue` has always treated rank 1 as the CHAMPION - there is a
+   * test called "makes the champion pick last" - but this function only ever handed it
+   * a regular-season (or preseason-talent) order, so a title-winning lower seed was
+   * priced as a mid-table team.
+   *
+   * A decided bracket overrides that for the teams it actually ranks: the playoff
+   * finishers take their real finishing places, 1..N. Everyone else keeps the order
+   * `ordered` just computed and follows on behind them - which is both correct (a team
+   * that missed the playoffs finished behind every team that made them) and important,
+   * because in the offseason those rosters have no record at all and their talent
+   * ordering above is the only real signal they have. Ranking them by an empty record
+   * instead would have fixed eight teams by breaking six.
+   */
+  const places = playoffPlaces(h);
   const m = new Map<number, number>();
+  if (places) {
+    for (const [rosterId, place] of places) m.set(rosterId, place);
+    let next = Math.max(...places.values()) + 1;
+    for (const r of ordered) {
+      if (!m.has(r.rosterId)) m.set(r.rosterId, next++);
+    }
+    return m;
+  }
   ordered.forEach((r, i) => m.set(r.rosterId, i + 1));
   return m;
 }

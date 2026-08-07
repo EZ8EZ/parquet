@@ -2,7 +2,6 @@ import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { BottomNav } from "@/components/BottomNav";
-import { GlobalSearch } from "@/components/GlobalSearch";
 import { DEFAULT_THEME, THEME_CHROME, themeBootScript } from "@/lib/theme";
 
 const inter = Inter({
@@ -75,18 +74,16 @@ export default function RootLayout({
         {/* Mobile-first shell: single centered column, content padded above the
             fixed bottom tab bar. Widens gracefully on larger screens.
 
-            The bottom padding clears BOTH fixed layers: the tab bar and the search
-            button floating above it, whose top edge sits at safe-area + 140px (see
-            GlobalSearch). The clearance lives here rather than on any one page
-            because the button is global - every page can scroll content into that
-            corner, and per-page padding would just re-fix the same bug page by page. */}
+            Round 6 retired the floating search button (see components/SearchPanel.tsx):
+            it collided with real content on every content-heavy page added since round
+            1, flagged twice. Search now lives at the top of /more, the sixth tab, so
+            this padding only has to clear the tab bar itself - one fixed layer, not two. */}
         <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col">
-          <main className="flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+10rem)] pt-5 sm:px-6">
+          <main className="flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+6rem)] pt-5 sm:px-6">
             {children}
           </main>
         </div>
         <BottomNav />
-        <GlobalSearch />
       </body>
     </html>
   );

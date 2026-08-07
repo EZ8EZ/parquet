@@ -616,7 +616,13 @@ export function buildAssetMoves(
         assetKey: key,
         kind: "pick",
         // pickLabel already carries "(inferred)" when the pick was inferred.
-        label: pickLabel(dp),
+        // Origin qualifier per the /drafts lineage convention: a pick moving on
+        // from someone other than its original roster names where it came from,
+        // so two same-round pick nodes in one strand stay distinguishable.
+        label: pickLabel(
+          dp,
+          dp.rosterId !== dp.previousOwnerId ? rosterName(h, dp.rosterId) : null,
+        ),
         became: pickPlayers[key] ?? null,
         inferred: dp.inferred === true,
         tradeId: t.transactionId,

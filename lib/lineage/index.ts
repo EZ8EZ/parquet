@@ -24,6 +24,7 @@ import type { LeagueHistory } from "../history";
 import { getLeagueProvider } from "../providers";
 import type { DraftMeta, DraftPick } from "../providers/types";
 import { ordinal, rosterName } from "../derive/describe";
+import { timed } from "../timing";
 
 // ---------------------------------------------------------------- types
 
@@ -156,33 +157,26 @@ const EMPTY_INDEX: DraftIndex = { supported: false, bySeason: new Map() };
  * In-process memo, mirroring the `playersCache` pattern in the Sleeper provider.
  * Drafts are immutable once complete but a live draft should still refresh, so the
  * TTL is short enough to follow one in progress.
+ *
+ * SINGLE-FLIGHT: stores the in-flight PROMISE, not the resolved value (mirrors the
+ * fix to `getCorpus` in lib/history.ts). Measured on the real league, this is the
+ * single slowest cold loader in the app — 1,483ms and 15 requests per assembly — so
+ * N concurrent cold readers previously multiplied both by N. `resolvedAt` is only
+ * set once the promise settles: a caller that arrives mid-assembly always joins it
+ * (nothing to expire yet), and the TTL is anchored to completion time exactly as
+ * before once the slot has something that can go stale.
  */
-let indexCache: { at: number; key: string; value: DraftIndex } | null = null;
+interface IndexSlot {
+  key: string;
+  promise: Promise<DraftIndex>;
+  resolvedAt?: number;
+}
+let indexSlot: IndexSlot | null = null;
 const INDEX_TTL_MS = 5 * 60_000;
 
-/**
- * Load every draft in the league chain and index it for lineage lookups.
- *
- * Never throws: a provider without draft support, or a season whose draft fails to
- * load, simply produces a smaller index and the callers report "unresolved".
- */
-export async function buildDraftIndex(
-  h: LeagueHistory,
-  opts: { fresh?: boolean } = {},
-): Promise<DraftIndex> {
-  const key = `${h.provider}|${h.currentLeague.leagueId}`;
-  if (
-    !opts.fresh &&
-    indexCache &&
-    indexCache.key === key &&
-    Date.now() - indexCache.at < INDEX_TTL_MS
-  ) {
-    return indexCache.value;
-  }
-
+async function assembleDraftIndex(h: LeagueHistory): Promise<DraftIndex> {
   const provider = getLeagueProvider();
   if (!provider.getDrafts || !provider.getDraftPicks) {
-    indexCache = { at: Date.now(), key, value: EMPTY_INDEX };
     return EMPTY_INDEX;
   }
   const getDrafts = provider.getDrafts.bind(provider);
@@ -220,21 +214,51 @@ export async function buildDraftIndex(
     }
   }
 
-  const value: DraftIndex = { supported: true, bySeason };
-  indexCache = { at: Date.now(), key, value };
-  return value;
+  return { supported: true, bySeason };
+}
+
+/**
+ * Load every draft in the league chain and index it for lineage lookups.
+ *
+ * Never throws: a provider without draft support, or a season whose draft fails to
+ * load, simply produces a smaller index and the callers report "unresolved".
+ */
+export async function buildDraftIndex(
+  h: LeagueHistory,
+  opts: { fresh?: boolean } = {},
+): Promise<DraftIndex> {
+  const key = `${h.provider}|${h.currentLeague.leagueId}`;
+  if (!opts.fresh && indexSlot && indexSlot.key === key) {
+    if (indexSlot.resolvedAt === undefined) return indexSlot.promise;
+    if (Date.now() - indexSlot.resolvedAt < INDEX_TTL_MS) return indexSlot.promise;
+  }
+
+  const slot: IndexSlot = { key } as IndexSlot;
+  slot.promise = timed("buildDraftIndex", () => assembleDraftIndex(h))
+    .then((value) => {
+      slot.resolvedAt = Date.now();
+      return value;
+    })
+    .catch((err) => {
+      // Clear the slot on rejection so a transient failure doesn't pin a rejected
+      // promise for the rest of the TTL window (mirrors `ensureIngested`).
+      if (indexSlot === slot) indexSlot = null;
+      throw err;
+    });
+  indexSlot = slot;
+  return slot.promise;
 }
 
 /** Drop the memoized draft index (mirrors `invalidateHistory`). */
 export function invalidateDraftIndex(): void {
-  indexCache = null;
+  indexSlot = null;
 }
 
 // ---------------------------------------------------------------- helpers
 
 const REASON_TEXT: Record<UnresolvedReason, string> = {
   "no-draft-support": "This data source doesn't expose drafts.",
-  "no-draft": "Not drafted yet — this pick is still in the future.",
+  "no-draft": "Not drafted yet - this pick is still in the future.",
   "not-yet-drafted": "The draft hasn't reached this pick yet.",
   "slot-unknown": "No draft slot for that team this season.",
   "no-player": "The pick was made but no player was recorded.",
