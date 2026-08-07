@@ -12,20 +12,15 @@ import { getLeagueHistory } from "@/lib/history";
 import { ordinal } from "@/lib/derive/describe";
 import { loadSeasonRecap } from "@/lib/recap";
 import { notableWaiverLabel } from "@/lib/ledger";
+import { fragilityTone } from "@/lib/metrics/fragility";
 import { EmptyState, PageHeader, SectionHeader, Stat, Tag } from "@/components/ui";
+import { MetricGloss } from "@/components/MetricGloss";
 import { AwardBadge, GROUP_TONE, iconForAward } from "@/components/AwardBadge";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { fmtValue } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
 
-// Same three-way mapping `/managers/compare` and the trade web already use for a
-// fragility band - "balanced" is deliberately neutral, not a color judgment.
-const FRAGILITY_TONE = {
-  resilient: "positive",
-  balanced: "neutral",
-  brittle: "negative",
-} as const;
 
 export default async function RecapPage() {
   const h = await getLeagueHistory();
@@ -319,13 +314,19 @@ export default async function RecapPage() {
           </div>
           <div className="mt-0.5 text-[11px] leading-snug text-muted">
             {fragilityToday ? (
-              <Tag tone={FRAGILITY_TONE[fragilityToday.band]}>{fragilityToday.band}</Tag>
+              // Posture-conditioned: brittle is an alarm on a roster playing for this
+              // season and a plain description on one that has already sold (D23).
+              <Tag tone={fragilityTone(fragilityToday.band, timelineToday?.posture)}>
+                {fragilityToday.band}
+              </Tag>
             ) : (
               "no roster data"
             )}
           </div>
         </Link>
       </div>
+      {/* Both indexes land here as bare numbers - define them in place, quietly. */}
+      <MetricGloss className="mt-1" />
     </div>
   );
 }

@@ -3,7 +3,7 @@
  * dependency. Used by unit tests so the derivation engines can be exercised
  * purely and deterministically.
  */
-import type { Annotation, HistoryMatchup, LeagueHistory } from "../history";
+import { annotationKey, type Annotation, type HistoryMatchup, type LeagueHistory } from "../history";
 import type { BracketGame } from "../providers/types";
 import {
   corpus,
@@ -60,16 +60,23 @@ export function buildFixtureHistory(
   };
 }
 
+/**
+ * Builds a one-entry annotations map, authored by `ownerId` (default "u1" — the
+ * fixture's own EZ8 seat, `buildFixtureHistory`'s default `me`). Pass a different
+ * ownerId to simulate a leaguemate's own captured reasoning on a shared trade.
+ */
 export function annotation(
   transactionId: string,
   reasoning: string,
   posture: string | null = null,
+  ownerId: string = "u1",
 ): Map<string, Annotation> {
   return new Map([
     [
-      transactionId,
+      annotationKey(transactionId, ownerId),
       {
         transactionId,
+        ownerId,
         reasoning,
         posture,
         createdAt: new Date(0),

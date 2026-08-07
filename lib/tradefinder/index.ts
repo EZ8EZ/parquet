@@ -31,6 +31,16 @@ import {
   convictionNotes,
   type ConvictionNote,
 } from "./conviction";
+import { packageFragilityNote, type FragilityNote } from "./fragility";
+import { leagueReplacementValue } from "../metrics/fragility";
+
+export {
+  fragilityNoteFor,
+  packageFragilityNote,
+  rosterAfter,
+  SPOF_SHIFT_MIN,
+  type FragilityNote,
+} from "./fragility";
 
 export {
   convictionIndex,
@@ -111,6 +121,13 @@ export interface SuggestedPackage {
    * level - the surface decides how to say each of those, not the engine.
    */
   conviction: ConvictionNote[];
+  /**
+   * What this package does to the viewer's single point of failure, when it moves it
+   * far enough to be worth saying. Null is the common case and means "this deal does
+   * not change what your season is load-bearing on", which is not the same as "your
+   * roster is fine" - the surface says neither.
+   */
+  fragility: FragilityNote | null;
   score: number;
 }
 
@@ -693,6 +710,10 @@ export function findTrades(
   // the viewer's ranking, and three packages asking for it separately would pay for
   // the same scan three times.
   const conviction = convictionIndex(opts.customOrder ?? [], h.players);
+  // Same reasoning as the conviction index above: the replacement line is a scan of the
+  // whole league, and it is identical for every package, so it is computed once here
+  // rather than three times inside the loop.
+  const replacementValue = leagueReplacementValue(h);
   const packages: SuggestedPackage[] = raw.map((pkg, i) => {
     const give = pkg.give.map((p) => p.asset);
     const get = pkg.get.map((p) => p.asset);
@@ -707,6 +728,7 @@ export function findTrades(
       ...cases,
       fit: { yours: pkg.yourGain, theirs: pkg.theirGain, mutual: pkg.mutual },
       conviction: convictionNotes({ give, get }, conviction),
+      fragility: packageFragilityNote(h, rosterId, give, get, { replacementValue }),
       score: pkg.score,
     };
   });

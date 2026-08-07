@@ -3,7 +3,7 @@
  * worth capturing reasoning for: every trade, plus notable waiver claims. What
  * makes a waiver claim "notable" is not one fixed rule - see `buildIsNotable`.
  */
-import type { Annotation, LeagueHistory } from "./history";
+import { myAnnotation, type Annotation, type LeagueHistory } from "./history";
 import { describeTradeForRoster, describeTransaction } from "./derive/describe";
 import type { Transaction } from "./providers/types";
 
@@ -116,7 +116,9 @@ export function getLedgerEntries(h: LeagueHistory): LedgerEntry[] {
         t.type === "trade"
           ? `You ${describeTradeForRoster(h, t, rosterId)}`
           : describeTransaction(h, t),
-      annotation: h.annotations.get(t.transactionId) ?? null,
+      // Only the VIEWER's own annotation — a trade partner's captured reasoning on
+      // this same transactionId must never show up as "your" reasoning.
+      annotation: myAnnotation(h, t.transactionId),
     }))
     .sort((a, b) => b.created - a.created);
 }

@@ -1,10 +1,13 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { buildFixtureHistory } from "../testing/fixtureHistory";
+import { FixtureProvider } from "../providers/fixture";
+import * as providers from "../providers";
 import {
   buildDraftIndex,
   getDraftBoard,
   getDraftSeasons,
   getTradedPickLineages,
+  invalidateDraftIndex,
   resolvePickLineage,
 } from "./index";
 
@@ -225,5 +228,56 @@ describe("draft index", () => {
         b.bySeason.get(season)!.picks,
       );
     }
+  });
+});
+
+describe("buildDraftIndex single-flight", () => {
+  // Measured against the real league: this is the single slowest cold loader in the
+  // app (1,483ms, 15 requests). Without single-flight, N concurrent cold callers each
+  // ran their own full pass over the chain's drafts. `getDrafts` is called once per
+  // season in `h.chain` per assembly, so its call COUNT (not just "was it called") is
+  // the signal: N concurrent calls must cost the same as one call, not N times as much.
+  afterEach(() => {
+    vi.restoreAllMocks();
+    invalidateDraftIndex();
+  });
+
+  it("dedupes N concurrent cold callers into exactly one assembly", async () => {
+    invalidateDraftIndex();
+    const h = buildFixtureHistory();
+    const spy = vi.spyOn(FixtureProvider.prototype, "getDrafts");
+
+    const results = await Promise.all(
+      Array.from({ length: 5 }, () => buildDraftIndex(h)),
+    );
+    const callsForOneAssembly = spy.mock.calls.length;
+    expect(callsForOneAssembly).toBeGreaterThan(0);
+    expect(callsForOneAssembly).toBe(h.chain.length > 0 ? spy.mock.calls.length : 0);
+
+    // Every caller joined the same assembly: same object identity, and issuing the
+    // load again right after (still within TTL) costs zero further calls.
+    for (const r of results.slice(1)) expect(r).toBe(results[0]);
+    await buildDraftIndex(h);
+    expect(spy.mock.calls.length).toBe(callsForOneAssembly);
+  });
+
+  it("clears the slot on rejection so a transient failure does not pin it", async () => {
+    // Per-season draft/pick failures are already caught INSIDE `assembleDraftIndex`
+    // (never throws by contract — see its docstring), so a rejection can only reach
+    // the single-flight slot from something outside that loop, e.g. `getLeagueProvider`
+    // itself throwing. That is what this simulates, to exercise the slot-level
+    // guarantee: a caller must not get stuck on a permanently-rejected promise,
+    // mirroring `ensureIngested()` in lib/ingest.ts.
+    invalidateDraftIndex();
+    const h = buildFixtureHistory();
+    const spy = vi.spyOn(providers, "getLeagueProvider");
+    spy.mockImplementationOnce(() => {
+      throw new Error("simulated provider failure");
+    });
+
+    await expect(buildDraftIndex(h)).rejects.toThrow("simulated provider failure");
+    // The slot must be clear now — the next call gets a real (mocked-through) provider
+    // and succeeds instead of replaying the same rejection.
+    await expect(buildDraftIndex(h)).resolves.toBeDefined();
   });
 });

@@ -91,6 +91,13 @@ Annotations are stored locally (DB) against the immutable `transaction_id`, so
 re-ingests never orphan them. Transaction bodies are also persisted, so the ledger
 works offline and against fixtures.
 
+**Amended by D35's authorship work:** the key is now the composite
+`@@unique([transactionId, ownerId])` (`prisma/schema.prisma`), not `transaction_id`
+alone. A trade has two sides that share one id, so a single-column key made one
+participant's note indistinguishable from the other's - and let one overwrite it.
+The transaction id is still the immutable half of the key; the author is the half
+that was missing.
+
 ## D12. "New transaction" detection via diff of persisted transaction_ids
 Ingest is idempotent (upsert by `transaction_id`). The set of transaction_ids with
 no annotation and `type in (trade, notable)` drives the home-screen "unannotated
@@ -132,9 +139,18 @@ integration (would not work in production).
 Eric deploys on Vercel, where SQLite cannot persist. The corpus is therefore read
 live from the provider (Sleeper fetches cached, players memoized in-process), so every
 read feature works with no database at all. The DB is used ONLY to persist ledger
-annotations, and even that is best-effort: if it is unreachable the write returns
-`persisted: false` instead of erroring. Rejected: requiring Postgres to deploy (a
+annotations, and even that is best-effort. Rejected: requiring Postgres to deploy (a
 setup wall for a private app); localStorage-only annotations (lost across devices).
+
+**Amended by D36 - "best-effort" was too broad and it cost a real note.** The
+leniency applies to the case this decision was written for and only that case: with
+no `DATABASE_URL` at all, a write returns 200 + `persisted: false` + `reason:
+"no-database"` and says so in its own copy. A database that is CONFIGURED and then
+throws is a different answer entirely - 500 + `ok: false` + `reason: "db-error"`,
+opening "Your note was NOT saved" - because swallowing that error is how the app
+once told a user his reasoning was saved and discarded it. Reads still degrade to
+empty rather than hard-failing, which is the part of this decision D36 leaves
+untouched; they just log loudly now instead of doing it in silence.
 
 ## D19. Do not guess the pick component of commissioner trades
 Commissioner-executed trades always carry `draft_picks: []`, so their pick component
@@ -346,10 +362,17 @@ priced at **11,646** before this fix, 1,646 over the documented ceiling of 10,00
 `theoreticalMaxMultiplier()` in `lib/valuation/index.ts`, never hand-typed.** `ageMax` is
 just the largest anchor value, because linear interpolation between any two anchors can
 never exceed the larger of the two endpoints, so the curve's global max is always one of its
-anchor points. `injuryMax` and `roleMax` are `Math.max` over their config maps (including the
-"healthy"/`null` case, which resolves to 1.0), so if either config ever changes to exceed 1.0
-the ceiling calculation picks it up automatically instead of needing a matching edit somewhere
-else. `posMax` is the max of `positionMultipliers()` computed from the league's actual live
+anchor points. `roleMax` is a `Math.max` over its config map (including the `unknown` case,
+which resolves to 1.0), so if that config ever changes to exceed 1.0 the ceiling calculation
+picks it up automatically instead of needing a matching edit somewhere else. `injuryMax` was
+the same shape when this was written and is now `maxInjuryMultiplier(cfg)` in
+`lib/valuation/injury.ts`, because the injury term was rebuilt as `1 - penalty` and a plain
+`Math.max` over the config no longer describes what the function can return: it derives the
+ceiling by taking every class penalty against the smallest note and status scales at both
+ends of the age scale, through the same `[0, 1]` clamp `injuryAssessment` applies. Same
+contract, stricter derivation - it still resolves to exactly 1.0 under the shipped config,
+and every number in this entry is unchanged, because it returns 1.0 for the arithmetic's
+reasons rather than by assumption. `posMax` is the max of `positionMultipliers()` computed from the league's actual live
 scoring, per the existing "never hardcoded" rule for that function. Under this league's
 scoring: `1.16 * 1.0 * 1.0 * 1.0491462851868945 = 1.2170096908167976`.
 
@@ -510,3 +533,215 @@ to clear 4.5 at current alpha values even in the contrast theme (~8 small pills 
 markup that belongs to a dedicated pass, not a theme override), and any future
 revisiting of the default's own contrast is an owner-level identity question, not an
 engineering one.
+
+## D35. The LENS and the SEAT are two mechanisms, because they want opposite properties
+Parquet had exactly one notion of "you": the `parquet_roster` cookie. It answered two
+questions that only look like one - "whose public data am I looking at" and "whose
+private authorship do I hold" - and it was `httpOnly: false` by design, because the
+`/rank` board and the digest panel read it client-side. So the author stamped on every
+decision-ledger annotation was derived from a string any reader can rewrite in
+devtools. Anyone could write, and edit, as anyone. The annotation-authorship work that
+landed just before this (the composite `(transactionId, ownerId)` index, author-scoped
+reads) fixed WHERE the author is stored; it could not fix where the author came from.
+
+The two jobs cannot share a cookie because they want opposite things. The lens should
+be freely switchable - running the whole app as any manager is one of the best things
+about it, and every number it moves is public Sleeper data the whole league can
+already see. The authorship must be unforgeable. So there are now two mechanisms:
+
+- **The lens** - `parquet_roster`, unchanged in every respect. Still readable, still
+  one tap, still what `h.me` resolves from.
+- **The seat** - `parquet_seat`, a SIGNED, httpOnly cookie holding
+  `s1.<ownerId>.<HMAC-SHA256("s1:"+ownerId, AUTH_SECRET)>`. The commissioner generates
+  one claim link per manager (`pnpm claim-links`, or /commissioner once he holds his
+  own seat) and hands it out once; opening it sets the cookie. Node's built-in
+  `crypto`, no new dependency, no user table, no session store - and crucially no
+  database, since D18 makes the DB optional and an identity layer that needed one
+  would quietly repeal that.
+
+`lib/auth/seat.ts` holds the whole decision matrix as pure functions.
+`writeAuthorId` stamps the SEAT and never consults the lens, so the worst a forged
+`parquet_roster` can now do is change which public numbers you read. `viewAuthorId` is
+one rule stricter - it additionally requires the lens to AGREE - because a ledger
+answering "your notes" while the rest of the page answers "their team" would read two
+people's stories into one screen. Consequence, stated plainly: while the lens is on
+someone else, multi-user mode shows no private reasoning at all, neither theirs nor
+yours. That is the intended shape, not a gap.
+
+**LEGACY MODE IS THE DEFAULT AND IS NOT DEGRADED.** With no `AUTH_SECRET` there is
+nothing to sign with, `resolveSeat` reports `enforced: false`, and every function
+falls through to the lens - the exact behaviour the app had before any of this. This
+is a hard contract, pinned by tests on both the pure matrix and the real route
+handler: a single-user deploy (which is every deploy today) never has to know seats
+exist. `LeagueHistory.authorId` is optional for the same reason - `undefined` means
+"no identity layer ran" (a hand-built fixture corpus, a script) and gets the legacy
+answer, while `null` means "an identity layer ran and concluded this view holds no
+private authorship" and must NOT collapse back to the lens.
+
+Two smaller repairs ride along, both consequences of the app having had one identity:
+a browser with no lens cookie was silently rendered the deploy owner's seat (his
+headline, his record, "27 decisions to capture"), and now meets `/teams` instead via
+a five-line middleware, deep link preserved through a sanitized `next` param; and the
+digest's last-seen marker was ONE global cookie, so switching the lens reported
+"nothing has moved since just now" against your own visit thirty seconds earlier - it
+is now keyed per identity (seat, else lens roster), derived from cookies alone so the
+write path still costs no corpus read. `/teams` also joined `ALL_SURFACES`, which was
+claiming completeness while omitting the app's front door.
+
+Rejected: passwords or a user table (a login page nobody in a fourteen-person dynasty
+league asked for, and a database dependency D18 forbids); a separate exchange step
+between link token and session token (buys revocation we do not have anywhere else,
+costs the server-side store we specifically do not get); gating custom-rank writes on
+a seat (a ranking board is a per-browser opinion about players carrying no identity
+stamp and no cross-user exposure - gating it would break the "pick a team to explore"
+path the picker promises without closing any hole); requiring a seat to advance the
+digest marker (same reasoning; keying it was the actual fix); scoping annotation READS
+to the seat while ignoring the lens (shows your notes attached to someone else's
+transactions). Known and accepted: a claim link is a bearer token with no revocation
+short of rotating `AUTH_SECRET`, which invalidates every seat at once.
+
+## D36. "No database" and "the database said no" are different answers, and conflating them lost a note
+`/api/annotations` degraded every database error into D18's friendly "saved for this
+session, but not persisted" and a 200. That is correct for the case it was written for
+(Vercel with no Postgres) and catastrophic for the case it silently absorbed: in
+production the live Neon database had its `Annotation_transactionId_key` unique index
+replaced by the composite `(transactionId, ownerId)` one while deployed code still
+upserted on `where: { transactionId }`. Postgres refused (SQLSTATE 42P10, "no unique
+or exclusion constraint matching the ON CONFLICT specification"), the catch swallowed
+it, the API said the note was saved, and the user's typed reasoning was discarded. For
+an app whose entire premise is capturing reasoning while you still remember it, that is
+the worst failure available.
+
+The fix is to stop interpreting after the fact and ask BEFORE the query.
+`databaseConfigured()` reads `DATABASE_URL` - a configuration fact, knowable with
+certainty and with no round trip - so the three outcomes are now three answers: no URL
+is 200 + `persisted: false` + `reason: "no-database"` (expected, ephemeral, and says
+so); a thrown error is **500** + `ok: false` + `reason: "db-error"` and copy that
+opens "Your note was NOT saved"; success is `persisted: true`. The driver's own code
+and message are logged server-side, because that incident was diagnosable ONLY from
+the driver's text and a generic "db error" line would have said nothing actionable.
+`describeDbError` is duck-typed rather than narrowed to
+`PrismaClientKnownRequestError` for exactly that reason - the errors that matter most
+are the ones nobody anticipated, and narrowing by class drops them in an "unknown"
+bucket. `LedgerItem` now stays OPEN with the text still in the textarea on a genuine
+failure, so the only copy of that reasoning is still on screen and still selectable.
+The read path (`loadAnnotations`) keeps degrading to an empty map, since D18 forbids a
+read hard-failing on the DB, but no longer does it in silence: a configured-but-broken
+database logs loudly, because "you have captured nothing" is the read-side twin of the
+same lie and invites someone to retype what the app merely failed to fetch.
+Rejected: retrying (a constraint mismatch is not transient); queueing the write
+client-side (durability theatre in an app with no offline story); keeping the 200 and
+signalling only in the body (every existing caller treats 200 as success).
+
+## D37. Round 6's `useState`-loses-everything bug got fixed three more times, and search
+finally got its missing deep link
+
+D30 moved the trade web's selection from `useState` to the query string because a
+great feature's UI hadn't caught up. The same bug shape turned up in three more
+places doing real work mid-navigation: `/values`' filters, `/trade`'s give/get
+package, and the search box mounted on `/more`. All three now follow D30's exact
+division of labour - a dependency-free `lib/*/url.ts` module owns the mapping
+between a URL and a state shape, the surface reads it once at mount and writes it
+back on every change - but which write primitive each surface uses is not copied
+blindly; it is picked from the same reasoning D30 stated, not from the letter of it.
+
+**`history.replaceState`, not `router.replace`, for `/values` and `/trade`.** Both
+pages are `force-dynamic` and their server render is the expensive part - `/values`
+revalues every player in the league, `/trade` runs `analyzeRoster` and
+`leagueValueRanking` over every roster. Routing on every filter tap or every
+asset add/remove would pay that whole render again per tap, exactly the cost D30
+identified for `/web`. `lib/values/url.ts` and `lib/trade/url.ts` both carry that
+comment rather than assuming the reader remembers D30.
+
+**`router.replace` (with `{ scroll: false }`), not `history.replaceState`, for the
+search box on `/more`.** `/more`'s own server render does no real work
+(`groupedSurfaces()` is a static list, no corpus read), so there is no per-keystroke
+cost to dodge, and letting Next own the URL means the same debounce timer that
+already gates the `/api/search` fetch can gate the mirror too, at zero added
+latency. Doing this one with `history.replaceState` instead would have been cargo
+culting the mechanism without the cost that justified it.
+
+**The trade package resolves ids against the UNION of both sides' pools, not
+"mine" specifically.** `lib/trade/url.ts` only ever carries ids
+(`give`/`get`/`gp`/`rp`, comma-joined) - never names or values - and `TradeBuilder`
+looks each one up in `myPlayers ∪ otherPlayers` (same for picks). That is what makes
+`/trade?give=...&get=...` a genuinely shareable link: the person who opens it has
+their OWN roster as "mine", which is not the roster the ids were built against, so
+resolving only against "my" pool would silently drop the sender's own assets on
+arrival. Verified live: a package built from Victor Wembanyama (give) and Jabari
+Smith (get) round-trips through the URL with both names and Wembanyama's value
+(9,569) intact.
+
+**Search's player results finally link somewhere real.** They were the only one of
+the four result kinds pointing at a page with nothing selected (`/values`, the full
+list, forcing a re-search in that page's own box) - managers, trades and picks all
+had real deep links already. `valuesFocusHref` (`lib/values/url.ts`) builds
+`/values?focus=<id>`, which `ValuesList` reads to expand that row, scroll it into
+view once, and ring it briefly (`ValueAssetRow`'s `focused` prop). Composes with the
+filter persistence rather than fighting it: a focus deep link typically carries no
+other params, so the defaults (`All`, no query) already make the row visible, and
+for the rare case a searched player's value ranks outside the page's normal 260-row
+cap, `app/values/page.tsx` appends that one row rather than silently showing
+nothing. Verified live via SSR: searching a deep-bench name (value 37, rank 261)
+still renders `aria-expanded="true"` and the highlight ring at row 261.
+
+Both new URL modules ship the same untrusted-input posture D30 set for
+`lib/tradegraph/url.ts`: nothing throws, a hand-edited or stale param degrades to
+its default, and ids this module can't resolve are simply left for the component to
+drop rather than validated here (this file only knows strings). `lib/trade/url.ts`
+additionally caps id length and count, since a give/get param is otherwise an
+unbounded string a hand-edited URL could grow arbitrarily.
+
+One owner-directed removal rode along in the same file: `TradeBuilder`'s "Copyable
+summary" block (a copy-to-clipboard `<pre>` of `TradeEvaluation.copyable`) came out
+of the UI, since the trade centre link below it already covers "get this trade in
+front of Sleeper" and the plain-text summary was redundant with the thesis rendered
+above it. `TradeEvaluation.copyable` itself is untouched in `lib/trade` - this was a
+UI-only removal, not a data-layer one.
+
+Rejected: one shared "URL sync" hook parameterized by write-strategy (the two
+strategies exist for opposite reasons - one dodges an expensive render, the other
+rides an existing debounce for zero added cost - collapsing them into one knob would
+hide that the choice is never arbitrary); pinning the focused player's row into the
+URL's own filter defaults so it always survives a filter change (the row is a
+one-time deep-link nudge, not a permanent pin - letting a later filter change hide
+it again is the expected behaviour, not a bug).
+
+## D38. ONE corpus cache entry for the whole league, and identity resolved outside it
+D18 makes reads DB-free by holding the assembled corpus in process, and D35 then gave
+the app two per-viewer identities. Those two facts are only compatible because of a
+split that is easy to miss when reading either decision alone, so it is recorded here
+rather than left to be rediscovered by whoever next edits the cache.
+
+**The cached object is `Corpus`, which is `LeagueHistory` MINUS `me`.** The single-flight
+slot in `lib/history.ts` is keyed by nothing at all - one entry, one league, a 5 minute
+TTL - because everything in it is public league data that is identical for every viewer.
+The two things that are NOT identical per viewer are computed after the await, per
+request, from cookies: the lens (`me`, from `parquet_roster`) and the seat-derived
+`authorId` (`viewAuthorId`). So multi-user mode needs no per-user cache key, no cache
+partitioning, and no second assembly. D18 survives D35 unchanged.
+
+**What the shared entry does hold is every author's annotations**, since
+`loadAnnotations` runs inside the assembly. That is deliberate - the map is loaded once
+for the league, not once per reader - and it means the cache is not the thing keeping one
+manager's reasoning away from another. `myAnnotation()` is: it looks up
+`annotationKey(transactionId, viewerAuthorId(h))` and nothing else. The comment on
+`h.annotations` and the one above the analyst's corpus builder both say so, because a
+future `h.annotations.get(transactionId)` written by someone in a hurry would be a
+privacy bug that no test of the cache would catch. If a per-viewer prefilter is ever
+wanted, it belongs on the read path, not in the cached object.
+
+One shared entry also means one shared invalidation, which is why the annotation write
+path no longer uses it: `invalidateHistory()` drops the WHOLE entry, so one manager
+saving one note used to make the next request from ANY manager pay a full reassembly
+(~145 Sleeper requests and D25's 1.4s budget, plus a fresh `players` Map that misses
+the valuation WeakMap). `publishAnnotation()` sets the one row into the cached map
+instead, which is only safe because of the same split this entry is about - the
+annotations map is the ONLY part of the corpus this process writes, everything else in
+it is Sleeper's and stale on a clock rather than on our own writes. `invalidateHistory`
+survives as a test hook and as the last resort for a writer that genuinely changed
+something upstream. Rejected: keying the corpus by viewer (multiplies the app's heaviest
+object by the league size to vary two fields that cost nothing to compute); moving
+annotations out of the corpus so the cache holds only public data (turns every ledger
+and recap render into its own DB round trip, which is the read-time DB dependency D18
+exists to prevent).

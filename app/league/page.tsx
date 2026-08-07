@@ -3,6 +3,9 @@ import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
 import { leagueTimelines } from "@/lib/metrics/duration";
+import { leagueFragility } from "@/lib/metrics/fragility";
+import { buildQuadrantView } from "@/lib/metrics/quadrant";
+import { CoherenceFragilityQuadrant } from "@/components/CoherenceFragilityQuadrant";
 import { DeltaValue, SectionHeader, Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { TimelineQuadrant } from "@/components/TimelineChart";
@@ -31,6 +34,7 @@ export default async function LeaguePage() {
   const h = await getLeagueHistory();
   const ranked = leagueValueRanking(h);
   const timelines = leagueTimelines(h);
+  const fragility = leagueFragility(h);
   const form = await currentFormByRoster(h);
   const meId = h.me.rosterId;
   // Most of a dynasty league's calendar has the live season sitting at 0-0 in
@@ -47,6 +51,21 @@ export default async function LeaguePage() {
     ? ranked[Math.floor(ranked.length / 2)].totalValue
     : 0;
   const myRank = meId != null ? ranked.findIndex((r) => r.rosterId === meId) + 1 : 0;
+
+  // The two proprietary metrics on one pair of axes. Both passes are already computed
+  // above / here, so the board costs a join rather than a third walk of the league.
+  const board = buildQuadrantView(
+    timelines,
+    fragility.map((f) => ({
+      rosterId: f.rosterId,
+      fragility: f.fragility,
+      percentile: f.percentile,
+      band: f.band,
+      spofName: f.singlePointOfFailure?.name ?? null,
+      spofShare: f.singlePointOfFailure?.damageShare ?? null,
+    })),
+    meId,
+  );
 
   return (
     <div>
@@ -177,6 +196,16 @@ export default async function LeaguePage() {
           );
         })}
       </ul>
+
+      {/* The duration board above says WHEN each roster wins. This one crosses that
+          with WHAT BREAKS FIRST, which is the pairing no surface in this app has ever
+          shown for more than two managers at a time. */}
+      <SectionHeader
+        title="Coherence x fragility - the whole board"
+        href="/methodology"
+        cta="how RFI works"
+      />
+      <CoherenceFragilityQuadrant view={board} />
 
       <h2 className="mb-1.5 mt-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-muted">
         Power ranking - by roster value

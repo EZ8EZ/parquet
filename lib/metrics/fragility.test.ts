@@ -592,6 +592,70 @@ describe("Roster Fragility Index over the league", () => {
     }
   });
 
+  /**
+   * THE READER'S INVARIANT: two identical numbers may never carry two different bands.
+   *
+   * This was broken for as long as the metric has existed, and `/league`'s quadrant is
+   * what made it visible - it is the first surface that renders the score and the band
+   * adjacent in one sorted list, and on the live league it read:
+   *
+   *     nathang21     63 / 46   resilient
+   *     5-Year Plan   65 / 50   balanced
+   *     zachgoldy     71 / 46   balanced
+   *     6-Month Plan  71 / 43   resilient
+   *
+   * 46 resilient above 46 balanced, with 43 resilient below both. The cause was that
+   * `fragility` was rounded for display while `band` came off the UNROUNDED index's
+   * percentile, so two rosters less than 0.5 apart could land on opposite sides of the
+   * 25th-percentile line while showing the same number. Both are now read off the same
+   * rounded ladder, which makes the invariant hold by construction rather than by
+   * formatting, and these three tests are what stop it drifting back.
+   */
+  describe("the number and the band cannot contradict each other", () => {
+    it("gives equal displayed scores an equal band and an equal percentile", () => {
+      const all = leagueFragility(h);
+      const byScore = new Map<number, typeof all>();
+      for (const p of all) {
+        byScore.set(p.fragility, [...(byScore.get(p.fragility) ?? []), p]);
+      }
+      // Non-vacuous: the fixture league genuinely ties two rosters on one number, so
+      // there is at least one group where the invariant has something to say.
+      expect(byScore.size).toBeLessThan(all.length);
+      for (const [score, group] of byScore) {
+        expect(`${score} -> ${[...new Set(group.map((p) => p.band))].join(" AND ")}`).toBe(
+          `${score} -> ${group[0].band}`,
+        );
+        expect(new Set(group.map((p) => p.percentile)).size).toBe(1);
+      }
+    });
+
+    it("never shows a lower score a MORE brittle band than a higher one", () => {
+      // The general form of the live contradiction: read top to bottom, brittleness may
+      // only ever weaken. `leagueFragility` is already sorted most fragile first.
+      const rank = { resilient: 0, balanced: 1, brittle: 2 } as const;
+      const all = leagueFragility(h);
+      for (let i = 1; i < all.length; i++) {
+        expect(rank[all[i].band]).toBeLessThanOrEqual(rank[all[i - 1].band]);
+        // And the ordering the bands ride on is the DISPLAYED number, not a hidden one.
+        expect(all[i].fragility).toBeLessThanOrEqual(all[i - 1].fragility);
+      }
+    });
+
+    it("classifies off the displayed number, not off a finer one behind it", () => {
+      // Every profile's percentile has to be reproducible from the numbers a reader can
+      // see. If the band were still derived from an unrounded index this fails, because
+      // no ladder of displayed scores can reproduce a percentile computed off raws.
+      const all = leagueFragility(h);
+      const ladder = all.map((p) => p.fragility);
+      for (const p of all) {
+        expect(p.percentile).toBeCloseTo(
+          Math.round(fragilityPercentile(p.fragility, ladder) * 100) / 100,
+          5,
+        );
+      }
+    });
+  });
+
   it("agrees between the single-roster getter and the league pass", () => {
     const all = leagueFragility(h);
     for (const p of all) {

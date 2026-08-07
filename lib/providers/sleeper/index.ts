@@ -170,15 +170,13 @@ export class SleeperProvider implements LeagueProvider {
   async getPlayers(): Promise<Player[]> {
     // /players/nba is ~3.3MB — over Next's 2MB fetch-cache limit, so it can't use
     // the data cache. Memoize in-process (rosters change far more often than the
-    // player universe) to avoid re-downloading it on every render.
-    const now = Date.now();
-    if (playersCache && now - playersCache.at < PLAYERS_TTL_MS) {
-      return playersCache.data;
-    }
-    const raw = await getJson(`/players/nba`, RawPlayerMap, { noStore: true });
-    const data = Object.values(raw).map(toPlayer);
-    playersCache = { at: now, data };
-    return data;
+    // player universe) to avoid re-downloading it on every render. `memo()` is
+    // single-flight (see its docstring below), so concurrent cold callers join one
+    // 2.46MB download instead of each issuing their own.
+    return memo(playersCache, "players", PLAYERS_TTL_MS, async () => {
+      const raw = await getJson(`/players/nba`, RawPlayerMap, { noStore: true });
+      return Object.values(raw).map(toPlayer);
+    });
   }
 
   /**
@@ -219,27 +217,54 @@ export class SleeperProvider implements LeagueProvider {
   }
 }
 
-let playersCache: { at: number; data: Player[] } | null = null;
+interface MemoSlot<T> {
+  promise: Promise<T>;
+  resolvedAt?: number;
+}
+
+const playersCache = new Map<string, MemoSlot<Player[]>>();
 const PLAYERS_TTL_MS = 6 * 60 * 60 * 1000; // 6h - the player universe is stable
 
 /**
  * Lightweight in-process memo (same intent as `playersCache`): drafts are read on
  * every board render and one league season costs 1 + N requests to hydrate.
  */
-const draftsCache = new Map<string, { at: number; data: DraftMeta[] }>();
-const draftPicksCache = new Map<string, { at: number; data: DraftPick[] }>();
+const draftsCache = new Map<string, MemoSlot<DraftMeta[]>>();
+const draftPicksCache = new Map<string, MemoSlot<DraftPick[]>>();
 const DRAFTS_TTL_MS = 30 * 60 * 1000; // 30m - a live draft still refreshes
 
+/**
+ * SINGLE-FLIGHT memo, keyed. Stores the in-flight PROMISE, not the resolved value
+ * (mirrors the fix to `getCorpus` in lib/history.ts) — the players payload alone is
+ * 2.46MB and 157ms, so N concurrent cold callers previously each downloaded their own
+ * copy instead of joining one. `resolvedAt` is only set once the promise settles: a
+ * caller arriving mid-load always joins it (nothing to expire yet), and the TTL is
+ * anchored to completion time exactly as before once there is a value that can go
+ * stale. On rejection the slot is deleted so a transient failure doesn't pin a
+ * rejected promise for the rest of the TTL window (mirrors `ensureIngested` in
+ * lib/ingest.ts).
+ */
 async function memo<T>(
-  cache: Map<string, { at: number; data: T }>,
+  cache: Map<string, MemoSlot<T>>,
   key: string,
   ttlMs: number,
   load: () => Promise<T>,
 ): Promise<T> {
-  const now = Date.now();
   const hit = cache.get(key);
-  if (hit && now - hit.at < ttlMs) return hit.data;
-  const data = await load();
-  cache.set(key, { at: now, data });
-  return data;
+  if (hit) {
+    if (hit.resolvedAt === undefined) return hit.promise;
+    if (Date.now() - hit.resolvedAt < ttlMs) return hit.promise;
+  }
+  const slot: MemoSlot<T> = {} as MemoSlot<T>;
+  slot.promise = load()
+    .then((value) => {
+      slot.resolvedAt = Date.now();
+      return value;
+    })
+    .catch((err) => {
+      if (cache.get(key) === slot) cache.delete(key);
+      throw err;
+    });
+  cache.set(key, slot);
+  return slot.promise;
 }

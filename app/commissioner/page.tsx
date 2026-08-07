@@ -13,6 +13,7 @@ import { notableWaiverLabel } from "@/lib/ledger";
 import { EmptyState, PageHeader, SectionHeader, Tag } from "@/components/ui";
 import { cn, fmtValue } from "@/lib/ui";
 import { LineageCard } from "../drafts/parts";
+import { SeatLinks } from "./seats";
 
 export const dynamic = "force-dynamic";
 
@@ -95,6 +96,10 @@ export default async function CommissionerPage() {
         title="League health & audit log"
         subtitle="A dashboard, not a second ledger - every row here points at the surface that already owns the full story. Trade-veto history isn't included: Sleeper doesn't expose it reliably enough to show without risking a silent gap."
       />
+
+      {/* First, because handing the app to the league is a one-time act that has to
+          be findable, and everything below it is a recurring check. */}
+      <SeatLinks h={h} />
 
       <SectionHeader
         title="Stale rosters"

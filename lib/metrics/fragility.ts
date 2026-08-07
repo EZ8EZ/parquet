@@ -217,6 +217,14 @@ export interface FragilityAsset {
   positions: string[];
   age: number | null;
   injuryStatus: string | null;
+  /**
+   * Sleeper's `injury_body_part` / `injury_notes`. Carried through because the injury
+   * term this metric borrows now reads them, and reads them far more heavily than it
+   * reads the status string. Optional so the metric's own tests can still build an
+   * asset from a status alone.
+   */
+  injuryBodyPart?: string | null;
+  injuryNotes?: string | null;
 }
 
 /** One player's leave-one-out result. */
@@ -544,9 +552,16 @@ export function starterWeights(
  *   exposure   = sum_i v_i * (1 - play_i) / sum_i v_i
  *
  * Both terms are borrowed rather than invented, on purpose. `injuryMultiplier` is the
- * league's own valuation config, so the statuses this league actually reports are priced
- * exactly as the value model prices them. `availability` is duration.ts's career taper,
- * reused so the two metrics cannot disagree about when a body stops being reliable.
+ * league's own valuation config, so an injury is priced here exactly as the value model
+ * prices it - which since the injury rebuild means by body part, note type and the
+ * player's age at the injury, not by a status word. `availability` is duration.ts's
+ * career taper, reused so the two metrics cannot disagree about when a body stops being
+ * reliable.
+ *
+ * The rebuild moved this metric in both directions, which is correct in both: a roster
+ * carrying a star with a surgically repaired Achilles now registers far more exposure
+ * than before, and a roster whose only flags are young players marked "Rest" now
+ * registers none, because load management is not an injury.
  *
  * Read this as an INDEX OF EXPOSURE, not a probability of missing games. A 37-year-old
  * scoring 0.5 on the taper does not mean he misses half the season; it means half of his
@@ -566,7 +581,15 @@ export function availabilityExposure(
   for (const a of assets) {
     if (a.value <= 0) continue;
     const play = clamp01(
-      injuryMultiplier(a.injuryStatus, cfg) * availability(a.age ?? UNKNOWN_AGE),
+      injuryMultiplier(
+        {
+          status: a.injuryStatus,
+          bodyPart: a.injuryBodyPart,
+          notes: a.injuryNotes,
+          age: a.age,
+        },
+        cfg,
+      ) * availability(a.age ?? UNKNOWN_AGE),
     );
     num += a.value * (1 - play);
     den += a.value;
@@ -685,12 +708,35 @@ function assetsOf(
   h: LeagueHistory,
   valueOf: (playerId: string) => number,
 ): FragilityAsset[] {
-  const out: FragilityAsset[] = [];
+  // Exclude taxi-squad players: they are stashed and cannot be started without
+  // moving them off the taxi squad first. Including them overstates startable depth.
   const taxiSet = new Set(roster?.taxi ?? []);
-  for (const pid of roster?.players ?? []) {
-    // Exclude taxi-squad players: they are stashed and cannot be started without
-    // moving them off the taxi squad first. Including them overstates startable depth.
-    if (taxiSet.has(pid)) continue;
+  return assetsFromIds(
+    (roster?.players ?? []).filter((pid) => !taxiSet.has(pid)),
+    h,
+    valueOf,
+  );
+}
+
+/**
+ * Fragility assets for an ARBITRARY set of player ids.
+ *
+ * Split out of `assetsOf` so a HYPOTHETICAL roster (the one you would hold after a
+ * proposed trade) is built by exactly the same code as a real one. If the two were
+ * assembled separately, a difference between before and after could be a difference in
+ * method rather than a difference in the roster, which is the only thing a post-trade
+ * fragility read is allowed to report.
+ */
+export function assetsFromIds(
+  playerIds: Iterable<string>,
+  h: LeagueHistory,
+  valueOf: (playerId: string) => number,
+): FragilityAsset[] {
+  const out: FragilityAsset[] = [];
+  const seen = new Set<string>();
+  for (const pid of playerIds) {
+    if (seen.has(pid)) continue;
+    seen.add(pid);
 
     const p: Player | undefined = h.players.get(pid);
     if (!p) continue;
@@ -709,6 +755,8 @@ function assetsOf(
       positions,
       age: p.age,
       injuryStatus: p.injuryStatus,
+      injuryBodyPart: p.injuryBodyPart,
+      injuryNotes: p.injuryNotes,
     });
   }
   // Stable order so every downstream consumer sees the same list every run.
@@ -752,19 +800,59 @@ export function leagueFragility(
     ...b,
     score: scoreFragility(b.assets, slots, cfg),
   }));
-  const raws = scored.map((s) => s.score.raw);
+
+  // THE LADDER IS THE ROUNDED INDEX, DELIBERATELY - see `fragilityLadder`. Percentile
+  // and band are both derived from it, so the number a reader sees is the number the
+  // band was decided from.
+  const ladder = fragilityLadder(scored.map((s) => s.score.raw));
 
   return scored
-    .map((s) => buildProfile(h, s.roster, s.assets, s.score, slots, replacement, raws))
+    .map((s) => ({
+      // The unrounded index survives only as a sort key, never as a displayed or
+      // classified quantity. It is what orders two rosters that show the same number,
+      // and it does the job the percentile used to do here - which the percentile can
+      // no longer do, now that identical displayed numbers share one percentile by
+      // construction. Roster id is the final tie-break so the order is total and
+      // identical on every run.
+      raw: s.score.raw,
+      profile: buildProfile(h, s.roster, s.assets, s.score, slots, replacement, ladder),
+    }))
     .sort(
       (a, b) =>
-        b.fragility - a.fragility ||
-        // Percentile is computed off the UNROUNDED index, so it breaks ties between two
-        // rosters that round to the same displayed number. Roster id is the final
-        // tie-break so the order is total and identical on every run.
-        b.percentile - a.percentile ||
-        a.rosterId - b.rosterId,
-    );
+        b.profile.fragility - a.profile.fragility ||
+        b.raw - a.raw ||
+        a.profile.rosterId - b.profile.rosterId,
+    )
+    .map((s) => s.profile);
+}
+
+/**
+ * The league's fragility scores AS DISPLAYED - i.e. rounded - which is the ladder both
+ * the percentile and the band are read off.
+ *
+ * This is a correctness fix, not a formatting one. The band used to be derived from the
+ * unrounded index while the number was rounded for display, so two rosters whose raw
+ * scores differed by less than 0.5 rendered the SAME number on opposite sides of the
+ * 25th-percentile line. `/league`'s quadrant is the surface that made it unreadable,
+ * because it is the first one to put the number and the band adjacent in a single
+ * sorted list: it showed 46 "resilient" above 46 "balanced" above 43 "resilient", which
+ * is not a subtle rounding artifact to a reader, it is the board contradicting itself.
+ *
+ * Rounding the ladder first makes the invariant hold BY CONSTRUCTION and everywhere,
+ * not just where somebody remembered to format it: equal displayed numbers get an equal
+ * count of rosters below them, hence an equal percentile, hence an equal band. The
+ * alternatives considered were both narrower. Showing a decimal in the quadrant fixes
+ * the one list that happens to render both, and leaves every other surface (`/recap`,
+ * `/managers/compare`, the trade web) free to disagree with itself the moment it grows
+ * a second roster on screen. Showing the percentile instead of the band there replaces
+ * a word the whole app uses with a number nobody else shows.
+ *
+ * Cost, measured against the live league: exactly ONE of fourteen rosters changes band,
+ * and it is the one the contradiction was about - the 46 that read "balanced" now reads
+ * "resilient", agreeing with the other 46. Every other assignment is unchanged.
+ */
+function fragilityLadder(raws: number[]): number[] {
+  return raws.map((r) => Math.round(r));
 }
 
 /**
@@ -791,6 +879,94 @@ export function getFragilityProfile(
   );
 }
 
+// ---------------------------------------------------------------------------------
+// Reading a roster's single point of failure, real or hypothetical
+// ---------------------------------------------------------------------------------
+
+/** The players a roster can actually start tonight. Taxi squad excluded, as ever. */
+export function startableRosterIds(h: LeagueHistory, rosterId: number): string[] {
+  const r = h.rostersById.get(rosterId);
+  if (!r) return [];
+  const taxi = new Set(r.taxi ?? []);
+  return (r.players ?? []).filter((pid) => !taxi.has(pid));
+}
+
+/**
+ * The league's replacement line: the value of the last player the league expects to be
+ * starting. Extracted so a hypothetical roster is measured against the SAME line
+ * `leagueFragility` uses, rather than one derived from the hypothetical itself.
+ */
+export function leagueReplacementValue(
+  h: LeagueHistory,
+  cfg: ValuationConfig = VALUATION_CONFIG,
+): number {
+  const slots = lineupSlots(h);
+  const values = cachedValuePlayers(h, cfg);
+  const valueOf = (pid: string) => values.get(pid)?.value ?? 0;
+  const teams = h.currentLeague.totalRosters || h.rosters.length || 1;
+  return replacementLevel(
+    h.rosters.flatMap((r) => assetsOf(r, h, valueOf).map((a) => a.value)),
+    teams * Math.max(1, slots.length),
+  );
+}
+
+/** What a roster's fragility looks like from the one angle that names a name. */
+export interface SpofRead {
+  playerId: string;
+  name: string;
+  /** Startable value lost if he goes, after the best internal replacement steps in. */
+  damage: number;
+  /** damage / startableValue. The share of the season he carries. */
+  damageShare: number;
+  startableValue: number;
+  /** Startable-quality bodies beyond the lineup slots. Negative means already short. */
+  depthBeyondStarters: number;
+}
+
+/**
+ * The single point of failure for an arbitrary set of players on this league's lineup
+ * shape. The roster somebody holds today, or the one they would hold after a trade.
+ *
+ * No percentile and no band, because both are league-relative and a hypothetical roster
+ * has no place in a league it does not exist in. What survives the hypothetical is the
+ * part that was always the actionable output: a name and a share.
+ */
+export function spofOfPlayers(
+  h: LeagueHistory,
+  playerIds: Iterable<string>,
+  opts: { cfg?: ValuationConfig; replacementValue?: number } = {},
+): SpofRead | null {
+  const cfg = opts.cfg ?? VALUATION_CONFIG;
+  const slots = lineupSlots(h);
+  const values = cachedValuePlayers(h, cfg);
+  const assets = assetsFromIds(playerIds, h, (pid) => values.get(pid)?.value ?? 0);
+  if (assets.length === 0) return null;
+  const solved = solveLineup(assets, slots);
+  const top = looDamage(assets, slots)[0];
+  if (!top) return null;
+  const replacement = opts.replacementValue ?? leagueReplacementValue(h, cfg);
+  return {
+    playerId: top.playerId,
+    name: top.name,
+    damage: Math.round(top.damage),
+    damageShare: round3(top.damageShare),
+    startableValue: Math.round(solved.value),
+    depthBeyondStarters: depthBeyondStarters(assets, slots, replacement),
+  };
+}
+
+/**
+ * Posture-conditioned reading of the band lives in ./bands, so the trade web can import
+ * the rule without importing the valuation model. Re-exported here because this file is
+ * where a reader looks for it.
+ */
+export {
+  fragilityIsAlarming,
+  fragilityTone,
+  type FragilityBand,
+  type RosterPosture,
+} from "./bands";
+
 function buildProfile(
   h: LeagueHistory,
   roster: { rosterId: number; ownerId: string | null },
@@ -798,14 +974,19 @@ function buildProfile(
   score: FragilityScore,
   slots: string[],
   replacement: number,
-  leagueRaws: number[],
+  leagueLadder: number[],
 ): FragilityProfile {
   const user = roster.ownerId ? h.usersById.get(roster.ownerId) : undefined;
   const teamName = user?.teamName ?? null;
   const ownerName = user?.displayName ?? `Roster ${roster.rosterId}`;
   if (assets.length === 0) return emptyProfile(roster.rosterId, teamName, ownerName);
 
-  const percentile = fragilityPercentile(score.raw, leagueRaws);
+  // The displayed number FIRST, then everything derived from it. Both arguments are
+  // rounded, which is the whole point: a reader who sees two identical numbers can
+  // never be shown two different bands, because the band cannot see anything the
+  // reader cannot.
+  const fragility = Math.round(score.raw);
+  const percentile = fragilityPercentile(fragility, leagueLadder);
   const band: FragilityProfile["band"] =
     percentile >= BRITTLE_PERCENTILE
       ? "brittle"
@@ -820,7 +1001,7 @@ function buildProfile(
     rosterId: roster.rosterId,
     teamName,
     ownerName,
-    fragility: Math.round(score.raw),
+    fragility,
     percentile: Math.round(percentile * 100) / 100,
     band,
     looScore: Math.round(score.looScore),
@@ -882,6 +1063,12 @@ const RESILIENT_PERCENTILE = 0.25;
 
 /**
  * Share of the league this roster is more fragile than. 1 = most fragile in the league.
+ *
+ * Callers inside this module pass the ROUNDED ladder (`fragilityLadder`) on both
+ * arguments, so rosters that display the same number share one percentile and therefore
+ * one band. The function itself stays generic - it only knows how to rank a number
+ * against a list - because the decision about which ladder to rank against belongs to
+ * whoever knows what the reader is being shown.
  *
  * Deliberately relative, and the reason is a bug we already shipped once: the first
  * version of duration.ts classified posture off absolute cutoffs and, on real data,

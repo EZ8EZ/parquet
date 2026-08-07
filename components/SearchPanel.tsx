@@ -23,16 +23,31 @@
  * that deal again" and is worth reading without leaving the page you are on - and
  * then links to that exact deal on the trade web, which marks it inside its pair's
  * history. That trade URL is built by lib/tradegraph/url.ts, the one place the
- * mapping lives; this file never assembles the query string itself.
+ * mapping lives; this file never assembles the query string itself. A player result
+ * links to `/values?focus=<id>` (lib/values/url.ts) instead of the bare list, for
+ * the same reason - it's the only result kind that used to go nowhere useful.
+ *
+ * The query itself now lives in the address bar too (`/more?q=...`), mirrored as you
+ * type: this used to be plain `useState`, so opening any result and coming back
+ * meant retyping the whole search from scratch. `router.replace` (not
+ * `history.replaceState`, unlike /web and /values' filters - see those files) is
+ * fine here because /more's own server render does no real work (`groupedSurfaces()`
+ * is a static list), so there is no per-keystroke render cost to dodge. The mirror
+ * rides the SAME debounce timer as the fetch below rather than adding a second one,
+ * so it never adds latency of its own - and the input's value never reads from the
+ * router, only from local state, so typing stays instant regardless of what the
+ * address bar is doing.
  */
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation";
 import { ArrowLeftRight, ChevronRight, GitBranch, Loader2, Search } from "lucide-react";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { TeamAvatar } from "./TeamAvatar";
 import { Tag } from "./ui";
 import { cn, fmtValue } from "@/lib/ui";
 import { tradeWebHref } from "@/lib/tradegraph/url";
+import { valuesFocusHref } from "@/lib/values/url";
 import type {
   ManagerResult,
   PickResult,
@@ -56,36 +71,47 @@ function totalCount(r: SearchResponse): number {
 }
 
 export function SearchPanel() {
-  const [query, setQuery] = useState("");
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  // Read once at mount - a `/more?q=...` link (or the back button) starts the box
+  // already filled in. Nothing re-derives this from a later address-bar change; the
+  // mirror below only ever writes.
+  const [query, setQuery] = useState(() => searchParams.get("q") ?? "");
   const [result, setResult] = useState<SearchResponse>(EMPTY);
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading] = useState(() => !!searchParams.get("q")?.trim());
   const [expandedTrade, setExpandedTrade] = useState<string | null>(null);
   const abortRef = useRef<AbortController | null>(null);
 
-  const handleQueryChange = useCallback((value: string) => {
-    setQuery(value);
-    // Both branches respond directly to the keystroke that caused them, rather
-    // than deriving state from a change inside an effect (the cascading-render
-    // anti-pattern the react-hooks lint rule flags) - clearing the box clears the
-    // results immediately, and typing shows the spinner immediately rather than
-    // waiting out the debounce window to react.
-    if (!value.trim()) {
-      abortRef.current?.abort();
-      setResult(EMPTY);
-      setLoading(false);
-    } else {
-      setLoading(true);
-    }
-  }, []);
+  const handleQueryChange = useCallback(
+    (value: string) => {
+      setQuery(value);
+      // Both branches respond directly to the keystroke that caused them, rather
+      // than deriving state from a change inside an effect (the cascading-render
+      // anti-pattern the react-hooks lint rule flags) - clearing the box clears the
+      // results immediately, and typing shows the spinner immediately rather than
+      // waiting out the debounce window to react.
+      if (!value.trim()) {
+        abortRef.current?.abort();
+        setResult(EMPTY);
+        setLoading(false);
+        router.replace("/more", { scroll: false });
+      } else {
+        setLoading(true);
+      }
+    },
+    [router],
+  );
 
   // The empty-query reset lives in the input's own onChange (above), not here -
   // deriving it from a state change inside an effect is the exact cascading-render
   // anti-pattern the react-hooks lint rule flags. This effect only ever subscribes
-  // to the debounced fetch for a non-empty query.
+  // to the debounced fetch (and, alongside it, the debounced URL mirror) for a
+  // non-empty query.
   useEffect(() => {
     const trimmed = query.trim();
     if (!trimmed) return;
     const handle = setTimeout(() => {
+      router.replace(`/more?q=${encodeURIComponent(trimmed)}`, { scroll: false });
       abortRef.current?.abort();
       const controller = new AbortController();
       abortRef.current = controller;
@@ -101,7 +127,7 @@ export function SearchPanel() {
         .finally(() => setLoading(false));
     }, DEBOUNCE_MS);
     return () => clearTimeout(handle);
-  }, [query]);
+  }, [query, router]);
 
   return (
     <div>
@@ -207,7 +233,7 @@ function PlayerRow({ p }: { p: PlayerResult }) {
   return (
     <li>
       <Link
-        href="/values"
+        href={valuesFocusHref(p.id)}
         className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
       >
         <PlayerAvatar name={p.name} team={p.team} playerId={p.id} size="sm" />

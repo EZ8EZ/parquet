@@ -155,7 +155,16 @@ export interface Player {
   age: number | null;
   yearsExp: number | null;
   birthDate: string | null;
+  /**
+   * Sleeper `injury_status`. In live NBA data this is only ever DTD / Out / IR, and it
+   * is a far weaker severity signal than its vocabulary implies (a ruptured Achilles
+   * and a bruised quad are both "DTD"). The two fields below carry the real signal.
+   */
   injuryStatus: string | null;
+  /** Sleeper `injury_body_part`, e.g. "Knee". Present on every live flag. */
+  injuryBodyPart: string | null;
+  /** Sleeper `injury_notes`, e.g. "Surgery". Present on about two thirds of flags. */
+  injuryNotes: string | null;
   depthChartOrder: number | null;
   status: string | null;
   number: number | null;

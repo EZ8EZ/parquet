@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { PageHeader, SectionHeader } from "@/components/ui";
@@ -18,7 +19,16 @@ export default function MorePage() {
         subtitle="Search for a specific player, manager, trade or pick - or browse every surface the app has. If it isn't listed below, it doesn't exist yet."
       />
 
-      <SearchPanel />
+      {/*
+        Suspense because SearchPanel reads the query string through useSearchParams -
+        the search box's own text is addressable now (`/more?q=...`), so leaving for
+        a result and coming back restores it instead of an empty box. This page is
+        force-dynamic, so the boundary never actually suspends in practice; it is
+        here so that dependency can never turn into a render-mode surprise later.
+      */}
+      <Suspense fallback={null}>
+        <SearchPanel />
+      </Suspense>
 
       {groups.map(({ group, items }) => (
         <div key={group}>

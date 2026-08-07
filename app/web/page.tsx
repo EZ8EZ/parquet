@@ -16,6 +16,7 @@ import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
 import { leagueTimelines, playerDuration } from "@/lib/metrics/duration";
 import { leagueFragility } from "@/lib/metrics/fragility";
 import { Card, PageHeader, Tag } from "@/components/ui";
+import { MetricGloss } from "@/components/MetricGloss";
 import { TradeWeb } from "@/components/TradeWeb";
 
 export const dynamic = "force-dynamic";
@@ -123,6 +124,10 @@ export default async function TradeWebPage() {
           </div>
         </div>
       </Card>
+
+      {/* Every manager in the web carries a TCI and RFI pill (D30) with no room to
+          explain itself in a pill - so the definition lives here once, quietly. */}
+      <MetricGloss className="-mt-3 mb-2" />
 
       {/*
         Suspense because TradeWeb reads the query string through useSearchParams -

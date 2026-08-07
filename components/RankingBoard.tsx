@@ -38,7 +38,7 @@ import {
   disagreements as computeDisagreements,
 } from "@/lib/rankings";
 import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
-import { valuePlayers } from "@/lib/valuation";
+import { injuryLabel, valuePlayers } from "@/lib/valuation";
 import {
   CUSTOM_RANK_STORAGE_KEY,
   customOrderFromCookieHeader,
@@ -390,6 +390,16 @@ export function RankingBoard({
           const v = values.get(id);
           const tier = v ? tierFor(v.value)?.label : undefined;
           const dragging = draggingId === id;
+          // Body part only: this row is 390px wide with a drag handle in it. Null for
+          // a healthy player and for load management, which is a flag, not an injury.
+          const injury = injuryLabel(
+            {
+              status: p.injuryStatus,
+              bodyPart: p.injuryBodyPart,
+              notes: p.injuryNotes,
+            },
+            { short: true },
+          );
           return (
             <li
               key={id}
@@ -420,9 +430,9 @@ export function RankingBoard({
                   <span className="truncate text-[13px] font-semibold leading-tight text-ink">
                     {p.fullName}
                   </span>
-                  {p.injuryStatus && (
+                  {injury && (
                     <span className="shrink-0 rounded bg-negative/15 px-1 text-[11px] font-semibold leading-tight text-negative">
-                      {p.injuryStatus}
+                      {injury}
                     </span>
                   )}
                 </span>

@@ -26,7 +26,11 @@ export function CopyBlock({ text, label = "Copy for Sleeper" }: { text: string; 
           {copied ? "copied" : "copy"}
         </button>
       </div>
-      <pre className="whitespace-pre-wrap px-2.5 py-2 font-mono text-[11px] leading-relaxed text-muted">
+      {/* `break-words` breaks a token ONLY when it has no other option, which leaves
+          the prose-shaped trade summaries wrapping exactly as they did and stops an
+          unbroken 80-character claim link from running off the side of a 390px
+          screen - the one payload this block has ever carried with no spaces in it. */}
+      <pre className="whitespace-pre-wrap break-words px-2.5 py-2 font-mono text-[11px] leading-relaxed text-muted">
         {text}
       </pre>
     </div>

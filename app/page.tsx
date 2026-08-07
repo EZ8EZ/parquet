@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, ChevronRight, Repeat, ScrollText, Settings } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronRight, Repeat, ScrollText, Settings } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getStrategyReport } from "@/lib/strategy";
 import { getLedgerSummary } from "@/lib/ledger";
@@ -8,6 +8,7 @@ import { currentFormByRoster } from "@/lib/roster";
 import { ordinal } from "@/lib/derive/describe";
 import { liveStreaks } from "@/lib/streaks";
 import { curatedSurfaces } from "@/lib/nav";
+import { canCapture, readSeat } from "@/lib/auth/server";
 import { iconForSurface } from "@/components/nav-icons";
 import { DigestPanel } from "@/components/DigestPanel";
 import { StreakPanel } from "@/components/StreakPanel";
@@ -20,6 +21,10 @@ export default async function HomePage() {
   const h = await getLeagueHistory();
   const report = getStrategyReport(h);
   const ledger = getLedgerSummary(h);
+  // "27 decisions to capture" is a to-do list, and a to-do list addressed to someone
+  // who is not allowed to do any of it is just an accusation. In legacy mode this is
+  // always true and the badge behaves exactly as it always has.
+  const mayCapture = canCapture(await readSeat(), h.me.userId);
   const p = report.profile;
   const roster = h.rostersById.get(p.rosterId);
   const form = (await currentFormByRoster(h)).get(p.rosterId);
@@ -81,7 +86,7 @@ export default async function HomePage() {
       )}
 
       {/* Unannotated decisions badge - a to-do to clear, not paperwork. One line. */}
-      {ledger.unannotatedNotable > 0 && (
+      {mayCapture && ledger.unannotatedNotable > 0 && (
         <Link
           href="/ledger"
           className="mb-3 flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-accent/30 bg-accent/10 px-2.5 py-2 transition-colors hover:border-accent/60"
@@ -100,15 +105,18 @@ export default async function HomePage() {
         </Link>
       )}
 
-      {/* Revealed strategy - the headline, first thing on the screen. */}
+      {/* Revealed strategy - the headline, first thing on the screen. The kicker
+          names WHOSE strategy, because "You said win-now. You sold." only lands when
+          the reader knows who "you" is - obvious to the manager in their own seat,
+          not to a leaguemate seeing this app (or this seat) for the first time. */}
       <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
-        Revealed strategy
+        Revealed strategy · {p.teamName ?? p.displayName}
       </p>
       <h1 className="mt-0.5 font-display text-[25px] font-semibold leading-[1.12] text-ink">
         {report.headline}
       </h1>
 
-      {report.contradictions.length > 0 && (
+      {report.contradictions.length > 0 ? (
         <div className="mt-3 space-y-2">
           {report.contradictions.slice(0, 2).map((c) => (
             <Card key={c.id} className="border-negative/30 bg-negative/[0.06] p-3">
@@ -133,7 +141,33 @@ export default async function HomePage() {
             </Card>
           ))}
         </div>
-      )}
+      ) : report.statedPostures.length > 0 ? (
+        // Quiet, not silent: the owner has captured reasoning with nothing to
+        // contradict it, and rendering nothing here would be honest about the
+        // outcome but not about the record - the app's whole premise is memory
+        // serving self-knowledge, and "here's what you said, it still holds" is
+        // part of that memory, not just the moments it catches you out. Kept
+        // visually calm and clearly not a warning: no red, no AlertTriangle.
+        <div className="mt-3 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2">
+          <div className="flex items-center gap-2">
+            <CheckCircle2 size={14} aria-hidden="true" className="shrink-0 text-positive" />
+            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+              Stated vs revealed
+            </span>
+          </div>
+          <p className="mt-1 text-[13px] leading-relaxed text-ink/90">
+            You&apos;ve captured reasoning on {report.statedPostures.length} decision
+            {report.statedPostures.length > 1 ? "s" : ""}, and nothing in your record
+            contradicts it yet.{" "}
+            <Link
+              href="/ledger"
+              className="font-semibold text-accent underline-offset-2 hover:underline"
+            >
+              See what you said
+            </Link>
+          </p>
+        </div>
+      ) : null}
 
       {/* Headline figures. Four numbers, four destinations, one card's worth of
           height instead of four stacked boxes. */}
@@ -283,8 +317,18 @@ export default async function HomePage() {
       </Link>
 
       <p className="mt-5 text-center text-[11px] leading-relaxed text-faint">
-        Parquet advises; it can&apos;t act. Sleeper has no write API - every
-        recommendation ends in a copyable summary you paste yourself.
+        Parquet advises; it can&apos;t act. Sleeper has no write API - a trade ends
+        at a one-tap link to your league&apos;s trade centre, and a pitch ends at
+        text you send yourself.
+      </p>
+      <p className="text-center text-[11px] leading-relaxed text-faint">
+        First time here?{" "}
+        <Link
+          href="/about"
+          className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-2 hover:text-accent hover:underline"
+        >
+          What this is, and what the numbers mean
+        </Link>
       </p>
     </div>
   );

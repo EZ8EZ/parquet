@@ -1,10 +1,12 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ChevronRight, Lightbulb } from "lucide-react";
+import { ArrowLeft, ChevronRight, Lightbulb, Trophy } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildDossier } from "@/lib/dossier";
 import { generateApproachMessage } from "@/lib/dossier/message";
+import { titleSummariesByOwner } from "@/lib/dossier/titles";
 import { getPrincipals } from "@/lib/principals";
+import { scheduleLuckForRoster } from "@/lib/metrics/scheduleLuck";
 import { managerWebHref } from "@/lib/tradegraph/url";
 import { Tag, DeltaValue, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
@@ -67,10 +69,14 @@ export default async function ManagerDetailPage({
 
   const principals = await getPrincipals(h);
   const d = buildDossier(h, rosterId, principals);
+  const luck = await scheduleLuckForRoster(h, principals, rosterId);
   const p = d.profile;
   const tradesData = p.tradesBySeason.map((s) => ({ label: s.season, value: s.count }));
   const isMe = h.me.rosterId === rosterId;
   const user = p.userId ? h.usersById.get(p.userId) : undefined;
+  // Credited to the PERSON, via the same ownerId a roster handover would otherwise
+  // get wrong - see lib/dossier/titles.ts.
+  const titles = p.userId ? titleSummariesByOwner(h, principals).get(p.userId) : undefined;
 
   /** Team identity for any roster in the league (used by the partner rows). */
   const teamOf = (id: number) => {
@@ -131,6 +137,13 @@ export default async function ManagerDetailPage({
           </div>
         </div>
       </header>
+
+      {titles && (
+        <p className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-accent">
+          <Trophy size={14} aria-hidden="true" className="shrink-0" />
+          {titles.label}
+        </p>
+      )}
 
       {d.tags.length > 0 && (
         <div className="mb-2 flex flex-wrap gap-1">
@@ -199,6 +212,48 @@ export default async function ManagerDetailPage({
       <p className="mt-1.5 font-mono text-[11px] leading-relaxed tnum text-faint">
         {extras.join(" · ")}
       </p>
+
+      {luck && luck.gamesPlayed > 0 && (
+        <>
+          <SectionHeader title="Schedule luck" />
+          <div className="grid grid-cols-2 gap-1.5">
+            <Metric
+              label="Actual record"
+              value={`${luck.wins}-${luck.losses}${luck.ties ? `-${luck.ties}` : ""}`}
+              sub={`${luck.gamesPlayed} games`}
+            />
+            <Metric
+              label="Scoring says"
+              value={`${luck.expectedWins.toFixed(1)}-${(luck.gamesPlayed - luck.expectedWins).toFixed(1)}`}
+              sub={luck.allPlay ? "all-play record" : "Pythagorean expected"}
+            />
+          </div>
+          <p className="mt-1.5 text-[12px] leading-snug text-muted">
+            <span
+              className={cn(
+                "font-semibold",
+                luck.luckWins >= 0 ? "text-positive" : "text-negative",
+              )}
+            >
+              {signed(Math.round(luck.luckWins * 10) / 10)} wins
+            </span>{" "}
+            of {luck.luckWins >= 0 ? "cushion" : "drag"} versus what their scoring
+            alone earned them
+            {luck.luckiest && luck.unluckiest && luck.luckiest !== luck.unluckiest
+              ? ` - ${luck.luckiest.season} was their kindest schedule, ${luck.unluckiest.season} their harshest.`
+              : "."}
+          </p>
+          {!luck.allPlay && (
+            <p className="mt-1 text-[11px] leading-relaxed text-faint">
+              From season point totals (points for vs. points against), not
+              week-by-week play - this league&apos;s per-week history isn&apos;t
+              loaded for the live provider (see lib/history.ts). Not the same as a
+              true all-play record, but the same honest question: does the record
+              match the scoring.
+            </p>
+          )}
+        </>
+      )}
 
       {p.afterLoss && p.afterLoss.total > 0 && (
         <p className="mt-1.5 text-[12px] leading-snug text-muted">

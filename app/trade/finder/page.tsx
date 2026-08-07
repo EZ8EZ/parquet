@@ -9,11 +9,11 @@ import {
   partnerBoard,
   type ConvictionNote,
   type FinderAsset,
+  type FragilityNote,
 } from "@/lib/tradefinder";
 import { readCustomOrder } from "@/lib/rankings/customOrderServer";
 import { PageHeader, SectionHeader, Stat, Tag, DeltaValue } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
-import { CopyBlock } from "@/components/CopyBlock";
 import { fmtValue } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -279,6 +279,7 @@ export default async function TradeFinderPage({
                     </p>
                   )}
                   <ConvictionLine notes={p.conviction} />
+                  <FragilityLine note={p.fragility} />
                 </Link>
               </li>
             ))}
@@ -331,6 +332,29 @@ function ConvictionLine({ notes }: { notes: ConvictionNote[] }) {
       }`}
     >
       {summary.text}
+    </p>
+  );
+}
+
+/**
+ * The one fragility fact a package can honestly state, on the card rather than only in
+ * the detail: whether the season ends up leaning less on one name, or more.
+ *
+ * Both directions get the SAME neutral treatment on purpose. Concentrating value into
+ * one better player is a move this app recommends elsewhere (D32) and it necessarily
+ * raises this number, so colouring "creates" as a warning would contradict the finder's
+ * own advice one line below it. The words carry the direction; the colour does not.
+ */
+function FragilityLine({ note }: { note: FragilityNote | null }) {
+  if (!note) return null;
+  const share = Math.round(note.after.damageShare * 100);
+  return (
+    <p className="mt-1.5 text-[12px] leading-snug text-muted">
+      <span className="font-semibold text-ink">
+        {note.direction === "relieves" ? "Leans less on one man: " : "Leans more on one man: "}
+      </span>
+      {note.after.name} at {share}% of startable value afterwards, from{" "}
+      {Math.round(note.before.damageShare * 100)}% on {note.before.name} today.
     </p>
   );
 }
@@ -485,10 +509,16 @@ function PackageDetail({
         <Read label="The assumption that must hold" text={e.keyAssumption} accent />
         {e.consolidationNote && <Read label="Consolidation" text={e.consolidationNote} />}
         <Read label="Against your own record" text={e.historyCheck} />
-      </div>
-
-      <div className="mt-3">
-        <CopyBlock text={e.copyable} />
+        {pkg.fragility && (
+          <Read
+            label={
+              pkg.fragility.direction === "relieves"
+                ? "What it takes off one man"
+                : "What it puts on one man"
+            }
+            text={pkg.fragility.text}
+          />
+        )}
       </div>
     </>
   );

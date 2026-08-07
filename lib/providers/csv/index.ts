@@ -272,6 +272,8 @@ export class CsvProvider implements LeagueProvider {
       yearsExp: null,
       birthDate: null,
       injuryStatus: null,
+      injuryBodyPart: null,
+      injuryNotes: null,
       depthChartOrder: null,
       status: "ACT",
       number: null,

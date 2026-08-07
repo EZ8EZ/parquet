@@ -126,7 +126,7 @@ All documented in [`.env.example`](.env.example):
 | Var | Default | Purpose |
 |---|---|---|
 | `LEAGUE_PROVIDER` | `sleeper` | `fixture` \| `sleeper` \| `csv`. Defaults to the real league so a zero-config deploy is never silently fake (D21) |
-| `DATABASE_URL` | `file:./dev.db` | SQLite locally; swap to `postgres://` for prod |
+| `DATABASE_URL` | unset | `postgres://` only (`prisma/schema.prisma` is on the postgresql provider). Unset is supported: reads are DB-free and a ledger write says plainly it was not persisted (D18/D36) |
 | `SLEEPER_USERNAME` | `EZ8` | resolves your roster ("you") |
 | `SLEEPER_LEAGUE_ID` | committed constant | current-season league id; falls back to `DEFAULT_SLEEPER_LEAGUE_ID` in `lib/providers/index.ts` (D21) |
 | `LLM_BASE_URL` | - | OpenAI-compatible endpoint (Groq/OpenRouter/Ollama); enables conversational analyst |
@@ -134,6 +134,10 @@ All documented in [`.env.example`](.env.example):
 | `LLM_MODEL` | `llama-3.3-70b-versatile` | analyst model |
 | `NEXT_PUBLIC_USE_PLAYER_PHOTOS` | `true` | real NBA headshots (licensing caveat, see DECISIONS D8) |
 | `CSV_DIR` | - | directory of CSVs when `LEAGUE_PROVIDER=csv` |
+| `AUTH_SECRET` | unset | unset = single-user mode, the default. Set it to require a signed seat for private authorship (D35) |
+| `LANGSMITH_API_KEY` | unset | traces analyst LLM calls to LangSmith. **Sends the full prompt, which contains the viewer's own captured reasoning** - opt-in for that reason |
+| `LANGSMITH_PROJECT` | `default` | LangSmith project the traced runs land in |
+| `PARQUET_DEBUG_TIMINGS` | unset | `1` logs cold-load duration for the two heaviest loaders |
 
 ## Scripts
 
@@ -143,7 +147,7 @@ All documented in [`.env.example`](.env.example):
 | `pnpm build` | `prisma generate` + production build |
 | `pnpm typecheck` | `tsc --noEmit` |
 | `pnpm test` | Vitest (valuation, strategy, dossier, trade, principals, metrics, awards, Sleeper + CSV parsers) |
-| `pnpm db:push` | apply the Prisma schema to SQLite |
+| `pnpm db:push` | apply the Prisma schema to the Postgres in `DATABASE_URL` |
 | `pnpm ingest [leagueId]` | full historical pull, idempotent upserts |
 | `pnpm seed` | seed the demo ledger annotation (fixture) |
 | `pnpm gen:icons` | regenerate the PWA icon set from `public/icon.svg` |
@@ -205,11 +209,12 @@ read, so a fresh clone works with no manual ingest against fixtures.
 ~20-40 transactions/season × a few seasons of annotated history fits comfortably in
 one context window (see DECISIONS D7).
 
-**No write access.** Sleeper is read-only; Parquet advises but can't act. Every
-recommendation ends in a copyable summary you paste into Sleeper yourself.
+**No write access.** Sleeper is read-only; Parquet advises but can't act. A trade
+ends at a one-tap link to your league's trade centre; a pitch (on /plan and the
+manager dossier) ends at text you copy and send yourself.
 
 ## Stack
-Next.js 16 (App Router, TS strict) · Tailwind v4 · Prisma 6 (SQLite → Postgres) ·
+Next.js 16 (App Router, TS strict) · Tailwind v4 · Prisma 6 (Postgres, optional) ·
 Zod 4 · Vitest · any OpenAI-compatible LLM endpoint (D17) · deployable to Vercel · installable PWA.
 
 ## Deploy (Vercel)
@@ -222,11 +227,14 @@ assembles 5 seasons from Sleeper (~1.5s), then it is cached. `pnpm build` runs
 Set env vars only to override: `LEAGUE_PROVIDER=fixture` for the offline demo, or
 `SLEEPER_LEAGUE_ID` / `SLEEPER_USERNAME` to point at a different league.
 
-**Persisting ledger annotations** is the one feature that needs a database (SQLite
-can't persist on serverless). To enable it: add a Vercel Postgres / Neon store, set
-`DATABASE_URL`, change `provider = "postgresql"` in `prisma/schema.prisma`, and run
-`prisma db push`. Until then, annotation writes degrade gracefully (they don't error;
-they just aren't saved), and the rest of the app is fully functional.
+**Persisting ledger annotations** is the one feature that needs a database. To enable
+it: add a Vercel Postgres / Neon store, set `DATABASE_URL` to it, and run
+`prisma db push` (the schema is already on the postgresql provider). Until then,
+annotation writes degrade gracefully - with `DATABASE_URL` unset the API answers 200
+and says the note was kept for the session but not persisted - and the rest of the app
+is fully functional. Note the one case that is NOT graceful on purpose: a
+`DATABASE_URL` that is set but rejects the write answers 500 and "Your note was NOT
+saved", because pretending otherwise once discarded a real note (D36).
 
 Optional: set `LLM_BASE_URL` + `LLM_API_KEY` (e.g. a free Groq key) to turn on the
 conversational analyst.

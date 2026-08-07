@@ -1,7 +1,8 @@
 import Link from "next/link";
-import { ChevronRight, Lock } from "lucide-react";
+import { ChevronRight, Lock, Trophy } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getAllDossiers } from "@/lib/dossier";
+import { titleSummariesByOwner } from "@/lib/dossier/titles";
 import { getPrincipals } from "@/lib/principals";
 import { Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
@@ -13,6 +14,7 @@ export default async function ManagersPage() {
   const h = await getLeagueHistory();
   const principals = await getPrincipals(h);
   const dossiers = getAllDossiers(h, principals);
+  const titlesByOwnerId = titleSummariesByOwner(h, principals);
   const seasons = h.chain.length || 1;
   const me = h.me.rosterId;
 
@@ -85,6 +87,8 @@ export default async function ManagersPage() {
                 : `current-${identity.rosterId}`;
             const shown = d.tags.slice(0, 3);
             const extra = d.tags.length - shown.length;
+            // Keyed by ownerId, not rosterId - see lib/dossier/titles.ts and D22.
+            const titles = p.userId ? titlesByOwnerId.get(p.userId) : undefined;
             return (
               <li key={key}>
                 <Link
@@ -110,6 +114,12 @@ export default async function ManagersPage() {
                         <Tag className="shrink-0">former {d.identity.tenureLabel}</Tag>
                       )}
                     </div>
+                    {titles && (
+                      <div className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-accent">
+                        <Trophy size={11} aria-hidden="true" className="shrink-0" />
+                        <span className="truncate">{titles.label}</span>
+                      </div>
+                    )}
                     {shown.length > 0 && (
                       <div className="mt-0.5 truncate text-[11px] font-medium leading-tight text-accent">
                         {shown.join(" · ")}

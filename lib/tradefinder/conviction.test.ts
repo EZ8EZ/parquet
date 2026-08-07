@@ -21,6 +21,8 @@ function player(id: string, name: string, rank: number | null): Player {
     yearsExp: 4,
     birthDate: null,
     injuryStatus: null,
+    injuryBodyPart: null,
+    injuryNotes: null,
     depthChartOrder: 1,
     status: "ACT",
     number: 0,

@@ -1,14 +1,23 @@
 import { getLeagueHistory } from "@/lib/history";
-import { VALUATION_CONFIG } from "@/lib/valuation/config";
+import { VALUATION_CONFIG, type InjuryClass } from "@/lib/valuation/config";
 import {
+  INJURY_CLASS_LABELS,
   ageMultiplier,
   pickValue,
   positionMultipliers,
   slotValue,
 } from "@/lib/valuation";
 import { pickDuration, playerDuration } from "@/lib/metrics/duration";
+import {
+  W_LOO,
+  W_CONCENTRATION,
+  W_EXPOSURE,
+  LOO_TOP_K,
+} from "@/lib/metrics/fragility";
 import { PageHeader, Card, SectionHeader } from "@/components/ui";
 import { LineChart } from "@/components/charts";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
 
 export const dynamic = "force-dynamic";
 
@@ -56,6 +65,39 @@ export default async function MethodologyPage() {
 
   const classEntries = Object.entries(cfg.classStrength);
 
+  // Injury classes, ordered by how much they cost, with the body parts that map into
+  // each one read back out of the config rather than retyped here.
+  const partsByClass = new Map<InjuryClass, string[]>();
+  for (const [part, k] of Object.entries(cfg.injury.bodyPartClass)) {
+    partsByClass.set(k, [...(partsByClass.get(k) ?? []), part]);
+  }
+  const injuryClasses = (Object.keys(cfg.injury.classPenalty) as InjuryClass[])
+    .map((key) => {
+      const label = INJURY_CLASS_LABELS[key];
+      const parts = partsByClass.get(key) ?? [];
+      return {
+        key,
+        label,
+        // Suppress the body-part line when it would only repeat the class name.
+        parts:
+          parts.length === 0
+            ? "anything unrecognised"
+            : parts.length === 1 && parts[0] === label
+              ? null
+              : parts.join(", "),
+        penalty: cfg.injury.classPenalty[key],
+        slope: cfg.injury.classAgeSlope[key],
+      };
+    })
+    .sort((a, b) => b.penalty - a.penalty);
+
+  // Measured off the corpus this page is rendering, not a number typed in a comment,
+  // so the claim below cannot quietly go stale.
+  const flagged = [...h.players.values()].filter((p) => p.injuryStatus);
+  const dtd = flagged.filter((p) => p.injuryStatus === "DTD").length;
+  const liveDtdShare =
+    flagged.length > 0 ? `${Math.round((dtd / flagged.length) * 100)}%` : "most";
+
   const durationExamples = [
     { label: "21-year-old", d: playerDuration(21) },
     { label: "27-year-old", d: playerDuration(27) },
@@ -69,6 +111,15 @@ export default async function MethodologyPage() {
         kicker="Methodology"
         title="How the values work"
         subtitle="No black box, no scraped market. Every number below is a tunable constant in one config file. Transparency is the point."
+        action={
+          <Link
+            href="/about"
+            className="inline-flex min-h-11 items-center gap-0.5 rounded-full border border-border px-3 text-[11px] font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+          >
+            What this is
+            <ChevronRight size={12} aria-hidden="true" />
+          </Link>
+        }
       />
 
       <Card className="mb-4">
@@ -121,30 +172,122 @@ export default async function MethodologyPage() {
         </div>
       </Card>
 
-      <SectionHeader title="4 · Injury & role" />
+      <SectionHeader title="4 · Injury - by body part, note and age" />
       <Card>
-        <div className="grid grid-cols-2 gap-4 text-sm">
-          <div>
-            <div className="mb-1 text-[11px] uppercase tracking-wide text-faint">Injury</div>
-            <ul className="space-y-0.5 font-mono text-xs text-muted">
-              {Object.entries(cfg.injury).map(([k, v]) => (
-                <li key={k}>{k}: {v}×</li>
+        <p className="text-sm leading-relaxed text-muted">
+          An injury is not one number. The same word means different things to
+          different bodies at different ages, so this term reads what actually
+          happened and how old the player was when it did.
+        </p>
+        <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-[12px] text-accent">
+          injury = 1 − class × note × status × age
+        </p>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          Each class penalty below is the share of dynasty value a{" "}
+          <span className="text-ink">surgical</span> event in that class costs a{" "}
+          {cfg.injury.ageReference}-year-old. The age column is how much that grows
+          per decade older, and it is the whole point: an Achilles rupture at 33 is
+          often career-altering, at 23 it is a lost season.
+        </p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full min-w-[290px] font-mono text-[11px]">
+            <thead>
+              <tr className="border-b border-border text-left text-faint">
+                <th className="py-1 pr-2 font-normal">Class</th>
+                <th className="py-1 pr-2 text-right font-normal">Cost</th>
+                <th className="py-1 text-right font-normal">/decade</th>
+              </tr>
+            </thead>
+            <tbody>
+              {injuryClasses.map((c) => (
+                <tr key={c.key} className="border-b border-border/40">
+                  <td className="py-1 pr-2 text-ink">
+                    {c.label}
+                    {c.parts && (
+                      <span className="block text-[10px] text-faint">{c.parts}</span>
+                    )}
+                  </td>
+                  <td className="py-1 pr-2 text-right text-muted">
+                    {Math.round(c.penalty * 100)}%
+                  </td>
+                  <td className="py-1 text-right text-muted">
+                    {c.slope === 0 ? "flat" : `×${(1 + c.slope).toFixed(2)}`}
+                  </td>
+                </tr>
               ))}
-              <li>healthy: 1.0×</li>
-            </ul>
-          </div>
-          <div>
-            <div className="mb-1 text-[11px] uppercase tracking-wide text-faint">Role (depth chart)</div>
-            <ul className="space-y-0.5 font-mono text-xs text-muted">
-              <li>starter: {cfg.role.starter}×</li>
-              <li>2nd unit: {cfg.role.secondary}×</li>
-              <li>bench: {cfg.role.bench}×</li>
-            </ul>
-          </div>
+            </tbody>
+          </table>
         </div>
       </Card>
 
-      <SectionHeader title="5 · Draft picks - slot-aware, lottery-aware" />
+      <Card className="mt-2">
+        <div className="grid grid-cols-2 gap-4 text-sm">
+          <div>
+            <div className="mb-1 text-[11px] uppercase tracking-wide text-faint">
+              Note (vs surgery)
+            </div>
+            <ul className="space-y-0.5 font-mono text-xs text-muted">
+              {Object.entries(cfg.injury.noteScale).map(([k, v]) => (
+                <li key={k}>
+                  {k}: {v.toFixed(2)}×
+                </li>
+              ))}
+              <li className="text-faint">
+                none: {cfg.injury.noteMissingScale.toFixed(2)}×
+              </li>
+            </ul>
+          </div>
+          <div>
+            <div className="mb-1 text-[11px] uppercase tracking-wide text-faint">
+              Status
+            </div>
+            <ul className="space-y-0.5 font-mono text-xs text-muted">
+              {Object.entries(cfg.injury.statusScale).map(([k, v]) => (
+                <li key={k}>
+                  {k}: {v.toFixed(2)}×
+                </li>
+              ))}
+              <li className="text-faint">healthy: 1.00×</li>
+            </ul>
+          </div>
+        </div>
+        <p className="mt-3 text-xs leading-relaxed text-faint">
+          Status barely moves anything, on purpose. Sleeper marks {liveDtdShare}
+          {" "}of all flagged NBA players &quot;DTD&quot;, and that bucket holds both a
+          bruised quad and a ruptured Achilles. A field that calls a season-ending
+          injury day-to-day cannot be trusted to say how bad something is.
+        </p>
+      </Card>
+
+      <Card className="mt-2">
+        <p className="text-sm font-semibold text-ink">
+          What this cannot see
+        </p>
+        <p className="mt-1.5 text-sm leading-relaxed text-muted">
+          Only the injury a player is carrying <span className="text-ink">today</span>.
+          Sleeper publishes no injury history at all: no past injuries, no dates, no
+          games missed. So a 28-year-old with three back surgeries behind him and no
+          current flag prices at a clean 1.00×, exactly like a 22-year-old who has
+          never been hurt.
+        </p>
+        <p className="mt-2 text-sm leading-relaxed text-muted">
+          That is a real hole and it is left open on purpose. Filling it would mean
+          inventing a history the data does not contain, or hardcoding a list of
+          players we happen to think are fragile. An acknowledged gap beats a
+          confident guess.
+        </p>
+      </Card>
+
+      <SectionHeader title="5 · Role" />
+      <Card>
+        <ul className="space-y-0.5 font-mono text-xs text-muted">
+          <li>starter: {cfg.role.starter}×</li>
+          <li>2nd unit: {cfg.role.secondary}×</li>
+          <li>bench: {cfg.role.bench}×</li>
+        </ul>
+      </Card>
+
+      <SectionHeader title="6 · Draft picks - slot-aware, lottery-aware" />
       <Card>
         <p className="text-sm leading-relaxed text-muted">
           Picks are NOT priced by round. The 1.01 and the 1.{String(teams).padStart(2, "0")}{" "}
@@ -236,7 +379,7 @@ export default async function MethodologyPage() {
         </ul>
       </Card>
 
-      <SectionHeader title="6 · Timelines - Dynasty Duration & TCI" />
+      <SectionHeader title="7 · Timelines - Dynasty Duration & TCI" />
       <Card>
         <p className="text-sm leading-relaxed text-muted">
           Every asset is a claim on production at some point in TIME. Borrowing Macaulay
@@ -283,6 +426,26 @@ export default async function MethodologyPage() {
             league of veterans, so contending / ascending / rebuilding are assigned by
             within-league percentile of duration.
           </li>
+          <li>
+            <span className="font-semibold text-ink">
+              Which makes posture a forced curve, and that is worth saying.
+            </span>{" "}
+            Because the cutoffs are quartiles, about a quarter of coherent rosters are
+            labelled contending in every league, however that league is built.
+            &ldquo;Contending&rdquo; is the claim that you are in the shortest-dated
+            quarter of THIS league, not that you are ready to win a title. Read it as a
+            rank, because that is what it is.
+          </li>
+          <li>
+            <span className="font-semibold text-ink">
+              The index is on one formula, not proven to be on one scale.
+            </span>{" "}
+            A roster&apos;s TCI depends only on its own assets, so the same roster scores
+            the same anywhere and two readings of this league can be subtracted. But the
+            3 in that formula was calibrated to the dispersion actually observed across
+            this league&apos;s fourteen rosters, so comparing a TCI here against one from
+            a league of a different size or shape is not something we have established.
+          </li>
         </ul>
         <p className="mt-2 text-[11px] leading-relaxed text-faint">
           This is only computable because players and picks are valued on one common
@@ -290,9 +453,67 @@ export default async function MethodologyPage() {
         </p>
       </Card>
 
+      <SectionHeader title="8 · Fragility - the RFI" />
+      <Card>
+        <p className="text-sm leading-relaxed text-muted">
+          Duration says WHEN a roster&apos;s value arrives; the{" "}
+          <span className="font-semibold text-ink">Roster Fragility Index</span> asks
+          what breaks first. Two rosters can hold the same value on the same timeline
+          and be in completely different danger: one loses its season the night a knee
+          goes, the other re-solves around the loss. RFI is three measurements of that
+          difference, weighted and combined onto 0-100, higher = more fragile:
+        </p>
+        <p className="mt-2 rounded-[--radius-sm] bg-bg/60 p-2.5 text-center font-mono text-[12px] text-accent">
+          RFI = 100 · ({W_LOO} · damage + {W_CONCENTRATION} · concentration +{" "}
+          {W_EXPOSURE} · exposure)
+        </p>
+        <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-muted">
+          <li>
+            <span className="font-semibold text-ink">Leave-one-out damage
+            ({W_LOO}).</span> Delete each player, RE-SOLVE the best legal lineup out
+            of who is left, and measure the startable value lost - so a star with a
+            real backup shows small damage, and the biggest loss names your single
+            point of failure. Scored on the top {LOO_TOP_K} damages together. Weighted
+            heaviest because it is the only component that runs an actual
+            counterfactual.
+          </li>
+          <li>
+            <span className="font-semibold text-ink">Concentration
+            ({W_CONCENTRATION}).</span> A normalized Herfindahl-Hirschman index over
+            starter-weighted value - the shape of the whole distribution, which
+            leave-one-out cannot see. A roster whose stars are individually
+            replaceable can still hold every real point of value in four men.
+          </li>
+          <li>
+            <span className="font-semibold text-ink">Availability exposure
+            ({W_EXPOSURE}).</span> How much value sits in bodies that may not play,
+            priced with the value model&apos;s own injury term and the duration
+            curve&apos;s age taper, so the three models cannot disagree. Weighted
+            least: injury status is a snapshot that can change in a day, so it
+            adjusts the index rather than driving it.
+          </li>
+        </ul>
+        <p className="mt-3 text-sm leading-relaxed text-muted">
+          <span className="font-semibold text-ink">What it refuses to count.</span>{" "}
+          Picks are excluded: a future first cannot fill a lineup slot tonight, and
+          folding pick capital in would make the most extreme teardown in the league
+          read as robust, which is the opposite of true. And RFI is not a quality
+          score - low fragility is not the same as good. A torn-down roster with
+          nothing to lose scores mid-pack, because there is nothing left to fail.
+        </p>
+        <p className="mt-2 text-[11px] leading-relaxed text-faint">
+          Bands (resilient / balanced / brittle) are league-relative quartiles, for
+          the same reason posture is: brittle only means something next to the
+          rosters you actually have to beat. Each reference constant was calibrated
+          against the observed spread of a real 14-team league, not a theoretical
+          worst case.
+        </p>
+      </Card>
+
       <p className="mt-6 text-center text-[11px] leading-relaxed text-faint">
         Player and pick constants live in <span className="font-mono">lib/valuation/config.ts</span>;
-        the timeline math in <span className="font-mono">lib/metrics/duration.ts</span>.
+        the timeline math in <span className="font-mono">lib/metrics/duration.ts</span>;
+        fragility in <span className="font-mono">lib/metrics/fragility.ts</span>.
         Ranking tiers are not part of the model - they break where the value distribution
         actually cliffs, instead of at fixed thresholds. A crowdsourced vote-driven market
         is intentionally deferred until there&apos;s enough participation to trust it.

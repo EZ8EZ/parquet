@@ -91,6 +91,8 @@ function buildPlayers(): { players: Player[]; rankOf: Map<string, number> } {
       yearsExp: Math.max(0, age - 19),
       birthDate: `${byear}-01-01`,
       injuryStatus: null,
+      injuryBodyPart: null,
+      injuryNotes: null,
       depthChartOrder: null,
       status: "ACT",
       number: ((i * 3) % 55) + 1,

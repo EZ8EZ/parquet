@@ -60,8 +60,13 @@ export const ALL_SURFACES: NavSurface[] = [
 
   // ---------------------------------------------------------------- the app
   { href: "/analyst", label: "The Analyst", sub: "Audit your own thinking", group: "The app", curated: true },
-  { href: "/methodology", label: "Methodology", sub: "How the value model actually works", group: "The app" },
+  { href: "/about", label: "What this is", sub: "The premise, both indexes, and why nothing gets a grade", group: "The app" },
+  { href: "/methodology", label: "Methodology", sub: "How the values and both indexes actually work", group: "The app" },
   { href: "/settings", label: "Settings", sub: "Theme, and how you view the app", group: "The app" },
+  // The front door, and until now the one real surface this registry did not list -
+  // which made /more's "if it isn't listed below, it doesn't exist" false about the
+  // very page a first-time visitor is now routed to (see lib/auth/entry.ts).
+  { href: "/teams", label: "Switch team", sub: "Run the whole app as any manager in the league", group: "The app" },
 ];
 
 /** Home's and League's shared shortcut set - see the file header for why this is a

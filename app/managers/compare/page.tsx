@@ -22,16 +22,22 @@
  */
 
 import Link from "next/link";
-import { ArrowLeft, ChevronRight, Lock } from "lucide-react";
+import { ArrowLeft, ChevronRight, Lock, Trophy } from "lucide-react";
 import type { ReactNode } from "react";
 import { getLeagueHistory } from "@/lib/history";
 import { dossiersByOwner, type Dossier } from "@/lib/dossier";
+import { titleSummariesByOwner, type TitleSummary } from "@/lib/dossier/titles";
 import { getPrincipals, type Principal } from "@/lib/principals";
 import { buildTradeGraph, pairEdgeKey } from "@/lib/tradegraph";
 import { pairWebHref } from "@/lib/tradegraph/url";
 import { leagueTimelines, type TimelineProfile } from "@/lib/metrics/duration";
-import { leagueFragility, type FragilityProfile } from "@/lib/metrics/fragility";
+import {
+  fragilityTone,
+  leagueFragility,
+  type FragilityProfile,
+} from "@/lib/metrics/fragility";
 import { Card, SectionHeader, Tag } from "@/components/ui";
+import { MetricGloss } from "@/components/MetricGloss";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import {
   ManagerComparePicker,
@@ -46,12 +52,6 @@ const POSTURE_TONE = {
   ascending: "positive",
   rebuilding: "info",
   straddling: "negative",
-} as const;
-
-const BAND_TONE = {
-  resilient: "positive",
-  balanced: "neutral",
-  brittle: "negative",
 } as const;
 
 interface Cell {
@@ -82,6 +82,19 @@ function leadOf(
   return aWins ? "a" : "b";
 }
 
+/**
+ * Whether both rosters are trying to win a season they can still win. The only footing
+ * on which a lower fragility score is an advantage rather than a description.
+ */
+function bothPlayingToWin(
+  a: TimelineProfile["posture"],
+  b: TimelineProfile["posture"],
+): boolean {
+  const playing = (p: TimelineProfile["posture"]) =>
+    p === "contending" || p === "ascending";
+  return playing(a) && playing(b);
+}
+
 function Val({ cell, lead }: { cell: Cell; lead: boolean }) {
   return (
     <div className="min-w-0">
@@ -107,15 +120,26 @@ function dossierHref(d: Dossier): string {
     : `/managers/${d.identity.rosterId}`;
 }
 
-/** One side's identity column: avatar, name, former tenure, top dossier tags. */
+/**
+ * One side's identity column: avatar, name, former tenure, titles, top dossier tags.
+ *
+ * Titles sit ABOVE the behaviour tags on purpose - a ring is an achievement, not a
+ * behavioural tell, and this is the one surface that puts two managers' identities
+ * side by side, which makes it the natural home for the single most emotionally
+ * loaded number in a dynasty league (see DECISIONS.md D6: a thesis, not a grade -
+ * this isn't a grade either, just a fact, and it earns its own line rather than
+ * getting lost among "Pick hoarder" and "Deadline buyer").
+ */
 function Side({
   d,
   principal,
   isMe,
+  titles,
 }: {
   d: Dossier;
   principal: Principal | undefined;
   isMe: boolean;
+  titles: TitleSummary | undefined;
 }) {
   const p = d.profile;
   const shown = d.tags.slice(0, 3);
@@ -130,7 +154,7 @@ function Side({
       />
       <Link
         href={dossierHref(d)}
-        className="mt-1 block truncate text-[13px] font-semibold leading-tight text-ink transition-colors hover:text-accent"
+        className="mt-1 flex min-h-11 items-center truncate text-[13px] font-semibold leading-tight text-ink transition-colors hover:text-accent"
       >
         {p.teamName ?? p.displayName}
       </Link>
@@ -139,6 +163,12 @@ function Side({
       </div>
       {d.identity.kind === "former" && (
         <Tag className="mt-1">former {d.identity.tenureLabel}</Tag>
+      )}
+      {titles && (
+        <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-accent">
+          <Trophy size={11} aria-hidden="true" className="shrink-0" />
+          <span className="truncate">{titles.label}</span>
+        </div>
       )}
       {shown.length > 0 && (
         <div className="mt-1 text-[11px] font-medium leading-snug text-accent">
@@ -184,6 +214,7 @@ export default async function CompareManagersPage({
   const h = await getLeagueHistory();
   const principals = await getPrincipals(h);
   const dossiers = dossiersByOwner(h, principals);
+  const titlesByOwnerId = titleSummariesByOwner(h, principals);
 
   const options: CompareOption[] = principals.principals
     .filter((pr) => dossiers.has(pr.ownerId))
@@ -438,15 +469,33 @@ export default async function CompareManagersPage({
                   label: "Fragility",
                   a: {
                     main: Math.round(aFr.fragility),
-                    sub: <Tag tone={BAND_TONE[aFr.band]}>{aFr.band}</Tag>,
+                    sub: (
+                      <Tag tone={fragilityTone(aFr.band, aTl.posture)}>{aFr.band}</Tag>
+                    ),
                   },
                   b: {
                     main: Math.round(bFr.fragility),
-                    sub: <Tag tone={BAND_TONE[bFr.band]}>{bFr.band}</Tag>,
+                    sub: (
+                      <Tag tone={fragilityTone(bFr.band, bTl.posture)}>{bFr.band}</Tag>
+                    ),
                   },
-                  // The one metric here with a stated direction: it is a risk index,
-                  // and its own docs say higher is more fragile.
-                  lead: leadOf(aFr.fragility, bFr.fragility, "low"),
+                  /**
+                   * RFI has a stated direction (higher is more fragile) and no stated
+                   * WINNER, which is not the same thing. This row used to hand the row
+                   * to whoever scored lower, which crowned the most torn-down roster in
+                   * the league for having nothing left to lose - the exact misreading
+                   * D23 exists to forbid.
+                   *
+                   * The lead survives only where the comparison means something: two
+                   * rosters both playing for a season they can still win. There, less
+                   * of the season riding on one man is a real advantage over the other
+                   * man's roster. Everywhere else the two numbers are still shown side
+                   * by side and neither is called better, because a rebuild's low score
+                   * and a contender's low score are not the same fact.
+                   */
+                  lead: bothPlayingToWin(aTl.posture, bTl.posture)
+                    ? leadOf(aFr.fragility, bFr.fragility, "low")
+                    : null,
                 } satisfies Row,
               ]
             : []),
@@ -459,8 +508,18 @@ export default async function CompareManagersPage({
 
       <div className="mt-3 grid grid-cols-[76px_1fr_1fr] gap-2">
         <div />
-        <Side d={aD} principal={aPr} isMe={aP.userId === h.me.userId} />
-        <Side d={bD} principal={bPr} isMe={bP.userId === h.me.userId} />
+        <Side
+          d={aD}
+          principal={aPr}
+          isMe={aP.userId === h.me.userId}
+          titles={titlesByOwnerId.get(aId!)}
+        />
+        <Side
+          d={bD}
+          principal={bPr}
+          isMe={bP.userId === h.me.userId}
+          titles={titlesByOwnerId.get(bId!)}
+        />
       </div>
 
       <SectionHeader
@@ -510,7 +569,12 @@ export default async function CompareManagersPage({
 
       <SectionHeader title="Where the roster stands tonight" />
       {rosterRows.length > 0 ? (
-        <CompareSheet rows={rosterRows} />
+        <>
+          <CompareSheet rows={rosterRows} />
+          {/* First-time readers meet both indexes as bare numbers here - one quiet,
+              closed-by-default definition beats sending them to another page. */}
+          <MetricGloss className="mt-1" />
+        </>
       ) : (
         <Card className="border-warn/30 bg-warn/[0.06]">
           <p className="text-[13px] leading-relaxed text-muted">
@@ -552,7 +616,9 @@ export default async function CompareManagersPage({
 
       <p className="mt-3 text-[11px] leading-relaxed text-faint">
         Gold marks a side only where more is plainly more: pick capital, and the lower
-        fragility index. Every other row is a difference, not a score. Behaviour is
+        fragility index when both rosters are playing to win now. A low fragility score
+        on a team that has already sold means it has little left to lose, so that
+        comparison gets no winner. Every other row is a difference, not a score. Behaviour is
         scoped to each manager&apos;s own tenure, so a roster that changed hands reads
         as two people rather than one blended average.
       </p>

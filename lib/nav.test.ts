@@ -13,6 +13,16 @@ describe("the surface registry", () => {
     expect(hrefs).toContain("/rank");
   });
 
+  it("includes the front door - a first-time reader must be able to find it", () => {
+    expect(ALL_SURFACES.map((s) => s.href)).toContain("/about");
+  });
+
+  it("includes /teams - the picker a cookie-less visitor is now routed to", () => {
+    // /more promises "if it isn't listed below, it doesn't exist". A registry that
+    // omitted the entry point of the whole identity flow would make that a lie.
+    expect(ALL_SURFACES.map((s) => s.href)).toContain("/teams");
+  });
+
   it("flags every bottom-nav tab as primary, and nothing else", () => {
     const primaryHrefs = ALL_SURFACES.filter((s) => s.primary).map((s) => s.href);
     expect(new Set(primaryHrefs)).toEqual(new Set(["/", "/roster", "/plan", "/trade", "/league"]));

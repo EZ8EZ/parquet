@@ -5,7 +5,31 @@
       "name": "parquet-dev",
       "runtimeExecutable": "pnpm",
       "runtimeArgs": ["dev"],
-      "port": 3000
+      "port": 3000,
+      "autoPort": true
+    },
+    {
+      "name": "parquet-dev-schedule-luck",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev", "-p", "3450"],
+      "port": 3450
+    },
+    {
+      "name": "parquet-attach-running",
+      "url": "http://localhost:3007",
+      "port": 3007
+    },
+    {
+      "name": "parquet-dev-annotations",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev", "-p", "3461"],
+      "port": 3461
+    },
+    {
+      "name": "parquet-dev-4fixes",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev", "-p", "3472"],
+      "port": 3472
     }
   ]
 }

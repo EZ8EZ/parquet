@@ -1,8 +1,29 @@
 "use client";
 
+/**
+ * TRADE BUILDER - the package (give/get players and picks) lives in the address
+ * bar, not in plain `useState`. It used to be the latter, which meant checking a
+ * player's value on /values or a manager's dossier - both one tap away, both
+ * things you'd naturally want to do mid-build - silently destroyed the whole
+ * package. lib/trade/url.ts is the one place the mapping between a URL and a
+ * package lives (ids only - that's what makes the package addressable, not names
+ * or values), and this component resolves those ids against the union of both
+ * sides' pools, so a pasted `/trade?give=...&get=...` link reproduces the same
+ * package for whoever opens it, on their own phone, regardless of whose roster
+ * the ids nominally sit on for them. Same pattern DECISIONS D30 shipped for the
+ * trade web.
+ *
+ * `history.replaceState` rather than `router.replace`, same reasoning as /web and
+ * /values (see lib/tradegraph/url.ts and lib/values/url.ts): /trade is
+ * force-dynamic and its server render prices every player on every roster in the
+ * league, so routing on every add/remove tap would pay for that whole render
+ * again, per tap.
+ */
 import { useEffect, useMemo, useRef, useState } from "react";
-import { ArrowLeftRight, Check, Copy, Loader2, Plus, X } from "lucide-react";
+import { useSearchParams } from "next/navigation";
+import { ArrowLeftRight, Loader2, Plus, X } from "lucide-react";
 import type { TradeEvaluation } from "@/lib/trade";
+import { parseTradeParams, tradeQueryString, type TradePackageIds } from "@/lib/trade/url";
 import { cn, fmtValue, fold } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTradeUrl } from "@/lib/sleeperLinks";
@@ -257,10 +278,44 @@ export function TradeBuilder({
   /** Current Sleeper league id - used to link out to the trade centre. */
   leagueId?: string | null;
 }) {
-  const [give, setGive] = useState<PlayerOption[]>([]);
-  const [get, setGet] = useState<PlayerOption[]>([]);
-  const [givePicks, setGivePicks] = useState<PickOption[]>([]);
-  const [getPicks, setGetPicks] = useState<PickOption[]>([]);
+  // Every player/pick id in the URL is resolved against the UNION of both sides'
+  // pools, not just "my" pool - that's what lets a shared link reproduce the same
+  // package for a different viewer, whose own roster puts these ids on the
+  // opposite side of the ledger.
+  const playerById = useMemo(() => {
+    const m = new Map<string, PlayerOption>();
+    for (const p of myPlayers) m.set(p.id, p);
+    for (const p of otherPlayers) m.set(p.id, p);
+    return m;
+  }, [myPlayers, otherPlayers]);
+  const pickById = useMemo(() => {
+    const m = new Map<string, PickOption>();
+    for (const p of myPicks) m.set(p.id, p);
+    for (const p of otherPicks) m.set(p.id, p);
+    return m;
+  }, [myPicks, otherPicks]);
+
+  const searchParams = useSearchParams();
+  // Read once at mount - the mirror below only ever writes, so a later address-bar
+  // change (there shouldn't be one; this component owns it) never bounces back in.
+  const [initial] = useState(() => {
+    const ids = parseTradeParams(searchParams);
+    const players = (list: string[]) =>
+      list.map((id) => playerById.get(id)).filter((p): p is PlayerOption => !!p);
+    const picks = (list: string[]) =>
+      list.map((id) => pickById.get(id)).filter((p): p is PickOption => !!p);
+    return {
+      give: players(ids.give),
+      get: players(ids.get),
+      givePicks: picks(ids.givePicks),
+      getPicks: picks(ids.getPicks),
+    };
+  });
+
+  const [give, setGive] = useState<PlayerOption[]>(initial.give);
+  const [get, setGet] = useState<PlayerOption[]>(initial.get);
+  const [givePicks, setGivePicks] = useState<PickOption[]>(initial.givePicks);
+  const [getPicks, setGetPicks] = useState<PickOption[]>(initial.getPicks);
   const [picker, setPicker] = useState<null | {
     side: "give" | "get";
     kind: "player" | "pick";
@@ -268,8 +323,23 @@ export function TradeBuilder({
   const [result, setResult] = useState<TradeEvaluation | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [copied, setCopied] = useState(false);
   const resultRef = useRef<HTMLDivElement>(null);
+
+  // Write-only mirror to the address bar - see the file header for why
+  // `history.replaceState` rather than `router.replace`.
+  useEffect(() => {
+    const ids: TradePackageIds = {
+      give: give.map((p) => p.id),
+      get: get.map((p) => p.id),
+      givePicks: givePicks.map((p) => p.id),
+      getPicks: getPicks.map((p) => p.id),
+    };
+    window.history.replaceState(
+      null,
+      "",
+      `${window.location.pathname}${tradeQueryString(ids)}`,
+    );
+  }, [give, get, givePicks, getPicks]);
 
   const giveTotal =
     give.reduce((s, p) => s + p.value, 0) + givePicks.reduce((s, p) => s + p.value, 0);
@@ -411,9 +481,7 @@ export function TradeBuilder({
       )}
 
       <div ref={resultRef} className="scroll-mt-4">
-        {result && (
-          <TradeResult r={result} copied={copied} setCopied={setCopied} leagueId={leagueId} />
-        )}
+        {result && <TradeResult r={result} leagueId={leagueId} />}
       </div>
 
       {picker && modal && (
@@ -432,13 +500,9 @@ export function TradeBuilder({
 
 function TradeResult({
   r,
-  copied,
-  setCopied,
   leagueId,
 }: {
   r: TradeEvaluation;
-  copied: boolean;
-  setCopied: (b: boolean) => void;
   leagueId?: string | null;
 }) {
   const dirTone =
@@ -487,27 +551,12 @@ function TradeResult({
       {r.consolidationNote && <Block title="Consolidation">{r.consolidationNote}</Block>}
 
       <div className="rounded-[--radius] border border-border bg-bg/70 p-3">
-        <div className="mb-1.5 flex items-center justify-between">
-          <span className="text-[11px] uppercase tracking-wide text-faint">Copyable summary</span>
-          <button
-            onClick={() => {
-              navigator.clipboard?.writeText(r.copyable);
-              setCopied(true);
-              setTimeout(() => setCopied(false), 1500);
-            }}
-            className="inline-flex items-center gap-1 px-2 text-xs font-semibold text-accent"
-          >
-            {copied ? <Check size={13} aria-hidden="true" /> : <Copy size={13} aria-hidden="true" />}{" "}
-            {copied ? "copied" : "copy"}
-          </button>
-        </div>
-        <pre className="whitespace-pre-wrap font-mono text-[11px] leading-relaxed text-muted">{r.copyable}</pre>
-        {/* Sleeper has no write API, so we can't send the proposal - but copy above
-            then tap here and the trade centre is one screen away. */}
+        {/* Sleeper has no write API, so we can't send the proposal - the trade
+            centre is one tap away instead. */}
         <OpenInSleeper
           href={sleeperTradeUrl(leagueId)}
           label="Open Sleeper to send"
-          className="mt-2.5 w-full"
+          className="w-full"
         />
       </div>
     </div>

@@ -13,6 +13,7 @@ import {
   GraduationCap,
   Handshake,
   Home,
+  Info,
   ListOrdered,
   MessageSquareText,
   ScrollText,
@@ -45,6 +46,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "/values": BookText,
   "/rank": ListOrdered,
   "/analyst": MessageSquareText,
+  "/about": Info,
   "/methodology": FlaskConical,
   "/settings": Settings,
 };

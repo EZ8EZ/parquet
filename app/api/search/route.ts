@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getLeagueHistory, type LeagueHistory } from "@/lib/history";
 import { getPrincipals, tenureLabel } from "@/lib/principals";
-import { cachedValuePlayers, type ValueBreakdown } from "@/lib/valuation";
+import { cachedValuePlayers, injuryLabel, type ValueBreakdown } from "@/lib/valuation";
 import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
 import {
   buildDraftIndex,
@@ -34,7 +34,8 @@ export interface PlayerResult {
   age: number | null;
   value: number;
   tier: string;
-  injuryStatus: string | null;
+  /** `injuryLabel()` output, e.g. "Knee · Surgery". Null when healthy or rested. */
+  injury: string | null;
 }
 
 export interface ManagerResult {
@@ -134,7 +135,11 @@ function searchPlayers(h: LeagueHistory, needle: string): PlayerResult[] {
       age: p.age,
       value: v.value,
       tier: tierFor(v.value)?.label ?? "Fringe",
-      injuryStatus: p.injuryStatus,
+      injury: injuryLabel({
+        status: p.injuryStatus,
+        bodyPart: p.injuryBodyPart,
+        notes: p.injuryNotes,
+      }),
     }));
 }
 

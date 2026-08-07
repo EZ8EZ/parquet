@@ -14,9 +14,20 @@ import {
   type CanonicalLine,
   type ValuationConfig,
 } from "./config";
+import { injuryMultiplier, maxInjuryMultiplier } from "./injury";
 
 export { VALUATION_CONFIG } from "./config";
-export type { ValuationConfig } from "./config";
+export type { ValuationConfig, InjuryClass } from "./config";
+export {
+  INJURY_CLASS_LABELS,
+  injuryAgeScale,
+  injuryAssessment,
+  injuryClassOf,
+  injuryLabel,
+  injuryMultiplier,
+  maxInjuryMultiplier,
+} from "./injury";
+export type { InjuryAssessment, InjuryInput } from "./injury";
 
 export interface ValueBreakdown {
   playerId: string;
@@ -46,14 +57,6 @@ export function ageMultiplier(
     }
   }
   return 1.0;
-}
-
-export function injuryMultiplier(
-  status: string | null,
-  cfg: ValuationConfig = VALUATION_CONFIG,
-): number {
-  if (!status) return 1.0;
-  return cfg.injury[status] ?? cfg.injuryDefault;
 }
 
 export function roleMultiplier(
@@ -121,7 +124,10 @@ function primaryPosition(player: Player): string {
  * healthy/starter case), so they do not currently contribute to the ceiling,
  * but they are included in this max rather than assumed away, so a future
  * config edit that pushes either above 1.0 is caught automatically instead of
- * silently reopening this bug.
+ * silently reopening this bug. `maxInjuryMultiplier` derives injury's own max
+ * from the whole class/note/status/age lattice rather than reading a flat
+ * table, which is why the injury model could be rebuilt underneath this
+ * function without the ceiling moving by a single point.
  *
  * Age's own max is just the largest anchor value: interpolation is linear
  * between two anchors, so it can never produce a value outside the range of
@@ -133,7 +139,7 @@ export function theoreticalMaxMultiplier(
   cfg: ValuationConfig = VALUATION_CONFIG,
 ): number {
   const ageMax = Math.max(...cfg.ageAnchors.map(([, m]) => m));
-  const injuryMax = Math.max(1, cfg.injuryDefault, ...Object.values(cfg.injury));
+  const injuryMax = maxInjuryMultiplier(cfg);
   const roleMax = Math.max(
     cfg.role.starter,
     cfg.role.secondary,
@@ -153,7 +159,18 @@ export function valuePlayer(
   const rank = player.searchRank ?? 260;
   const base = cfg.maxValue * Math.exp(-cfg.rankDecay * Math.max(0, rank - 1));
   const ageMult = ageMultiplier(player.age, cfg);
-  const injuryMult = injuryMultiplier(player.injuryStatus, cfg);
+  const injuryMult = injuryMultiplier(
+    {
+      status: player.injuryStatus,
+      bodyPart: player.injuryBodyPart,
+      notes: player.injuryNotes,
+      // For a CURRENT injury, current age IS age-at-injury. Sleeper carries no
+      // injury history and no start date, so this is the only age the model can
+      // honestly attach to an injury - and for the flags it prices, it is exact.
+      age: player.age,
+    },
+    cfg,
+  );
   const roleMult = roleMultiplier(player.depthChartOrder, cfg);
   const mults = posMults ?? positionMultipliers(scoring, cfg);
   const posMult = mults[primaryPosition(player)] ?? 1;
@@ -203,8 +220,10 @@ export function valuePlayers(
  *
  * KEYED ON THE CORPUS ITSELF, not on a TTL. `getLeagueHistory` builds a fresh
  * wrapper object per request, but the `players` Map inside it is the SAME instance
- * for as long as the corpus cache holds (history.ts hands back `cachedCorpus.value`
- * untouched), and a corpus refresh - TTL expiry, `fresh: true`, or
+ * for as long as the corpus cache holds (history.ts hands back the resolved corpus
+ * from its single-flight slot untouched, so concurrent cold callers share one
+ * `players` Map rather than each minting their own), and a corpus refresh - TTL
+ * expiry, `fresh: true`, or
  * `invalidateHistory()` - always allocates a new one. Keying a WeakMap on that Map
  * makes the pairing exact by construction: a value map can never outlive the corpus
  * it was computed from, because the corpus IS its key. (A first cut of this used a

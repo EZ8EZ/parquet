@@ -279,24 +279,23 @@ export function buildPrincipals(
 
 // ---------------------------------------------------------------- loader
 
-let cache: { at: number; key: string; value: PrincipalIndex } | null = null;
+/**
+ * SINGLE-FLIGHT: stores the in-flight PROMISE, not the resolved value (mirrors the
+ * fix to `getCorpus` in lib/history.ts). This loader costs two requests per season;
+ * without single-flight, N concurrent cold readers each ran their own full pass.
+ * `resolvedAt` is only set once the promise settles, so a caller arriving mid-load
+ * always joins it, and the TTL is anchored to completion time exactly as before once
+ * there is a resolved value that can go stale.
+ */
+interface PrincipalsSlot {
+  key: string;
+  promise: Promise<PrincipalIndex>;
+  resolvedAt?: number;
+}
+let slot: PrincipalsSlot | null = null;
 const TTL_MS = 5 * 60_000;
 
-/**
- * Load per-season ownership across the chain and build the index.
- *
- * Deliberately NOT part of the corpus: it costs two requests per season and only the
- * pages that attribute history to people need it. Cached in-process the same way the
- * draft index is, and a season that fails to load is skipped rather than fatal.
- */
-export async function getPrincipals(
-  h: LeagueHistory,
-  opts: { fresh?: boolean } = {},
-): Promise<PrincipalIndex> {
-  const key = `${h.provider}|${h.currentLeague.leagueId}`;
-  if (!opts.fresh && cache && cache.key === key && Date.now() - cache.at < TTL_MS) {
-    return cache.value;
-  }
+async function assemblePrincipals(h: LeagueHistory): Promise<PrincipalIndex> {
   const provider = getLeagueProvider();
 
   const rows = await Promise.all(
@@ -326,14 +325,45 @@ export async function getPrincipals(
       users: new Map(r.users.map((u) => [u.userId, u])),
     }));
 
-  const value = buildPrincipals(seasonsAsc, h.rosters, h.usersById);
-  cache = { at: Date.now(), key, value };
-  return value;
+  return buildPrincipals(seasonsAsc, h.rosters, h.usersById);
+}
+
+/**
+ * Load per-season ownership across the chain and build the index.
+ *
+ * Deliberately NOT part of the corpus: it costs two requests per season and only the
+ * pages that attribute history to people need it. Cached in-process the same way the
+ * draft index is, and a season that fails to load is skipped rather than fatal.
+ */
+export async function getPrincipals(
+  h: LeagueHistory,
+  opts: { fresh?: boolean } = {},
+): Promise<PrincipalIndex> {
+  const key = `${h.provider}|${h.currentLeague.leagueId}`;
+  if (!opts.fresh && slot && slot.key === key) {
+    if (slot.resolvedAt === undefined) return slot.promise;
+    if (Date.now() - slot.resolvedAt < TTL_MS) return slot.promise;
+  }
+
+  const next: PrincipalsSlot = { key } as PrincipalsSlot;
+  next.promise = assemblePrincipals(h)
+    .then((value) => {
+      next.resolvedAt = Date.now();
+      return value;
+    })
+    .catch((err) => {
+      // Clear the slot on rejection so a transient failure doesn't pin a rejected
+      // promise for the rest of the TTL window (mirrors `ensureIngested`).
+      if (slot === next) slot = null;
+      throw err;
+    });
+  slot = next;
+  return next.promise;
 }
 
 /** Reset the memo. Test and "fresh reload" hook. */
 export function invalidatePrincipals(): void {
-  cache = null;
+  slot = null;
 }
 
 /** Seasons a principal held a given roster, as a set for transaction filtering. */

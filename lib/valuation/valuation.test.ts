@@ -9,6 +9,7 @@ import {
   classMultiplier,
   estimateOverallPick,
   invalidateValuesCache,
+  maxInjuryMultiplier,
   pickValue,
   slotDistribution,
   positionMultipliers,
@@ -35,6 +36,8 @@ function player(overrides: Partial<Player>): Player {
     yearsExp: 4,
     birthDate: null,
     injuryStatus: null,
+    injuryBodyPart: null,
+    injuryNotes: null,
     depthChartOrder: 1,
     status: "ACT",
     number: 0,
@@ -76,6 +79,46 @@ describe("valuePlayer", () => {
     const hurt = valuePlayer(player({ injuryStatus: "Out" }), SCORING);
     expect(hurt.value).toBeLessThan(healthy.value);
   });
+
+  /**
+   * The rebuild's headline claim, at the value level rather than the multiplier level:
+   * two players identical in rank, age, role and position, separated only by WHICH
+   * body part is hurt. The old model could not tell these apart at all - both were one
+   * "DTD" string and both got the same 0.97 fallback.
+   */
+  it("separates a ruptured Achilles from a jammed finger", () => {
+    const achilles = valuePlayer(
+      player({
+        age: 30,
+        injuryStatus: "DTD",
+        injuryBodyPart: "Achilles",
+        injuryNotes: "Surgery",
+      }),
+      SCORING,
+    );
+    const finger = valuePlayer(
+      player({
+        age: 30,
+        injuryStatus: "DTD",
+        injuryBodyPart: "Finger",
+        injuryNotes: "Sprain",
+      }),
+      SCORING,
+    );
+    expect(achilles.value).toBeLessThan(finger.value * 0.8);
+  });
+
+  it("does not tax a rested rookie as though he were hurt", () => {
+    // Eleven live players carry body part "Rest", every one of them 19 to 25. The old
+    // model charged all eleven an injury penalty for being young and idle.
+    const rested = valuePlayer(
+      player({ age: 20, injuryStatus: "DTD", injuryBodyPart: "Rest" }),
+      SCORING,
+    );
+    const healthy = valuePlayer(player({ age: 20 }), SCORING);
+    expect(rested.value).toBe(healthy.value);
+    expect(rested.injuryMultiplier).toBe(1);
+  });
   it("exposes an explainable breakdown", () => {
     const b = valuePlayer(player({}), SCORING);
     expect(b).toHaveProperty("base");
@@ -108,11 +151,7 @@ describe("theoreticalMaxMultiplier", () => {
   it("is the product of each multiplier's own max, not a hand-typed constant", () => {
     const posMults = { PG: 1.05, C: 1.12, SF: 0.95 };
     const ageMax = Math.max(...VALUATION_CONFIG.ageAnchors.map(([, m]) => m));
-    const injuryMax = Math.max(
-      1,
-      VALUATION_CONFIG.injuryDefault,
-      ...Object.values(VALUATION_CONFIG.injury),
-    );
+    const injuryMax = maxInjuryMultiplier();
     const roleMax = Math.max(
       VALUATION_CONFIG.role.starter,
       VALUATION_CONFIG.role.secondary,
@@ -139,9 +178,13 @@ describe("theoreticalMaxMultiplier", () => {
   });
 
   it("confirms injury and role never exceed 1.0 in the current config", () => {
-    expect(
-      Math.max(VALUATION_CONFIG.injuryDefault, ...Object.values(VALUATION_CONFIG.injury)),
-    ).toBeLessThanOrEqual(1);
+    // Injury's max is now DERIVED from the whole class/note/status/age lattice rather
+    // than read off a flat table, so this assertion still means what it always meant:
+    // neither term can lift the ceiling that every value in the app is rescaled
+    // against. The injury rebuild deliberately kept it at exactly 1.0, which is why no
+    // healthy player's value moved by a single point.
+    expect(maxInjuryMultiplier()).toBeLessThanOrEqual(1);
+    expect(maxInjuryMultiplier()).toBe(1);
     expect(
       Math.max(
         VALUATION_CONFIG.role.starter,

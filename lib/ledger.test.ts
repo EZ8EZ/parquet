@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildFixtureHistory } from "./testing/fixtureHistory";
-import { buildIsNotable, isFaabLeague, notableWaiverLabel } from "./ledger";
-import type { LeagueHistory } from "./history";
+import { buildIsNotable, getLedgerEntries, isFaabLeague, notableWaiverLabel } from "./ledger";
+import { annotationKey, type Annotation, type LeagueHistory } from "./history";
 import type { Transaction } from "./providers/types";
 
 const h = buildFixtureHistory();
@@ -128,5 +128,68 @@ describe("notableWaiverLabel", () => {
   it("names FAAB for a FAAB league and contested claims for a rolling-priority one", () => {
     expect(notableWaiverLabel(h)).toBe("big-FAAB waiver claims");
     expect(notableWaiverLabel(rollingLeague([]))).toBe("contested waiver claims");
+  });
+});
+
+describe("getLedgerEntries — a trade partner's annotation must never appear as MY reasoning", () => {
+  const SHARED_TX_ID = "t-shared-ledger";
+
+  function sharedTrade(): Transaction {
+    return tx({
+      transactionId: SHARED_TX_ID,
+      type: "trade",
+      rosterIds: [1, 2],
+      adds: { px: 1, py: 2 },
+      drops: { px: 2, py: 1 },
+    });
+  }
+
+  function bothSidesAnnotated(): Map<string, Annotation> {
+    return new Map([
+      [
+        annotationKey(SHARED_TX_ID, "u1"),
+        {
+          transactionId: SHARED_TX_ID,
+          ownerId: "u1",
+          reasoning: "OWNER-U1-ONLY reasoning.",
+          posture: "value",
+          createdAt: new Date(0),
+          updatedAt: new Date(0),
+        },
+      ],
+      [
+        annotationKey(SHARED_TX_ID, "u2"),
+        {
+          transactionId: SHARED_TX_ID,
+          ownerId: "u2",
+          reasoning: "OWNER-U2-ONLY reasoning.",
+          posture: "value",
+          createdAt: new Date(0),
+          updatedAt: new Date(0),
+        },
+      ],
+    ]);
+  }
+
+  it("shows the viewer's OWN annotation on a shared trade, not the partner's", () => {
+    const h: LeagueHistory = {
+      ...buildFixtureHistory(bothSidesAnnotated()),
+      transactions: [sharedTrade()],
+      me: { userId: "u1", rosterId: 1, displayName: "u1", teamName: null },
+    };
+    const entries = getLedgerEntries(h);
+    const entry = entries.find((e) => e.transactionId === SHARED_TX_ID);
+    expect(entry?.annotation?.reasoning).toBe("OWNER-U1-ONLY reasoning.");
+  });
+
+  it("switching the viewer to the OTHER side of the exact same transaction flips which annotation shows", () => {
+    const h: LeagueHistory = {
+      ...buildFixtureHistory(bothSidesAnnotated()),
+      transactions: [sharedTrade()],
+      me: { userId: "u2", rosterId: 2, displayName: "u2", teamName: null },
+    };
+    const entries = getLedgerEntries(h);
+    const entry = entries.find((e) => e.transactionId === SHARED_TX_ID);
+    expect(entry?.annotation?.reasoning).toBe("OWNER-U2-ONLY reasoning.");
   });
 });

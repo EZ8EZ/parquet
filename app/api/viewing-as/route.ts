@@ -1,6 +1,5 @@
 import { NextResponse } from "next/server";
 import { z } from "zod";
-import { invalidateHistory } from "@/lib/history";
 
 export const dynamic = "force-dynamic";
 
@@ -9,7 +8,12 @@ const Body = z.object({ rosterId: z.number().int().min(1).max(64) });
 /**
  * Set which team the app is "viewing as". Persisted in a cookie so every server
  * component picks it up. The heavy league corpus is cached independently of this,
- * so switching teams is cheap.
+ * so switching teams is cheap — no `invalidateHistory()` here on purpose. `Corpus`
+ * (lib/history.ts) is declared `Omit<LeagueHistory, "me">`, i.e. identity-independent
+ * by construction, and `getLeagueHistory` re-derives `me` from the lens cookie on
+ * every call, so switching the lens can never stale the corpus. Invalidating it here
+ * used to force every other reader on this instance into a ~146-request corpus
+ * reassembly just because one manager switched teams.
  */
 export async function POST(req: Request) {
   let json: unknown;
@@ -29,7 +33,6 @@ export async function POST(req: Request) {
     path: "/",
     maxAge: 60 * 60 * 24 * 365,
   });
-  invalidateHistory();
   return res;
 }
 
@@ -37,6 +40,5 @@ export async function POST(req: Request) {
 export async function DELETE() {
   const res = NextResponse.json({ ok: true });
   res.cookies.set("parquet_roster", "", { path: "/", maxAge: 0 });
-  invalidateHistory();
   return res;
 }

@@ -93,7 +93,13 @@ export function StreakPanel({
           Counted to{" "}
           <LocalDate ts={countedAt} className="font-mono tnum text-muted" />. These move on their own - four of them change with nothing but the passing
           of a day. The{" "}
-          <Link href="/awards" className="font-semibold text-accent">
+          {/* py-4/-my-4: grows the tap target to 44px without pushing the
+              surrounding sentence apart - the negative margin cancels the padding's
+              contribution to line flow, so only the hit area gets bigger. */}
+          <Link
+            href="/awards"
+            className="inline-block py-4 -my-4 font-semibold text-accent"
+          >
             Superlatives
           </Link>{" "}
           are the opposite: settled, ranked, and season-final.

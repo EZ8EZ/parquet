@@ -15,6 +15,7 @@ export function LedgerItem({
   type,
   initialReasoning,
   initialPosture,
+  readOnly = false,
 }: {
   transactionId: string;
   description: string;
@@ -23,10 +24,16 @@ export function LedgerItem({
   type: string;
   initialReasoning: string | null;
   initialPosture: string | null;
+  /**
+   * This reader may not author here: they hold no seat, or the lens is pointed at
+   * someone else (see lib/auth/seat.ts). The API refuses the write regardless - this
+   * is the UI half, so nobody is offered a textarea that leads to a 401.
+   */
+  readOnly?: boolean;
 }) {
   const router = useRouter();
   const alreadyAnnotated = !!initialReasoning;
-  const [editing, setEditing] = useState(!alreadyAnnotated);
+  const [editing, setEditing] = useState(!alreadyAnnotated && !readOnly);
   const [reasoning, setReasoning] = useState(initialReasoning ?? "");
   const [posture, setPosture] = useState<string | null>(initialPosture);
   const [saving, setSaving] = useState(false);
@@ -36,6 +43,17 @@ export function LedgerItem({
   // premise of the ledger, so the user gets told the truth about it.
   const [notPersisted, setNotPersisted] = useState(false);
 
+  /**
+   * Three outcomes, and the difference between them is the whole point.
+   *
+   * A REJECTED write must never look like a saved one. This component used to collapse
+   * "the server said it could not persist" into a soft note under the quote and leave
+   * the editor closed - which is correct when there is simply no database configured
+   * (the text really is held for the session) and catastrophic when the database
+   * actively refused, because the typed reasoning is then gone and the UI said it was
+   * fine. On a genuine failure we stay in the editor with the text still in it, so the
+   * one copy of that reasoning is still on screen and still selectable.
+   */
   async function save() {
     if (!reasoning.trim()) return;
     setSaving(true);
@@ -46,13 +64,25 @@ export function LedgerItem({
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ transactionId, reasoning: reasoning.trim(), posture }),
       });
-      if (!res.ok) throw new Error("save failed");
-      const data: { persisted?: boolean } = await res.json();
+      const data: { ok?: boolean; persisted?: boolean; message?: string } = await res
+        .json()
+        .catch(() => ({}));
+
+      if (!res.ok || data.ok === false) {
+        setError(
+          data.message ??
+            (res.status === 401
+              ? "This browser has not claimed a seat, so it cannot write. Ask the commissioner for your claim link."
+              : "Your note was NOT saved. Copy your text somewhere safe and try again."),
+        );
+        return; // Stay open. The text stays where the reader can still see it.
+      }
+
       setNotPersisted(data.persisted === false);
       setEditing(false);
       if (data.persisted !== false) router.refresh();
     } catch {
-      setError("Couldn't save. Try again.");
+      setError("Your note was NOT saved - the request never completed. Try again.");
     } finally {
       setSaving(false);
     }
@@ -62,7 +92,9 @@ export function LedgerItem({
     <div
       className={cn(
         "rounded-[--radius] border p-4",
-        alreadyAnnotated && !editing
+        // The accent border is a call to action ("this one still needs your why"),
+        // so a reader who cannot act on it gets the calm treatment instead.
+        readOnly || (alreadyAnnotated && !editing)
           ? "border-border bg-surface/60"
           : "border-accent/30 bg-surface/80",
       )}
@@ -76,7 +108,7 @@ export function LedgerItem({
       </div>
       <p className="text-sm font-medium leading-snug text-ink">{description}</p>
 
-      {editing ? (
+      {editing && !readOnly ? (
         <div className="mt-3">
           <textarea
             value={reasoning}
@@ -130,28 +162,34 @@ export function LedgerItem({
           </div>
         </div>
       ) : (
-        <div className="mt-2.5">
+        <div className={cn(reasoning || posture ? "mt-2.5" : "")}>
           {posture && (
             <span className="mb-1.5 inline-block rounded-full border border-border px-2 py-0.5 text-[11px] text-muted">
               {posture}
             </span>
           )}
-          <p className="text-sm italic leading-relaxed text-muted">
-            &ldquo;{reasoning}&rdquo;
-          </p>
+          {reasoning && (
+            <p className="text-sm italic leading-relaxed text-muted">
+              &ldquo;{reasoning}&rdquo;
+            </p>
+          )}
           {notPersisted && (
             <p className="mt-1.5 text-[11px] leading-snug text-warn">
               Held for this session only - no database is connected, so this note
               will not survive a reload.
             </p>
           )}
-          <button
-            type="button"
-            onClick={() => setEditing(true)}
-            className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-faint hover:text-accent"
-          >
-            <Pencil size={12} /> edit
-          </button>
+          {/* No seat, no pencil. The API refuses the write anyway, so offering the
+              affordance would only teach the reader that the app is broken. */}
+          {!readOnly && (
+            <button
+              type="button"
+              onClick={() => setEditing(true)}
+              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-faint hover:text-accent"
+            >
+              <Pencil size={12} /> edit
+            </button>
+          )}
         </div>
       )}
     </div>

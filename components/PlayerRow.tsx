@@ -11,7 +11,7 @@ export function PlayerRow({
   tier,
   playerId,
   right,
-  injuryStatus,
+  injury,
 }: {
   name: string;
   team?: string | null;
@@ -21,7 +21,13 @@ export function PlayerRow({
   tier?: string;
   playerId?: string | null;
   right?: ReactNode;
-  injuryStatus?: string | null;
+  /**
+   * What is actually wrong, e.g. "Knee · Surgery" - `injuryLabel()`, not a raw
+   * `injury_status`. Sleeper's status word says "DTD" for a ruptured Achilles and
+   * "DTD" for a bruised quad, so it was never worth the space it took up. Null for a
+   * healthy player AND for load management, which is not an injury.
+   */
+  injury?: string | null;
 }) {
   return (
     <div className="flex items-center gap-3 rounded-[--radius-sm] border border-border bg-surface/60 px-3 py-2.5">
@@ -29,9 +35,9 @@ export function PlayerRow({
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-semibold text-ink">{name}</span>
-          {injuryStatus && (
+          {injury && (
             <span className="rounded bg-negative/15 px-1 text-[10px] font-semibold text-negative">
-              {injuryStatus}
+              {injury}
             </span>
           )}
         </div>

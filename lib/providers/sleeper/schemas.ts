@@ -292,6 +292,8 @@ export const RawPlayer = z.object({
   years_exp: num.nullish(),
   birth_date: str.nullish(),
   injury_status: str.nullish(),
+  injury_body_part: str.nullish(),
+  injury_notes: str.nullish(),
   depth_chart_order: num.nullish(),
   status: str.nullish(),
   number: num.nullish(),
@@ -313,6 +315,12 @@ export function toPlayer(r: z.infer<typeof RawPlayer>): Player {
     yearsExp: r.years_exp ?? null,
     birthDate: r.birth_date ?? null,
     injuryStatus: r.injury_status ?? null,
+    // Both populated live and both previously dropped on the floor. `injury_start_date`
+    // is NOT mapped: it is present on the raw payload and populated on exactly 0 of
+    // 2,106 players, so parsing it would only create the impression that injury dating
+    // is available (see lib/valuation/injury.ts).
+    injuryBodyPart: r.injury_body_part ?? null,
+    injuryNotes: r.injury_notes ?? null,
     depthChartOrder: r.depth_chart_order ?? null,
     status: r.status ?? null,
     number: r.number ?? null,
