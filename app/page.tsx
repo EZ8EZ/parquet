@@ -8,9 +8,9 @@ import { loadDigest } from "@/lib/digest";
 import { currentFormByRoster } from "@/lib/roster";
 import { ordinal } from "@/lib/derive/describe";
 import { liveStreaks } from "@/lib/streaks";
-import { groupedSurfaces } from "@/lib/nav";
+import { homeNext } from "@/lib/nav";
 import { canCapture, readSeat } from "@/lib/auth/server";
-import { iconForSurface } from "@/components/nav-icons";
+import { Onward } from "@/components/Onward";
 import { DigestPanel } from "@/components/DigestPanel";
 import { StreakPanel } from "@/components/StreakPanel";
 import { Wordmark } from "@/components/Brand";
@@ -159,74 +159,8 @@ export default async function HomePage() {
       <SectionHeader title="Since your last visit" />
       <DigestPanel digest={digest} />
 
-      {/*
-        WHERE TO - the half of this page the round-8 brief actually bought.
-
-        Home used to end with a "Go deeper" grid of eight CURATED surfaces, roughly
-        1,600px down, under everything else on the page - which was survivable only
-        because a bar of tabs was pinned to the bottom of the screen doing the real
-        navigating. That bar is gone (components/Desk.tsx), so the landing page has to
-        be a hub rather than a dashboard with a nav bar bolted under it, and a curated
-        subset is no longer an honest answer to "what is in this app". This is the
-        WHOLE registry, in the registry's own groups, at roughly 700px - above every
-        derived figure on the page, because "where do you want to go" is a better
-        opening question for a first-time leaguemate than "here is your pick capital".
-
-        Grouped by `lib/nav.ts`'s own grouping, never a second arrangement invented
-        here: the same five headings a reader sees in the Desk's menu and on /more, in
-        the same order, so the three places that list surfaces teach one shape.
-      */}
-      <SectionHeader title="Where to" href="/more" cta="one long list" />
-      <p className="-mt-0.5 mb-2 text-note leading-snug text-muted">
-        Everything in Parquet, and the same list is behind the Menu button at the
-        bottom of every screen.
-      </p>
-      {groupedSurfaces().map(({ group, items }) => (
-        <div key={group} className="mb-2.5">
-          <h3 className="mb-1.5 px-0.5 text-micro font-semibold uppercase tracking-[0.16em] text-faint">
-            {group === "Primary" ? "The four you use most" : group}
-          </h3>
-          <div className={group === "Primary" ? "grid grid-cols-4 gap-1.5" : "grid grid-cols-2 gap-1.5"}>
-            {items.map((s) => {
-              const Icon = iconForSurface(s.href);
-              const here = s.href === "/";
-              if (group === "Primary") {
-                return (
-                  <Link
-                    key={s.href}
-                    href={s.href}
-                    aria-current={here ? "page" : undefined}
-                    className={`flex min-h-[3.5rem] flex-col items-center justify-center gap-1 rounded-[--radius-sm] border px-1 text-center transition-colors ${
-                      here
-                        ? "border-accent/60 bg-accent/10 text-accent"
-                        : "border-border bg-surface text-ink hover:border-accent/50 hover:bg-surface-2"
-                    }`}
-                  >
-                    <Icon size={19} aria-hidden="true" />
-                    <span className="text-micro font-semibold leading-none">
-                      {s.short ?? s.label}
-                    </span>
-                  </Link>
-                );
-              }
-              return (
-                <HomeLink
-                  key={s.href}
-                  href={s.href}
-                  icon={<Icon size={15} />}
-                  title={s.label}
-                  sub={s.sub}
-                />
-              );
-            })}
-          </div>
-        </div>
-      ))}
-
-      {/* YOUR SEASON, in figures. Below the hub rather than above it now: these are
-          instrumentation, and instrumentation is what you read once you have decided
-          where you are. Every one of them is still a link, and they are still four
-          numbers in one card's worth of height rather than four stacked boxes. */}
+      {/* YOUR SEASON, in figures. Four numbers in one card's worth of height rather
+          than four stacked boxes, and every one of them is a link. */}
       <SectionHeader title="Your season, in four numbers" />
       <div className="grid grid-cols-2 overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
         <Figure
@@ -360,10 +294,38 @@ export default async function HomePage() {
       )}
 
 
+      {/*
+        WHERE NEXT, and pointedly NOT a menu.
+
+        For one round this page ended with the whole surface registry, grouped exactly
+        as the Desk's drawer groups it and exactly as /more does - three renderings of
+        one index, which is the failure the registry was built to end, one layer up.
+        The drawer is the index: its button says "every page in Parquet, and search",
+        it is on the bottom of every screen, and it is a thumb's width from the reader
+        at all times. So Home stopped being a directory and went back to being a
+        landing page - what changed (the digest, above), what is outstanding (the
+        capture badge at the top), and this: at most three moves that earn their place
+        given what the app actually knows tonight. `homeNext` in lib/nav.ts explains
+        which three facts it reads and why it reads no more than three.
+      */}
+      <Onward
+        steps={homeNext({
+          outstanding: mayCapture ? ledger.unannotatedNotable : 0,
+          moved: digest.state === "changes",
+          contradicted: report.contradictions.length > 0,
+        })}
+      />
+
       {/* The "Parquet advises; it can't act / Sleeper has no write API" note used to
           sit here. It is a constraint about sending trades, and /trade states it at the
           point where it actually bites (the evaluation ends at "Open Sleeper to send").
-          Home is not where anyone is trying to send anything. */}
+          Home is not where anyone is trying to send anything.
+
+          /more is named here in the smallest type on the page and nowhere else on it,
+          on purpose. It is no longer a feature to promote - the drawer carries the
+          same index from every screen - but it IS the only path to that index for a
+          reader without JavaScript, since the drawer is a client component. One quiet
+          link keeps the guarantee true in the one case the drawer cannot cover. */}
       <p className="mt-5 text-center text-meta leading-relaxed text-faint">
         First time here?{" "}
         <Link
@@ -372,6 +334,15 @@ export default async function HomePage() {
         >
           What this is, and what the numbers mean
         </Link>
+        <span className="mt-0.5 block">
+          Or{" "}
+          <Link
+            href="/more"
+            className="underline-offset-2 hover:text-accent hover:underline"
+          >
+            every page in one list
+          </Link>
+        </span>
       </p>
     </div>
   );
@@ -417,36 +388,5 @@ function Micro({ label, value }: { label: string; value: string }) {
         {value}
       </div>
     </div>
-  );
-}
-
-function HomeLink({
-  href,
-  icon,
-  title,
-  sub,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  sub: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex min-h-11 min-w-0 flex-col justify-center rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2 transition-colors hover:border-accent/50 hover:bg-surface-2"
-    >
-      <span className="flex items-center gap-1.5">
-        <span aria-hidden="true" className="shrink-0 text-accent">
-          {icon}
-        </span>
-        <span className="truncate text-body font-semibold leading-tight text-ink">
-          {title}
-        </span>
-      </span>
-      <span className="mt-0.5 truncate text-meta leading-tight text-faint">
-        {sub}
-      </span>
-    </Link>
   );
 }

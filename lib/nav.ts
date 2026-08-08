@@ -10,6 +10,10 @@
  * lists, so the two can no longer drift apart, and `/more` renders the whole thing
  * as the one page that promises completeness.
  *
+ * EXACTLY TWO SURFACES RENDER THE WHOLE REGISTRY: the Desk's drawer, and `/more`
+ * behind it as the no-JS and crawler fallback. Home briefly made a third, which put
+ * the same index on screen three ways; it now renders none of it (see `homeNext`).
+ *
  * Deliberately plain data, no icons: this file has to stay importable from a Server
  * Component and a plain data module alike without pulling in `lucide-react` (see
  * `components/nav-icons.tsx` for the href -> icon side of this, kept separate on
@@ -266,11 +270,63 @@ const ONWARD: Record<string, OnwardStep[]> = {
  * entry of its own.
  */
 export function onwardFrom(href: string): { href: string; label: string; why: string }[] {
-  return (ONWARD[href] ?? []).map((s) => ({
+  return resolveSteps(ONWARD[href] ?? []);
+}
+
+function resolveSteps(steps: OnwardStep[]): { href: string; label: string; why: string }[] {
+  return steps.map((s) => ({
     href: s.href,
     label: s.label ?? ALL_SURFACES.find((x) => x.href === s.href)?.label ?? s.href,
     why: s.why,
   }));
+}
+
+/**
+ * HOME'S NEXT STEPS, WHICH ARE NOT A MENU.
+ *
+ * For one round Home rendered the WHOLE registry, and so did `/more`, and so did the
+ * Desk's drawer: three copies of one index, which is the very "wall of stuff" the
+ * registry was built to end, moved one layer up. The drawer is the complete index -
+ * its button promises every page in Parquet plus search, and it is on the bottom of
+ * every screen - so Home does not need to be a second one. Home's job is the other
+ * half: what changed, what is outstanding, and the two or three moves worth making
+ * right now.
+ *
+ * "Right now" is read from three facts the app knows for certain, and nothing else.
+ * Deliberately NOT a phase-aware rule engine: `currentLeague.status` carries four
+ * values against six real modes of a dynasty season, so anything keyed to it would
+ * fire on the wrong boundaries. These three questions have unambiguous answers - is
+ * there reasoning still to capture, did anything actually move since the last visit,
+ * does the record contradict what was said. Each true fact promotes ONE step to the
+ * front; the baseline (`ONWARD["/"]`) then fills the remainder, so a completely quiet
+ * week still ends with three real ways out rather than an empty rail.
+ */
+export interface HomeFacts {
+  /** Notable decisions with no reasoning captured, in a seat allowed to capture it. */
+  outstanding: number;
+  /** The digest has something to report since the last visit. */
+  moved: boolean;
+  /** Stated posture and revealed behaviour disagree. */
+  contradicted: boolean;
+}
+
+export function homeNext(f: HomeFacts): { href: string; label: string; why: string }[] {
+  const front: OnwardStep[] = [];
+  if (f.outstanding > 0) {
+    // NOT the baseline's "Write down why, before I forget": when this fires, the
+    // capture badge at the top of Home is already saying almost exactly that, and two
+    // near-identical sentences on one page read as a stutter rather than as emphasis.
+    front.push({ href: "/ledger", why: "Which decisions still have no why?" });
+  }
+  if (f.moved) {
+    front.push({ href: "/deals", why: "What were those moves actually worth?" });
+  }
+  if (f.contradicted) {
+    front.push({ href: "/analyst", why: "Argue with someone who has read all of it" });
+  }
+  const seen = new Set(front.map((s) => s.href));
+  const rest = (ONWARD["/"] ?? []).filter((s) => !seen.has(s.href));
+  return resolveSteps([...front, ...rest].slice(0, 3));
 }
 
 /** Every surface that has onward steps defined. Test-facing. */
@@ -340,10 +396,11 @@ export function primarySurfaces(): NavSurface[] {
  *
  * It was Home's grid and League's pill row, which is why it exists as a filter over
  * the registry rather than as either page's own array - the two had already silently
- * diverged once. Home has since been rebuilt as a hub rendering the WHOLE registry by
- * group, so it no longer reads this. The filter stays because /league still needs a
- * short list rather than all twenty-four surfaces, and because "which surfaces are
- * worth a shortcut" is a judgement that belongs in the registry either way.
+ * diverged once. Home no longer reads it, and no longer renders any index at all: it
+ * ends with the situational steps `homeNext` builds, because a landing page that
+ * lists everything is a third copy of the drawer. The filter stays because /league
+ * still needs a short list rather than all twenty-four surfaces, and because "which
+ * surfaces are worth a shortcut" is a judgement that belongs in the registry either way.
  */
 export function curatedSurfaces(): NavSurface[] {
   return ALL_SURFACES.filter((s) => s.curated);

@@ -3,6 +3,7 @@ import {
   ALL_SURFACES,
   curatedSurfaces,
   groupedSurfaces,
+  homeNext,
   managerLinks,
   onwardFrom,
   primarySurfaces,
@@ -63,8 +64,8 @@ describe("the surface registry", () => {
 
 describe("curatedSurfaces", () => {
   it("is the set /league renders as its pill row", () => {
-    // Was "the set Home and League both render". Home is a full-registry hub now and
-    // reads groupedSurfaces instead, so this describes one consumer, not two.
+    // Was "the set Home and League both render". Home renders no index at all now -
+    // it ends with `homeNext` - so this describes one consumer, not two.
     const curated = curatedSurfaces();
     expect(curated.length).toBeGreaterThan(0);
     for (const s of curated) expect(s.curated).toBe(true);
@@ -130,6 +131,46 @@ describe("onwardFrom - the no-dead-ends rule", () => {
     // Callers pass a pathname, and a dynamic route legitimately has no entry.
     expect(onwardFrom("/managers/42")).toEqual([]);
     expect(onwardFrom("")).toEqual([]);
+  });
+});
+
+describe("homeNext - Home is a landing page, not a third copy of the index", () => {
+  const quiet = { outstanding: 0, moved: false, contradicted: false };
+
+  it("falls back to the baseline when nothing is happening, never to nothing", () => {
+    // A quiet week must still leave the landing page with real ways out - the whole
+    // point of the no-dead-ends rule applies hardest to the page people open first.
+    expect(homeNext(quiet)).toEqual(onwardFrom("/"));
+  });
+
+  it("never offers more than three, however much is going on", () => {
+    const busy = homeNext({ outstanding: 27, moved: true, contradicted: true });
+    expect(busy.length).toBe(3);
+  });
+
+  it("leads with the reasoning still to capture", () => {
+    expect(homeNext({ ...quiet, outstanding: 4 })[0].href).toBe("/ledger");
+  });
+
+  it("never repeats a destination or points back at Home", () => {
+    for (const outstanding of [0, 3]) {
+      for (const moved of [false, true]) {
+        for (const contradicted of [false, true]) {
+          const steps = homeNext({ outstanding, moved, contradicted });
+          const hrefs = steps.map((s) => s.href);
+          expect(new Set(hrefs).size).toBe(hrefs.length);
+          expect(hrefs).not.toContain("/");
+        }
+      }
+    }
+  });
+
+  it("takes its labels from the registry, and says why without an em dash", () => {
+    const byHref = new Map(ALL_SURFACES.map((s) => [s.href, s.label]));
+    for (const step of homeNext({ outstanding: 1, moved: true, contradicted: true })) {
+      expect(step.label).toBe(byHref.get(step.href));
+      expect(step.why).not.toMatch(/[—–]/);
+    }
   });
 });
 
