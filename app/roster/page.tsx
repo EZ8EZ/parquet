@@ -352,6 +352,9 @@ export default async function RosterPage() {
                   playerId={fr.singlePointOfFailure.playerId}
                   size="sm"
                   className="mt-0.5"
+                  // The sentence beside this never names his NBA team, so the crest
+                  // is new information here rather than a second copy of one.
+                  teamBadge
                 />
                 <p className="text-note leading-snug text-muted">
                   Season hinges on{" "}

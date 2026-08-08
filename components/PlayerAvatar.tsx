@@ -46,6 +46,7 @@
  */
 import { useState } from "react";
 import { cn } from "@/lib/ui";
+import { TeamLogo } from "@/components/TeamLogo";
 
 /**
  * NBA team primary colours. Used ONLY for the 2px identity edge now — never as a
@@ -91,12 +92,23 @@ export function PlayerAvatar({
   playerId,
   size = "md",
   className,
+  teamBadge,
 }: {
   name: string;
   team?: string | null;
   playerId?: string | null;
   size?: keyof typeof SIZES;
   className?: string;
+  /**
+   * Overlay a small NBA team crest at the disc's corner. OFF by default and only
+   * worth turning on where the real team is not printed as text anywhere else in the
+   * row (TradeBuilder's give/get rows, the deal receipt, the roster's single-point-
+   * of-failure line, the lineage header) - everywhere else already prints the team
+   * abbreviation next to the name, and a crest there would just be a second, louder
+   * copy of a datum the reader already has (the exact mistake D39 undid for the
+   * disc's own fill colour).
+   */
+  teamBadge?: boolean;
 }) {
   const [failed, setFailed] = useState(false);
   const px = SIZES[size];
@@ -117,39 +129,59 @@ export function PlayerAvatar({
   // read as monograms, not real headshots.
   const usePhotos = process.env.NEXT_PUBLIC_USE_PLAYER_PHOTOS === "true";
 
-  if (usePhotos && playerId && !failed) {
-    // Sleeper CDN thumbnail (personal/local use per .env.example). Actually a
-    // transparent-cutout PNG despite the .jpg extension — see the file header.
-    // Falls back to the monogram on load error (missing photo, not a licensing gate).
-    const src = `https://sleepercdn.com/content/nba/players/thumb/${playerId}.jpg`;
-    return (
+  const avatar =
+    usePhotos && playerId && !failed ? (
+      // Sleeper CDN thumbnail (personal/local use per .env.example). Actually a
+      // transparent-cutout PNG despite the .jpg extension — see the file header.
+      // Falls back to the monogram on load error (missing photo, not a licensing gate).
       // eslint-disable-next-line @next/next/no-img-element
       <img
-        src={src}
+        src={`https://sleepercdn.com/content/nba/players/thumb/${playerId}.jpg`}
         alt={name}
         width={px}
         height={px}
         decoding="async"
         onError={() => setFailed(true)}
-        className={cn("shrink-0 rounded-full object-cover object-top ring-1 ring-border-strong", className)}
+        className={cn(
+          "shrink-0 rounded-full object-cover object-top ring-1 ring-border-strong",
+          !teamBadge && className,
+        )}
         style={disc}
       />
+    ) : (
+      <span
+        aria-hidden="true"
+        className={cn(
+          // Monogram, not a code: it is a person's initials, so it takes the sans like
+          // every other name in the app rather than the identifier face.
+          "inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-ink ring-1 ring-border-strong",
+          !teamBadge && className,
+        )}
+        style={{ ...disc, fontSize: Math.round(px * 0.38) }}
+      >
+        {initials(name)}
+      </span>
     );
-  }
 
-  const fontSize = Math.round(px * 0.38);
+  if (!teamBadge || !team) return avatar;
+
+  // The badge sits in its own same-sized wrapper so callers that pass a `className`
+  // (a margin, most often) still land on the outer box rather than getting lost
+  // inside it. `overflow-visible` is the point of the wrapper existing at all - the
+  // crest pokes past the disc's own edge on purpose, so it reads as a badge and not
+  // as a second, smaller face crammed inside the first.
+  const BADGE_SIZE = { sm: "xs", md: "xs", lg: "sm" } as const;
   return (
     <span
-      aria-hidden="true"
-      className={cn(
-        // Monogram, not a code: it is a person's initials, so it takes the sans like
-        // every other name in the app rather than the identifier face.
-        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-ink ring-1 ring-border-strong",
-        className,
-      )}
-      style={{ ...disc, fontSize }}
+      className={cn("relative inline-block shrink-0", className)}
+      style={{ width: px, height: px }}
     >
-      {initials(name)}
+      {avatar}
+      <TeamLogo
+        team={team}
+        className="absolute -bottom-0.5 -right-0.5 rounded-full bg-bg p-0.5 ring-1 ring-border-strong"
+        size={BADGE_SIZE[size]}
+      />
     </span>
   );
 }

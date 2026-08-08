@@ -24,6 +24,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { LocalDate } from "@/components/LocalDate";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { ordinal } from "@/lib/derive/describe";
 import { dealHref } from "@/lib/tradegraph/url";
 import { parsePickKey } from "@/lib/provenance";
@@ -339,9 +340,15 @@ function ResolutionBody({ r }: { r: ProvenanceResolution }) {
             ? `/drafts/${r.season}?pick=${r.pickNo}#pick-${r.pickNo}`
             : `/drafts/${r.season}`
         }
-        className="group inline-flex min-h-11 max-w-full items-start gap-1 text-left"
+        className="group inline-flex min-h-11 max-w-full items-start gap-1.5 text-left"
         aria-label={`The pick became ${r.playerName}. Open the ${r.season} draft board.`}
       >
+        {/* The one face on this rail: the moment a pick - an abstraction with no
+            face of its own - resolves into an actual person. Every other node here
+            is a fantasy manager or a date, so this is also the only place
+            `PlayerAvatar` earns a spot on the rail rather than making a five-node
+            time axis into a second player list. */}
+        <PlayerAvatar name={r.playerName} playerId={r.playerId} size="sm" className="mt-0.5" />
         <span className="min-w-0">
           <span className="block truncate text-body font-semibold leading-snug text-info group-hover:underline">
             The pick became {r.playerName}
