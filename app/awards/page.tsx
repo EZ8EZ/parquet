@@ -1,8 +1,8 @@
 import Link from "next/link";
-import { ChevronRight, Trophy, type LucideIcon } from "lucide-react";
+import { ChevronRight, Scale, Trophy, type LucideIcon } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { AWARD_GROUPS, awardsPageData, type Award, type AwardEntrant } from "@/lib/superlatives";
-import { Tag, EmptyState } from "@/components/ui";
+import { Tag, Disclosure, EmptyState, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { AwardBadge, GROUP_TONE, iconForAward, type BadgeTone } from "@/components/AwardBadge";
 import type { LeagueUser } from "@/lib/providers/types";
@@ -58,6 +58,56 @@ function EntrantLink({
   );
 }
 
+/**
+ * Sentence one, then the rest.
+ *
+ * Splits on a full stop followed by whitespace and a capital, which is what keeps
+ * "taking the consensus number one at 1.01" in one piece - a naive split on "." breaks
+ * that subtitle mid-clause, and it is one of the ones this exists to rescue.
+ */
+function firstSentence(text: string): [string, string] {
+  const m = /(?<=[.!?])\s+(?=[A-Z])/.exec(text);
+  if (!m) return [text, ""];
+  return [text.slice(0, m.index), text.slice(m.index + m[0].length)];
+}
+
+/**
+ * THE AWARD SUBTITLE, which used to be `line-clamp-2`.
+ *
+ * Two lines is the worst of both worlds at this length: it cost 514px across the
+ * twenty cards on this page AND cut seven of them off mid-sentence, so the honesty
+ * caveats D23 puts in these subtitles - "Hindsight pricing", "the number cannot tell
+ * them apart", "a torn-down roster has little to lose" - were the exact words being
+ * thrown away. They are the point of the subtitle, not the overflow.
+ *
+ * So: the claim stays on the card, always, unclamped. Everything after the first
+ * sentence is one tap away in the house disclosure rather than deleted by CSS. Awards
+ * whose subtitle is a single sentence render as a plain paragraph and pay no chrome at
+ * all, which is most of the behavioural half of this page.
+ */
+function AwardSubtitle({ text }: { text: string }) {
+  const [head, rest] = firstSentence(text);
+  if (!rest) {
+    return <p className="mt-0.5 text-meta leading-snug text-muted">{text}</p>;
+  }
+  return (
+    <details className="group mt-0.5">
+      <summary className="cursor-pointer list-none py-1 text-meta leading-snug text-muted">
+        {head}{" "}
+        <span className="whitespace-nowrap font-semibold text-accent">
+          more
+          <ChevronRight
+            size={11}
+            aria-hidden="true"
+            className="inline align-[-1px] transition-transform group-open:rotate-90"
+          />
+        </span>
+      </summary>
+      <p className="pb-1 text-meta leading-snug text-muted">{rest}</p>
+    </details>
+  );
+}
+
 function AwardCard({
   award,
   meRosterId,
@@ -85,16 +135,14 @@ function AwardCard({
     >
       {/* Title and the winning number share a line: the figure is the headline. */}
       <div className="flex items-baseline gap-2">
-        <h3 className="min-w-0 flex-1 font-display text-[17px] font-semibold leading-tight text-ink">
+        <h3 className="min-w-0 flex-1 font-display text-lede font-semibold leading-tight text-ink">
           {award.title}
         </h3>
-        <span className="shrink-0 font-mono text-[12px] font-semibold tnum text-accent">
+        <span className="shrink-0 font-mono text-note font-semibold tnum text-accent">
           {award.statLine}
         </span>
       </div>
-      <p className="mt-0.5 line-clamp-2 text-[11px] leading-snug text-muted">
-        {award.subtitle}
-      </p>
+      <AwardSubtitle text={award.subtitle} />
 
       <EntrantLink
         entrant={w}
@@ -116,7 +164,7 @@ function AwardCard({
         />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-1.5">
-            <span className="min-w-0 truncate text-[13px] font-semibold text-ink">
+            <span className="min-w-0 truncate text-body font-semibold text-ink">
               {w.label}
             </span>
             {isMe ? (
@@ -124,7 +172,7 @@ function AwardCard({
             ) : w.isFormer ? (
               <Tag>former{w.tenureLabel ? ` ${w.tenureLabel}` : ""}</Tag>
             ) : (
-              <span className="shrink-0 truncate text-[11px] text-faint">
+              <span className="min-w-0 shrink truncate text-meta text-faint">
                 {w.displayName}
               </span>
             )}
@@ -138,7 +186,7 @@ function AwardCard({
       {w.partnerRosterId != null && (
         <Link
           href={`/managers/${w.partnerRosterId}`}
-          className="-my-1 flex min-h-11 items-center gap-1 px-2 text-[11px] font-semibold text-accent"
+          className="-my-1 flex min-h-11 items-center gap-1 px-2 text-meta font-semibold text-accent"
         >
           also see {w.partnerLabel}
           <ChevronRight size={12} aria-hidden="true" />
@@ -197,7 +245,7 @@ function RunnerUpRow({
     >
       <span
         aria-hidden="true"
-        className="w-3 shrink-0 font-mono text-[11px] tnum text-faint"
+        className="w-3 shrink-0 font-mono text-meta tnum text-faint"
       >
         {place.replace(/\D/g, "")}
       </span>
@@ -211,18 +259,23 @@ function RunnerUpRow({
       />
       <span
         className={cn(
-          "min-w-0 flex-1 truncate text-[12px]",
+          "min-w-0 flex-1 truncate text-note",
           isMe ? "font-semibold text-accent" : "text-muted",
         )}
       >
         {entrant.label}
       </span>
       {entrant.tenureLabel && (
-        <span className="shrink-0 text-[10px] text-faint">
+        <span className="shrink-0 text-micro text-faint">
           {entrant.tenureLabel}
         </span>
       )}
-      <span className="shrink-0 truncate font-mono text-[11px] tnum text-faint">
+      {/* `shrink-0 truncate` is self-contradictory: truncate needs a shrinkable
+          box and shrink-0 forbids one, so a long stat string refused to compress,
+          crushed the team name beside it to a single character ("6...", "5..."),
+          and still pushed the page 79px past the viewport on every iPhone. The
+          name is what this page is FOR, so the stat yields first. */}
+      <span className="min-w-0 shrink truncate font-mono text-meta tnum text-faint">
         {entrant.stat}
       </span>
     </EntrantLink>
@@ -259,21 +312,21 @@ export default async function AwardsPage() {
     <div>
       <header className="mb-2">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
             League awards
           </p>
           <Link
             href="/league"
-            className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+            className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
           >
             the league
             <ChevronRight size={12} aria-hidden="true" />
           </Link>
         </div>
-        <h1 className="font-display text-[26px] font-semibold leading-[1.1] text-ink">
+        <h1 className="font-display text-display font-semibold leading-[1.1] text-ink">
           The Superlatives
         </h1>
-        <p className="mt-0.5 text-[12px] leading-snug text-muted">
+        <p className="mt-0.5 text-note leading-snug text-muted">
           Earned, not voted. Judged purely on what they actually did.
         </p>
       </header>
@@ -292,27 +345,44 @@ export default async function AwardsPage() {
           {/* Figures inline, hairline-separated: three cards cost 90px for four numbers. */}
           <div className="flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface/60">
             {[
-              { v: awards.length, l: "awards" },
+              { v: awards.length, l: "awards", t: undefined as string | undefined },
               {
                 v: summary.managers,
+                l: "managers",
                 // Not the number of teams: a team that changed hands contributes two
                 // managers, and the one who left is still eligible for their seasons.
-                l: summary.formerManagers > 0 ? "managers*" : "managers",
+                // This used to be an asterisk pointing at a 30-word footnote at the
+                // bottom of a very long page - a permanent tax on every reader to
+                // explain one number to the reader who wondered. It is a definition,
+                // so it lives on the definition, and /about carries the long form.
+                t:
+                  summary.formerManagers > 0
+                    ? `${summary.managers} managers across ${summary.managers - summary.formerManagers} teams: ${summary.formerManagers} team${summary.formerManagers === 1 ? " has" : "s have"} changed hands, and each manager is judged only on the seasons they actually ran.`
+                    : undefined,
               },
-              { v: summary.trades, l: "trades" },
-              { v: summary.moves.toLocaleString(), l: "moves" },
+              { v: summary.trades, l: "trades", t: undefined },
+              { v: summary.moves.toLocaleString(), l: "moves", t: undefined },
             ].map((s, i) => (
               <div key={s.l} className="flex-1 px-1 py-1.5 text-center">
                 <div
                   className={cn(
-                    "font-mono text-[17px] font-semibold leading-tight tnum",
+                    "font-mono text-lede font-semibold leading-tight tnum",
                     i === 0 ? "text-accent" : "text-ink",
                   )}
                 >
                   {s.v}
                 </div>
-                <div className="text-[11px] uppercase tracking-wide text-faint">
-                  {s.l}
+                <div className="text-meta uppercase tracking-wide text-faint">
+                  {s.t ? (
+                    <abbr
+                      title={s.t}
+                      className="cursor-help underline decoration-dotted underline-offset-2"
+                    >
+                      {s.l}
+                    </abbr>
+                  ) : (
+                    s.l
+                  )}
                 </div>
               </div>
             ))}
@@ -324,10 +394,10 @@ export default async function AwardsPage() {
               <a
                 key={g.id}
                 href={`#${g.id}`}
-                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface/60 px-2.5 text-[12px] font-medium text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface/60 px-2.5 text-note font-medium text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
               >
                 {g.label}
-                <span className="font-mono text-[11px] tnum text-faint">
+                <span className="font-mono text-meta tnum text-faint">
                   {g.items.length}
                 </span>
               </a>
@@ -335,7 +405,7 @@ export default async function AwardsPage() {
           </nav>
 
           {mine.length > 0 && (
-            <p className="mt-2 rounded-[--radius] border border-accent/30 bg-accent/[0.06] px-2.5 py-1.5 text-[11.5px] leading-snug text-muted">
+            <p className="mt-2 rounded-[--radius] border border-accent/30 bg-accent/[0.06] px-2.5 py-1.5 text-meta leading-snug text-muted">
               <span className="font-semibold text-ink">Your mantel:</span>{" "}
               {mine.map((a) => a.title).join(", ")}.
             </p>
@@ -343,9 +413,7 @@ export default async function AwardsPage() {
 
           {groups.map((g) => (
             <section key={g.id} id={g.id} className="scroll-mt-3">
-              <h2 className="mb-1.5 mt-3.5 text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
-                {g.label}
-              </h2>
+              <SectionHeader title={g.label} />
               <div className="space-y-1.5">
                 {g.items.map((a) => (
                   <AwardCard
@@ -359,25 +427,33 @@ export default async function AwardsPage() {
             </section>
           ))}
 
-          <p className="mt-4 text-[11px] leading-relaxed text-faint">
-            Derived from {summary.moves.toLocaleString()} recorded transactions across{" "}
-            {summary.seasons} seasons. Ties break to the lower roster number. Awards
-            with no real signal behind them are left unawarded. Tap any team for their
-            dossier.
+          {/* The rules of the competition, which every reader needs exactly once and
+              no reader needs on the way past. Collapsed into the house idiom rather
+              than deleted: a page that hands out thirteen verdicts owes the reader a
+              way to check how ties and blanks were settled. */}
+          <Disclosure
+            summary="How these are settled"
+            icon={<Scale size={12} />}
+            className="mt-4"
+          >
+            <p>
+              Derived from {summary.moves.toLocaleString()} recorded transactions across{" "}
+              {summary.seasons} seasons. Ties break to the lower roster number. Awards
+              with no real signal behind them are left unawarded rather than handed to
+              the least-bad entrant.
+            </p>
             {summary.formerManagers > 0 && (
-              <>
-                {" "}
-                <span className="text-muted">
-                  *{summary.managers} managers across {summary.managers - summary.formerManagers}{" "}
-                  teams: {summary.formerManagers} team
-                  {summary.formerManagers === 1 ? " has" : "s have"} changed hands, and
-                  each manager is judged only on the seasons they actually ran. Former
-                  managers are listed without a dossier link, because that roster&rsquo;s
-                  dossier now describes their successor.
-                </span>
-              </>
+              <p className="mt-2">
+                {summary.managers} managers across{" "}
+                {summary.managers - summary.formerManagers} teams:{" "}
+                {summary.formerManagers} team
+                {summary.formerManagers === 1 ? " has" : "s have"} changed hands, and
+                each manager is judged only on the seasons they actually ran. A former
+                manager keeps their own dossier, because the roster they left now
+                describes their successor.
+              </p>
             )}
-          </p>
+          </Disclosure>
         </>
       )}
     </div>

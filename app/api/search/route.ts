@@ -83,7 +83,7 @@ export interface SearchResponse {
 // Tiers only mean something relative to the WHOLE league's value distribution (see
 // /values), so this can't be computed on just the matched subset. The player values
 // themselves now come from lib/valuation's own shared `cachedValuePlayers` (every
-// caller in the app - dossiers, timelines, fragility, /values, /web, this route -
+// caller in the app - dossiers, timelines, fragility, /values, /deals, this route -
 // used to memoize the identical computation separately; see DECISIONS for the
 // cold-start pass that consolidated it). Tiers are cheap to rebuild from an already-
 // cached value map, so only the tier resolver is memoized here, still keyed and

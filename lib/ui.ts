@@ -1,9 +1,34 @@
 import { clsx, type ClassValue } from "clsx";
-import { twMerge } from "tailwind-merge";
+import { extendTailwindMerge } from "tailwind-merge";
+
+/**
+ * `tailwind-merge` HAS TO BE TOLD ABOUT THE TYPE SCALE, or it silently deletes it.
+ *
+ * The scale in globals.css is named for the job each step does (`text-body`,
+ * `text-meta`, `text-display`, ...) rather than for its size. tailwind-merge resolves
+ * conflicts from a built-in table it cannot extend by reading our CSS, and in that
+ * table `text-<word>` is a COLOUR - so `cn("text-display", ok ? "text-positive" :
+ * "text-negative")` looked like two colours to it and it dropped the size. The class
+ * vanished from the output entirely: no error, no warning, just 16px where 25px was
+ * asked for, and only in the call sites that use `cn` with a conditional colour.
+ * (Found on the Desk's destination labels, which rendered at 16px; the same silent
+ * drop was already live in TradeBuilder, StreakPanel, ui.tsx and drafts/parts.tsx.)
+ *
+ * Registering the six names as font sizes is the whole fix, and it belongs here
+ * rather than at each call site: the alternative is remembering, forever, never to
+ * put a size and a colour in the same `cn()`.
+ */
+const merge = extendTailwindMerge({
+  extend: {
+    classGroups: {
+      "font-size": [{ text: ["micro", "meta", "note", "body", "lede", "display"] }],
+    },
+  },
+});
 
 /** Merge conditional class names, de-duplicating Tailwind utilities. */
 export function cn(...inputs: ClassValue[]): string {
-  return twMerge(clsx(inputs));
+  return merge(clsx(inputs));
 }
 
 /** Compact signed number, e.g. +3 / -2 / 0. */

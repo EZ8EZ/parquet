@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { buildFixtureHistory } from "../testing/fixtureHistory";
 import {
+  coherenceOf,
   durationOf,
   getTimelineProfile,
   leagueTimelines,
@@ -143,5 +144,44 @@ describe("Timeline Coherence Index", () => {
     const b = getTimelineProfile(h, h.me.rosterId!);
     expect(a.tci).toBe(b.tci);
     expect(a.rosterDuration).toBe(b.rosterDuration);
+  });
+});
+
+describe("coherenceOf", () => {
+  it("is exactly what getTimelineProfile publishes, for every roster in the league", () => {
+    // The Lab's counterfactual scores a HYPOTHETICAL roster on this function. If it
+    // ever stopped agreeing with the real profile, the two numbers shown side by side
+    // would be on different scales - which is the one thing that comparison cannot
+    // survive. Pinned here rather than assumed from the refactor.
+    for (const r of h.rosters) {
+      const profile = getTimelineProfile(h, r.rosterId);
+      const c = coherenceOf(profile.assets);
+      expect(c.tci).toBe(profile.tci);
+      expect(Math.round(c.rosterDuration * 100) / 100).toBe(profile.rosterDuration);
+      expect(Math.round(c.dispersion * 100) / 100).toBe(profile.dispersion);
+      expect(c.totalValue).toBe(profile.totalValue);
+    }
+  });
+
+  it("reads an empty bag as zero rather than dividing by it", () => {
+    expect(coherenceOf([])).toEqual({
+      rosterDuration: 0,
+      dispersion: 0,
+      tci: 0,
+      totalValue: 0,
+    });
+  });
+
+  it("scores a set that agrees about its own timeline above one that does not", () => {
+    const tight = coherenceOf([
+      { value: 100, duration: 4 },
+      { value: 100, duration: 4.2 },
+    ]);
+    const split = coherenceOf([
+      { value: 100, duration: 1.2 },
+      { value: 100, duration: 7.4 },
+    ]);
+    expect(tight.tci).toBeGreaterThan(split.tci);
+    expect(split.tci).toBe(0);
   });
 });

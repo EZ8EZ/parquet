@@ -19,7 +19,7 @@ export interface Point {
  * Round to 2dp. Every computed SVG coordinate below goes through this - an
  * unrounded float can serialize differently between the server render and the
  * client hydration pass, which React reports as a hydration mismatch (same fix
- * TradeWeb.tsx uses for its curved edges).
+ * the deleted trade web used for its curved edges).
  */
 function r2(v: number): number {
   return Math.round(v * 100) / 100;
@@ -113,6 +113,81 @@ export function BarChart({
             <text x={cx + barW / 2} y={H - 5} textAnchor="middle" fontSize="10" fill={MUTED}>
               {d.label}
             </text>
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
+/**
+ * Two (or N) totals as horizontal bars, one per row, labelled in place.
+ *
+ * The receipt's only chart. Horizontal rather than vertical because the labels are
+ * team names: at 390px a vertical bar chart has ~150px of width per side to print
+ * "The Terror Twins" under it, and it truncates; a horizontal bar puts the name on
+ * its own full-width line above the bar and never does.
+ *
+ * Deliberately NOT a difference, a ratio or a delta (D6). It draws two lengths and
+ * lets the reader do the comparing - the moment this renders "+2,400" it has issued a
+ * verdict, which is the one thing this app does not do.
+ *
+ * `max` is taken from the caller rather than derived here so several of these can
+ * share one scale when they need to.
+ */
+export function SideBars({
+  data,
+  max,
+  height = 26,
+  format = (n) => `${n}`,
+}: {
+  data: Point[];
+  max: number;
+  /** Row height, in the same unit space as the viewBox. */
+  height?: number;
+  format?: (n: number) => string;
+}) {
+  const W = 320;
+  const rowH = height;
+  const barH = 10;
+  const H = rowH * data.length;
+  if (data.length === 0 || max <= 0) return null;
+  const barW = (v: number) => Math.max(2, r2((v / max) * W));
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="w-full"
+      role="img"
+      aria-label={`Value today: ${data.map((d) => `${d.label} ${format(d.value)}`).join("; ")}.`}
+    >
+      {data.map((d, i) => {
+        const top = i * rowH;
+        return (
+          <g key={`${d.label}-${i}`}>
+            <text x={0} y={top + 10} fontSize="11" fontWeight={600} fill="var(--color-ink)">
+              {d.label}
+            </text>
+            <text
+              x={W}
+              y={top + 10}
+              textAnchor="end"
+              fontSize="11"
+              fill="var(--color-accent)"
+              className="font-mono"
+            >
+              {format(d.value)}
+            </text>
+            <rect x={0} y={top + 15} width={W} height={barH} rx={3} fill={GRID} opacity={0.5} />
+            <rect
+              x={0}
+              y={top + 15}
+              width={barW(d.value)}
+              height={barH}
+              rx={3}
+              fill={ACCENT}
+              opacity={0.85}
+            />
           </g>
         );
       })}

@@ -1,170 +1,132 @@
 import { describe, expect, it } from "vitest";
+import { buildFixtureHistory } from "../testing/fixtureHistory";
+import { buildPrincipals } from "../principals";
+import { buildTradeLedger } from "./index";
 import {
-  EMPTY_WEB_URL,
-  edgeKeyForTrade,
-  managerWebHref,
-  pairWebHref,
-  parseWebParams,
-  tradeWebHref,
-  webQueryString,
-  type WebUrlState,
+  dealHref,
+  dealsQueryString,
+  EMPTY_DEALS_URL,
+  lineageHref,
+  managerDealsHref,
+  pairDealsHref,
+  parseDealsParams,
+  playerLineageHref,
 } from "./url";
 
-/** The real reader the page hands `parseWebParams`. */
-function read(query: string) {
-  return new URLSearchParams(query);
-}
+const reader = (o: Record<string, string>) => ({ get: (k: string) => o[k] ?? null });
 
-describe("parseWebParams", () => {
-  it("reads nothing out of nothing", () => {
-    expect(parseWebParams(read(""))).toEqual(EMPTY_WEB_URL);
+describe("the deal URL", () => {
+  it("is one path segment per deal", () => {
+    expect(dealHref("1234567890")).toBe("/deals/1234567890");
   });
 
-  it("reads a manager, a pair and a season", () => {
-    expect(parseWebParams(read("manager=abc"))).toMatchObject({
-      selection: { kind: "node", ownerId: "abc" },
-      mode: "web",
-    });
-    expect(parseWebParams(read("pair=abc-def"))).toMatchObject({
-      selection: { kind: "edge", key: "abc-def" },
-    });
-    expect(parseWebParams(read("season=2024")).season).toBe("2024");
-  });
-
-  it("reads a trade as a trade, not as a selection", () => {
-    const s = parseWebParams(read("trade=tx9"));
-    expect(s.tradeId).toBe("tx9");
-    // The strand it lights up is resolved from the graph, which this module cannot
-    // see, so the selection is deliberately still empty here.
-    expect(s.selection).toBeNull();
-  });
-
-  it("resolves a conflicting link down to its most specific part", () => {
-    const s = parseWebParams(read("trade=tx9&pair=a-b&manager=a"));
-    expect(s.tradeId).toBe("tx9");
-    expect(s.selection).toBeNull();
-
-    const t = parseWebParams(read("pair=a-b&manager=a"));
-    expect(t.selection).toEqual({ kind: "edge", key: "a-b" });
-  });
-
-  it("only accepts the one mode that is not the default", () => {
-    expect(parseWebParams(read("mode=trees")).mode).toBe("trees");
-    expect(parseWebParams(read("mode=WEB")).mode).toBe("web");
-    expect(parseWebParams(read("mode=nonsense")).mode).toBe("web");
-  });
-
-  it("treats a hand-edited URL as untrusted rather than throwing", () => {
-    expect(parseWebParams(read("manager=&season=%20%20")).selection).toBeNull();
-    expect(parseWebParams(read("season=%20%20")).season).toBeNull();
-    expect(parseWebParams(read(`trade=${"x".repeat(300)}`)).tradeId).toBeNull();
-    // A coalesced multi-team id (four stitched transactions) has to survive: this is
-    // the real shape of the league's biggest deals, not an edge case.
-    const coalesced = `coalesced-${["981392784131178496", "981392875004981248", "981393045398618112", "981396413038772224"].join("+")}`;
-    expect(parseWebParams(read(`trade=${encodeURIComponent(coalesced)}`)).tradeId).toBe(
-      coalesced,
-    );
-    // ...and so does a trees root built on top of one.
-    expect(
-      parseWebParams(read(`asset=${encodeURIComponent(`${coalesced}|p:1648`)}`)).asset,
-    ).toBe(`${coalesced}|p:1648`);
-    expect(parseWebParams(read("manager=%20abc%20"))).toMatchObject({
-      selection: { kind: "node", ownerId: "abc" },
-    });
+  it("escapes a coalesced multi-team id rather than splicing it into the path raw", () => {
+    // `coalesceCommissionerTrades` stitches several transactions into one synthetic
+    // id joined with `+`, which is a space in a path segment if left unencoded.
+    const id = "coalesced-111+222+333";
+    expect(dealHref(id)).toBe("/deals/coalesced-111%2B222%2B333");
+    expect(decodeURIComponent(dealHref(id).slice("/deals/".length))).toBe(id);
   });
 });
 
-describe("webQueryString", () => {
-  it("says nothing when there is nothing to say", () => {
-    expect(webQueryString(EMPTY_WEB_URL)).toBe("");
+describe("the lineage URL", () => {
+  it("carries an asset key, player or pick", () => {
+    expect(lineageHref("p:4892")).toBe("/lineage/p%3A4892");
+    expect(lineageHref("k:2025-1-11")).toBe("/lineage/k%3A2025-1-11");
+    expect(playerLineageHref("4892")).toBe(lineageHref("p:4892"));
   });
 
-  it("round-trips every web-mode state through parse", () => {
-    const states: WebUrlState[] = [
-      { ...EMPTY_WEB_URL, season: "2024" },
-      { ...EMPTY_WEB_URL, selection: { kind: "node", ownerId: "111" } },
-      { ...EMPTY_WEB_URL, selection: { kind: "edge", key: "111-222" } },
-      { ...EMPTY_WEB_URL, tradeId: "tx1" },
-      { ...EMPTY_WEB_URL, tradeId: "tx1", season: "2023" },
-      { ...EMPTY_WEB_URL, mode: "trees", asset: "tx1|p:42" },
-    ];
-    for (const s of states) {
-      expect(parseWebParams(read(webQueryString(s)))).toEqual(s);
+  it("round-trips through decodeURIComponent, which is what the route does", () => {
+    for (const key of ["p:4892", "k:2025-1-11", "k:2027-3-14"]) {
+      expect(decodeURIComponent(lineageHref(key).slice("/lineage/".length))).toBe(key);
+    }
+  });
+});
+
+describe("the deal index filters", () => {
+  it("reads nothing out of an empty query string", () => {
+    expect(parseDealsParams(reader({}))).toEqual(EMPTY_DEALS_URL);
+    expect(dealsQueryString(EMPTY_DEALS_URL)).toBe("");
+  });
+
+  it("lets the more specific filter win rather than throwing the URL out", () => {
+    const s = parseDealsParams(reader({ pair: "u1-u2", manager: "u9" }));
+    expect(s.pair).toBe("u1-u2");
+    expect(s.manager).toBeNull();
+  });
+
+  it("round-trips a pair and a manager through their own helpers", () => {
+    expect(pairDealsHref("u1-u2")).toBe("/deals?pair=u1-u2");
+    expect(managerDealsHref("u9")).toBe("/deals?manager=u9");
+    expect(parseDealsParams(reader({ pair: "u1-u2" })).pair).toBe("u1-u2");
+    expect(parseDealsParams(reader({ manager: "u9" })).manager).toBe("u9");
+  });
+
+  it("keeps the season alongside either filter", () => {
+    expect(
+      dealsQueryString({ manager: "u9", pair: null, season: "2024" }),
+    ).toBe("?manager=u9&season=2024");
+    const s = parseDealsParams(reader({ manager: "u9", season: "2024" }));
+    expect(s).toEqual({ manager: "u9", pair: null, season: "2024" });
+  });
+
+  it("degrades untrusted input to absent instead of throwing", () => {
+    // A URL is hand-editable and old links outlive the shapes they were written
+    // against. Nothing here may throw; the caller checks the ids against the ledger.
+    expect(parseDealsParams(reader({ manager: "   " })).manager).toBeNull();
+    expect(parseDealsParams(reader({ pair: "x".repeat(300) })).pair).toBeNull();
+    expect(parseDealsParams(reader({ season: "" })).season).toBeNull();
+  });
+
+  it("accepts a coalesced id at its real length rather than capping it too tight", () => {
+    // A real coalesced id already runs past 100 characters. A tight cap here would
+    // silently refuse the league's biggest deals.
+    const long = `coalesced-${Array.from({ length: 6 }, (_, i) => `11111111111111111${i}`).join("+")}`;
+    expect(long.length).toBeGreaterThan(100);
+    expect(parseDealsParams(reader({ pair: long })).pair).toBe(long);
+  });
+});
+
+/**
+ * The pairing's two counts are NOT interchangeable, and the difference was live in a
+ * headline: `/deals` sorted on the dossier-derived figure and announced "busiest
+ * pairing: kdewitt4 and 6-Month Plan, 8 deals" when kdewitt4 has done 2 with them and
+ * the other 6 belong to NSLKB, who left the league in 2024. The dossier fold is
+ * ROSTER-keyed, so a seat that has changed hands blends both managers who held it -
+ * exactly the D22 failure, surfacing in a sentence.
+ */
+describe("the pairing's two counts", () => {
+  const h = buildFixtureHistory();
+  const usersById = new Map(h.users.map((u) => [u.userId, u]));
+  const principals = buildPrincipals(
+    h.chain.map((c) => ({
+      season: c.season,
+      owners: new Map(
+        h.rosters.filter((r) => r.ownerId).map((r) => [r.rosterId, r.ownerId as string]),
+      ),
+      users: usersById,
+    })),
+    h.rosters,
+    usersById,
+  );
+  const ledger = buildTradeLedger(h, principals);
+
+  it("reports dealCount as exactly what can be listed", () => {
+    expect(ledger.pairings.length).toBeGreaterThan(0);
+    for (const p of ledger.pairings) {
+      expect(p.dealCount).toBe(p.tradeIds.length);
+      // Never undersold: the dossier figure is a ceiling, never a floor breach.
+      expect(p.dossierCount).toBeGreaterThanOrEqual(p.dealCount);
     }
   });
 
-  it("writes only the params belonging to the mode on screen", () => {
-    // A web-mode link does not carry a trees root, and vice versa: the URL
-    // describes what is being looked at, not everything the page remembers.
-    expect(
-      webQueryString({ ...EMPTY_WEB_URL, asset: "tx1|p:42", season: "2024" }),
-    ).toBe("?season=2024");
-    expect(
-      webQueryString({
-        ...EMPTY_WEB_URL,
-        mode: "trees",
-        asset: "tx1|p:42",
-        season: "2024",
-        tradeId: "tx1",
-      }),
-    ).toBe("?mode=trees&asset=tx1%7Cp%3A42");
-  });
-
-  it("prefers the linked deal over the pair it sits on", () => {
-    expect(
-      webQueryString({
-        ...EMPTY_WEB_URL,
-        tradeId: "tx1",
-        selection: { kind: "edge", key: "111-222" },
-      }),
-    ).toBe("?trade=tx1");
-  });
-});
-
-describe("edgeKeyForTrade", () => {
-  const edges = [
-    { key: "a-b", tradeIds: ["t1", "t2"] },
-    { key: "a-c", tradeIds: ["t2", "t3"] },
-  ];
-
-  it("finds the strand a deal sits on", () => {
-    expect(edgeKeyForTrade(edges, "t1")).toBe("a-b");
-    expect(edgeKeyForTrade(edges, "t3")).toBe("a-c");
-  });
-
-  it("resolves a multi-team deal deterministically", () => {
-    // t2 is genuinely on both strands; the panel renders the whole deal either way.
-    expect(edgeKeyForTrade(edges, "t2")).toBe("a-b");
-  });
-
-  it("returns null for a deal with no strand", () => {
-    expect(edgeKeyForTrade(edges, "nope")).toBeNull();
-    expect(edgeKeyForTrade([], "t1")).toBeNull();
-  });
-});
-
-describe("hrefs", () => {
-  it("builds the one trade URL in the app", () => {
-    expect(tradeWebHref("1234567890")).toBe("/web?trade=1234567890");
-  });
-
-  it("survives an id needing encoding", () => {
-    const href = tradeWebHref("a b&c");
-    expect(href).toBe("/web?trade=a+b%26c");
-    // What matters is that the reader gets the id back intact.
-    expect(parseWebParams(read(href.split("?")[1])).tradeId).toBe("a b&c");
-  });
-
-  it("builds a manager URL", () => {
-    expect(managerWebHref("999")).toBe("/web?manager=999");
-  });
-
-  it("builds a pair URL that parses back to the same strand", () => {
-    const href = pairWebHref("111-222");
-    expect(href).toBe("/web?pair=111-222");
-    expect(parseWebParams(read(href.split("?")[1])).selection).toEqual({
-      kind: "edge",
-      key: "111-222",
-    });
+  it("sorts on the listable count, so the busiest pairing is one you can open", () => {
+    const listed = ledger.pairings.map((p) => p.dealCount);
+    expect([...listed].sort((a, b) => b - a)).toEqual(listed);
+    // The headline figure must be reachable: filtering to that pair yields that many
+    // deals, which is the property the dossier-derived count does not have.
+    const top = ledger.pairings[0];
+    const ids = new Set(top.tradeIds);
+    expect(ledger.trades.filter((t) => ids.has(t.id))).toHaveLength(top.dealCount);
   });
 });

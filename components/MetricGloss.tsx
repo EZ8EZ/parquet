@@ -80,7 +80,7 @@ export function MetricGloss({
       : "What TCI and RFI measure";
   return (
     <details className={cn("group", className)}>
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[11px] font-semibold text-faint transition-colors hover:text-accent">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-meta font-semibold text-faint transition-colors hover:text-accent">
         <HelpCircle size={12} aria-hidden="true" className="shrink-0" />
         {label}
         <ChevronRight
@@ -93,11 +93,11 @@ export function MetricGloss({
         {metrics.map((m) => {
           const g = METRIC_GLOSS[m];
           return (
-            <p key={m} className="text-[12px] leading-snug text-muted">
+            <p key={m} className="text-note leading-snug text-muted">
               <span className="font-semibold text-ink">
                 {g.abbr} · {g.name}
               </span>{" "}
-              <span className="font-mono text-[11px] tnum text-faint">
+              <span className="font-mono text-meta tnum text-faint">
                 ({g.scale})
               </span>
               <br />
@@ -105,10 +105,10 @@ export function MetricGloss({
             </p>
           );
         })}
-        <p className="text-[11px] leading-snug text-faint">{METRIC_GLOSS_NOTE}</p>
+        <p className="text-meta leading-snug text-faint">{METRIC_GLOSS_NOTE}</p>
         <Link
           href="/methodology"
-          className="inline-flex min-h-11 items-center gap-0.5 text-[11px] font-semibold text-accent"
+          className="inline-flex min-h-11 items-center gap-0.5 text-meta font-semibold text-accent"
         >
           The full method
           <ChevronRight size={12} aria-hidden="true" />

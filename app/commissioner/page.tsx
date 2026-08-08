@@ -23,7 +23,7 @@ const TYPE_TONE: Record<string, "accent" | "info" | "neutral"> = {
 };
 
 /** One audit-log row: date, type, the ledger's own neutral copy, and a link to
- *  wherever this transaction actually lives - the trade web for a trade, the
+ *  wherever this transaction actually lives - its own deal page for a trade, the
  *  manager who made the move for everything else. No inline detail beyond that
  *  one line, on purpose - see lib/commissioner.ts for why this isn't a second
  *  ledger. */
@@ -31,13 +31,13 @@ function AuditRow({ e }: { e: AuditEntry }) {
   const href = e.tradeHref ?? (e.rosterId != null ? `/managers/${e.rosterId}` : null);
   const inner = (
     <>
-      <span className="w-11 shrink-0 font-mono text-[11px] tnum text-faint">
+      <span className="w-11 shrink-0 font-mono text-meta tnum text-faint">
         wk {e.week}
       </span>
       <Tag tone={TYPE_TONE[e.type] ?? "neutral"} className="shrink-0">
         {e.type.replace("_", " ")}
       </Tag>
-      <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">
+      <span className="min-w-0 flex-1 truncate text-note text-ink">
         {e.description}
       </span>
       {href && <ChevronRight size={13} className="shrink-0 text-faint" aria-hidden="true" />}
@@ -116,7 +116,7 @@ export default async function CommissionerPage() {
       ) : (
         <>
           {h.rosters.length > 0 && staleRosters.length / h.rosters.length > 0.75 && (
-            <p className="mb-2 text-[12px] leading-snug text-muted">
+            <p className="mb-2 text-note leading-snug text-muted">
               Most of the league is quiet right now. That is the offseason lull,
               not a pile of separate problems.
             </p>
@@ -130,10 +130,10 @@ export default async function CommissionerPage() {
               >
                 <ShieldAlert size={15} className="shrink-0 text-warn" aria-hidden="true" />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+                  <span className="block truncate text-body font-semibold leading-tight text-ink">
                     {r.name}
                   </span>
-                  <span className="block truncate text-[11px] leading-tight text-muted">
+                  <span className="block truncate text-meta leading-tight text-muted">
                     {r.reasons.map((x) => x.detail).join(" · ")}
                   </span>
                 </span>
@@ -167,7 +167,7 @@ export default async function CommissionerPage() {
 
       {pendingPicks.length > 0 && (
         <details className="mt-2 rounded-[--radius] border border-border bg-surface/60">
-          <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-2.5 py-1.5 text-[12px] font-semibold text-muted">
+          <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-2.5 py-1.5 text-note font-semibold text-muted">
             <Hourglass size={14} className="shrink-0 text-faint" aria-hidden="true" />
             {pendingPicks.length} more traded pick{pendingPicks.length === 1 ? "" : "s"}{" "}
             waiting on a future or in-progress draft - normal, not a health issue
@@ -183,12 +183,12 @@ export default async function CommissionerPage() {
       <SectionHeader
         title="Transaction audit log"
         action={
-          <span className="font-mono text-[11px] tnum text-faint">
+          <span className="font-mono text-meta tnum text-faint">
             {fmtValue(auditLog.length)} of {fmtValue(h.transactions.length)}
           </span>
         }
       />
-      <p className="-mt-1 mb-1.5 text-[11px] leading-snug text-muted">
+      <p className="-mt-1 mb-1.5 text-meta leading-snug text-muted">
         Trades and {waiverLabel}, across every team - the same bar the ledger
         uses for what counts as notable. Everything else is real activity too, just not
         the kind a commissioner needs a checklist for.
@@ -205,10 +205,10 @@ export default async function CommissionerPage() {
               className="overflow-hidden rounded-[--radius] border border-border bg-surface/60"
             >
               <div className="flex items-center justify-between border-b border-border px-2.5 py-1">
-                <span className="font-mono text-[12px] font-semibold tnum text-ink">
+                <span className="font-mono text-note font-semibold tnum text-ink">
                   {season}
                 </span>
-                <span className="font-mono text-[11px] tnum text-faint">
+                <span className="font-mono text-meta tnum text-faint">
                   {bySeason.get(season)!.length}
                 </span>
               </div>

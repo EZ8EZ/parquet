@@ -22,13 +22,14 @@
  * better half.
  */
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Search } from "lucide-react";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { Sparkline } from "./charts";
 import { cn, fmtValue, fold } from "@/lib/ui";
+import { playerLineageHref } from "@/lib/tradegraph/url";
 import {
   VALUE_FILTERS,
   parseValuesParams,
@@ -80,6 +81,7 @@ export function ValueAssetRow({
   trajectory,
   trajectoryColor,
   focused,
+  provenance,
 }: {
   rank?: number;
   name: string;
@@ -115,6 +117,15 @@ export function ValueAssetRow({
    * nothing more (it never re-fires just because the row re-renders).
    */
   focused?: boolean;
+  /**
+   * A pre-rendered provenance rail (components/ProvenanceRail.tsx), shown inside the
+   * expansion. This row is a CLIENT component and the rail is a server one, so it
+   * arrives as a node rather than being built here - which is also the reason /values
+   * passes nothing: that list is assembled client-side from `ValueRow` data, so there
+   * is no server render to hang a rail off. Those rows get the link below instead,
+   * which every row gets regardless.
+   */
+  provenance?: ReactNode;
 }) {
   const [open, setOpen] = useState(!!focused);
   const [justArrived, setJustArrived] = useState(!!focused);
@@ -232,6 +243,25 @@ export function ValueAssetRow({
               How this is built
             </Link>
           </p>
+
+          {/* WHERE HE CAME FROM. Every asset has an answer, including "never traded",
+              which is why this link is unconditional and there is no empty state to
+              guard against - see lib/provenance's header. */}
+          {playerId && (
+            <>
+              {provenance ? (
+                <div className="mt-2 border-t border-border pt-2">{provenance}</div>
+              ) : (
+                <Link
+                  href={playerLineageHref(playerId)}
+                  className="mt-2 flex min-h-11 items-center justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 text-[11px] font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+                >
+                  Where he came from
+                  <ChevronRight size={13} aria-hidden="true" />
+                </Link>
+              )}
+            </>
+          )}
         </div>
       )}
     </li>
@@ -292,7 +322,7 @@ export function ValuesList({ rows }: { rows: ValueRow[] }) {
   // `router.replace`: /values is force-dynamic and its server render reloads the
   // league and revalues every player, so routing on every keystroke or filter tap
   // would pay that whole render again per tap - the exact reasoning D30 recorded
-  // for /web's `useWebUrl`, and it applies unchanged to this page's cost profile.
+  // for the deleted /web's own URL sync, and it applies unchanged to this page.
   useEffect(() => {
     const state = { pos, q, sort, limit, focus: focusId };
     window.history.replaceState(

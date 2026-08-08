@@ -22,7 +22,6 @@ describe("trade evaluator", () => {
     expect(e.keyAssumption.length).toBeGreaterThan(0);
     expect(e.historyCheck.length).toBeGreaterThan(0);
     expect(e).not.toHaveProperty("grade");
-    expect(e.copyable).toContain("SEND");
   });
 
   it("classifies acquiring an aging star for a pick as buying (win-now)", () => {

@@ -5,8 +5,10 @@
  */
 import {
   Award,
+  Beaker,
   BookText,
   CalendarCheck,
+  Compass,
   FlaskConical,
   GitBranch,
   GitCompare,
@@ -40,7 +42,7 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "/awards": Award,
   "/commissioner": ShieldCheck,
   "/trade/finder": Handshake,
-  "/web": Share2,
+  "/deals": Share2,
   "/drafts": GitBranch,
   "/drafts/grades": GraduationCap,
   "/values": BookText,
@@ -49,6 +51,10 @@ export const NAV_ICONS: Record<string, LucideIcon> = {
   "/about": Info,
   "/methodology": FlaskConical,
   "/settings": Settings,
+  "/more": Compass,
+  // Not FlaskConical: /methodology already wears that, and two surfaces sharing a
+  // mark in the same list is how a reader learns to stop trusting the marks.
+  "/lab": Beaker,
 };
 
 /** Falls back to a generic mark rather than throwing - a registry entry added

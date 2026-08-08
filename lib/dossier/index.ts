@@ -171,7 +171,7 @@ export function buildDossier(
         }
       : undefined;
 
-  const p = deriveManagerProfile(h, rosterId, scope);
+  const p = deriveManagerProfile(h, rosterId, scope, principals);
   const seasonCount =
     scope?.seasons && scope.seasons.size > 0 ? scope.seasons.size : h.chain.length || 1;
   return assembleDossier(p, seasonCount, { kind: "current", rosterId });
@@ -200,7 +200,7 @@ export function buildFormerDossier(
     teamName: principal.teamName,
     seasons,
   };
-  const p = deriveManagerProfile(h, rosterId, scope);
+  const p = deriveManagerProfile(h, rosterId, scope, principals);
   const seasonCount = seasons.size > 0 ? seasons.size : h.chain.length || 1;
   return assembleDossier(p, seasonCount, {
     kind: "former",

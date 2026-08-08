@@ -12,7 +12,6 @@
  * hydration. That is also why the panel prints WHEN it was counted - a figure that
  * moves on its own is only meaningful next to the moment it was true.
  */
-import Link from "next/link";
 import { Circle, Hourglass, TrendingUp } from "lucide-react";
 import { LocalDate } from "@/components/LocalDate";
 import type { LiveStreak, StreakState } from "@/lib/streaks";
@@ -27,7 +26,7 @@ const STATE_COPY: Record<StreakState, { label: string; tone: string }> = {
 function StateDot({ state }: { state: StreakState }) {
   const { label, tone } = STATE_COPY[state];
   return (
-    <span className={cn("inline-flex items-center gap-1 text-[10px] font-semibold uppercase tracking-wide", tone)}>
+    <span className={cn("inline-flex items-center gap-1 text-micro font-semibold uppercase tracking-wide", tone)}>
       <Circle
         size={6}
         aria-hidden="true"
@@ -66,18 +65,30 @@ function Meter({ progress }: { progress: number }) {
   );
 }
 
+/**
+ * A row that is BOTH idle and zero is anti-information: "Trades in the last 90 days -
+ * idle - 0 trades" in August tells the reader nothing except that it is August, and it
+ * costs a full row of a panel that already runs long. An idle row with a real number
+ * still says something ("longest hold: 3y 2mo, idle"), so only the zeroes go.
+ */
+function worthShowing(s: LiveStreak): boolean {
+  return !(s.state === "idle" && s.value === 0);
+}
+
 export function StreakPanel({
-  streaks,
+  streaks: allStreaks,
   countedAt,
 }: {
   streaks: LiveStreak[];
   /** The instant every figure was measured to. */
   countedAt: number;
 }) {
+  const streaks = allStreaks.filter(worthShowing);
+
   if (streaks.length === 0) {
     return (
       <div className="rounded-[--radius] border border-border bg-surface/60 p-3">
-        <p className="text-[12.5px] leading-relaxed text-muted">
+        <p className="text-note leading-relaxed text-muted">
           Nothing is running yet. Streaks appear once this roster has some history to
           measure - a hold that has lasted, or a trade to count from.
         </p>
@@ -87,22 +98,15 @@ export function StreakPanel({
 
   return (
     <div>
-      <p className="mb-2 flex items-start gap-1.5 text-[11px] leading-snug text-faint">
-        <Hourglass size={12} aria-hidden="true" className="mt-px shrink-0" />
+      {/* The stamp stays; the paragraph that used to follow it explaining how a streak
+          differs from a Superlative does not. That contrast is a product-design
+          footnote, true on every visit and new on exactly one of them, so it lives on
+          /about now and the section header above this panel still links to /awards. */}
+      <p className="mb-2 flex items-center gap-1.5 text-meta leading-snug text-faint">
+        <Hourglass size={12} aria-hidden="true" className="shrink-0" />
         <span>
           Counted to{" "}
-          <LocalDate ts={countedAt} className="font-mono tnum text-muted" />. These move on their own - four of them change with nothing but the passing
-          of a day. The{" "}
-          {/* py-4/-my-4: grows the tap target to 44px without pushing the
-              surrounding sentence apart - the negative margin cancels the padding's
-              contribution to line flow, so only the hit area gets bigger. */}
-          <Link
-            href="/awards"
-            className="inline-block py-4 -my-4 font-semibold text-accent"
-          >
-            Superlatives
-          </Link>{" "}
-          are the opposite: settled, ranked, and season-final.
+          <LocalDate ts={countedAt} className="font-mono tnum text-muted" />
         </span>
       </p>
 
@@ -111,30 +115,30 @@ export function StreakPanel({
           {streaks.map((s) => (
             <li key={s.id} className="px-3 py-2.5">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-wide text-muted">
+                <span className="min-w-0 truncate text-meta font-semibold uppercase tracking-wide text-muted">
                   {s.label}
                 </span>
                 <StateDot state={s.state} />
               </div>
 
               <div className="mt-0.5 flex items-baseline gap-1.5">
-                <span className="font-mono text-[22px] font-semibold leading-none tnum text-ink">
+                <span className="font-mono text-lede font-semibold leading-none tnum text-ink">
                   {s.display}
                 </span>
-                <span className="text-[11px] text-faint">{unitNoun(s)}</span>
+                <span className="text-meta text-faint">{unitNoun(s)}</span>
                 {s.atLeast && (
-                  <span className="text-[10px] text-warn" title="Older than the record">
+                  <span className="text-micro text-warn" title="Older than the record">
                     at least
                   </span>
                 )}
               </div>
 
-              <p className="mt-0.5 text-[12px] leading-snug text-muted">{s.detail}</p>
+              <p className="mt-0.5 text-note leading-snug text-muted">{s.detail}</p>
 
               {s.next && (
                 <>
                   <Meter progress={s.next.progress} />
-                  <p className="mt-1 flex items-center gap-1 font-mono text-[10.5px] tnum text-faint">
+                  <p className="mt-1 flex items-center gap-1 font-mono text-micro tnum text-faint">
                     <TrendingUp size={11} aria-hidden="true" className="shrink-0" />
                     {s.next.remaining}
                   </p>

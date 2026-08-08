@@ -376,7 +376,7 @@ export function tenureSeasons(p: Principal, rosterId?: number): Set<string> {
 /**
  * "2022-2024" for a departed principal, undefined for a current one (nothing to
  * date-range). Shared rather than reimplemented per caller - awards, dossiers and the
- * trade web all need to print the same span for the same principal.
+ * deal record all need to print the same span for the same principal.
  */
 export function tenureLabel(p: Principal): string | undefined {
   if (!p.isFormer || p.seasons.length === 0) return undefined;

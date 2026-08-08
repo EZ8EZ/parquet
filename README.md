@@ -32,7 +32,7 @@ four things **no competitor builds** (see [RESEARCH.md](RESEARCH.md)):
 5. **Game Plan** (`/plan`) - the prescriptive counterpart to all that diagnosis. It
    reads your window (contend / ascend / rebuild / retool), names your actual
    structural problem, and proposes specific moves with specific managers, chosen by
-   their dossier behavior, each with its honest cost. Ends in copyable text.
+   their dossier behavior, each with its honest cost.
 
 **Draft picks are treated as first-class assets throughout** - valued, counted in
 roster value, tradeable in the evaluator, and traced to the players they became
@@ -132,12 +132,13 @@ All documented in [`.env.example`](.env.example):
 | `LLM_BASE_URL` | - | OpenAI-compatible endpoint (Groq/OpenRouter/Ollama); enables conversational analyst |
 | `LLM_API_KEY` | - | key for that endpoint (none needed for local Ollama) |
 | `LLM_MODEL` | `llama-3.3-70b-versatile` | analyst model |
-| `NEXT_PUBLIC_USE_PLAYER_PHOTOS` | `true` | real NBA headshots (licensing caveat, see DECISIONS D8) |
+| `NEXT_PUBLIC_USE_PLAYER_PHOTOS` | `false` | real NBA headshots, hotlinked from Sleeper's CDN (licensing caveat, see DECISIONS D8/D39) |
 | `CSV_DIR` | - | directory of CSVs when `LEAGUE_PROVIDER=csv` |
 | `AUTH_SECRET` | unset | unset = single-user mode, the default. Set it to require a signed seat for private authorship (D35) |
 | `LANGSMITH_API_KEY` | unset | traces analyst LLM calls to LangSmith. **Sends the full prompt, which contains the viewer's own captured reasoning** - opt-in for that reason |
 | `LANGSMITH_PROJECT` | `default` | LangSmith project the traced runs land in |
 | `PARQUET_DEBUG_TIMINGS` | unset | `1` logs cold-load duration for the two heaviest loaders |
+| `PARQUET_ORIGIN` | `http://localhost:3000` | `pnpm claim-links` only - fallback when the origin isn't passed as a CLI arg |
 
 ## Scripts
 
@@ -163,7 +164,8 @@ app/                      Next.js App Router (all data pages force-dynamic)
   managers/[rosterId]/    manager dossiers
   drafts/[season]/        pick lineage + draft boards
   awards/                 league superlatives
-  web/                    trade web (beta)
+  deals/                  every deal, and one receipt page per trade
+  lineage/                one asset's provenance rail
   ledger/ analyst/ values/ methodology/
   api/{annotations,analyst,trade,viewing-as,resolve-user}/route.ts
 
@@ -209,23 +211,31 @@ read, so a fresh clone works with no manual ingest against fixtures.
 ~20-40 transactions/season × a few seasons of annotated history fits comfortably in
 one context window (see DECISIONS D7).
 
-**No write access.** Sleeper is read-only; Parquet advises but can't act. A trade
-ends at a one-tap link to your league's trade centre; a pitch (on /plan and the
-manager dossier) ends at text you copy and send yourself.
+**No write access.** Sleeper is read-only; Parquet advises but can't act. A trade,
+and a pitch from /plan or a manager dossier, both end at a one-tap link to your
+league's trade centre - you carry the thesis over yourself from there.
 
 ## Stack
 Next.js 16 (App Router, TS strict) · Tailwind v4 · Prisma 6 (Postgres, optional) ·
 Zod 4 · Vitest · any OpenAI-compatible LLM endpoint (D17) · deployable to Vercel · installable PWA.
 
 ## Deploy (Vercel)
-**Zero configuration required.** No database, no environment variables. Just connect
-the repo and deploy: the real league and player photos are the committed defaults, so
-production serves live data out of the box. The first request after a cold start
-assembles 5 seasons from Sleeper (~1.5s), then it is cached. `pnpm build` runs
-`prisma generate` first.
+**Zero configuration required for live league data.** No database, no environment
+variables needed. Just connect the repo and deploy: the real league is the committed
+default, so production serves live data out of the box. The first request after a
+cold start assembles 5 seasons from Sleeper (~1.5s), then it is cached. `pnpm build`
+runs `prisma generate` first.
 
-Set env vars only to override: `LEAGUE_PROVIDER=fixture` for the offline demo, or
-`SLEEPER_LEAGUE_ID` / `SLEEPER_USERNAME` to point at a different league.
+**Player photos default OFF**, unlike everything else here (D39): Sleeper's headshots
+aren't licensed for redistribution, so a public repo has to default a fork's or a
+forgetful deploy's monograms to the licensing-safe answer rather than the convenient
+one. Set `NEXT_PUBLIC_USE_PLAYER_PHOTOS=true` explicitly in Vercel to opt in for your
+own deploy - including Eric's own production deploy, which needs this set explicitly
+now that the default has flipped.
+
+Set env vars only to override: `LEAGUE_PROVIDER=fixture` for the offline demo,
+`SLEEPER_LEAGUE_ID` / `SLEEPER_USERNAME` to point at a different league, or
+`NEXT_PUBLIC_USE_PLAYER_PHOTOS=true` for real headshots.
 
 **Persisting ledger annotations** is the one feature that needs a database. To enable
 it: add a Vercel Postgres / Neon store, set `DATABASE_URL` to it, and run
@@ -254,7 +264,7 @@ Build, typecheck, lint, and **260 tests across 15 files** are green. See PROGRES
 the honest what-works / what's-stubbed / next-steps rundown.
 
 Known gap worth naming here: **principals are threaded through the awards surface only.**
-Dossiers, trade partners, the trade web and the strategy engine are still roster-keyed, so
+Dossiers, trade partners, the deal record and the strategy engine are still roster-keyed, so
 on the one roster that changed hands they still read two managers as one. QUESTIONS #12.
 
 ## License

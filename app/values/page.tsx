@@ -82,21 +82,21 @@ export default async function ValuesPage({
   return (
     <div>
       <header className="mb-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
           Dynasty values
         </p>
         <div className="flex items-center justify-between gap-3">
-          <h1 className="font-display text-[26px] font-semibold leading-tight text-ink">
+          <h1 className="font-display text-display font-semibold leading-tight text-ink">
             Asset values
           </h1>
           <Link
             href="/methodology"
-            className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border px-3 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+            className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
           >
             Methodology
           </Link>
         </div>
-        <p className="mt-0.5 text-xs leading-snug text-muted">
+        <p className="mt-0.5 text-note leading-snug text-muted">
           A transparent, tunable model - not a scraped market. Computed from this
           league&apos;s own scoring settings. Tiers break where the value
           distribution actually cliffs.
@@ -118,7 +118,7 @@ export default async function ValuesPage({
       <nav aria-label="Values sections" className="mt-2 flex gap-1.5">
         <Link
           href="/rank"
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
         >
           Build your own ranking
           <ChevronRight size={13} aria-hidden="true" />
@@ -131,8 +131,8 @@ export default async function ValuesPage({
         (lib/values/url.ts), so returning from a dossier or a search result lands
         back where you were instead of row 1. This page is force-dynamic, so the
         boundary never actually suspends in practice; it is here so that dependency
-        can never turn into a render-mode surprise later (same reasoning as /web -
-        see app/web/page.tsx).
+        can never turn into a render-mode surprise later (same reasoning the deleted
+        /web carried - see D30/D37).
       */}
       <Suspense fallback={null}>
         <ValuesList rows={rows} />
@@ -152,11 +152,11 @@ function Figure({
 }) {
   return (
     <div className="min-w-0 px-2.5 py-1.5">
-      <dt className="text-[11px] uppercase tracking-wide text-faint">{label}</dt>
-      <dd className="truncate font-mono text-base font-semibold tnum text-ink">
+      <dt className="text-meta uppercase tracking-wide text-faint">{label}</dt>
+      <dd className="truncate font-mono text-lede leading-snug font-semibold tnum text-ink">
         {value}
       </dd>
-      {sub && <dd className="truncate text-[11px] text-muted">{sub}</dd>}
+      {sub && <dd className="truncate text-meta text-muted">{sub}</dd>}
     </div>
   );
 }

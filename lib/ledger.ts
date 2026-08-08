@@ -5,6 +5,7 @@
  */
 import { myAnnotation, type Annotation, type LeagueHistory } from "./history";
 import { describeTradeForRoster, describeTransaction } from "./derive/describe";
+import { tenureSeasons, type PrincipalIndex } from "./principals";
 import type { Transaction } from "./providers/types";
 
 export interface LedgerEntry {
@@ -93,16 +94,37 @@ export function notableWaiverLabel(h: LeagueHistory): string {
   return isFaabLeague(h) ? "big-FAAB waiver claims" : "contested waiver claims";
 }
 
-/** All of the user's decisions, newest first. */
-export function getLedgerEntries(h: LeagueHistory): LedgerEntry[] {
+/**
+ * All of the user's decisions, newest first.
+ *
+ * `principals` CONFINES THIS TO THE VIEWER'S OWN TENURE, which is the difference
+ * between a to-do list and an accusation. Every row here is captioned "You acquired
+ * ..." and the badge above it says "log why you made them - while you still
+ * remember"; keyed on the seat alone, the manager who took over roster 11 in 2025 was
+ * shown 25 decisions of which 19 were their predecessor's, each addressed to them in
+ * the second person. D22 is explicit that `ownerAt(season, rosterId)` is the only
+ * sanctioned way to turn a historical fact into a person, and lib/recap.ts already
+ * gates on exactly that. Optional, so a caller without an index degrades to the old
+ * seat-scoped behaviour and a league with no handovers is unchanged.
+ */
+export function getLedgerEntries(
+  h: LeagueHistory,
+  principals?: PrincipalIndex,
+): LedgerEntry[] {
   const rosterId = h.me.rosterId;
   if (rosterId == null) return [];
   const notable = buildIsNotable(h);
+  const viewer = h.me.userId ? principals?.byOwnerId.get(h.me.userId) : undefined;
+  const seasons =
+    viewer && principals?.hasSuccessions
+      ? tenureSeasons(viewer, rosterId)
+      : null;
   const mine = h.transactions.filter(
     (t) =>
-      t.rosterIds.includes(rosterId) ||
-      Object.values(t.adds).includes(rosterId) ||
-      Object.values(t.drops).includes(rosterId),
+      (seasons == null || seasons.has(t.season)) &&
+      (t.rosterIds.includes(rosterId) ||
+        Object.values(t.adds).includes(rosterId) ||
+        Object.values(t.drops).includes(rosterId)),
   );
   return mine
     .map((t) => ({
@@ -130,8 +152,11 @@ export interface LedgerSummary {
   unannotatedNotable: number;
 }
 
-export function getLedgerSummary(h: LeagueHistory): LedgerSummary {
-  const entries = getLedgerEntries(h);
+export function getLedgerSummary(
+  h: LeagueHistory,
+  principals?: PrincipalIndex,
+): LedgerSummary {
+  const entries = getLedgerEntries(h, principals);
   const notable = entries.filter((e) => e.notable);
   return {
     total: entries.length,

@@ -4,7 +4,7 @@
  * Everything else in Parquet is diagnostic (here's what you did, here's who they are).
  * This is the prescriptive surface: it reads your window, finds your structural
  * problems, and proposes specific trades with specific managers — matched to their
- * dossier behavior — that you can copy into Sleeper.
+ * dossier behavior.
  *
  * It stays honest: it names the cost of each move and refuses to invent a plan when
  * the roster doesn't support one (no filler advice).
@@ -50,7 +50,6 @@ export interface Move {
   get: string[];
   /** The honest cost/risk. */
   cost: string;
-  copyable: string;
 }
 
 export interface GamePlan {
@@ -185,18 +184,6 @@ function choosePartner(
   return { d: best, why };
 }
 
-function copyBlock(give: string[], get: string[], note: string): string {
-  return [
-    "Trade idea (via Parquet):",
-    `I send: ${give.length ? give.join(", ") : "-"}`,
-    `I get:  ${get.length ? get.join(", ") : "-"}`,
-    note ? `Note: ${note}` : "",
-    "- Sleeper has no trade API; paste this into the app to send.",
-  ]
-    .filter(Boolean)
-    .join("\n");
-}
-
 export function buildGamePlan(
   h: LeagueHistory,
   rosterId: number,
@@ -207,7 +194,7 @@ export function buildGamePlan(
   const dossiers = h.rosters
     .filter((r) => r.rosterId !== rosterId)
     .map((r) => buildDossier(h, r.rosterId, principals));
-  const report = getStrategyReport(h);
+  const report = getStrategyReport(h, principals);
   const moves: Move[] = [];
   const caveats: string[] = [];
 
@@ -233,7 +220,6 @@ export function buildGamePlan(
         give,
         get: ["one Cornerstone-or-better player"],
         cost: "You get thinner. If your starter gets hurt, the drop-off is real.",
-        copyable: copyBlock(give, ["your best available player"], "Looking to consolidate - quality over quantity."),
       });
     }
     // 2) Convert future picks into now.
@@ -251,7 +237,6 @@ export function buildGamePlan(
         give,
         get: ["a proven producer at a position of need"],
         cost: "If this season doesn't break your way, you've paid for a window that didn't open.",
-        copyable: copyBlock(give, ["a proven starter"], "Buying now - happy to move future picks."),
       });
     }
   }
@@ -274,7 +259,6 @@ export function buildGamePlan(
         give,
         get: ["one Cornerstone-or-better player"],
         cost: "Less depth to absorb injuries, and you may be paying a small premium for the consolidation.",
-        copyable: copyBlock(give, ["your best available player"], "Consolidating depth, keeping my picks."),
       });
     }
     if (a.picks.extraFirsts > 0) {
@@ -289,7 +273,6 @@ export function buildGamePlan(
         give: ["nothing"],
         get: ["optionality"],
         cost: "Patience is genuinely costly if a title window opens sooner than expected.",
-        copyable: copyBlock(["nothing"], ["holding picks"], "Not moving future firsts right now."),
       });
     }
   }
@@ -310,7 +293,6 @@ export function buildGamePlan(
         give,
         get: ["future firsts", "a young piece"],
         cost: "You get worse this season, and it'll feel bad in-week.",
-        copyable: copyBlock(give, ["future 1sts / young players"], "Rebuilding - targeting picks and youth."),
       });
     }
     const partner2 = choosePartner(dossiers, "cash-picks");
@@ -325,7 +307,6 @@ export function buildGamePlan(
       give: ["a productive veteran", "spare depth"],
       get: ["a young ascending player"],
       cost: "Youth is probabilistic - some of these won't hit.",
-      copyable: copyBlock(["a productive veteran"], ["a young ascending player"], "Happy to help you win now - I'll take the youth."),
     });
   }
 
@@ -348,7 +329,6 @@ export function buildGamePlan(
         give,
         get: ["future firsts"],
         cost: "You may fall out of the playoff race entirely this season.",
-        copyable: copyBlock(give, ["future 1sts"], "Open to moving win-now pieces for future capital."),
       });
     }
   }
@@ -368,7 +348,6 @@ export function buildGamePlan(
       give: surplus ? [`surplus ${surplus} depth`] : ["depth"],
       get: [`a starting-caliber ${hole}`],
       cost: "Thinning a strength can backfire if injuries hit there.",
-      copyable: copyBlock(surplus ? [`surplus ${surplus}`] : ["depth"], [`starting ${hole}`], `Looking for ${hole} help.`),
     });
   }
   if (fringe.length >= 3) {
@@ -383,7 +362,6 @@ export function buildGamePlan(
       give: fringe.slice(0, 3).map((f) => f.name),
       get: ["waiver upside / roster flexibility"],
       cost: "Low risk - but don't drop someone whose role is about to change.",
-      copyable: copyBlock(fringe.slice(0, 3).map((f) => f.name), ["waiver adds"], "Clearing roster space."),
     });
   }
 

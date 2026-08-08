@@ -184,7 +184,30 @@ export function strengthRanks(h: LeagueHistory): Map<number, number> {
   return m;
 }
 
-export function pickCapital(h: LeagueHistory, rosterId: number): PickCapital {
+export interface PickCapitalOptions {
+  /**
+   * Which ownership question this call is answering.
+   *
+   * `"held"` (the default, and every production caller outside the Lab) is the real
+   * one: who owns the pick NOW, trades applied. `"original"` ignores every trade and
+   * returns the picks this roster was BORN with - the counterfactual lens
+   * `lib/lab/counterfactual` needs, and the only reason this option exists.
+   *
+   * It is an option rather than a second function because the valuation recipe below
+   * (slot distribution from `strengthRanks`, lottery size from `playoff_teams`, class
+   * strength, present-value discount) is the part that must never differ between the
+   * two answers. A copy in lib/lab could drift from this one silently; a swapped
+   * predicate cannot.
+   */
+  ownership?: "held" | "original";
+}
+
+export function pickCapital(
+  h: LeagueHistory,
+  rosterId: number,
+  opts: PickCapitalOptions = {},
+): PickCapital {
+  const ownership = opts.ownership ?? "held";
   const cur = h.currentSeasonYear;
   const rounds = h.currentLeague.settings.draft_rounds || 3;
   const teams = h.currentLeague.totalRosters || h.rosters.length;
@@ -195,7 +218,9 @@ export function pickCapital(h: LeagueHistory, rosterId: number): PickCapital {
   for (const season of seasons) {
     for (let round = 1; round <= rounds; round++) {
       for (let original = 1; original <= teams; original++) {
-        if (ownerOf(h, season, round, original) !== rosterId) continue;
+        const owner =
+          ownership === "original" ? original : ownerOf(h, season, round, original);
+        if (owner !== rosterId) continue;
         const acquired = original !== rosterId;
         const fromName = acquired ? rosterName(h, original) : null;
         const seasonsOut = parseInt(season, 10) - cur;

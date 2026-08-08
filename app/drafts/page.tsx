@@ -41,21 +41,21 @@ export default async function DraftsPage() {
     <div>
       <header className="mb-2">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
             Pick lineage
           </p>
           <Link
             href="/values"
-            className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+            className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
           >
             pick values
             <ChevronRight size={12} aria-hidden="true" />
           </Link>
         </div>
-        <h1 className="font-display text-[26px] font-semibold leading-[1.1] text-ink">
+        <h1 className="font-display text-display font-semibold leading-[1.1] text-ink">
           What that pick became
         </h1>
-        <p className="mt-0.5 text-[12px] leading-snug text-muted">
+        <p className="mt-0.5 text-note leading-snug text-muted">
           Every traded pick, traced to the player it turned into. Tap one to land on
           it in its own draft.
         </p>
@@ -93,16 +93,16 @@ export default async function DraftsPage() {
               <div key={s.l} className="flex-1 px-1.5 py-1.5 text-center">
                 <div
                   className={cn(
-                    "font-mono text-[17px] font-semibold leading-tight tnum",
+                    "font-mono text-lede font-semibold leading-tight tnum",
                     s.tone,
                   )}
                 >
                   {s.v}
                 </div>
-                <div className="text-[11px] uppercase tracking-wide text-faint">
+                <div className="text-meta uppercase tracking-wide text-faint">
                   {s.l}
                 </div>
-                <div className="text-[11px] leading-tight text-muted">{s.s}</div>
+                <div className="text-meta leading-tight text-muted">{s.s}</div>
               </div>
             ))}
           </div>
@@ -114,7 +114,7 @@ export default async function DraftsPage() {
           <nav aria-label="Drafts sections" className="mt-2 flex gap-1.5">
             <Link
               href="/drafts/grades"
-              className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+              className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
             >
               <GraduationCap size={13} aria-hidden="true" />
               Draft report cards
@@ -127,7 +127,7 @@ export default async function DraftsPage() {
           <SectionHeader
             title="Draft boards"
             action={
-              <span className="font-mono text-[11px] tnum text-faint">
+              <span className="font-mono text-meta tnum text-faint">
                 {seasons.length} on record
               </span>
             }
@@ -150,7 +150,7 @@ export default async function DraftsPage() {
             title="Picks you traded away"
             action={
               gaveResolved.length > 0 ? (
-                <span className="font-mono text-[11px] tnum text-negative">
+                <span className="font-mono text-meta tnum text-negative">
                   {gaveResolved.length}
                 </span>
               ) : undefined
@@ -178,7 +178,7 @@ export default async function DraftsPage() {
               <SectionHeader
                 title="Picks you acquired"
                 action={
-                  <span className="font-mono text-[11px] tnum text-positive">
+                  <span className="font-mono text-meta tnum text-positive">
                     {gotResolved.length}
                   </span>
                 }
@@ -223,7 +223,7 @@ export default async function DraftsPage() {
               <SectionHeader
                 title="Around the league"
                 action={
-                  <span className="font-mono text-[11px] tnum text-faint">
+                  <span className="font-mono text-meta tnum text-faint">
                     {Math.min(12, leagueResolved.length)} of {leagueResolved.length}
                   </span>
                 }
@@ -237,16 +237,16 @@ export default async function DraftsPage() {
                         aria-label={`${l.season} round ${l.round}: ${l.playerName}, taken by ${l.usedByName}`}
                         className="flex min-h-11 items-center gap-2 px-2.5 py-1 transition-colors hover:bg-surface-2"
                       >
-                        <span className="w-14 shrink-0 font-mono text-[11px] tnum text-muted">
+                        <span className="w-14 shrink-0 font-mono text-meta tnum text-muted">
                           {l.season} R{l.round}
                         </span>
-                        <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">
+                        <span className="min-w-0 flex-1 truncate text-note text-ink">
                           {l.playerName}
                         </span>
-                        <span className="max-w-[34%] shrink-0 truncate text-[11px] text-faint">
+                        <span className="min-w-0 max-w-[34%] shrink truncate text-meta text-faint">
                           {l.usedByName}
                         </span>
-                        <span className="shrink-0 font-mono text-[11px] tnum text-accent">
+                        <span className="shrink-0 font-mono text-meta tnum text-accent">
                           #{l.pickNo}
                         </span>
                       </Link>

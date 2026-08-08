@@ -30,13 +30,13 @@ import { useMemo, useState } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Tag } from "@/components/ui";
+import { MetricGloss } from "@/components/MetricGloss";
 import {
   QUADRANTS,
   TCI_BANDS,
   axisDomain,
   axisTicks,
   placeLabels,
-  type QuadrantKey,
   type QuadrantView,
 } from "@/lib/metrics/quadrant";
 
@@ -48,14 +48,6 @@ const NEG = "var(--color-negative)";
 const SURFACE = "var(--color-surface)";
 
 const STEP_INK = ["var(--tci-1)", "var(--tci-2)", "var(--tci-3)", "var(--tci-4)"];
-
-/** Reading order: the corner with no good reading leads, the comfortable one closes. */
-const GROUP_ORDER: QuadrantKey[] = [
-  "splitTopHeavy",
-  "splitSpread",
-  "agreedTopHeavy",
-  "agreedSpread",
-];
 
 const W = 320;
 const H = 236;
@@ -340,7 +332,7 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
 
         {/* Scale legend. A multi-hue ramp always ships one. */}
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-mono text-[10px] uppercase tracking-wide text-faint">
+          <span className="font-mono text-micro uppercase tracking-wide text-faint">
             TCI
           </span>
           {TCI_BANDS.map((b) => (
@@ -350,18 +342,21 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
                 className="inline-block h-2.5 w-2.5 rounded-full"
                 style={{ background: STEP_INK[b.step - 1] }}
               />
-              <span className="font-mono text-[10px] tnum text-faint">{b.range}</span>
+              <span className="font-mono text-micro tnum text-faint">{b.range}</span>
             </span>
           ))}
         </div>
 
-        <p className="mt-1.5 text-[11px] leading-snug text-faint">
+        {/* Only the half of this caption that describes THIS CHART is permanent. The
+            other half - what fragility refuses to mean - was the same paragraph the app
+            already prints in MetricGloss, on /about and on /methodology, so it now
+            arrives the way every other index caveat in this app does: collapsed, one
+            faint line, opened once by whoever needs it. */}
+        <p className="mt-1.5 text-meta leading-snug text-faint">
           Dashed lines are this league&rsquo;s medians, not pass marks - half the board
-          sits under each by construction. Colour reads coherence only. Fragility is
-          deliberately uncoloured, because a low score there is not a good score: a
-          torn-down roster has little to lose because there is little left on it, not
-          because it is insulated.
+          sits under each by construction. Colour reads coherence only.
         </p>
+        <MetricGloss metrics={["tci", "rfi"]} className="mt-0.5" />
       </div>
 
       {/* The selected roster. Defaults to yours, so the board opens on the reading
@@ -372,30 +367,30 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
             selected.isMe ? "border-accent/40 bg-accent/[0.06]" : "border-border bg-surface/60"
           }`}
         >
-          <p className="truncate text-[14px] font-semibold leading-tight text-ink">
-            <span className="mr-1.5 font-mono text-[11px] tnum text-faint">
+          <p className="truncate text-body font-semibold leading-tight text-ink">
+            <span className="mr-1.5 font-mono text-meta tnum text-faint">
               {selected.n}
             </span>
             {selected.name}
             {selected.isMe && (
-              <span className="ml-1.5 font-mono text-[11px] text-accent">you</span>
+              <span className="ml-1.5 font-mono text-meta text-accent">you</span>
             )}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <Tag tone={selected.quadrant === "splitTopHeavy" ? "negative" : "neutral"}>
               {q.label}
             </Tag>
-            <span className="font-mono text-[11px] tnum text-faint">
+            <span className="font-mono text-meta tnum text-faint">
               {selected.tci} TCI · {selected.posture}
             </span>
-            <span className="font-mono text-[11px] tnum text-faint">
+            <span className="font-mono text-meta tnum text-faint">
               {selected.fragility} RFI · {selected.fragilityBand}
             </span>
           </div>
           {/* The RFI number on its own means nothing without the league it was scored
               against, and the axis has no colour to carry that. So it is said. */}
           {points.length > 1 && (
-            <p className="mt-1 text-[11px] leading-snug text-faint">
+            <p className="mt-1 text-meta leading-snug text-faint">
               More fragile than{" "}
               {Math.round(selected.fragilityPercentile * (points.length - 1))} of the
               other {points.length - 1} rosters.
@@ -403,7 +398,7 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
           )}
 
           {selected.spofName && (
-            <p className="mt-1.5 text-[11px] leading-snug text-muted">
+            <p className="mt-1.5 text-meta leading-snug text-muted">
               breaks first:{" "}
               <span className="font-semibold text-ink">{selected.spofName}</span>
               {selected.spofShare != null && (
@@ -417,11 +412,11 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
             </p>
           )}
 
-          <p className="mt-1.5 text-[12px] leading-snug text-muted">{q.thesis}</p>
+          <p className="mt-1.5 text-note leading-snug text-muted">{q.thesis}</p>
 
           <Link
             href={`/managers/${selected.rosterId}`}
-            className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-[11px] font-semibold text-accent"
+            className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-meta font-semibold text-accent"
           >
             Open the dossier
             <ChevronRight size={13} aria-hidden="true" />
@@ -429,73 +424,47 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
         </div>
       )}
 
-      {/* Grouped list. Also the screen-reader path: a scatter of fourteen dots is not
-          one, and every dot is a real button here. */}
-      <div className="mt-1.5 space-y-1.5">
-        {GROUP_ORDER.map((key) => {
-          const meta = QUADRANTS[key];
-          const rows = points.filter((p) => p.quadrant === key);
-          if (rows.length === 0) return null;
+      {/*
+        THE DOT RAIL - one tappable, focusable, labelled control per dot.
+       *
+       * This used to be a grouped list of all fourteen rosters, four quadrant headers
+       * deep. It was good, and it was the THIRD rendering of the same fourteen rosters
+       * on the same page (round 8 measured the four of them at 87% of /league). What it
+       * was actually load-bearing for is not the reading - the page's one roster list
+       * carries every number in text - it is that a scatter of fourteen SVG dots has no
+       * keyboard path and no screen-reader path unless something else does. So the
+       * selectors survive at full strength and the duplicated prose does not.
+       */}
+      <div className="scroll-x mt-1.5 flex gap-1" role="group" aria-label="Select a roster">
+        {points.map((p) => {
+          const isSel = selected?.rosterId === p.rosterId;
           return (
-            <div
-              key={key}
-              className="overflow-hidden rounded-[--radius-sm] border border-border bg-surface/60"
+            <button
+              key={p.rosterId}
+              type="button"
+              onClick={() => setSelectedId(p.rosterId)}
+              aria-pressed={isSel}
+              aria-label={`${p.name}: TCI ${p.tci}, ${p.posture}. RFI ${p.fragility}, ${p.fragilityBand}.`}
+              className={`flex h-11 w-11 shrink-0 flex-col items-center justify-center gap-0.5 rounded-[--radius-sm] border transition-colors ${
+                isSel
+                  ? "border-border-strong bg-surface-2"
+                  : "border-border bg-surface/60 hover:bg-surface-2"
+              } ${p.isMe ? "border-accent/50" : ""}`}
             >
-              <div className="border-b border-border px-2.5 py-1.5">
-                <div className="flex items-baseline justify-between gap-2">
-                  <p className="font-mono text-[11px] font-semibold uppercase tracking-wide text-ink">
-                    {meta.label}
-                    <span className="ml-1.5 font-normal text-faint">
-                      {rows.length} of {points.length}
-                    </span>
-                  </p>
-                  <p className="shrink-0 font-mono text-[10px] uppercase tracking-wide text-faint">
-                    tci / rfi
-                  </p>
-                </div>
-                <p className="mt-px text-[11px] leading-snug text-faint">{meta.gist}</p>
-              </div>
-              <ul className="divide-y divide-border">
-                {rows.map((p) => (
-                  <li key={p.rosterId}>
-                    <button
-                      type="button"
-                      onClick={() => setSelectedId(p.rosterId)}
-                      aria-pressed={selected?.rosterId === p.rosterId}
-                      className={`flex w-full min-h-11 items-center gap-2 px-2.5 py-1.5 text-left transition-colors hover:bg-surface-2 ${
-                        selected?.rosterId === p.rosterId ? "bg-surface-2" : ""
-                      } ${p.isMe ? "bg-accent/[0.06]" : ""}`}
-                    >
-                      <span
-                        aria-hidden="true"
-                        className="h-2.5 w-2.5 shrink-0 rounded-full"
-                        style={{ background: STEP_INK[p.tciStep - 1] }}
-                      />
-                      <span className="w-4 shrink-0 text-center font-mono text-[11px] tnum text-faint">
-                        {p.n}
-                      </span>
-                      <span className="min-w-0 flex-1 truncate text-[13px] font-semibold leading-tight text-ink">
-                        {p.name}
-                        {p.isMe && (
-                          <span className="ml-1.5 font-mono text-[11px] font-normal text-accent">
-                            you
-                          </span>
-                        )}
-                      </span>
-                      <span className="shrink-0 font-mono text-[11px] tnum text-faint">
-                        {p.tci} / {p.fragility}
-                      </span>
-                      {/* The band as plain text, not as the coloured pill the rest of
-                          the app gives it. A green "resilient" chip on a torn-down
-                          roster is the exact claim this board exists to refuse. */}
-                      <span className="w-[52px] shrink-0 text-right text-[11px] text-muted">
-                        {p.fragilityBand}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            </div>
+              <span
+                aria-hidden="true"
+                className="h-2 w-2 rounded-full"
+                style={{ background: STEP_INK[p.tciStep - 1] }}
+              />
+              <span
+                aria-hidden="true"
+                className={`font-mono text-meta leading-none tnum ${
+                  p.isMe ? "font-semibold text-accent" : "text-muted"
+                }`}
+              >
+                {p.n}
+              </span>
+            </button>
           );
         })}
       </div>

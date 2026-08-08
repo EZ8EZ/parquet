@@ -11,7 +11,8 @@ import {
   Repeat,
 } from "lucide-react";
 import type { Digest, DigestMoveItem } from "@/lib/digest";
-import { tradeWebHref } from "@/lib/tradegraph/url";
+import { Disclosure } from "@/components/ui";
+import { dealHref } from "@/lib/tradegraph/url";
 import { cn } from "@/lib/ui";
 
 /**
@@ -47,15 +48,20 @@ export function DigestPanel({ digest }: { digest: Digest }) {
         <div className="flex items-start gap-2.5">
           <History size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-faint" />
           <div className="min-w-0">
-            <p className="text-[13px] font-semibold leading-tight text-ink">
+            <p className="text-body font-semibold leading-tight text-ink">
               No earlier visit to compare against
             </p>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted">
-              This is the first time this device has looked, so there is no before. Parquet
-              just marked where the league stands. From the next visit on, this panel lists
-              every trade, every pick that became a player, and every real timeline or
-              fragility shift that happened while you were away.
-            </p>
+            {/* This is the one branch of this panel that a reader sees exactly once,
+                and it was rendering fifty words of explanation permanently above the
+                fold on the second screen of the app. The line above already says the
+                whole thing; the paragraph explaining what the panel WILL do belongs
+                behind the same disclosure everything else in this app uses. */}
+            <Disclosure summary="What this panel will show" className="mt-0.5">
+              This is the first time this device has looked, so there is no before.
+              Parquet just marked where the league stands. From the next visit on, this
+              panel lists every trade, every pick that became a player, and every real
+              timeline or fragility shift that happened while you were away.
+            </Disclosure>
           </div>
         </div>
       </Shell>
@@ -68,10 +74,10 @@ export function DigestPanel({ digest }: { digest: Digest }) {
         <div className="flex items-start gap-2.5">
           <History size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-faint" />
           <div className="min-w-0">
-            <p className="text-[13px] font-semibold leading-tight text-ink">
+            <p className="text-body font-semibold leading-tight text-ink">
               Nothing has moved since {digest.sinceLabel}
             </p>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted">
+            <p className="mt-1 text-meta leading-relaxed text-muted">
               No trades, no picks resolved, no roster shifted its timeline or fragility
               enough to be worth your attention.
             </p>
@@ -84,7 +90,7 @@ export function DigestPanel({ digest }: { digest: Digest }) {
 
   return (
     <Shell>
-      <p className="text-[11px] leading-tight text-muted">
+      <p className="text-meta leading-tight text-muted">
         Since {digest.sinceLabel}
       </p>
 
@@ -97,11 +103,11 @@ export function DigestPanel({ digest }: { digest: Digest }) {
           href="/ledger"
         >
           {digest.trades.map((t) => (
-            <Row key={t.transactionId} href={tradeWebHref(t.transactionId)} flagged={t.mine}>
-              <span className="block text-[13px] leading-snug text-ink">
+            <Row key={t.transactionId} href={dealHref(t.transactionId)} flagged={t.mine}>
+              <span className="block text-body leading-snug text-ink">
                 {t.description}
               </span>
-              <span className="mt-0.5 block font-mono text-[11px] tnum text-faint">
+              <span className="mt-0.5 block font-mono text-meta tnum text-faint">
                 {t.season} · wk {t.week}
                 {t.mine ? " · you" : ""}
               </span>
@@ -120,10 +126,10 @@ export function DigestPanel({ digest }: { digest: Digest }) {
         >
           {digest.picks.map((p) => (
             <Row key={p.key} href="/drafts" flagged={p.mine}>
-              <span className="block text-[13px] leading-snug text-ink">
+              <span className="block text-body leading-snug text-ink">
                 {p.label} became {p.playerName}
               </span>
-              <span className="mt-0.5 block font-mono text-[11px] tnum text-faint">
+              <span className="mt-0.5 block font-mono text-meta tnum text-faint">
                 {p.position ? `${p.position} · ` : ""}
                 {p.mine ? "your pick" : p.ownerName}
               </span>
@@ -175,7 +181,7 @@ function Shell({ children }: { children: React.ReactNode }) {
  */
 function PrimingNote() {
   return (
-    <p className="text-[11px] leading-relaxed text-faint">
+    <p className="text-meta leading-relaxed text-faint">
       Timeline and fragility movement needs a previous reading to subtract, and this visit
       is the first one to store one. Those rows start from your next visit.
     </p>
@@ -201,16 +207,16 @@ function Group({
     <div className="mt-2">
       <div className="flex items-center gap-1.5">
         <span className="shrink-0 text-accent">{icon}</span>
-        <h3 className="min-w-0 truncate text-[11px] font-semibold uppercase tracking-[0.14em] text-muted">
+        <h3 className="min-w-0 truncate text-meta font-semibold uppercase tracking-[0.14em] text-muted">
           {title}
         </h3>
-        <span className="font-mono text-[11px] tnum text-faint">{count}</span>
+        <span className="font-mono text-meta tnum text-faint">{count}</span>
       </div>
       <div className="mt-1 space-y-1">{children}</div>
       {count > shown && (
         <Link
           href={href}
-          className="inline-flex min-h-11 items-center gap-0.5 text-[11px] font-semibold text-accent"
+          className="inline-flex min-h-11 items-center gap-0.5 text-meta font-semibold text-accent"
         >
           {count - shown} more
           <ChevronRight size={12} aria-hidden="true" />
@@ -263,11 +269,11 @@ function MoveLine({ move }: { move: DigestMoveItem }) {
   const Arrow = up ? ArrowUpRight : ArrowDownRight;
   return (
     <>
-      <span className="block truncate text-[13px] leading-snug text-ink">
+      <span className="block truncate text-body leading-snug text-ink">
         {move.mine ? "You" : move.name}
         <span className="text-muted"> · {METRIC_LABEL[move.metric]}</span>
       </span>
-      <span className="mt-0.5 flex items-center gap-1 font-mono text-[11px] tnum text-faint">
+      <span className="mt-0.5 flex items-center gap-1 font-mono text-meta tnum text-faint">
         <span>
           {move.from} to {move.to}
         </span>

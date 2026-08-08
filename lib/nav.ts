@@ -15,42 +15,65 @@
  * `components/nav-icons.tsx` for the href -> icon side of this, kept separate on
  * purpose - lib/ never imports a UI library anywhere else in this app either).
  *
- * The five bottom-nav tabs are included for completeness (a registry that quietly
- * excluded them would be lying about being the full list) but flagged `primary` so
- * a renderer can de-emphasize "you already have a tab for this."
+ * `primary` IS THE DESTINATION ROW. The Desk (components/Desk.tsx) renders its four
+ * destination slots by filtering this array on that flag - it does not keep a list of
+ * its own. It used to: `BottomNav.tsx` hand-maintained a `TABS` array, and by the time
+ * the Desk replaced it that array had already drifted from this file in two directions
+ * at once. This header claimed "five bottom-nav tabs" while the bar shipped six, and
+ * the sixth (`/more`) was a tab that the registry did not list at all - which made
+ * /more's own promise ("if it isn't listed below, it doesn't exist yet") false about
+ * the very page printing it. Both are fixed here, and the second array is gone, so
+ * neither can recur.
+ *
+ * `group === "Primary"` is the same set as `primary`, pinned by nav.test.ts: a surface
+ * with a permanent slot is listed under Primary in the index and nowhere else, so the
+ * drawer never advertises a destination twice.
  */
 export interface NavSurface {
   href: string;
   label: string;
   sub: string;
   group: "Primary" | "Your team" | "The league" | "Trading" | "Drafts & values" | "The app";
-  /** Already one tap away from anywhere via the bottom tab bar. */
+  /** Has a permanent destination slot on the Desk. Equivalent to `group: "Primary"`. */
   primary?: true;
+  /** The Desk's destination row is 1/4 of a 390pt screen wide, so a slot label has
+   *  to be one short word. Only `primary` surfaces need one. */
+  short?: string;
   /** Also shown in Home's and League's shortcut lists - see the file header. */
   curated?: true;
 }
 
 export const ALL_SURFACES: NavSurface[] = [
-  // ---------------------------------------------------------------- primary tabs
-  { href: "/", label: "Home", sub: "Today's stat line and what changed", group: "Primary", primary: true },
-  { href: "/roster", label: "Roster", sub: "Your own team, valued and tiered", group: "Primary", primary: true },
-  { href: "/plan", label: "Plan", sub: "How to improve this team", group: "Primary", primary: true },
-  { href: "/trade", label: "Trade", sub: "Build and evaluate a deal", group: "Primary", primary: true },
-  { href: "/league", label: "League", sub: "Standings, timelines, everyone's window", group: "Primary", primary: true },
+  // ------------------------------------------------------- the destination slots
+  // Four, and the fourth is the ledger rather than the league. The Desk's row asks
+  // "what are you here to do" - look at today, at the team, at the decision in front
+  // of you, or at the record of decisions already made - and capturing reasoning is
+  // the one of those the app exists for. The league standings are a thing you read,
+  // not a thing you do, they change once a week at most, and Home's Record figure has
+  // always linked straight there. Trade lost its slot to the same argument: it is
+  // where a plan gets executed, so it is reached from /plan and from the drawer.
+  { href: "/", label: "Home", short: "Today", sub: "Today's stat line and what changed", group: "Primary", primary: true },
+  { href: "/roster", label: "Roster", short: "Team", sub: "Your own team, valued and tiered", group: "Primary", primary: true },
+  { href: "/plan", label: "Plan", short: "Decide", sub: "How to improve this team", group: "Primary", primary: true },
+  { href: "/ledger", label: "Decision ledger", short: "Record", sub: "Capture your reasoning at the moment of conviction", group: "Primary", primary: true },
 
   // ---------------------------------------------------------------- your team
   { href: "/recap", label: "Season recap", sub: "Last season, recapped from what actually happened", group: "Your team", curated: true },
-  { href: "/ledger", label: "Decision ledger", sub: "Capture your reasoning at the moment of conviction", group: "Your team", curated: true },
 
   // ---------------------------------------------------------------- the league
+  { href: "/league", label: "League", sub: "Standings, timelines, everyone's window", group: "The league" },
   { href: "/managers", label: "Dossiers", sub: "Scout your rivals", group: "The league", curated: true },
   { href: "/managers/compare", label: "Manager Compare", sub: "Any two managers, side by side", group: "The league", curated: true },
   { href: "/awards", label: "League awards", sub: "Who's who, statistically", group: "The league", curated: true },
   { href: "/commissioner", label: "Commissioner tools", sub: "League health checks and an audit log", group: "The league" },
 
   // ---------------------------------------------------------------- trading
+  { href: "/trade", label: "Trade", sub: "Build and evaluate a deal", group: "Trading", curated: true },
   { href: "/trade/finder", label: "Trade Finder", sub: "Auto-suggested packages, priced both ways", group: "Trading" },
-  { href: "/web", label: "Trade web", sub: "Every trade in the league, connected", group: "Trading", curated: true },
+  // Replaces /web. The ring is gone (see lib/tradegraph's header for the measurement
+  // that killed it); what a reader wanted from it was always a specific deal, and
+  // every deal now has its own page underneath this index.
+  { href: "/deals", label: "Every deal", sub: "One page per trade, and what each side is worth today", group: "Trading", curated: true },
 
   // ---------------------------------------------------------------- drafts & values
   { href: "/drafts", label: "Draft history", sub: "What your picks became", group: "Drafts & values", curated: true },
@@ -67,7 +90,31 @@ export const ALL_SURFACES: NavSurface[] = [
   // which made /more's "if it isn't listed below, it doesn't exist" false about the
   // very page a first-time visitor is now routed to (see lib/auth/entry.ts).
   { href: "/teams", label: "Switch team", sub: "Run the whole app as any manager in the league", group: "The app" },
+  // The index itself, and the reason this entry exists at all: /more was a bottom tab
+  // that this registry did not list, so the page telling readers "if it isn't listed
+  // below, it doesn't exist yet" was omitting itself. It survives the Desk as the
+  // no-JS and crawler fallback for the drawer, and as the drawer's own "see
+  // everything" target.
+  { href: "/more", label: "Everything in Parquet", sub: "Search, and every surface in one list", group: "The app" },
+  // ONE entry for the whole Lab, and deliberately neither `primary` nor `curated`:
+  // the experiments behind it are unfinished by construction and must not compete
+  // with finished surfaces for a slot or a shortcut. The Lab's own index lists them;
+  // this registry lists the Lab. See lib/lab/index.ts.
+  { href: "/lab", label: "The Lab", sub: "Experiments. They may be wrong, and they may vanish", group: "The app" },
 ];
+
+/**
+ * The Desk's four destination slots, in registry order.
+ *
+ * The ONE list. `components/Desk.tsx` renders exactly what this returns, in exactly
+ * this order, and has no array of its own - which is the whole repair described in
+ * the file header. `short` is required on every entry here (nav.test.ts pins it), so
+ * a future surface promoted to `primary` without a slot label fails the suite rather
+ * than rendering a slot captioned "undefined".
+ */
+export function primarySurfaces(): NavSurface[] {
+  return ALL_SURFACES.filter((s) => s.primary);
+}
 
 /** Home's and League's shared shortcut set - see the file header for why this is a
  *  filter over the one registry rather than its own list. */

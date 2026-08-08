@@ -35,6 +35,37 @@
   --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
   --font-mono: var(--font-jetbrains), ui-monospace, monospace;
 
+  /*
+   * TYPE SCALE - six steps, and they are the whole scale.
+   *
+   * Seven rounds of parallel authorship left the app with 17 distinct arbitrary sizes
+   * plus Tailwind's own defaults, including a half-pixel family (12.5 / 11.5 / 10.5 /
+   * 13.5, 37 usages) and seven sizes used once or twice in the entire codebase. That is
+   * a fingerprint of many hands, not a designed scale: nothing in the product ever
+   * needed 12.5px to be distinguishable from 12px, and at 390px a reader cannot tell
+   * them apart anyway. Home alone rendered nine sizes.
+   *
+   * These six are named for their JOB rather than their size, so a future edit picks a
+   * role instead of guessing a number. Arbitrary `text-[Npx]` in a component is now the
+   * exception that has to justify itself, not the default.
+   *
+   *   micro   10px  the smallest legible label - state dots, badge text, axis chrome
+   *   meta    11px  captions, mono figures, the app's dominant secondary voice
+   *   note    12px  short glosses and disclosures
+   *   body    13px  primary reading size - row titles, prose, findings
+   *   lede    17px  card headings and the big figures that head a panel
+   *   display 25px  page titles (font-display)
+   *
+   * Tailwind still generates `text-sm`/`text-lg`/etc. because they are built in; they
+   * are simply not used by this app's own components any more.
+   */
+  --text-micro: 10px;
+  --text-meta: 11px;
+  --text-note: 12px;
+  --text-body: 13px;
+  --text-lede: 17px;
+  --text-display: 25px;
+
   /* Radii */
   --radius-sm: 8px;
   --radius: 12px;
@@ -312,6 +343,61 @@ a[role="button"],
 .rule {
   height: 1px;
   background: linear-gradient(90deg, var(--color-border-strong), transparent);
+}
+
+/*
+ * THE DESK's open animation (components/Desk.tsx).
+ *
+ * The drawer carries `hidden` + `inert` when collapsed, which is display:none, which
+ * no height transition can animate out of - and that is the right trade: an element
+ * that is genuinely absent from the accessibility tree and from find-in-page is worth
+ * more than a sliding one. So the motion is on the content arriving, not on the box
+ * growing. 180ms, one ease-out, no spring and no rubber-band anywhere in this
+ * component: an overshoot on a panel bolted to the bottom edge of the screen reads as
+ * the whole page wobbling.
+ *
+ * Under `prefers-reduced-motion` it degrades to an opacity snap rather than to
+ * nothing, because a panel that appears with no transition at all is the flicker the
+ * setting is usually trying to avoid, and opacity is the one channel it permits.
+ */
+/*
+ * The one control in the app deliberately under the 44pt minimum the rule above sets
+ * for every button, and it has to be stated HERE rather than as a `min-h-0` utility:
+ * that rule is unlayered, Tailwind's utilities are not, and an unlayered declaration
+ * beats every layered one regardless of specificity. The handle is 19pt because the
+ * spec's three-row arithmetic (19 + 44 + 53) is what keeps the resting Desk inside a
+ * thumb's reach; it is full-bleed wide, it sits ~97pt clear of the home indicator,
+ * and the chevron beside it is the same action at full size. It is the accelerator,
+ * never the only way in - see components/Desk.tsx.
+ */
+.desk-handle {
+  min-height: 0;
+  height: 19px;
+  padding: 8px 0 5px;
+}
+
+@keyframes desk-drawer-in {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes desk-fade-in {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.desk-drawer:not([hidden]) {
+  animation: desk-drawer-in 180ms cubic-bezier(0.32, 0.72, 0, 1);
+}
+.desk-scrim {
+  animation: desk-fade-in 180ms linear;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .desk-drawer:not([hidden]) {
+    animation: desk-fade-in 100ms linear;
+  }
+  .desk-scrim {
+    animation: none;
+  }
 }
 
 /* /rank blend-weight control. A bare native range renders as a hairline track

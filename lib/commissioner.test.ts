@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { buildFixtureHistory } from "./testing/fixtureHistory";
-import { tradeWebHref } from "./tradegraph/url";
+import { dealHref } from "./tradegraph/url";
 import { getAuditLog, getStaleRosters, STALE_DAYS_THRESHOLD } from "./commissioner";
 import type { LeagueHistory } from "./history";
 import type { Roster, Transaction } from "./providers/types";
@@ -79,7 +79,7 @@ describe("getAuditLog", () => {
     expect(log.map((e) => e.transactionId).sort()).toEqual(["trade1", "wonit"]);
   });
 
-  it("gives trades a deep link into the trade web and nothing else does", () => {
+  it("gives trades a deep link to their own receipt and nothing else does", () => {
     const withTxns: LeagueHistory = {
       ...h,
       transactions: [
@@ -90,7 +90,7 @@ describe("getAuditLog", () => {
     const log = getAuditLog(withTxns);
     const trade = log.find((e) => e.transactionId === "trade1")!;
     const waiver = log.find((e) => e.transactionId === "bigwaiver")!;
-    expect(trade.tradeHref).toBe(tradeWebHref("trade1"));
+    expect(trade.tradeHref).toBe(dealHref("trade1"));
     expect(trade.rosterId).toBeNull();
     expect(waiver.tradeHref).toBeNull();
     expect(waiver.rosterId).toBe(3);

@@ -15,6 +15,12 @@
       "port": 3450
     },
     {
+      "name": "parquet-dev-provenance",
+      "runtimeExecutable": "pnpm",
+      "runtimeArgs": ["dev", "-p", "3488"],
+      "port": 3488
+    },
+    {
       "name": "parquet-attach-running",
       "url": "http://localhost:3007",
       "port": 3007

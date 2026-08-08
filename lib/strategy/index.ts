@@ -10,6 +10,7 @@ import { myAnnotation, type LeagueHistory } from "../history";
 import type { Transaction } from "../providers/types";
 import { ageAtSeason, deriveManagerProfile, involves, type ManagerProfile } from "../derive/manager";
 import { describeTradeForRoster, tradeSide } from "../derive/describe";
+import { tenureSeasons, type PrincipalIndex } from "../principals";
 
 export interface StatedPosture {
   transactionId: string;
@@ -79,7 +80,22 @@ function isSellTrade(h: LeagueHistory, t: Transaction, rosterId: number): boolea
   return firstsGot >= 1 && (youngAcquired || s.gotPicks.length >= 2);
 }
 
-export function getStrategyReport(h: LeagueHistory): StrategyReport {
+/**
+ * `principals` SCOPES THIS REPORT TO THE PERSON, not the seat.
+ *
+ * Without it every figure on the home page is roster-keyed, and a seat that has
+ * changed hands hands the new manager their predecessor's whole record: viewing this
+ * app as the manager who took over roster 11 in 2025, "Revealed strategy" led with
+ * "TRADES MADE 22" when they have made four, "PICK CAPITAL 0" against a real -9, and
+ * an average acquisition age averaged across two different people - all of it
+ * contradicting that same manager's own dossier two taps away, which has been tenure
+ * scoped since D22. Optional so a caller with no index in hand degrades to the old
+ * behaviour rather than failing, and so a league with no handovers is unaffected.
+ */
+export function getStrategyReport(
+  h: LeagueHistory,
+  principals?: PrincipalIndex,
+): StrategyReport {
   const rosterId = h.me.rosterId;
   if (rosterId == null) {
     return {
@@ -92,9 +108,25 @@ export function getStrategyReport(h: LeagueHistory): StrategyReport {
     };
   }
 
-  const profile = deriveManagerProfile(h, rosterId);
+  // The viewer's own tenure in this seat. Only applied when the league has actually
+  // had a handover, so a league without one produces byte-identical output.
+  const viewer = h.me.userId ? principals?.byOwnerId.get(h.me.userId) : undefined;
+  const scope =
+    viewer && principals?.hasSuccessions
+      ? {
+          ownerId: viewer.ownerId,
+          displayName: viewer.displayName,
+          teamName: viewer.teamName,
+          seasons: tenureSeasons(viewer, rosterId),
+        }
+      : undefined;
+
+  const profile = deriveManagerProfile(h, rosterId, scope, principals);
   const myTrades = h.transactions.filter(
-    (t) => t.type === "trade" && t.rosterIds.includes(rosterId),
+    (t) =>
+      t.type === "trade" &&
+      t.rosterIds.includes(rosterId) &&
+      (!scope?.seasons || scope.seasons.has(t.season)),
   );
 
   // Stated postures from annotations — the VIEWER's own decisions with the

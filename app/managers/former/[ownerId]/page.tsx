@@ -5,7 +5,8 @@ import { getLeagueHistory } from "@/lib/history";
 import { buildFormerDossier } from "@/lib/dossier";
 import { titleSummariesByOwner } from "@/lib/dossier/titles";
 import { getPrincipals } from "@/lib/principals";
-import { managerWebHref } from "@/lib/tradegraph/url";
+import { partnerIdentity } from "@/lib/dossier/partners";
+import { managerDealsHref } from "@/lib/tradegraph/url";
 import { Tag, DeltaValue, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { BarChart } from "@/components/charts";
@@ -27,10 +28,10 @@ function Metric({
 }) {
   return (
     <div className="rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5">
-      <div className="text-[11px] uppercase tracking-wide text-faint">{label}</div>
+      <div className="text-meta uppercase tracking-wide text-faint">{label}</div>
       <div
         className={cn(
-          "font-mono text-lg font-semibold leading-tight tnum",
+          "font-mono text-lede font-semibold leading-tight tnum",
           tone === "positive"
             ? "text-positive"
             : tone === "negative"
@@ -42,7 +43,7 @@ function Metric({
       >
         {value}
       </div>
-      {sub && <div className="text-[11px] leading-tight text-muted">{sub}</div>}
+      {sub && <div className="text-meta leading-tight text-muted">{sub}</div>}
     </div>
   );
 }
@@ -75,16 +76,6 @@ export default async function FormerManagerDetailPage({
   // exists to represent. See lib/dossier/titles.ts.
   const titles = titleSummariesByOwner(h, principals).get(ownerId);
 
-  /** Team identity for any CURRENT roster (used by the partner rows). */
-  const teamOf = (id: number) => {
-    const r = h.rostersById.get(id);
-    const u = r?.ownerId ? h.usersById.get(r.ownerId) : undefined;
-    return {
-      name: u?.teamName ?? u?.displayName ?? `Roster ${id}`,
-      user: u,
-    };
-  };
-
   const extras: string[] = [];
   if (p.avgHoldingDays != null) extras.push(`avg hold ${p.avgHoldingDays}d`);
   if (p.deadline.buys || p.deadline.sells)
@@ -103,7 +94,7 @@ export default async function FormerManagerDetailPage({
       {/* Negative margins keep the 44px tap target from adding visible space. */}
       <Link
         href="/managers"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
       >
         <ArrowLeft size={13} aria-hidden="true" />
         All dossiers
@@ -117,13 +108,13 @@ export default async function FormerManagerDetailPage({
           size="lg"
         />
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
             Dossier · former manager
           </p>
-          <h1 className="truncate font-display text-[24px] font-semibold leading-[1.15] text-ink">
+          <h1 className="truncate font-display text-display font-semibold leading-[1.15] text-ink">
             {p.teamName ?? p.displayName}
           </h1>
-          <div className="flex flex-wrap items-center gap-x-2 font-mono text-[11px] tnum text-faint">
+          <div className="flex flex-wrap items-center gap-x-2 font-mono text-meta tnum text-faint">
             <span className="truncate">{p.displayName}</span>
             <span aria-hidden="true">·</span>
             <span>{identity.tenureLabel}</span>
@@ -135,13 +126,13 @@ export default async function FormerManagerDetailPage({
         </div>
       </header>
 
-      <p className="mb-2 rounded-[--radius-sm] border border-border-strong bg-elevated px-2.5 py-1.5 text-[11.5px] leading-snug text-muted">
+      <p className="mb-2 rounded-[--radius-sm] border border-border-strong bg-elevated px-2.5 py-1.5 text-meta leading-snug text-muted">
         No longer in the league - ran this roster {identity.tenureLabel}, then handed
         it off. Everything below is scoped to their own seasons only.
       </p>
 
       {titles && (
-        <p className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-accent">
+        <p className="mb-2 flex items-center gap-1.5 text-note font-semibold text-accent">
           <Trophy size={14} aria-hidden="true" className="shrink-0" />
           {titles.label}
         </p>
@@ -157,7 +148,7 @@ export default async function FormerManagerDetailPage({
         </div>
       )}
 
-      <p className="rounded-[--radius] border border-border bg-surface/80 p-2.5 text-[13px] leading-[1.42] text-ink">
+      <p className="rounded-[--radius] border border-border bg-surface/80 p-2.5 text-body leading-[1.42] text-ink">
         {d.read}
       </p>
 
@@ -171,7 +162,7 @@ export default async function FormerManagerDetailPage({
               aria-hidden="true"
               className="mt-[3px] shrink-0 text-accent"
             />
-            <p className="text-[12.5px] leading-snug text-ink/90">{t}</p>
+            <p className="text-note leading-snug text-ink/90">{t}</p>
           </li>
         ))}
       </ul>
@@ -204,12 +195,12 @@ export default async function FormerManagerDetailPage({
           }
         />
       </div>
-      <p className="mt-1.5 font-mono text-[11px] leading-relaxed tnum text-faint">
+      <p className="mt-1.5 font-mono text-meta leading-relaxed tnum text-faint">
         {extras.join(" · ")}
       </p>
 
       {p.afterLoss && p.afterLoss.total > 0 && (
-        <p className="mt-1.5 text-[12px] leading-snug text-muted">
+        <p className="mt-1.5 text-note leading-snug text-muted">
           <span className="font-semibold text-ink">After a loss:</span>{" "}
           {p.afterLoss.afterLoss} of {p.afterLoss.total} self-initiated trades came
           the week after a loss
@@ -227,12 +218,12 @@ export default async function FormerManagerDetailPage({
               <span
                 key={s.season}
                 className={cn(
-                  "inline-flex items-baseline gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[11px] tnum",
+                  "inline-flex items-baseline gap-1.5 rounded-full border px-2 py-0.5 font-mono text-meta tnum",
                   POSTURE_TONE[s.posture] ?? POSTURE_TONE.balanced,
                 )}
               >
                 {s.season}
-                <span className="text-[11px] font-medium not-italic opacity-80">
+                <span className="text-meta font-medium not-italic opacity-80">
                   {s.posture}
                 </span>
               </span>
@@ -246,7 +237,7 @@ export default async function FormerManagerDetailPage({
           <SectionHeader
             title="Trade activity"
             action={
-              <span className="font-mono text-[11px] tnum text-faint">
+              <span className="font-mono text-meta tnum text-faint">
                 {p.trades} across {tradesData.length} seasons
               </span>
             }
@@ -263,12 +254,12 @@ export default async function FormerManagerDetailPage({
             title="Favorite trade partners"
             action={
               <Link
-                // Straight to this manager's strands - a former manager's whole
+                // Straight to this manager's own deals - a former manager's whole
                 // trade record is exactly what the web's node panel shows.
-                href={managerWebHref(ownerId)}
-                className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-accent"
+                href={managerDealsHref(ownerId)}
+                className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent"
               >
-                trade web
+                their deals
                 <ChevronRight size={12} aria-hidden="true" />
               </Link>
             }
@@ -276,25 +267,31 @@ export default async function FormerManagerDetailPage({
           <div className="overflow-hidden rounded-[--radius] border border-border bg-surface/60">
             <ul className="divide-y divide-border">
               {p.tradePartners.slice(0, 6).map((tp) => {
-                const t = teamOf(tp.rosterId);
+                const t = partnerIdentity(h, principals, tp);
                 return (
-                  <li key={tp.rosterId}>
+                  <li key={tp.ownerId ?? `r${tp.rosterId}`}>
                     <Link
-                      href={`/managers/${tp.rosterId}`}
+                      href={t.href}
                       aria-label={`Dossier: ${t.name}`}
                       className="flex min-h-11 items-center gap-2.5 px-2.5 py-1.5 transition-colors hover:bg-surface-2 focus-visible:bg-surface-2"
                     >
                       <TeamAvatar
                         name={t.name}
-                        avatarId={t.user?.avatar}
-                        teamLogoUrl={t.user?.teamLogoUrl}
+                        avatarId={t.avatarId}
+                        teamLogoUrl={t.teamLogoUrl}
                         size="xs"
-                        isMe={h.me.rosterId === tp.rosterId}
+                        isMe={!t.isFormer && h.me.rosterId === tp.rosterId}
                       />
-                      <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-ink">
+                      <span className="min-w-0 flex-1 truncate text-note font-medium text-ink">
                         {t.name}
+                        {t.tenureLabel && (
+                          <span className="text-meta font-normal text-faint">
+                            {" "}
+                            {t.tenureLabel}
+                          </span>
+                        )}
                       </span>
-                      <span className="shrink-0 font-mono text-[11px] tnum text-muted">
+                      <span className="shrink-0 font-mono text-meta tnum text-muted">
                         {tp.count} deal{tp.count === 1 ? "" : "s"}
                       </span>
                       <ChevronRight
@@ -319,14 +316,14 @@ export default async function FormerManagerDetailPage({
           <Link
             key={a.href}
             href={a.href}
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-[12px] font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
           >
             {a.label}
           </Link>
         ))}
       </div>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-faint">
+      <p className="mt-3 text-meta leading-relaxed text-faint">
         Read from {p.totalTransactions} recorded moves ({signed(p.picks.net)} net
         picks) across {identity.tenureLabel}. Behavior only - no roster contents, no
         stated intent.

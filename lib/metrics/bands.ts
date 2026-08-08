@@ -1,7 +1,7 @@
 /**
  * How to READ a fragility band, given what the roster is trying to do.
  *
- * Its own module, with type-only imports, for one practical reason: the trade web is a
+ * Its own module, with type-only imports, for one practical reason: a trade surface is a
  * client component and needs this rule, and importing it from `./fragility` would drag
  * the whole valuation model into the browser bundle to answer a question that is four
  * lines of logic. Type-only imports are erased, so this file carries no runtime

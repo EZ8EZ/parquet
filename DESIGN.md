@@ -4,7 +4,8 @@ Aesthetic: **dark, editorial, high-contrast - a financial terminal crossed with 
 well-designed sports magazine.** One sharp accent (parquet gold). Generous
 whitespace, real typographic hierarchy, data in a mono face for the terminal feel.
 Mobile-first: every screen is designed at 390px first, primary actions in the
-bottom third, a fixed bottom tab bar, and no horizontal-scrolling tables.
+bottom third, a bottom sheet ("the Desk") for navigation, and no horizontal-scrolling
+tables.
 
 ## Typography
 - **Display / headlines:** Fraunces (serif, optical sizing) - gives the editorial,
@@ -42,14 +43,16 @@ The near-black background carries a faint gold+blue radial grain so it never rea
 as flat black.
 
 ## Layout & interaction rules (lessons from the competitor teardown)
-- **Fixed bottom tab bar** with icon **and** label (Home / Roster / League / Trade
-  / Analyst). Never a hidden floating nav toggle.
+- **The Desk**, a bottom sheet fixed to the screen: a four-item destination row
+  (Home / Roster / Plan / Decision ledger, icon **and** label) over a context row
+  and a drag handle that opens a drawer with search and every other surface. Never
+  a hidden floating nav toggle.
 - **No floating overlays that occlude content.** (The competitor's FAB collided with real
   content on every page - we have none.)
 - **Stacked cards, never clipped tables**, on mobile. Rankings/values are rows, not
   a horizontally-scrolling grid.
 - Single centered column, `max-w-2xl`, that widens gracefully on desktop.
-- Safe-area insets respected on the tab bar and the analyst composer.
+- Safe-area insets respected on the Desk and the analyst composer.
 
 ## Components
 - `components/ui.tsx` - PageHeader, Card, SectionHeader, Tag, Stat, DeltaValue,
@@ -58,7 +61,8 @@ as flat black.
   real headshots only behind `NEXT_PUBLIC_USE_PLAYER_PHOTOS` (see DECISIONS D8).
 - `components/charts.tsx` - hand-rolled SVG (LineChart, BarChart, AgeStrip), legible
   at 390px, no chart library.
-- `components/BottomNav.tsx`, `components/Brand.tsx` (wordmark + inline logo).
+- `components/Desk.tsx` (the bottom sheet / navigation), `components/Brand.tsx`
+  (wordmark + inline logo).
 
 ## Logo & icons
 Geometric parquet **herringbone chevron** in gold on a near-black rounded square -

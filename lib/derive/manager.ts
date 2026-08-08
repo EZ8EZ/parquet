@@ -6,14 +6,33 @@
  * behavior — what a manager did — never roster contents.
  */
 import type { LeagueHistory } from "../history";
+import type { PrincipalIndex } from "../principals";
 import type { Transaction } from "../providers/types";
 
 export interface SeasonCount {
   season: string;
   count: number;
 }
+/**
+ * A manager this profile has traded with.
+ *
+ * KEYED BY PRINCIPAL, NOT BY SEAT, whenever a principal index is available. This list
+ * used to count by roster id and label the roster's CURRENT holder, which is wrong the
+ * moment a seat changes hands: every deal a departed manager ever made was folded into
+ * their successor's row, under the successor's name. In this league that put "kdewitt4
+ * - 8 deals" on 6-Month Plan's dossier and on the home page, when kdewitt4 has done two
+ * with them; five other dossiers claimed a kdewitt4 relationship with ZERO real deals
+ * behind it. See lib/principals.ts, and lib/tradegraph, which was already doing this
+ * correctly for the deal record.
+ */
 export interface TradePartner {
+  /** The seat. Present for imagery and for routing a CURRENT partner's dossier; it is
+   *  the LAST seat held when `isFormer`, and is never the identity key. */
   rosterId: number;
+  /** Platform user id of the partner, when resolvable. THE identity key. */
+  ownerId: string | null;
+  /** They no longer hold a roster, so `/managers/{rosterId}` is somebody else's page. */
+  isFormer: boolean;
   displayName: string;
   count: number;
 }
@@ -127,6 +146,11 @@ export function deriveManagerProfile(
   h: LeagueHistory,
   rosterId: number,
   scope?: TenureScope,
+  /** Resolves the OTHER side of a trade to the person who actually sat in that seat
+   *  that season. Omit and partner identity degrades to the old seat-keyed behaviour,
+   *  which is exactly right for a league that has never had a handover and exactly
+   *  wrong for one that has. See `TradePartner`. */
+  principals?: PrincipalIndex,
 ): ManagerProfile {
   const roster = h.rostersById.get(rosterId);
   const userId = scope ? scope.ownerId : (roster?.ownerId ?? null);
@@ -149,20 +173,39 @@ export function deriveManagerProfile(
   // Trades by season.
   const tradesBySeason = countBySeason(trades);
 
-  // Trade partners.
-  const partnerCounts = new Map<number, number>();
+  // Trade partners, keyed by the PRINCIPAL on the other side of each deal - see the
+  // `TradePartner` doc comment for what seat-keying got wrong. Without a principal
+  // index the key falls back to the seat, which reproduces the old output byte for
+  // byte for a league that has never had a handover.
+  const partnerCounts = new Map<string, TradePartner>();
   for (const t of trades) {
     for (const rid of t.rosterIds) {
-      if (rid !== rosterId) partnerCounts.set(rid, (partnerCounts.get(rid) ?? 0) + 1);
+      if (rid === rosterId) continue;
+      const ownerId = principals?.ownerAt(t.season, rid) ?? null;
+      const partner = ownerId ? principals?.byOwnerId.get(ownerId) : undefined;
+      const key = ownerId ?? `roster:${rid}`;
+      const prev = partnerCounts.get(key);
+      if (prev) {
+        prev.count++;
+        continue;
+      }
+      partnerCounts.set(key, {
+        // A departed principal's page lives at their owner id, not at the seat they
+        // used to hold - that route belongs to their successor now.
+        rosterId: partner ? (partner.currentRosterId ?? partner.lastRosterId) : rid,
+        ownerId,
+        isFormer: partner?.isFormer ?? false,
+        displayName: partner?.displayName ?? nameForRoster(h, rid),
+        count: 1,
+      });
     }
   }
-  const tradePartners: TradePartner[] = [...partnerCounts.entries()]
-    .map(([rid, count]) => ({
-      rosterId: rid,
-      displayName: nameForRoster(h, rid),
-      count,
-    }))
-    .sort((a, b) => b.count - a.count);
+  const tradePartners: TradePartner[] = [...partnerCounts.values()].sort(
+    (a, b) =>
+      b.count - a.count ||
+      a.displayName.localeCompare(b.displayName) ||
+      a.rosterId - b.rosterId,
+  );
 
   // Acquisitions / disposals with age-at-event.
   const acqAges: number[] = [];

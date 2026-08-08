@@ -108,7 +108,7 @@ export async function loadSeasonRecap(h: LeagueHistory): Promise<SeasonRecap | n
     awardsPageData(h),
     resolvedPickTimeline(h),
   ]);
-  const allDecisions = getLedgerEntries(h); // pure, no request scope needed
+  const allDecisions = getLedgerEntries(h, principals); // pure, no request scope needed
 
   const rosters = bySeason.get(season);
   if (!rosters) return null; // the chain says complete but the provider has no rows - degrade, don't guess

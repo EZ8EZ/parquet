@@ -6,7 +6,8 @@ All shapes below are **empirically observed**, not assumed. Probed 2026-07-28.
 
 Read-only, no auth, no key. Rate limit ~1000 req/min. **No write access exists** -
 this app can advise but never execute a transaction. Every recommendation therefore
-ends in a copyable summary the user pastes into Sleeper.
+ends in a one-tap deep link into the league's own Sleeper screen (see
+`lib/sleeperLinks.ts`), and the user carries the thesis over themselves from there.
 
 ### Resolve user - `/user/EZ8`
 ```json

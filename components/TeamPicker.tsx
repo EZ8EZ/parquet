@@ -104,7 +104,7 @@ export function TeamPicker({
       >
         <label
           htmlFor="sleeper-username"
-          className="mb-1.5 block text-[11px] font-semibold uppercase tracking-wide text-muted"
+          className="mb-1.5 block text-meta font-semibold uppercase tracking-wide text-muted"
         >
           Your Sleeper username
         </label>
@@ -123,22 +123,22 @@ export function TeamPicker({
               }}
               autoComplete="username"
               placeholder="e.g. EZ8"
-              className="w-full rounded-full border border-border bg-bg/60 py-2.5 pl-9 pr-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+              className="w-full rounded-full border border-border bg-bg/60 py-2.5 pl-9 pr-3 text-body leading-relaxed text-ink placeholder:text-faint focus:border-accent focus:outline-none"
             />
           </div>
           <button
             type="submit"
             disabled={resolving || !name.trim()}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 text-sm font-semibold text-accent-ink disabled:opacity-40"
+            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 text-body leading-relaxed font-semibold text-accent-ink disabled:opacity-40"
           >
             {resolving ? <Loader2 size={15} className="animate-spin" /> : null}
             Go
           </button>
         </div>
         {error ? (
-          <p className="mt-2 text-[11px] leading-relaxed text-negative">{error}</p>
+          <p className="mt-2 text-meta leading-relaxed text-negative">{error}</p>
         ) : (
-          <p className="mt-2 text-[11px] leading-relaxed text-faint">
+          <p className="mt-2 text-meta leading-relaxed text-faint">
             Your team name works too. Not in this league? Pick a team below to explore.
           </p>
         )}
@@ -153,7 +153,7 @@ export function TeamPicker({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Find a team…"
-          className="w-full rounded-full border border-border bg-surface py-2.5 pl-9 pr-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+          className="w-full rounded-full border border-border bg-surface py-2.5 pl-9 pr-3 text-body leading-relaxed text-ink placeholder:text-faint focus:border-accent focus:outline-none"
         />
       </div>
 
@@ -176,12 +176,12 @@ export function TeamPicker({
               >
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-semibold text-ink">
+                    <span className="truncate text-body leading-relaxed font-semibold text-ink">
                       {t.teamName}
                     </span>
                     {active && <Check size={14} className="shrink-0 text-accent" />}
                   </div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[11px] text-faint">
+                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-meta text-faint">
                     <span>{t.ownerName}</span>
                     <span>·</span>
                     <span className="font-mono tnum">{t.record}</span>
@@ -191,16 +191,16 @@ export function TeamPicker({
                     </span>
                   </div>
                   {t.tags.length > 0 && (
-                    <div className="mt-1.5 truncate text-[11px] text-muted">
+                    <div className="mt-1.5 truncate text-meta text-muted">
                       {t.tags.slice(0, 3).join(" · ")}
                     </div>
                   )}
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="font-mono text-sm font-semibold tnum text-ink">
+                  <div className="font-mono text-body leading-relaxed font-semibold tnum text-ink">
                     {fmtValue(t.totalValue)}
                   </div>
-                  <div className="text-[10px] text-faint">total value</div>
+                  <div className="text-micro text-faint">total value</div>
                 </div>
                 {pending === t.rosterId && (
                   <Loader2 size={16} className="animate-spin text-accent" />

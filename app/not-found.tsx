@@ -28,7 +28,7 @@ export default function NotFound() {
           See everything
         </ButtonLink>
       </div>
-      <p className="mt-4 text-center text-[11px] leading-relaxed text-faint">
+      <p className="mt-4 text-center text-meta leading-relaxed text-faint">
         New to Parquet?{" "}
         <Link
           href="/about"

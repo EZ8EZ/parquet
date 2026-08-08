@@ -3,15 +3,14 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, Lightbulb, Trophy } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildDossier } from "@/lib/dossier";
-import { generateApproachMessage } from "@/lib/dossier/message";
 import { titleSummariesByOwner } from "@/lib/dossier/titles";
 import { getPrincipals } from "@/lib/principals";
+import { partnerIdentity } from "@/lib/dossier/partners";
 import { scheduleLuckForRoster } from "@/lib/metrics/scheduleLuck";
-import { managerWebHref } from "@/lib/tradegraph/url";
+import { managerDealsHref } from "@/lib/tradegraph/url";
 import { Tag, DeltaValue, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { BarChart } from "@/components/charts";
-import { CopyBlock } from "@/components/CopyBlock";
 import { cn, signed } from "@/lib/ui";
 import type { ReactNode } from "react";
 
@@ -31,10 +30,10 @@ function Metric({
 }) {
   return (
     <div className="rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5">
-      <div className="text-[11px] uppercase tracking-wide text-faint">{label}</div>
+      <div className="text-meta uppercase tracking-wide text-faint">{label}</div>
       <div
         className={cn(
-          "font-mono text-lg font-semibold leading-tight tnum",
+          "font-mono text-lede font-semibold leading-tight tnum",
           tone === "positive"
             ? "text-positive"
             : tone === "negative"
@@ -46,7 +45,7 @@ function Metric({
       >
         {value}
       </div>
-      {sub && <div className="text-[11px] leading-tight text-muted">{sub}</div>}
+      {sub && <div className="text-meta leading-tight text-muted">{sub}</div>}
     </div>
   );
 }
@@ -78,17 +77,6 @@ export default async function ManagerDetailPage({
   // get wrong - see lib/dossier/titles.ts.
   const titles = p.userId ? titleSummariesByOwner(h, principals).get(p.userId) : undefined;
 
-  /** Team identity for any roster in the league (used by the partner rows). */
-  const teamOf = (id: number) => {
-    const r = h.rostersById.get(id);
-    const u = r?.ownerId ? h.usersById.get(r.ownerId) : undefined;
-    return {
-      name: u?.teamName ?? u?.displayName ?? `Roster ${id}`,
-      handle: u?.displayName ?? null,
-      user: u,
-    };
-  };
-
   const extras: string[] = [];
   if (p.avgHoldingDays != null) extras.push(`avg hold ${p.avgHoldingDays}d`);
   if (p.deadline.buys || p.deadline.sells)
@@ -107,7 +95,7 @@ export default async function ManagerDetailPage({
       {/* Negative margins keep the 44px tap target from adding visible space. */}
       <Link
         href="/managers"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
       >
         <ArrowLeft size={13} aria-hidden="true" />
         All dossiers
@@ -122,13 +110,13 @@ export default async function ManagerDetailPage({
           isMe={isMe}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
             {isMe ? "Your own file" : "Dossier"}
           </p>
-          <h1 className="truncate font-display text-[24px] font-semibold leading-[1.15] text-ink">
+          <h1 className="truncate font-display text-display font-semibold leading-[1.15] text-ink">
             {p.teamName ?? p.displayName}
           </h1>
-          <div className="flex flex-wrap items-center gap-x-2 font-mono text-[11px] tnum text-faint">
+          <div className="flex flex-wrap items-center gap-x-2 font-mono text-meta tnum text-faint">
             <span className="truncate">{p.displayName}</span>
             <span aria-hidden="true">·</span>
             <span>{p.trades} trades</span>
@@ -139,7 +127,7 @@ export default async function ManagerDetailPage({
       </header>
 
       {titles && (
-        <p className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-accent">
+        <p className="mb-2 flex items-center gap-1.5 text-note font-semibold text-accent">
           <Trophy size={14} aria-hidden="true" className="shrink-0" />
           {titles.label}
         </p>
@@ -155,7 +143,7 @@ export default async function ManagerDetailPage({
         </div>
       )}
 
-      <p className="rounded-[--radius] border border-border bg-surface/80 p-2.5 text-[13px] leading-[1.42] text-ink">
+      <p className="rounded-[--radius] border border-border bg-surface/80 p-2.5 text-body leading-[1.42] text-ink">
         {d.read}
       </p>
 
@@ -169,17 +157,10 @@ export default async function ManagerDetailPage({
               aria-hidden="true"
               className="mt-[3px] shrink-0 text-accent"
             />
-            <p className="text-[12.5px] leading-snug text-ink/90">{t}</p>
+            <p className="text-note leading-snug text-ink/90">{t}</p>
           </li>
         ))}
       </ul>
-
-      <div className="mt-2">
-        <CopyBlock
-          text={generateApproachMessage(d)}
-          label="Draft message"
-        />
-      </div>
 
       <SectionHeader title="The numbers" />
       <div className="grid grid-cols-2 gap-1.5">
@@ -209,7 +190,7 @@ export default async function ManagerDetailPage({
           }
         />
       </div>
-      <p className="mt-1.5 font-mono text-[11px] leading-relaxed tnum text-faint">
+      <p className="mt-1.5 font-mono text-meta leading-relaxed tnum text-faint">
         {extras.join(" · ")}
       </p>
 
@@ -228,7 +209,7 @@ export default async function ManagerDetailPage({
               sub={luck.allPlay ? "all-play record" : "Pythagorean expected"}
             />
           </div>
-          <p className="mt-1.5 text-[12px] leading-snug text-muted">
+          <p className="mt-1.5 text-note leading-snug text-muted">
             <span
               className={cn(
                 "font-semibold",
@@ -244,7 +225,7 @@ export default async function ManagerDetailPage({
               : "."}
           </p>
           {!luck.allPlay && (
-            <p className="mt-1 text-[11px] leading-relaxed text-faint">
+            <p className="mt-1 text-meta leading-relaxed text-faint">
               From season point totals (points for vs. points against), not
               week-by-week play - this league&apos;s per-week history isn&apos;t
               loaded for the live provider (see lib/history.ts). Not the same as a
@@ -256,7 +237,7 @@ export default async function ManagerDetailPage({
       )}
 
       {p.afterLoss && p.afterLoss.total > 0 && (
-        <p className="mt-1.5 text-[12px] leading-snug text-muted">
+        <p className="mt-1.5 text-note leading-snug text-muted">
           <span className="font-semibold text-ink">After a loss:</span>{" "}
           {p.afterLoss.afterLoss} of {p.afterLoss.total} self-initiated trades came
           the week after a loss
@@ -274,12 +255,12 @@ export default async function ManagerDetailPage({
               <span
                 key={s.season}
                 className={cn(
-                  "inline-flex items-baseline gap-1.5 rounded-full border px-2 py-0.5 font-mono text-[11px] tnum",
+                  "inline-flex items-baseline gap-1.5 rounded-full border px-2 py-0.5 font-mono text-meta tnum",
                   POSTURE_TONE[s.posture] ?? POSTURE_TONE.balanced,
                 )}
               >
                 {s.season}
-                <span className="text-[11px] font-medium not-italic opacity-80">
+                <span className="text-meta font-medium not-italic opacity-80">
                   {s.posture}
                 </span>
               </span>
@@ -293,7 +274,7 @@ export default async function ManagerDetailPage({
           <SectionHeader
             title="Trade activity"
             action={
-              <span className="font-mono text-[11px] tnum text-faint">
+              <span className="font-mono text-meta tnum text-faint">
                 {p.trades} across {tradesData.length} seasons
               </span>
             }
@@ -310,12 +291,13 @@ export default async function ManagerDetailPage({
             title="Favorite trade partners"
             action={
               <Link
-                // Straight to this manager's strands, not the bare ring - the URL
-                // helper the trade web now exposes exists for exactly this link.
-                href={p.userId ? managerWebHref(p.userId) : "/web"}
-                className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-accent"
+                // Straight to this manager's own deals, filtered - which is what this
+                // link was always trying to do, back when the only destination was a
+                // ring with their strands lit.
+                href={p.userId ? managerDealsHref(p.userId) : "/deals"}
+                className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent"
               >
-                trade web
+                their deals
                 <ChevronRight size={12} aria-hidden="true" />
               </Link>
             }
@@ -323,25 +305,31 @@ export default async function ManagerDetailPage({
           <div className="overflow-hidden rounded-[--radius] border border-border bg-surface/60">
             <ul className="divide-y divide-border">
               {p.tradePartners.slice(0, 6).map((tp) => {
-                const t = teamOf(tp.rosterId);
+                const t = partnerIdentity(h, principals, tp);
                 return (
-                  <li key={tp.rosterId}>
+                  <li key={tp.ownerId ?? `r${tp.rosterId}`}>
                     <Link
-                      href={`/managers/${tp.rosterId}`}
+                      href={t.href}
                       aria-label={`Dossier: ${t.name}`}
                       className="flex min-h-11 items-center gap-2.5 px-2.5 py-1.5 transition-colors hover:bg-surface-2 focus-visible:bg-surface-2"
                     >
                       <TeamAvatar
                         name={t.name}
-                        avatarId={t.user?.avatar}
-                        teamLogoUrl={t.user?.teamLogoUrl}
+                        avatarId={t.avatarId}
+                        teamLogoUrl={t.teamLogoUrl}
                         size="xs"
-                        isMe={h.me.rosterId === tp.rosterId}
+                        isMe={!t.isFormer && h.me.rosterId === tp.rosterId}
                       />
-                      <span className="min-w-0 flex-1 truncate text-[12.5px] font-medium text-ink">
+                      <span className="min-w-0 flex-1 truncate text-note font-medium text-ink">
                         {t.name}
+                        {t.tenureLabel && (
+                          <span className="text-meta font-normal text-faint">
+                            {" "}
+                            {t.tenureLabel}
+                          </span>
+                        )}
                       </span>
-                      <span className="shrink-0 font-mono text-[11px] tnum text-muted">
+                      <span className="shrink-0 font-mono text-meta tnum text-muted">
                         {tp.count} deal{tp.count === 1 ? "" : "s"}
                       </span>
                       <ChevronRight
@@ -367,14 +355,14 @@ export default async function ManagerDetailPage({
           <Link
             key={a.href}
             href={a.href}
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-[12px] font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
           >
             {a.label}
           </Link>
         ))}
       </div>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-faint">
+      <p className="mt-3 text-meta leading-relaxed text-faint">
         Read from {p.totalTransactions} recorded moves ({signed(p.picks.net)} net
         picks). Behavior only - no roster contents, no stated intent.
       </p>

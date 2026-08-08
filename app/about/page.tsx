@@ -27,13 +27,13 @@ export default function AboutPage() {
       />
 
       <Card>
-        <p className="text-sm leading-relaxed text-ink">
+        <p className="text-body leading-relaxed text-ink">
           Dynasty leagues run for years, and the platform remembers everything
           except the part that matters: <span className="font-semibold">why</span>.
           Every trade survives forever in the transaction log. The reasoning that
           felt so obvious at the time survives about a month.
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
+        <p className="mt-2 text-body leading-relaxed text-muted">
           Parquet keeps both. The record comes from the league itself. The
           reasoning is written down in the decision ledger at the moment of
           conviction, before memory rewrites it. The app&apos;s one real trick is
@@ -47,7 +47,7 @@ export default function AboutPage() {
 
       <SectionHeader title={'Who "you" is'} />
       <Card>
-        <p className="text-sm leading-relaxed text-muted">
+        <p className="text-body leading-relaxed text-muted">
           Every page speaks to one manager at a time, and{" "}
           <span className="font-semibold text-ink">
             &quot;you&quot; means whoever is in the chair
@@ -59,7 +59,7 @@ export default function AboutPage() {
           &quot;You said win-now. You sold.&quot; is aimed at the chair, not at
           whoever happens to be holding the phone.
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
+        <p className="mt-2 text-body leading-relaxed text-muted">
           Switching chairs is public and free, because every number it moves is
           league data anyone can already read. Writing is the one thing it does not
           hand you: if your commissioner has turned on{" "}
@@ -69,22 +69,46 @@ export default function AboutPage() {
         </p>
         <Link
           href="/teams"
-          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-xs font-semibold text-accent"
+          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note leading-snug font-semibold text-accent"
         >
           Pick your team
           <ChevronRight size={13} aria-hidden="true" />
         </Link>
       </Card>
 
+      {/* Moved here out of the streak panel on Home, where it rendered on every visit
+          to explain a distinction that is new exactly once. This page is where the
+          app's vocabulary is defined; Home is where it gets used. */}
+      <SectionHeader title="Still running vs. settled" />
+      <Card>
+        <p className="text-body leading-relaxed text-muted">
+          Two things on this app look like the same thing and are not.{" "}
+          <span className="font-semibold text-ink">Streaks</span> are yours and still
+          moving: most of them get longer with nothing but the passing of a day, they
+          carry what happens next, and they can be alive, at risk, or broken.{" "}
+          <span className="font-semibold text-ink">Superlatives</span> are the opposite -
+          one winner each, ranked against the whole league, settled until more history
+          happens. That is why a streak prints the moment it was counted to and an award
+          does not: only one of them will be a different number tomorrow.
+        </p>
+        <Link
+          href="/awards"
+          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent"
+        >
+          The Superlatives
+          <ChevronRight size={13} aria-hidden="true" />
+        </Link>
+      </Card>
+
       <SectionHeader title="The two numbers you haven't seen before" />
       <Card>
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
+        <p className="text-meta font-semibold uppercase tracking-wide text-accent">
           TCI · Timeline Coherence Index{" "}
           <span className="font-mono normal-case tracking-normal text-faint">
             (0-100)
           </span>
         </p>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted">
+        <p className="mt-1.5 text-body leading-relaxed text-muted">
           Every asset on a dynasty roster is a claim on production at some point
           in time: a 21-year-old pays off later, a 33-year-old pays off now, a
           far-out first pays off after that. TCI measures whether a roster&apos;s
@@ -92,7 +116,7 @@ export default function AboutPage() {
           High means the roster is one plan. Low means it is two teams sharing a
           logo.
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
+        <p className="mt-2 text-body leading-relaxed text-muted">
           <span className="font-semibold text-ink">
             What it deliberately does not measure:
           </span>{" "}
@@ -105,20 +129,20 @@ export default function AboutPage() {
       </Card>
 
       <Card className="mt-2">
-        <p className="text-[11px] font-semibold uppercase tracking-wide text-accent">
+        <p className="text-meta font-semibold uppercase tracking-wide text-accent">
           RFI · Roster Fragility Index{" "}
           <span className="font-mono normal-case tracking-normal text-faint">
             (0-100, higher is more fragile)
           </span>
         </p>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted">
+        <p className="mt-1.5 text-body leading-relaxed text-muted">
           If your most load-bearing player&apos;s knee went on a Tuesday night,
           how much of your season goes with it? RFI deletes each player, re-solves
           the best legal lineup out of who is left, and measures what broke. Add
           how concentrated the roster&apos;s value is and how much of it sits in
           bodies that miss games, and you have the index.
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
+        <p className="mt-2 text-body leading-relaxed text-muted">
           <span className="font-semibold text-ink">
             What it deliberately does not measure:
           </span>{" "}
@@ -130,7 +154,7 @@ export default function AboutPage() {
         </p>
       </Card>
 
-      <p className="mt-2 text-[11px] leading-relaxed text-faint">
+      <p className="mt-2 text-meta leading-relaxed text-faint">
         Both numbers are built from one roster&apos;s own assets, so neither moves
         when somebody else trades, and both read the roster as it stands tonight.
         The words beside them are the league-relative part:
@@ -140,7 +164,7 @@ export default function AboutPage() {
 
       <SectionHeader title="Why nothing gets a grade" />
       <Card>
-        <p className="text-sm leading-relaxed text-muted">
+        <p className="text-body leading-relaxed text-muted">
           Every trade tool on the market will stamp your deal with a letter.
           Parquet refuses, on purpose. A grade is a verdict handed down by a model
           that cannot see your timeline, your league&apos;s scoring, or the chair
@@ -156,11 +180,11 @@ export default function AboutPage() {
 
       <SectionHeader title="What the numbers refuse to know" />
       <Card>
-        <p className="text-sm leading-relaxed text-muted">
+        <p className="text-body leading-relaxed text-muted">
           The fastest way to lose your trust would be one invented number, so the
           gaps are named instead of filled:
         </p>
-        <ul className="mt-2 space-y-2 text-sm leading-relaxed text-muted">
+        <ul className="mt-2 space-y-2 text-body leading-relaxed text-muted">
           <Refusal>
             Commissioner-executed trades arrive from the platform with no pick
             record. A version of this app inferred those picks; tested against a
@@ -185,7 +209,7 @@ export default function AboutPage() {
         </ul>
       </Card>
 
-      <p className="mt-5 text-center text-[11px] leading-relaxed text-faint">
+      <p className="mt-5 text-center text-meta leading-relaxed text-faint">
         The math behind every value, every curve, every constant is public on the{" "}
         <Link
           href="/methodology"

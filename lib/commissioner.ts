@@ -14,7 +14,7 @@
  *      from `lib/ledger.ts` rather than redefined - one definition of "worth
  *      showing" for the whole app) across EVERY roster, not just the viewer's, and
  *      hands each row a link to an existing surface: a trade opens on its own
- *      strand via `tradeWebHref`, everything else opens on the manager who made it.
+ *      receipt via `dealHref`, everything else opens on the manager who made it.
  *   2. LEAGUE HEALTH CHECKS. Two signals, both genuinely new arithmetic over
  *      existing fields rather than a new model: a roster's current starting
  *      lineup against `lineupSlots()` (already built for the fragility solver),
@@ -27,7 +27,7 @@ import type { LeagueHistory } from "./history";
 import { describeTransaction, rosterName } from "./derive/describe";
 import { buildIsNotable } from "./ledger";
 import { lineupSlots } from "./metrics/fragility";
-import { tradeWebHref } from "./tradegraph/url";
+import { dealHref } from "./tradegraph/url";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -45,7 +45,7 @@ export interface AuditEntry {
   created: number;
   type: string;
   description: string;
-  /** Trades only - opens the deal on its own strand in the trade web. */
+  /** Trades only - opens the deal's own receipt page. */
   tradeHref: string | null;
   /** Non-trades - the manager who made the move, for a page to link a dossier to. */
   rosterId: number | null;
@@ -71,7 +71,7 @@ export function getAuditLog(h: LeagueHistory): AuditEntry[] {
         created: t.created,
         type: t.type,
         description: describeTransaction(h, t),
-        tradeHref: t.type === "trade" ? tradeWebHref(t.transactionId) : null,
+        tradeHref: t.type === "trade" ? dealHref(t.transactionId) : null,
         rosterId,
         rosterName: rosterId != null ? rosterName(h, rosterId) : null,
       };
