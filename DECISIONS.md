@@ -1526,3 +1526,70 @@ the half-measure `.figure` replaced, deleted at its final call site; a duplicate
 `.figure` / `.edge-hilite` block in `globals.css`; and `--motion-*` declared in both
 `globals.css` and `interaction.css` - two agents independently fixing the same
 missing-declaration bug, which is precisely how the declaration went missing.
+
+## D49. NBA team crests, hotlinked from the SAME CDN as everything else, and gated on nothing
+The owner asked for "player images and any other images or logos that would make things
+look even better." The player-photo half was already done (D39); this is the logo half,
+plus a robustness re-check of D39's work now that the owner is about to flip
+`NEXT_PUBLIC_USE_PLAYER_PHOTOS` on for real.
+
+**The photo path checked out clean.** All three concerns the owner raised were verified
+rather than assumed: the thumb endpoint's real pixel size is 250x167-350x254 (checked
+across all 60 rendered rows on a live `/values`), which is 4-6x the 40-56px this app
+ever displays it at, so nothing is upscaled and nothing needs a bigger variant. The
+themed-disc backing D39 already put under the cutout (never a flat rectangle behind it)
+reads clean on all three themes on a real render - dark, paper, contrast - so no extra
+ring was added on top of it. The monogram fallback (photos off, or a 404) already reads
+as deliberate: initials, themed disc, the 2px team-hue edge. Nothing here needed to move.
+
+**`sleepercdn.com/images/team_logos/nba/{abbr}.png` is a real, reliable source.** Checked
+by loading all 30 current teams' lowercase-abbreviation URLs in a real browser and eyeballing
+several of them side by side (Celtics, Lakers, Warriors, Heat, Mavericks, Bulls, Nets, Jazz,
+Clippers) - each one is that team's actual crest, 150-300px square, not a shared placeholder.
+Same host `PlayerAvatar` and `TeamAvatar` already hotlink, so this is one more path on a CDN
+already in use, not a new dependency or a new domain to trust.
+
+**Not gated behind `NEXT_PUBLIC_USE_PLAYER_PHOTOS`, and that is a considered choice, not an
+oversight.** That flag exists for one specific reason: a real person's headshot is a
+licensing question a fork's owner has to have actually thought about (D39). A team crest is
+a trademark, not anyone's likeness, hotlinked the way every fantasy product on the web
+already displays one - and `TeamAvatar` next door already hotlinks Sleeper-hosted manager
+avatars (real people's own uploaded photos) with no gate at all. Holding a brand mark to a
+stricter bar than a person's photo would be backwards, not careful. New component:
+`components/TeamLogo.tsx`, `"use client"`, same fail-silent pattern as its neighbours -
+404 or network error renders nothing, never a broken-image glyph.
+
+**Placement: a corner badge on `PlayerAvatar`, opt-in per call site (`teamBadge` prop), and
+only where the team is not already printed as text nearby.** This app's densest lists -
+`/values`, the roster's own player rows, `PlayerRow`, `SearchPanel`, `DraftReportCard`,
+`RankingBoard`, the draft board - all already print the team abbreviation as text next to
+position and age. A crest there would be a second, louder copy of a datum the reader
+already has, which is the exact mistake D39 undid when it stripped the full-saturation
+team-colour fill off the disc itself. Rejected there for the same reason, not overlooked.
+
+Turned on in the four spots that do NOT print the team as text: `TradeBuilder`'s give/get
+rows (`meta` there is position and age only - team was never visible at all); the deal
+receipt's `PlayerNowRow` (value, tier and duration are this app's own numbers, no team
+anywhere in the row); the roster's one single-point-of-failure sentence ("Season hinges on
+X") which never names his team either; and the `/lineage` header, where the crest actually
+**replaces** text - the meta line under the player's name used to read "PG · LAL · 27y"
+and now reads "PG · 27y", the crest doing the team's job. That fourth one is the only
+placement that deletes a word instead of only adding a picture.
+
+**The provenance rail gets exactly one face, not five.** `ProvenanceHop` (the trade-by-trade
+nodes) has no manager avatar data reachable without threading `ManagerRef` fields through
+three separate call sites (`/roster`, `/lineage/[assetKey]`, `ValuesList`) for a rail whose
+own docstring says its job is a TIME axis, not a cast of characters - and the hop's own link
+already lands on the deal receipt one tap away, where the faces already live (`TradeParts`).
+Rejected on cost against a rail that is not the receipt. `ProvenanceResolution` ("the pick
+became {playerName}") is different: it already carries `playerId` on the node itself, so a
+`PlayerAvatar` there costs nothing to plumb and is the one moment on the rail an
+abstraction (a pick) turns into an actual person - the single face this component gets, at
+the one node built for it.
+
+**Rejected outright, not attempted.** Team logos on `/awards` (its winners are managers,
+already carrying `TeamAvatar`, not NBA teams) and on `/lineage`'s draft-pick pages (a pick
+has no NBA team until it resolves, and the resolution node already gets the treatment
+above). A per-row crest on the draft board (`app/drafts/parts.tsx`) - same redundant-with-
+text objection as the other dense lists, and 15+ picks per round is exactly the kind of
+list D39 already decided avatars don't belong on.

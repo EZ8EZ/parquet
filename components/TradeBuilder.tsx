@@ -195,6 +195,10 @@ function AssetRow({
             team={player.team}
             playerId={player.playerId}
             size="sm"
+            // The give/get rows never print a team abbreviation - `meta` below is
+            // position and age only - so a crest here is new information, not a
+            // louder copy of text already on the row.
+            teamBadge
           />
         )}
         <span className="min-w-0">
