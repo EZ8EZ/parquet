@@ -160,7 +160,54 @@ unrelated pick hops spanning three seasons to a single 2023 deal, because the on
 available signal ("both parties are in this trade") is far too weak. Fabricating trade
 contents is worse than an acknowledged gap, especially for a product whose entire
 premise is an honest record. Unattributable hops surface separately via
-`unrecordedPickMoves()`, and anything inferred is labelled "(inferred)" in the UI.
+`unrecordedPickMoves()`.
+
+**Second pass: the inference engine came back, uncalled, and was deleted again - and
+the "(inferred)" caveat went with it.** A hardened `attachInferredPicks` survived in
+`lib/derive/coalesce.ts` with **zero callers**, so `inferred: true` was set nowhere in
+the running app. Every piece of UX built on it - the "(inferred)" suffix in
+`pickLabel`, the `inferred` pill on the receipt, the `pick inferred` note on the
+provenance rail, the `hasInferredPicks` warn card - was honesty machinery for a
+condition that **had never once occurred on real data**, which reads as a disclosure
+and is really just decoration.
+
+Re-measured against NSL Fantasy Hoops before deciding, and the hardening changed
+nothing. The league contains exactly **one** coalesced commissioner trade
+(2023-07-03, EZ8 / aidsnuge / kdewitt4 - Booker, Poole, Klay, Ayton, players only),
+so the function's ambiguity guard (`matches.length !== 1`) can never fire: with one
+candidate, "ambiguous" is unreachable by construction. Its season floor
+(`pick.season >= trade.season`) excludes nothing either, because a 2023 trade admits
+2023, 2024 and 2025 picks alike. The result was the original six wrong hops, verbatim:
+
+    2024 1st (orig. vood12)     EZ8      -> kdewitt4
+    2023 1st (orig. EZ8)        EZ8      -> aidsnuge
+    2023 1st (orig. aidsnuge)   aidsnuge -> EZ8
+    2025 1st (orig. aidsnuge)   aidsnuge -> kdewitt4
+    2024 1st (orig. nathang21)  aidsnuge -> kdewitt4
+    2023 2nd (orig. kdewitt4)   kdewitt4 -> aidsnuge
+
+Six first-rounders across three draft classes, hung on a four-player deal that moved
+no picks. And each has a **better** explanation the algorithm is structurally blind
+to, because it only ever considers coalesced trades as candidates: EZ8 and kdewitt4
+made a recorded seven-pick blockbuster on 2024-01-07, and aidsnuge and kdewitt4 a
+recorded two-pick deal on 2023-12-15 - both inside the same league year as the July
+row, both at least as plausible, neither ever weighed. The signal is not merely weak;
+the candidate set is wrong.
+
+So: `attachInferredPicks` is deleted, `DraftPickRef.inferred` and
+`TradeRecord.hasInferredPicks` are deleted, and the four UI markers are deleted.
+`lib/derive/coalesce.test.ts` now pins the reconstruction AND pins that a coalesced
+trade comes out with `draftPicks: []`, so a third attempt fails a test rather than
+sitting dormant.
+
+**What replaced the caveat is a caveat that is actually true.** `commissionerExecuted`
+is a *checked property of the source rows* (the transaction id is `coalesced-`), not a
+claim about contents, and it fires on that real 2023 deal: the receipt says "Pick
+record missing - if picks changed hands here, they are not below, and the app will not
+guess which ones," and the deals list tags it `no pick record`. Rejected: wiring the
+function in as-is (it fabricates); keeping the "(inferred)" vocabulary against a
+condition that cannot occur (a disclosure that never fires is worse than none, because
+its silence reads as "nothing to disclose").
 
 ## D20. Tilt signal (trades after a loss) left fixture-only
 Deriving it live requires ~110 matchup requests and measured ~15s of cold start.
@@ -272,6 +319,12 @@ for players looks better than they were, and a manager who traded players for pi
 worse.** Pick capital is reported separately and honestly by `lib/picks.ts`. Rejected:
 folding in the picks we do have (produces a confidently wrong total); dropping the metric
 (the player side is real and complete).
+
+Note on D19's second pass: nothing here changes. The pick side of commissioner trades
+was never actually present - the `inferred` flag that once implied it might be turned
+out to be dead code that never set itself on real data - so this bias was always the
+whole truth about picks, not a partial one. The trades it applies to are now visibly
+marked `no pick record` rather than potentially "(inferred)".
 
 ## D25. Per-season rosters, per-season users and the draft index load OUTSIDE the corpus
 `getPrincipals()` costs two requests per season and `loadSeasonRosters()` one, and only
@@ -1324,8 +1377,12 @@ and because the app holds no historical ranking snapshots a value-at-trade-time 
 is **not available** - so the copy says today, and only today. D24: players only, with
 the direction of the bias stated out loud (a side that sent picks for players looks
 better here than it was; a side that sold for picks looks worse), and the picks listed
-above unpriced. D19: a deal carrying inferred picks says so in a warn card at the top,
-before any number.
+above unpriced. D19: a commissioner-executed deal says so in a warn card at the top,
+before any number - and since D19's second pass that card says the pick record is
+**missing**, not inferred. The earlier wording described an inference the app never
+made: it was gated on `hasInferredPicks`, which was computed from a flag no live code
+path ever set, so on this league the card had never rendered. The replacement is gated
+on a property of the source rows and does render, on the 2023 three-team deal.
 
 Former counterparties render `former 2022-2024` with no TCI or RFI pills. `ManagerLink`'s
 existing guard was ported into `components/TradeParts.tsx` unchanged and this is not

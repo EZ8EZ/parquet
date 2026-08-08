@@ -176,8 +176,6 @@ export interface ProvenanceHop {
   toOwnerId: string | null;
   fromName: string;
   toName: string;
-  /** This pick's involvement was inferred, not recorded (D19). */
-  inferred: boolean;
 }
 
 export interface ProvenanceResolution {
@@ -606,7 +604,6 @@ function hopOf(
     toOwnerId: m.toOwnerId,
     fromName: who(m.fromOwnerId, m.from),
     toName: who(m.toOwnerId, m.to),
-    inferred: m.inferred,
   };
 }
 

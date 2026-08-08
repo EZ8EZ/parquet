@@ -325,7 +325,6 @@ function HopBody({ h }: { h: ProvenanceHop }) {
       )}
       <p className="figure text-micro leading-normal text-faint">
         <LocalDate ts={h.at} /> · {h.season} wk {h.week}
-        {h.inferred && <span className="ml-1 text-warn">pick inferred</span>}
       </p>
     </div>
   );
