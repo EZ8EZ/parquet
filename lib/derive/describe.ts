@@ -16,13 +16,13 @@ export function ordinal(n: number): string {
 }
 
 export function pickLabel(dp: DraftPickRef, via?: string | null): string {
-  // Inferred picks are flagged in the label itself so an inference can never be
-  // read as a recorded fact, wherever it surfaces. `via` names the pick's ORIGINAL
-  // roster (the /drafts lineage convention) - without it, a trade moving two
-  // different picks that share a season and round reads as a no-op ("acquired the
-  // 2027 3rd for the 2027 3rd"), when the two are distinct assets.
+  // Every pick that reaches this label is one a transaction actually RECORDED - the
+  // app does not infer pick movement (D19). `via` names the pick's ORIGINAL roster
+  // (the /drafts lineage convention) - without it, a trade moving two different picks
+  // that share a season and round reads as a no-op ("acquired the 2027 3rd for the
+  // 2027 3rd"), when the two are distinct assets.
   const origin = via ? ` (via ${via})` : "";
-  return `${dp.season} ${ordinal(dp.round)}${origin}${dp.inferred ? " (inferred)" : ""}`;
+  return `${dp.season} ${ordinal(dp.round)}${origin}`;
 }
 
 export function rosterName(h: LeagueHistory, rosterId: number): string {
