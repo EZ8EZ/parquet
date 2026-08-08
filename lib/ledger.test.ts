@@ -1,7 +1,14 @@
 import { describe, expect, it } from "vitest";
 import { buildFixtureHistory } from "./testing/fixtureHistory";
-import { buildIsNotable, getLedgerEntries, isFaabLeague, notableWaiverLabel } from "./ledger";
+import {
+  buildIsNotable,
+  getLedgerEntries,
+  getLedgerSummary,
+  isFaabLeague,
+  notableWaiverLabel,
+} from "./ledger";
 import { annotationKey, type Annotation, type LeagueHistory } from "./history";
+import { getPrincipals } from "./principals";
 import type { Transaction } from "./providers/types";
 
 const h = buildFixtureHistory();
@@ -191,5 +198,71 @@ describe("getLedgerEntries — a trade partner's annotation must never appear as
     const entries = getLedgerEntries(h);
     const entry = entries.find((e) => e.transactionId === SHARED_TX_ID);
     expect(entry?.annotation?.reasoning).toBe("OWNER-U2-ONLY reasoning.");
+  });
+});
+
+/**
+ * REGRESSION: /ledger showed one manager 25 entries, 19 of them a predecessor's, each
+ * captioned "You acquired ...". Roster 9 is the fixture's one succeeded seat (see
+ * `SUCCESSION` in lib/providers/fixture/generate.ts): "BigTrades" (u9) ran it
+ * 2022-2024, "kdewitt4" (u15) has run it since 2025. Every entry here is captioned in
+ * the second person, addressed to whoever is viewing - so a seat-keyed ledger hands
+ * the successor 51 of the predecessor's own transactions, worded as their own
+ * decisions, the moment they load the page. `getLedgerEntries`/`getLedgerSummary`
+ * take an optional `principals` index specifically to confine the read to the
+ * viewer's own tenure - this pins that confinement against the fixture's real
+ * succession rather than a hand-built one.
+ */
+describe("getLedgerEntries — confined to the viewer's own tenure across a succession", () => {
+  const h = buildFixtureHistory();
+
+  function asRoster9(userId: string, displayName: string): LeagueHistory {
+    return { ...h, me: { userId, rosterId: 9, displayName, teamName: null } };
+  }
+
+  it("without a principals index, a succeeded seat's ledger is still the OLD seat-keyed shape (the bug, reproducible)", () => {
+    // No principals argument at all - the exact call shape every ledger reader made
+    // before D22. Proves the fixture can still reproduce the bug when the fix is
+    // skipped, so a revert of the `principals` plumbing would be caught here.
+    const successor = asRoster9("u15", "kdewitt4");
+    const entries = getLedgerEntries(successor);
+    const seasons = new Set(entries.map((e) => e.season));
+    // The predecessor's 2022-2024 transactions are still on roster 9's seat, so an
+    // unscoped read of "roster 9's history" surfaces them regardless of who is
+    // asking - that IS the bug this fixture exists to make visible.
+    expect(seasons.has("2022")).toBe(true);
+    expect(seasons.has("2023")).toBe(true);
+  });
+
+  it("with the principals index, the successor sees only their own 2025-2026 decisions", async () => {
+    const principals = await getPrincipals(h);
+    const successor = asRoster9("u15", "kdewitt4");
+    const entries = getLedgerEntries(successor, principals);
+    expect(entries.length).toBeGreaterThan(0);
+    for (const e of entries) {
+      expect(["2025", "2026"]).toContain(e.season);
+    }
+    // Scoped total must be strictly smaller than the seat's full, blended history -
+    // otherwise the scoping had no effect and this test would pass by accident.
+    const unscoped = getLedgerEntries(successor);
+    expect(entries.length).toBeLessThan(unscoped.length);
+  });
+
+  it("the departed predecessor's own view is confined the same way, symmetrically", async () => {
+    const principals = await getPrincipals(h);
+    const predecessor = asRoster9("u9", "BigTrades");
+    const entries = getLedgerEntries(predecessor, principals);
+    expect(entries.length).toBeGreaterThan(0);
+    for (const e of entries) {
+      expect(["2022", "2023", "2024"]).toContain(e.season);
+    }
+  });
+
+  it("getLedgerSummary's counts move with the same scoping, not just the entry list", async () => {
+    const principals = await getPrincipals(h);
+    const successor = asRoster9("u15", "kdewitt4");
+    const scoped = getLedgerSummary(successor, principals);
+    const unscoped = getLedgerSummary(successor);
+    expect(scoped.total).toBeLessThan(unscoped.total);
   });
 });

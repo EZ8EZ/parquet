@@ -23,6 +23,7 @@ import {
   generateCorpus,
   leagueIdFor,
   SEASONS,
+  SUCCESSION,
   type FixtureCorpus,
 } from "./generate";
 
@@ -68,8 +69,26 @@ export class FixtureProvider implements LeagueProvider {
     return corpus().rosters[leagueId] ?? [];
   }
 
-  async getUsers(_leagueId: string): Promise<LeagueUser[]> {
-    return corpus().users;
+  /**
+   * A season's users endpoint knows only who was in the league THAT season - see
+   * lib/principals.ts's header on why that matters: the departed manager on the
+   * fixture's one succeeded roster must be readable from the older seasons' users
+   * list and absent from the current one, exactly like the real API, or a principals
+   * lookup that relies on that asymmetry would pass here and fail live.
+   */
+  async getUsers(leagueId: string): Promise<LeagueUser[]> {
+    const season = SEASONS.find((s) => leagueIdFor(s) === leagueId);
+    const all = corpus().users;
+    if (!season) return all;
+    return all.filter((u) => {
+      if (u.userId === SUCCESSION.successorUserId) {
+        return season >= SUCCESSION.cutoverSeason;
+      }
+      if (u.userId === SUCCESSION.predecessorUserId) {
+        return season < SUCCESSION.cutoverSeason;
+      }
+      return true;
+    });
   }
 
   async getTransactions(leagueId: string, week: number): Promise<Transaction[]> {
