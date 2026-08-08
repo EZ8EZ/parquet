@@ -7,7 +7,9 @@ import { titleSummariesByOwner } from "@/lib/dossier/titles";
 import { getPrincipals } from "@/lib/principals";
 import { partnerIdentity } from "@/lib/dossier/partners";
 import { scheduleLuckForRoster } from "@/lib/metrics/scheduleLuck";
-import { managerDealsHref } from "@/lib/tradegraph/url";
+import { dealHref, managerDealsHref } from "@/lib/tradegraph/url";
+import { buybacksByRoster } from "@/lib/agency";
+import { LocalDate } from "@/components/LocalDate";
 import { Tag, DeltaValue, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { BarChart } from "@/components/charts";
@@ -86,6 +88,11 @@ export default async function ManagerDetailPage({
   const netPicksLeague = [...dossiersByOwner(h, principals).values()].map(
     (x) => x.profile.picks.net,
   );
+
+  // Round trips this manager made. One pass over transactions already in the corpus
+  // (lib/agency), keyed by the roster that ORIGINALLY owned the pick, which is the
+  // only roster for which "bought back" means anything.
+  const buybacks = buybacksByRoster(h).get(rosterId) ?? [];
 
   const extras: string[] = [];
   if (p.avgHoldingDays != null) extras.push(`avg hold ${p.avgHoldingDays}d`);
@@ -171,6 +178,73 @@ export default async function ManagerDetailPage({
           </li>
         ))}
       </ul>
+
+      {/*
+        PICKS THEY BOUGHT BACK. A behavioural signal that is a FACT and not a read:
+        this manager once owned this pick, traded it away, and later paid to get it
+        back. It is worth its own section because it is the only transaction that
+        converts a manager's own season from a result into an asset they control.
+
+        WHAT IT DELIBERATELY DOES NOT SAY (D19): why. Intent is not in the corpus. A
+        pick can come home as a throw-in, as the cheapest matching value in somebody
+        else's deal, or because a manager wanted their season back. The copy states
+        the round trip and stops, and the undated ones say plainly that no
+        transaction records them rather than guessing at one.
+      */}
+      {buybacks.length > 0 && (
+        <>
+          <SectionHeader title={`Picks they bought back - ${buybacks.length}`} />
+          <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
+            {buybacks.map((b, i) => {
+              const body = (
+                <>
+                  <span className="block truncate figure text-body font-semibold leading-tight text-ink">
+                    Their own {b.label}, back from {b.fromName}
+                  </span>
+                  <span className="block truncate text-meta leading-tight text-secondary">
+                    {b.recorded ? (
+                      <>
+                        <LocalDate ts={b.at!} />
+                        {b.awayDays != null
+                          ? ` · away ${b.awayDays} days${b.recordedHops && b.recordedHops > 2 ? `, changing hands ${b.recordedHops} times` : ""}`
+                          : " · the trade that sent it out is not in the record"}
+                      </>
+                    ) : (
+                      "No transaction records this move, so it carries no date"
+                    )}
+                  </span>
+                </>
+              );
+              return (
+                <li key={`${b.season}-${b.round}-${b.rosterId}-${i}`}>
+                  {b.recorded && b.transactionId ? (
+                    <Link
+                      href={dealHref(b.transactionId)}
+                      className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-surface-2"
+                    >
+                      <span className="min-w-0 flex-1">{body}</span>
+                      <ChevronRight
+                        size={13}
+                        aria-hidden="true"
+                        className="shrink-0 text-faint"
+                      />
+                    </Link>
+                  ) : (
+                    <div className="flex min-h-11 items-center gap-2 px-2.5 py-1.5">
+                      <span className="min-w-0 flex-1">{body}</span>
+                      <Tag tone="warn">unrecorded</Tag>
+                    </div>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <p className="mt-1.5 text-meta leading-snug text-secondary">
+            A pick that came home. It says what happened, not why: the app cannot see
+            intent, and a pick can return as a throw-in as easily as on purpose.
+          </p>
+        </>
+      )}
 
       <SectionHeader title="The numbers" />
       <div className="grid grid-cols-2 gap-1.5">

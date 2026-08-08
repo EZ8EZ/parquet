@@ -537,3 +537,39 @@ describe("against the fixture corpus", () => {
     }
   });
 });
+
+/**
+ * The per-row floor. A hop that brings a pick back to its original owner prints one
+ * more sentence than any other row, and the single global floor was measured without
+ * it - at 390px the live render put that row's date on the next row's caption.
+ */
+describe("layoutRows: per-row floors", () => {
+  const at = (day: number) => day * 86_400_000;
+
+  it("gives a row its own floor without stretching its neighbours", () => {
+    // Three events days apart then a long wait, so the floor is what binds the
+    // early rows and the proportional axis is what binds the last one.
+    const times = [at(0), at(1), at(2), at(1000)];
+    const base = layoutRows(times);
+    const bumped = layoutRows(times, [92, 132, 92, 92]);
+    expect(bumped[1]).toBeGreaterThanOrEqual(132);
+    expect(bumped[0]).toBe(base[0]);
+    expect(bumped[3]).toBe(base[3]);
+  });
+
+  it("honours a taller floor on the LAST row, which holds the terminus", () => {
+    const rows = layoutRows([at(0), at(1)], [92, 132]);
+    expect(rows[1]).toBe(132);
+  });
+
+  it("behaves exactly as before when no floors are supplied", () => {
+    const times = [at(0), at(100), at(200), at(1200)];
+    expect(layoutRows(times)).toEqual(layoutRows(times, [92, 92, 92, 92]));
+  });
+
+  it("never lets a supplied floor go below the global minimum", () => {
+    for (const r of layoutRows([at(0), at(1), at(2)], [10, 10, 10])) {
+      expect(r).toBeGreaterThanOrEqual(92);
+    }
+  });
+});
