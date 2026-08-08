@@ -5,13 +5,27 @@
  *
  * Three things stacked at the bottom of every page, bottom-up:
  *
- *   destination row  53pt  four links, and only four
+ *   the menu button  53pt  ONE full-bleed, worded control that opens everything
  *   context row      44pt  what you are looking at, and what is outstanding
  *   handle           19pt  the grip that opens the drawer above all of it
  *
  * 116pt plus `env(safe-area-inset-bottom)`, so ~150pt at rest on a device with a home
- * indicator. The old bar was ~94pt and spent all of it on six labels; this spends the
- * extra 56 on saying what you are looking at, which no bar of tabs can do.
+ * indicator - unchanged arithmetic, because the root layout's bottom padding is sized
+ * to it and belongs to another owner this round.
+ *
+ * ROUND 8b DELETED THE DESTINATION ROW. Four fixed links were still a bar of tabs, and
+ * the brief was to find out whether the app can live on summoned menus alone. What
+ * replaced them is the widest, most literal affordance a phone screen can hold: a
+ * full-bleed button that says the word "Menu" and, under it, what is behind it. A bar
+ * teaches by being permanently visible; this teaches the same way, in words instead of
+ * six-point icon captions, and it spends one row instead of one row per destination.
+ *
+ * THE COST IS ONE TAP, AND IT IS PAID BACK IN TWO PLACES. Reaching /roster from an
+ * arbitrary page is 2 taps now where it was 1. So: (a) the four former slots are the
+ * FIRST thing in the drawer and are PINNED to its bottom edge, a thumb's width above
+ * the button that just opened them - the second tap is the shortest travel on screen,
+ * not a hunt through a list; and (b) Home is a real hub again (app/page.tsx), so the
+ * page every session starts on lists every surface itself.
  *
  * WHAT MOVES WHEN IT OPENS: nothing you can reach. The drawer is the FIRST child of
  * the sheet, above the handle, so it grows upward into the page and the three rows
@@ -23,18 +37,24 @@
  *
  * TWO ACCESSIBILITY STATES, NOT THREE:
  *
- *   collapsed  non-modal. `<nav aria-label="Primary">` with the four links (the
- *              assertion every route in e2e/ makes - see e2e/helpers.ts), and the
- *              drawer is `hidden` + `inert`, so it is not in the tab order, not in
- *              the accessibility tree, and not findable by browser find-in-page.
+ *   collapsed  non-modal. `<nav aria-label="Primary">` wraps the whole resting sheet -
+ *              the seat chip, the status line and the menu button are ALL navigation,
+ *              and that landmark is the assertion every route in e2e/ makes (see
+ *              e2e/helpers.ts). It used to wrap only the four tabs; with the tabs gone
+ *              it wraps what is actually there, and stays visible on every route. The
+ *              drawer inside it is `hidden` + `inert` when closed, so it is not in the
+ *              tab order, not in the accessibility tree, and not findable by
+ *              browser find-in-page.
  *   expanded   `role="dialog" aria-modal="true"`, focus trapped inside the sheet,
  *              Escape closes, and the page behind is `inert`.
  *
  * Drag is an ACCELERATOR, never the contract. The handle is a real `<button>` with
- * `aria-expanded`/`aria-controls`, there is a second full-size chevron control in the
- * context row, and every destination in the drawer is also on /more - which stays a
- * real page for exactly that reason (no-JS, crawlers, and "see everything"). Nothing
- * in this component is reachable by drag alone. Intermediate detents are deliberately
+ * `aria-expanded`/`aria-controls`, the menu button below it is the same action at
+ * full width and in words, and every destination in the drawer is also on /more and
+ * on Home - both of which stay real pages for exactly that reason (no-JS, crawlers,
+ * and "see everything"). The former chevron-only toggle in the context row is gone:
+ * with a control that says "Menu" two rows down, a bare glyph was a third way to do
+ * one thing. Nothing in this component is reachable by drag alone. Intermediate detents are deliberately
  * NOT implemented: a third position would be a state with no name to announce and no
  * keyboard equivalent, so it would be a pointer-only nicety pretending to be part of
  * the interface.
@@ -51,6 +71,7 @@ import {
   ChevronRight,
   ChevronUp,
   ExternalLink,
+  LayoutGrid,
   Repeat,
   Settings,
 } from "lucide-react";
@@ -253,25 +274,39 @@ export function Desk({ data }: { data: DeskData | null }) {
           className="mx-auto w-full max-w-2xl rounded-t-[--radius-lg] border-t border-border bg-bg/[0.93] backdrop-blur-lg"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          {/* ------------------------------------------------------- the drawer */}
+        {/* `aria-label="Primary"` is load-bearing well beyond this file: every
+            registry-driven smoke test asserts it (e2e/helpers.ts) as the one piece of
+            chrome that proves a route rendered at all. It wraps the whole sheet now
+            rather than a row of tabs, because the whole sheet is the navigation. */}
+        <nav aria-label="Primary">
+          {/* ------------------------------------------------------- the drawer
+              A scrolling half and a pinned half. The pinned half is at the BOTTOM,
+              against the button that opened it, and holds the four destinations that
+              used to be a permanent row - which is what keeps "get to my roster" a
+              two-tap move with almost no travel between the taps rather than a
+              two-tap move plus a scan. */}
           <div
             id={drawerId}
             ref={drawerRef}
             tabIndex={-1}
             hidden={!expanded}
             inert={!expanded}
-            className="desk-drawer max-h-[min(32rem,calc(100dvh-11rem))] overflow-y-auto overscroll-contain px-3.5 pb-2 pt-3 outline-none"
+            // The display utility is applied ONLY when open. Tailwind's preflight
+            // hides `[hidden]` with a plain `display: none` rule, and a `flex`
+            // utility in the same class list wins on order - so a permanent `flex`
+            // here would render the whole drawer on every page, closed or not.
+            className={cn("desk-drawer outline-none", expanded && "flex flex-col")}
           >
+          <div className="max-h-[min(26rem,calc(100dvh-16rem))] overflow-y-auto overscroll-contain px-3.5 pt-3">
             <Suspense fallback={null}>
               <SearchPanel basePath={pathname} param={DESK_SEARCH_PARAM} />
             </Suspense>
 
             {/*
-              Every group EXCEPT Primary. Those four are not omitted, they are the row
-              two inches below this one, permanently on screen - printing them again
-              here would be the drawer advertising a destination the reader can already
-              see and touch. /more remains the index that lists literally everything,
-              and it is the last link in here.
+              Every group EXCEPT Primary. Those four are the pinned block below, a
+              thumb's width from the button - printing them twice in one panel would be
+              the drawer advertising the same destination in two places. /more remains
+              the index that lists literally everything, and it is the last link here.
             */}
             {groupedSurfaces()
               .filter((g) => g.group !== "Primary")
@@ -294,7 +329,7 @@ export function Desk({ data }: { data: DeskData | null }) {
                             href={s.href}
                             aria-current={active ? "page" : undefined}
                             className={cn(
-                              "flex min-h-11 items-start gap-2 rounded-[--radius-sm] border bg-surface/60 px-2 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2",
+                              "flex min-h-11 items-start gap-2 rounded-[--radius-sm] border bg-surface px-2 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2",
                               active ? "border-accent/60" : "border-border",
                             )}
                           >
@@ -323,11 +358,48 @@ export function Desk({ data }: { data: DeskData | null }) {
 
             <Link
               href="/more"
-              className="mt-3 flex min-h-11 items-center justify-center gap-1 rounded-[--radius-sm] border border-dashed border-border text-note font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+              className="mb-2 mt-3 flex min-h-11 items-center justify-center gap-1 rounded-[--radius-sm] border border-dashed border-border text-note font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
             >
               See everything on one page
               <ChevronRight size={13} aria-hidden="true" />
             </Link>
+          </div>
+
+          {/* ------------------------------------------- the pinned destinations
+              The four former tabs, rendered from the SAME registry flag that used to
+              draw the row (`primary`), never a list of this component's own. Pinned
+              rather than scrolled: these are the four moves a reader makes most, so
+              they must never be somewhere you have to scroll to, and they must sit
+              where the thumb already is. */}
+          <div className="shrink-0 border-t border-border px-3.5 pb-2 pt-2">
+            <h2 className="mb-1.5 px-0.5 text-micro font-semibold uppercase tracking-[0.16em] text-faint">
+              Go to
+            </h2>
+            <div className="grid grid-cols-4 gap-1.5">
+              {destinations.map((s) => {
+                const Icon = iconForSurface(s.href);
+                const active = isActive(pathname, s.href);
+                return (
+                  <Link
+                    key={s.href}
+                    href={s.href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "flex min-h-[3.25rem] flex-col items-center justify-center gap-1 rounded-[--radius-sm] border px-1 text-center transition-colors",
+                      active
+                        ? "border-accent/60 bg-accent/10 text-accent"
+                        : "border-border bg-surface text-muted hover:border-border-strong hover:bg-surface-2",
+                    )}
+                  >
+                    <Icon size={18} aria-hidden="true" />
+                    <span className="text-micro font-semibold leading-none">
+                      {s.short ?? s.label}
+                    </span>
+                  </Link>
+                );
+              })}
+            </div>
+          </div>
           </div>
 
           {/* ------------------------------------------------------- the handle
@@ -335,14 +407,16 @@ export function Desk({ data }: { data: DeskData | null }) {
               is why `min-h-0` has to override the global rule in globals.css rather
               than the rule being wrong. It is full-bleed wide, it sits ~97pt above
               `env(safe-area-inset-bottom)` so it never competes with the iOS home
-              indicator's swipe, and the chevron in the row below is the same action
-              at full size for anyone who wants it. */}
+              indicator's swipe, and the worded button two rows below is the same
+              action at full size for anyone who wants it. Its name says "drag handle"
+              so that it and the menu button are never two identically-named controls
+              in one list to a screen reader. */}
           <button
             ref={handleRef}
             type="button"
             aria-expanded={expanded}
             aria-controls={drawerId}
-            aria-label={expanded ? "Close the drawer" : "Open search and every surface"}
+            aria-label={expanded ? "Drag handle: close the menu" : "Drag handle: open the menu"}
             onClick={onHandleClick}
             onPointerDown={onPointerDown}
             onPointerMove={onPointerMove}
@@ -418,21 +492,6 @@ export function Desk({ data }: { data: DeskData | null }) {
               <span className="flex-1 truncate text-meta text-faint">Parquet</span>
             )}
 
-            <button
-              type="button"
-              aria-expanded={expanded}
-              aria-controls={drawerId}
-              aria-label={expanded ? "Close the drawer" : "Open search and every surface"}
-              onClick={() => setExpanded(!expanded)}
-              className="-mr-1.5 flex h-11 w-9 shrink-0 items-center justify-center text-faint transition-colors hover:text-accent"
-            >
-              {expanded ? (
-                <ChevronDown size={17} aria-hidden="true" />
-              ) : (
-                <ChevronUp size={17} aria-hidden="true" />
-              )}
-            </button>
-
             {seatMenu && data && (
               <div
                 id={seatMenuId}
@@ -463,34 +522,54 @@ export function Desk({ data }: { data: DeskData | null }) {
             )}
           </div>
 
-          {/* ----------------------------------------------- the destination row
-              `aria-label="Primary"` is load-bearing well beyond this file: every
-              registry-driven smoke test asserts it (e2e/helpers.ts) as the one piece
-              of chrome that proves a route rendered at all. */}
-          <nav aria-label="Primary" className="flex border-t border-border">
-            {destinations.map((s) => {
-              const Icon = iconForSurface(s.href);
-              const active = isActive(pathname, s.href);
-              return (
-                <Link
-                  key={s.href}
-                  href={s.href}
-                  aria-current={active ? "page" : undefined}
-                  className={cn(
-                    "flex flex-1 flex-col items-center justify-center gap-[3px] py-[9px] text-meta font-medium tracking-wide transition-colors",
-                    active ? "text-accent" : "text-faint hover:text-muted",
-                  )}
-                >
-                  <Icon size={21} strokeWidth={active ? 2.4 : 1.9} aria-hidden="true" />
-                  {/* `leading-none` is load-bearing arithmetic, not taste: preflight's
-                      `line-height: 1.5` on <html> is an ABSOLUTE 24px that an 11px
-                      label inherits unchanged, which would make this row 66pt instead
-                      of 53. 21 (icon) + 3 (gap) + 11 (label) + 18 (padding) = 53. */}
-                  <span className="leading-none">{s.short ?? s.label}</span>
-                </Link>
-              );
-            })}
-          </nav>
+          {/* ------------------------------------------------- the menu button
+              What replaced four tabs. The whole width of the phone, 53pt tall (the
+              destination row's exact height, because the root layout's bottom padding
+              is arithmetic against this sheet and belongs to another owner this
+              round), and it says what it is in a word rather than asking a reader to
+              infer it from a glyph. This is the ONE thing standing between a
+              first-time leaguemate and the rest of the app, so it is the most
+              literal, largest, most permanently visible control in the product.
+
+              `leading-none` on both lines is load-bearing arithmetic, not taste:
+              preflight's `line-height: 1.5` on <html> is an ABSOLUTE 24px that a
+              13px or 11px label inherits unchanged, which would overflow 53pt. */}
+          <button
+            type="button"
+            aria-expanded={expanded}
+            aria-controls={drawerId}
+            aria-label={expanded ? "Close the menu" : "Menu"}
+            onClick={() => setExpanded(!expanded)}
+            className={cn(
+              "flex h-[53px] w-full items-center justify-center gap-2 border-t px-3.5 transition-colors",
+              expanded
+                ? "border-accent/40 bg-accent/10 text-accent"
+                : "border-border text-ink hover:bg-surface-2",
+            )}
+          >
+            {expanded ? (
+              <ChevronDown size={18} aria-hidden="true" className="shrink-0" />
+            ) : (
+              <LayoutGrid size={18} aria-hidden="true" className="shrink-0 text-accent" />
+            )}
+            <span className="min-w-0">
+              <span className="block text-body font-semibold leading-none">
+                {expanded ? "Close" : "Menu"}
+              </span>
+              <span
+                className={cn(
+                  "mt-1 block truncate text-micro leading-none",
+                  expanded ? "text-accent/80" : "text-faint",
+                )}
+              >
+                {expanded ? "Back to the page" : "Every page in Parquet, and search"}
+              </span>
+            </span>
+            {!expanded && (
+              <ChevronUp size={16} aria-hidden="true" className="shrink-0 text-faint" />
+            )}
+          </button>
+        </nav>
         </div>
       </div>
     </>

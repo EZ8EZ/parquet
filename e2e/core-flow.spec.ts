@@ -45,12 +45,14 @@ test("ledger annotate affordance, then the audit-log deep link into the deal rec
   await page.goto("/");
   await expectStableChrome(page);
 
-  // Through the Desk's own destination row, which is where the ledger now lives:
-  // it is one of the four permanent slots (lib/nav.ts, `primary`), so it is no
-  // longer a curated shortcut in Home's "Go deeper" grid and the old
-  // `/Decision ledger/i` link text no longer exists on this page. Scoped to the
-  // Primary navigation on purpose - "Record" is also the label of Home's
-  // record figure, which links to /league, and this test means the slot.
+  // Through the Desk's menu, which is now the ONLY chrome-level way to any
+  // destination: round 8b deleted the four-tab destination row and replaced it with
+  // one worded button (components/Desk.tsx). This is the whole navigation contract
+  // in three lines - a real `<button>` opens it by tap, and the four former slots
+  // are pinned to the bottom of the drawer it opens. Scoped to the Primary
+  // navigation on purpose: "Record" is also the label of Home's record figure,
+  // which links to /league, and this test means the destination.
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
   await page
     .getByRole("navigation", { name: "Primary" })
     .getByRole("link", { name: "Record", exact: true })

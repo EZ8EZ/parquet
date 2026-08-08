@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, ChevronRight, Repeat, ScrollText, Settings } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronRight, ScrollText } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getStrategyReport } from "@/lib/strategy";
 import { getPrincipals } from "@/lib/principals";
@@ -8,7 +8,7 @@ import { loadDigest } from "@/lib/digest";
 import { currentFormByRoster } from "@/lib/roster";
 import { ordinal } from "@/lib/derive/describe";
 import { liveStreaks } from "@/lib/streaks";
-import { curatedSurfaces } from "@/lib/nav";
+import { groupedSurfaces } from "@/lib/nav";
 import { canCapture, readSeat } from "@/lib/auth/server";
 import { iconForSurface } from "@/components/nav-icons";
 import { DigestPanel } from "@/components/DigestPanel";
@@ -43,30 +43,12 @@ export default async function HomePage() {
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-3">
-        <Wordmark tagline="Dynasty memory" />
-        <div className="flex shrink-0 items-center gap-1.5">
-          {/* Who am I? - switch teams / enter a username. */}
-          <Link
-            href="/teams"
-            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-note font-medium text-muted transition-colors hover:border-accent hover:text-accent"
-          >
-            <Repeat size={13} aria-hidden="true" />
-            <span className="max-w-[7rem] truncate">
-              {h.me.teamName ?? h.me.displayName}
-            </span>
-          </Link>
-          {/* The display escape hatch. Icon-only so it costs almost no width on the
-              one row every visit starts from - two taps from anywhere in the app. */}
-          <Link
-            href="/settings"
-            aria-label="Settings"
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-muted transition-colors hover:border-accent hover:text-accent"
-          >
-            <Settings size={15} aria-hidden="true" />
-          </Link>
-        </div>
-      </div>
+      {/* The wordmark, and nothing beside it. "Switch team" and "Settings" used to sit
+          in this row's right-hand corner - the top-right of the tallest page in the
+          app, which is the single hardest place to reach one-handed on a 6.7" phone.
+          Both now live behind the seat chip in the Desk, which is at the bottom of
+          EVERY page rather than the top of this one (D35, and components/Desk.tsx). */}
+      <Wordmark tagline="Dynasty memory" />
 
       {/* Loud, not subtle: synthetic data that looks plausible is the most dangerous
           failure this app can have, so it must be impossible to mistake for real. */}
@@ -151,7 +133,7 @@ export default async function HomePage() {
         // serving self-knowledge, and "here's what you said, it still holds" is
         // part of that memory, not just the moments it catches you out. Kept
         // visually calm and clearly not a warning: no red, no AlertTriangle.
-        <div className="mt-3 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2">
+        <div className="mt-3 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={14} aria-hidden="true" className="shrink-0 text-positive" />
             <span className="text-meta font-semibold uppercase tracking-wide text-muted">
@@ -172,9 +154,81 @@ export default async function HomePage() {
         </div>
       ) : null}
 
-      {/* Headline figures. Four numbers, four destinations, one card's worth of
-          height instead of four stacked boxes. */}
-      <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-[--radius-sm] border border-border bg-surface/60">
+      {/* What moved while you were gone - the memory the rest of the page cannot give,
+          because every other figure here describes a state rather than a change. */}
+      <SectionHeader title="Since your last visit" />
+      <DigestPanel digest={digest} />
+
+      {/*
+        WHERE TO - the half of this page the round-8 brief actually bought.
+
+        Home used to end with a "Go deeper" grid of eight CURATED surfaces, roughly
+        1,600px down, under everything else on the page - which was survivable only
+        because a bar of tabs was pinned to the bottom of the screen doing the real
+        navigating. That bar is gone (components/Desk.tsx), so the landing page has to
+        be a hub rather than a dashboard with a nav bar bolted under it, and a curated
+        subset is no longer an honest answer to "what is in this app". This is the
+        WHOLE registry, in the registry's own groups, at roughly 700px - above every
+        derived figure on the page, because "where do you want to go" is a better
+        opening question for a first-time leaguemate than "here is your pick capital".
+
+        Grouped by `lib/nav.ts`'s own grouping, never a second arrangement invented
+        here: the same five headings a reader sees in the Desk's menu and on /more, in
+        the same order, so the three places that list surfaces teach one shape.
+      */}
+      <SectionHeader title="Where to" href="/more" cta="one long list" />
+      <p className="-mt-0.5 mb-2 text-note leading-snug text-muted">
+        Everything in Parquet, and the same list is behind the Menu button at the
+        bottom of every screen.
+      </p>
+      {groupedSurfaces().map(({ group, items }) => (
+        <div key={group} className="mb-2.5">
+          <h3 className="mb-1.5 px-0.5 text-micro font-semibold uppercase tracking-[0.16em] text-faint">
+            {group === "Primary" ? "The four you use most" : group}
+          </h3>
+          <div className={group === "Primary" ? "grid grid-cols-4 gap-1.5" : "grid grid-cols-2 gap-1.5"}>
+            {items.map((s) => {
+              const Icon = iconForSurface(s.href);
+              const here = s.href === "/";
+              if (group === "Primary") {
+                return (
+                  <Link
+                    key={s.href}
+                    href={s.href}
+                    aria-current={here ? "page" : undefined}
+                    className={`flex min-h-[3.5rem] flex-col items-center justify-center gap-1 rounded-[--radius-sm] border px-1 text-center transition-colors ${
+                      here
+                        ? "border-accent/60 bg-accent/10 text-accent"
+                        : "border-border bg-surface text-ink hover:border-accent/50 hover:bg-surface-2"
+                    }`}
+                  >
+                    <Icon size={19} aria-hidden="true" />
+                    <span className="text-micro font-semibold leading-none">
+                      {s.short ?? s.label}
+                    </span>
+                  </Link>
+                );
+              }
+              return (
+                <HomeLink
+                  key={s.href}
+                  href={s.href}
+                  icon={<Icon size={15} />}
+                  title={s.label}
+                  sub={s.sub}
+                />
+              );
+            })}
+          </div>
+        </div>
+      ))}
+
+      {/* YOUR SEASON, in figures. Below the hub rather than above it now: these are
+          instrumentation, and instrumentation is what you read once you have decided
+          where you are. Every one of them is still a link, and they are still four
+          numbers in one card's worth of height rather than four stacked boxes. */}
+      <SectionHeader title="Your season, in four numbers" />
+      <div className="grid grid-cols-2 overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
         <Figure
           href="/league"
           label="Record"
@@ -226,7 +280,7 @@ export default async function HomePage() {
       {/* Activity tape - the rest of the derived profile, previously unsurfaced. */}
       <Link
         href="/ledger"
-        className="mt-1.5 block rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
+        className="mt-1.5 block rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
       >
         <div className="grid grid-cols-4 gap-1">
           <Micro label="moves" value={`${p.totalTransactions}`} />
@@ -251,10 +305,6 @@ export default async function HomePage() {
         </p>
       </Link>
 
-      {/* What moved while you were gone - the memory the rest of the page cannot give,
-          because every other figure here describes a state rather than a change. */}
-      <SectionHeader title="Since your last visit" />
-      <DigestPanel digest={digest} />
 
       {/* The natural sibling of the digest, and the other half of the same question:
           that panel is what CHANGED while you were gone, this one is what is still
@@ -295,7 +345,7 @@ export default async function HomePage() {
                     ? `/managers/former/${tp.ownerId}`
                     : `/managers/${tp.rosterId}`
                 }
-                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-border bg-surface/60 px-3 transition-colors hover:border-accent"
+                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-border bg-surface px-3 transition-colors hover:border-accent"
               >
                 <span className="max-w-[8rem] truncate text-note font-semibold text-ink">
                   {tp.displayName}
@@ -309,34 +359,6 @@ export default async function HomePage() {
         </>
       )}
 
-      {/* Explore - rendered from lib/nav.ts's curated set, not a hand-kept list of
-          its own. That registry is also what League's pill row and the /more index
-          read, which is the actual fix behind round 6's candidate 53: this grid and
-          League's used to be two independently maintained lists that had already
-          silently diverged (neither included Manager Compare or /rank). One shared
-          source means they can't drift apart again. */}
-      <SectionHeader title="Go deeper" />
-      <div className="grid grid-cols-2 gap-1.5">
-        {curatedSurfaces().map((s) => {
-          const Icon = iconForSurface(s.href);
-          return (
-            <HomeLink
-              key={s.href}
-              href={s.href}
-              icon={<Icon size={15} />}
-              title={s.label}
-              sub={s.sub}
-            />
-          );
-        })}
-      </div>
-      <Link
-        href="/more"
-        className="mt-1.5 flex min-h-11 items-center justify-center gap-1 rounded-[--radius-sm] border border-dashed border-border text-note font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
-      >
-        See everything
-        <ChevronRight size={13} aria-hidden="true" />
-      </Link>
 
       {/* The "Parquet advises; it can't act / Sleeper has no write API" note used to
           sit here. It is a constraint about sending trades, and /trade states it at the
@@ -412,7 +434,7 @@ function HomeLink({
   return (
     <Link
       href={href}
-      className="flex min-h-11 min-w-0 flex-col justify-center rounded-[--radius-sm] border border-border bg-surface/70 px-2.5 py-2 transition-colors hover:border-accent/50 hover:bg-surface-2"
+      className="flex min-h-11 min-w-0 flex-col justify-center rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2 transition-colors hover:border-accent/50 hover:bg-surface-2"
     >
       <span className="flex items-center gap-1.5">
         <span aria-hidden="true" className="shrink-0 text-accent">
