@@ -1,0 +1,227 @@
+/**
+ * THE DISTRIBUTION STRIP - the shape a bare number needs to mean anything.
+ *
+ * The round-8 metrics audit found this app printing TCI, RFI, total value, pick
+ * capital and start rate as bare figures. "Your TCI is 61" is unanswerable: 61 out of
+ * what, against whom, and is 61 the good end? Every one of those numbers is scored
+ * against the same fourteen managers, and the app already holds all fourteen every
+ * time it prints one of them - so the comparison was never missing data, only a
+ * drawing.
+ *
+ * One tick per manager, positioned by value. Yours is taller, accented, and carries
+ * its own rank in words underneath. The reader gets the answer three ways at once:
+ * where the tick sits, how the crowd is bunched around it, and the printed rank.
+ *
+ * COLOUR (see lib/chart-colors.ts for the rules and their measurements):
+ * - The crowd is the SEQUENTIAL SINGLE-HUE magnitude ramp - one hue, five strengths,
+ *   strongest at the top of the range. That is genuine work, not decoration: it makes
+ *   a cluster at one end legible as a cluster rather than as evenly grey pickets, and
+ *   single-hue ramps are the only kind that survive every colour vision deficiency.
+ * - A `signed` strip uses the CVD-safe diverging pair instead, split at zero.
+ * - Nothing is encoded in colour alone. Delete every fill and the position, the
+ *   height difference and the printed rank still carry the whole reading.
+ *
+ * NO VALENCE. The strip never says which end is good. D23 is explicit that low
+ * fragility is not the same as good, and D6 forbids grades outright, so `betterEnd`
+ * exists only to word the rank sentence ("4th highest" / "4th lowest") and is
+ * omitted wherever the direction is genuinely not a judgement.
+ *
+ * Hand-rolled inline SVG (D3). Every coordinate is rounded before it reaches an
+ * attribute - unrounded floats serialize differently server-side and client-side and
+ * have broken hydration on this project before.
+ */
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
+import {
+  CHART_ACCENT,
+  CHART_FAINT,
+  CHART_GRID,
+  CHART_NEUTRAL,
+  divergingFill,
+  magnitudeOpacity,
+} from "@/lib/chart-colors";
+import { ordinal } from "@/lib/derive/describe";
+import { cn } from "@/lib/ui";
+
+const W = 320;
+const H = 36;
+/** The rail the ticks stand on. */
+const BASE = 26;
+const PAD = 6;
+
+const r1 = (v: number) => Math.round(v * 10) / 10;
+
+export function DistributionStrip({
+  label,
+  values,
+  mine,
+  format = (n) => `${n}`,
+  signed = false,
+  betterEnd,
+  sub,
+  href,
+  className,
+}: {
+  /** What is being distributed. Printed, and read out in the aria label. */
+  label: string;
+  /** Every comparable value in the league, yours included, in any order. */
+  values: number[];
+  /** The viewer's own value. `null` when the viewer holds no roster. */
+  mine: number | null;
+  format?: (n: number) => string;
+  /** Split the ramp at zero on the diverging pair instead of running sequential. */
+  signed?: boolean;
+  /**
+   * Only wording. "high" makes rank 1 the largest value, "low" the smallest. Leave
+   * undefined where neither end is better and the rank is simply a position.
+   */
+  betterEnd?: "high" | "low";
+  /** One short line under the figure - what it is made of. */
+  sub?: string;
+  /** Makes the whole row a link. The strip replaced a rail of tappable stat cells
+   *  that printed the same three numbers directly above it, so it has to keep the
+   *  destinations that rail carried rather than merely the figures. */
+  href?: string;
+  className?: string;
+}) {
+  const clean = values.filter((v) => Number.isFinite(v));
+  if (clean.length < 3) return null;
+
+  const lo = Math.min(...clean);
+  const hi = Math.max(...clean);
+  const span = hi - lo || 1;
+  const x = (v: number) => r1(PAD + ((v - lo) / span) * (W - PAD * 2));
+
+  // Rank is computed from the raw values, never from a pixel position - two rosters
+  // a hair apart round to the same x and must not round to the same rank.
+  const sorted = [...clean].sort((a, b) => (betterEnd === "low" ? a - b : b - a));
+  const rank = mine == null ? null : sorted.indexOf(mine) + 1;
+
+  const median = sorted.length
+    ? [...clean].sort((a, b) => a - b)[Math.floor(clean.length / 2)]
+    : 0;
+
+  const reading =
+    rank && rank > 0
+      ? betterEnd
+        ? `${ordinal(rank)} ${betterEnd === "high" ? "highest" : "lowest"} of ${clean.length}`
+        : `${ordinal(rank)} of ${clean.length}`
+      : `${clean.length} rosters`;
+
+  const body = (
+    <>
+      <div className="flex items-baseline justify-between gap-2">
+        <span className="flex min-w-0 items-center gap-0.5 truncate text-meta uppercase tracking-wide text-secondary">
+          {label}
+          {href && (
+            <ChevronRight size={11} aria-hidden="true" className="shrink-0" />
+          )}
+        </span>
+        <span className="shrink-0 font-mono text-meta tnum">
+          {mine != null && (
+            <span className="font-semibold text-ink">{format(mine)}</span>
+          )}
+          <span className="text-secondary"> {mine != null ? "· " : ""}{reading}</span>
+        </span>
+      </div>
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="w-full"
+        role="img"
+        aria-label={
+          `${label}: ${mine != null ? `yours is ${format(mine)}, ${reading}. ` : ""}` +
+          `Across ${clean.length} rosters the range runs ${format(lo)} to ${format(hi)}, ` +
+          `median ${format(median)}.`
+        }
+      >
+        <line
+          x1={PAD}
+          y1={BASE}
+          x2={W - PAD}
+          y2={BASE}
+          stroke={CHART_GRID}
+          strokeWidth={1}
+        />
+        {/* Median, dashed, never labelled as a pass mark - half the league is under
+            it by construction. */}
+        <line
+          x1={x(median)}
+          y1={BASE - 13}
+          x2={x(median)}
+          y2={BASE + 4}
+          stroke={CHART_NEUTRAL}
+          strokeWidth={1}
+          strokeDasharray="2 2"
+        />
+        {clean.map((v, i) => {
+          const isMine = mine != null && v === mine;
+          if (isMine) return null;
+          const f = (v - lo) / span;
+          return (
+            <rect
+              key={`${v}-${i}`}
+              x={r1(x(v) - 1)}
+              y={BASE - 10}
+              width={2}
+              height={10}
+              rx={1}
+              fill={signed ? divergingFill(v) : CHART_ACCENT}
+              opacity={signed ? 0.75 : magnitudeOpacity(f)}
+            />
+          );
+        })}
+        {mine != null && (
+          <g>
+            <rect
+              x={r1(x(mine) - 1.5)}
+              y={BASE - 18}
+              width={3}
+              height={18}
+              rx={1.5}
+              fill={signed ? divergingFill(mine) : CHART_ACCENT}
+            />
+            {/* A shape as well as a colour, so "which one is mine" never rests on
+                the accent alone. */}
+            {/* Points DOWN at the tick from above. It used to sit under the rail,
+                where it collided with the range label whenever the viewer held the
+                lowest or highest value in the league - which is exactly the case a
+                reader most wants to see clearly. */}
+            <polygon
+              points={`${r1(x(mine) - 3.5)},${BASE - 24} ${r1(x(mine) + 3.5)},${BASE - 24} ${r1(x(mine))},${BASE - 19}`}
+              fill={CHART_ACCENT}
+            />
+          </g>
+        )}
+        <text x={PAD} y={H - 1} fontSize="8" fill={CHART_FAINT} className="font-mono">
+          {format(lo)}
+        </text>
+        <text
+          x={W - PAD}
+          y={H - 1}
+          fontSize="8"
+          textAnchor="end"
+          fill={CHART_FAINT}
+          className="font-mono"
+        >
+          {format(hi)}
+        </text>
+      </svg>
+      {sub && <p className="-mt-0.5 text-meta leading-snug text-secondary">{sub}</p>}
+    </>
+  );
+
+  if (href) {
+    return (
+      <Link
+        href={href}
+        className={cn(
+          "block min-w-0 rounded-[--radius-sm] px-1.5 py-1 transition-colors hover:bg-surface-2",
+          className,
+        )}
+      >
+        {body}
+      </Link>
+    );
+  }
+  return <div className={cn("min-w-0 px-1.5 py-1", className)}>{body}</div>;
+}

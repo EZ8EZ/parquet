@@ -4,11 +4,26 @@
  * viewBox so they scale fluidly.
  */
 
-const ACCENT = "var(--color-accent)";
+import {
+  CHART_ACCENT,
+  CHART_GRID,
+  CHART_FAINT,
+  divergingFill,
+  magnitudeOpacity,
+} from "@/lib/chart-colors";
+
+const ACCENT = CHART_ACCENT;
+const GRID = CHART_GRID;
+const MUTED = CHART_FAINT;
+/**
+ * Trend direction keeps the SEMANTIC tokens - a sparkline that rises is telling you
+ * something went up, which is the job `--color-positive` exists for. Signed CHART
+ * FILLS do not: `BarChart signed` used the same two tokens as bar colours, and a
+ * red/green bar pair is the one encoding that is unreadable to the ~8% of men with a
+ * red-green deficiency. Those moved to the diverging pair in lib/chart-colors.ts.
+ */
 const POS = "var(--color-positive)";
 const NEG = "var(--color-negative)";
-const GRID = "var(--color-border)";
-const MUTED = "var(--color-faint)";
 
 export interface Point {
   label: string;
@@ -102,11 +117,25 @@ export function BarChart({
         const cx = padX + i * ((W - padX * 2) / data.length) + 4;
         const h = Math.abs(d.value) * scale;
         const yTop = d.value >= 0 ? zeroY - h : zeroY;
-        const color = signed ? (d.value >= 0 ? POS : NEG) : ACCENT;
+        // Diverging pair for the sign (CVD-safe, see lib/chart-colors.ts rule 3);
+        // the bar's own length and its printed number carry the same value, so the
+        // hue is the third encoding rather than the only one.
+        const color = signed ? divergingFill(d.value) : ACCENT;
         const labelY = d.value >= 0 ? yTop - 5 : yTop + h + 12;
         return (
           <g key={i}>
-            <rect x={cx} y={yTop} width={barW} height={Math.max(1, h)} rx={3} fill={color} opacity={0.9} />
+            <rect
+              x={cx}
+              y={yTop}
+              width={barW}
+              height={Math.max(1, h)}
+              rx={3}
+              fill={color}
+              // Unsigned bars ride the single-hue magnitude ramp: same hue, five
+              // strengths, so a chart of one tall bar and five stubs reads as a
+              // distribution rather than as six identical blocks (rule 2).
+              opacity={signed ? 0.9 : magnitudeOpacity(Math.abs(d.value) / maxAbs)}
+            />
             <text x={cx + barW / 2} y={labelY} textAnchor="middle" fontSize="10" fill="var(--color-ink)" className="font-mono">
               {format(d.value)}
             </text>
@@ -186,7 +215,11 @@ export function SideBars({
               height={barH}
               rx={3}
               fill={ACCENT}
-              opacity={0.85}
+              // Magnitude ramp (rule 2), which on a receipt is deliberately the ONLY
+              // thing the colour adds: it restates the length it is already drawing.
+              // A diverging pair here would be a verdict about which side won, and
+              // this chart computes no difference on purpose (D45).
+              opacity={magnitudeOpacity(d.value / max)}
             />
           </g>
         );

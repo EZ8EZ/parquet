@@ -33,7 +33,7 @@ export function Wordmark({ tagline }: { tagline?: string }) {
           Parquet
         </div>
         {tagline && (
-          <div className="mt-0.5 text-meta uppercase tracking-[0.16em] text-faint">
+          <div className="mt-0.5 text-meta uppercase tracking-[0.16em] text-secondary">
             {tagline}
           </div>
         )}

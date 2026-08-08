@@ -18,7 +18,7 @@ export function PageHeader({
   return (
     <header className="mb-3">
       {kicker && (
-        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
           {kicker}
         </p>
       )}
@@ -47,7 +47,7 @@ export function Card({
   return (
     <As
       className={cn(
-        "rounded-[--radius] border border-border bg-surface/80 p-4",
+        "rounded-[--radius] border border-border bg-surface p-4",
         className,
       )}
     >
@@ -78,7 +78,7 @@ export function SectionHeader({
       {href && cta && (
         <Link
           href={href}
-          className="-mr-2 inline-flex min-h-11 shrink-0 items-center gap-0.5 px-2 text-meta font-semibold text-accent"
+          className="-mr-2 inline-flex min-h-11 shrink-0 items-center gap-0.5 px-2 text-meta font-semibold text-accent-text"
         >
           {cta}
           <ChevronRight size={13} aria-hidden="true" />
@@ -120,7 +120,7 @@ export function Disclosure({
 }) {
   return (
     <details className={cn("group", className)}>
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-meta font-semibold text-faint transition-colors hover:text-accent">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-meta font-semibold text-faint transition-colors hover:text-accent-text">
         {icon && (
           <span aria-hidden="true" className="shrink-0">
             {icon}
@@ -135,7 +135,7 @@ export function Disclosure({
       </summary>
       <div
         className={cn(
-          "mb-2 rounded-[--radius-sm] border border-border bg-surface/60 p-2.5 text-note leading-snug text-muted",
+          "mb-2 rounded-[--radius-sm] border border-border bg-surface p-2.5 text-note leading-snug text-muted",
           bodyClassName,
         )}
       >
@@ -148,7 +148,7 @@ export function Disclosure({
 type Tone = "neutral" | "accent" | "positive" | "negative" | "info" | "warn";
 const toneClasses: Record<Tone, string> = {
   neutral: "bg-elevated text-muted border-border",
-  accent: "bg-accent/12 text-accent border-accent/25",
+  accent: "bg-accent-wash text-accent-text border-accent-edge",
   positive: "bg-positive/12 text-positive border-positive/25",
   negative: "bg-negative/12 text-negative border-negative/25",
   info: "bg-info/12 text-info border-info/25",
@@ -194,12 +194,12 @@ export function Stat({
       : tone === "negative"
         ? "text-negative"
         : tone === "accent"
-          ? "text-accent"
+          ? "text-accent-text"
           : "text-ink";
   return (
-    <div className="rounded-[--radius-sm] border border-border bg-surface/60 p-3">
-      <div className="text-meta uppercase tracking-wide text-faint">{label}</div>
-      <div className={cn("font-mono text-display leading-tight font-semibold tnum", valueColor)}>
+    <div className="rounded-[--radius-sm] border border-border bg-surface p-3">
+      <div className="text-meta uppercase tracking-wide text-secondary">{label}</div>
+      <div className={cn("figure text-display leading-tight font-semibold", valueColor)}>
         {value}
       </div>
       {sub && <div className="mt-0.5 text-meta text-muted">{sub}</div>}
@@ -211,7 +211,7 @@ export function DeltaValue({ n, suffix }: { n: number; suffix?: string }) {
   const tone = n > 0 ? "text-positive" : n < 0 ? "text-negative" : "text-muted";
   const s = n > 0 ? `+${n}` : `${n}`;
   return (
-    <span className={cn("font-mono tnum font-semibold", tone)}>
+    <span className={cn("figure font-semibold", tone)}>
       {s}
       {suffix}
     </span>
@@ -234,8 +234,8 @@ export function EmptyState({
   cta?: { href: string; label: string };
 }) {
   return (
-    <div className="rounded-[--radius] border border-dashed border-border-strong bg-surface/40 p-6 text-center">
-      {icon && <div className="mb-3 flex justify-center text-accent">{icon}</div>}
+    <div className="rounded-[--radius] border border-dashed border-border-strong bg-surface p-6 text-center">
+      {icon && <div className="mb-3 flex justify-center text-accent-text">{icon}</div>}
       <h3 className="font-display text-lede leading-tight font-semibold text-ink">{title}</h3>
       {children && (
         <div className="mx-auto mt-1.5 max-w-sm text-body leading-relaxed text-muted">{children}</div>
@@ -271,7 +271,7 @@ export function ButtonLink({
       className={cn(
         "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full px-4 py-2 text-body leading-relaxed font-semibold transition-colors",
         variant === "primary"
-          ? "bg-accent text-accent-ink hover:bg-accent/90"
+          ? "bg-accent text-accent-ink hover:bg-accent-strong"
           : "border border-border text-ink hover:bg-surface-2",
         className,
       )}
@@ -287,7 +287,7 @@ export function SkeletonLine({ className }: { className?: string }) {
 
 export function SkeletonCard() {
   return (
-    <div className="space-y-3 rounded-[--radius] border border-border bg-surface/60 p-4">
+    <div className="space-y-3 rounded-[--radius] border border-border bg-surface p-4">
       <SkeletonLine className="h-5 w-1/2" />
       <SkeletonLine className="w-3/4" />
       <SkeletonLine className="w-2/3" />

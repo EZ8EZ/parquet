@@ -23,7 +23,7 @@ export default function ClaimInvalidPage() {
         subtitle="The link is either incomplete, or it was signed before this deployment's key changed. Either way it cannot prove whose seat it is, so Parquet will not take its word for it."
       />
 
-      <div className="rounded-[--radius] border border-border bg-surface/60 p-4">
+      <div className="rounded-[--radius] border border-border bg-surface p-4">
         <div className="flex items-start gap-2.5">
           <KeyRound size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-faint" />
           <div className="min-w-0">
@@ -46,7 +46,7 @@ export default function ClaimInvalidPage() {
 
       <Link
         href="/teams"
-        className="mt-2 inline-flex min-h-11 items-center gap-1 text-body font-semibold text-accent"
+        className="mt-2 inline-flex min-h-11 items-center gap-1 text-body font-semibold text-accent-text"
       >
         Pick a team and carry on
         <ChevronRight size={14} aria-hidden="true" />

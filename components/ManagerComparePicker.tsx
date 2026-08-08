@@ -118,7 +118,7 @@ export function ManagerComparePicker({
         onClick={() => go({ a: b, b: a })}
         disabled={!a && !b}
         aria-label="Swap the two sides"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[--radius-sm] border border-border bg-surface/60 text-faint transition-colors hover:text-accent disabled:opacity-40 motion-reduce:transition-none"
+        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[--radius-sm] border border-border bg-surface text-faint transition-colors hover:text-accent-text disabled:opacity-40 motion-reduce:transition-none"
       >
         <ArrowLeftRight size={14} aria-hidden="true" />
       </button>

@@ -9,6 +9,7 @@ import {
 import { EmptyState, SectionHeader, Tag } from "@/components/ui";
 import { cn } from "@/lib/ui";
 import { LineageCard, SeasonTile, boardHref } from "./parts";
+import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
 
@@ -41,12 +42,12 @@ export default async function DraftsPage() {
     <div>
       <header className="mb-2">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
             Pick lineage
           </p>
           <Link
             href="/values"
-            className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
+            className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
           >
             pick values
             <ChevronRight size={12} aria-hidden="true" />
@@ -69,7 +70,7 @@ export default async function DraftsPage() {
         </EmptyState>
       ) : (
         <>
-          <div className="flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface/60">
+          <div className="flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface">
             {[
               {
                 v: gaveResolved.length,
@@ -93,13 +94,13 @@ export default async function DraftsPage() {
               <div key={s.l} className="flex-1 px-1.5 py-1.5 text-center">
                 <div
                   className={cn(
-                    "font-mono text-lede font-semibold leading-tight tnum",
+                    "figure text-lede font-semibold leading-tight",
                     s.tone,
                   )}
                 >
                   {s.v}
                 </div>
-                <div className="text-meta uppercase tracking-wide text-faint">
+                <div className="text-meta uppercase tracking-wide text-secondary">
                   {s.l}
                 </div>
                 <div className="text-meta leading-tight text-muted">{s.s}</div>
@@ -114,7 +115,7 @@ export default async function DraftsPage() {
           <nav aria-label="Drafts sections" className="mt-2 flex gap-1.5">
             <Link
               href="/drafts/grades"
-              className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+              className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
             >
               <GraduationCap size={13} aria-hidden="true" />
               Draft report cards
@@ -127,7 +128,7 @@ export default async function DraftsPage() {
           <SectionHeader
             title="Draft boards"
             action={
-              <span className="font-mono text-meta tnum text-faint">
+              <span className="figure text-meta text-secondary">
                 {seasons.length} on record
               </span>
             }
@@ -150,7 +151,7 @@ export default async function DraftsPage() {
             title="Picks you traded away"
             action={
               gaveResolved.length > 0 ? (
-                <span className="font-mono text-meta tnum text-negative">
+                <span className="figure text-meta text-negative">
                   {gaveResolved.length}
                 </span>
               ) : undefined
@@ -178,7 +179,7 @@ export default async function DraftsPage() {
               <SectionHeader
                 title="Picks you acquired"
                 action={
-                  <span className="font-mono text-meta tnum text-positive">
+                  <span className="figure text-meta text-positive">
                     {gotResolved.length}
                   </span>
                 }
@@ -223,12 +224,12 @@ export default async function DraftsPage() {
               <SectionHeader
                 title="Around the league"
                 action={
-                  <span className="font-mono text-meta tnum text-faint">
+                  <span className="figure text-meta text-secondary">
                     {Math.min(12, leagueResolved.length)} of {leagueResolved.length}
                   </span>
                 }
               />
-              <div className="overflow-hidden rounded-[--radius] border border-border bg-surface/60">
+              <div className="overflow-hidden rounded-[--radius] border border-border bg-surface">
                 <ul className="divide-y divide-border">
                   {leagueResolved.slice(0, 12).map((l) => (
                     <li key={`${l.season}-${l.round}-${l.originalRoster}`}>
@@ -237,16 +238,16 @@ export default async function DraftsPage() {
                         aria-label={`${l.season} round ${l.round}: ${l.playerName}, taken by ${l.usedByName}`}
                         className="flex min-h-11 items-center gap-2 px-2.5 py-1 transition-colors hover:bg-surface-2"
                       >
-                        <span className="w-14 shrink-0 font-mono text-meta tnum text-muted">
+                        <span className="w-14 shrink-0 figure text-meta text-muted">
                           {l.season} R{l.round}
                         </span>
                         <span className="min-w-0 flex-1 truncate text-note text-ink">
                           {l.playerName}
                         </span>
-                        <span className="min-w-0 max-w-[34%] shrink truncate text-meta text-faint">
+                        <span className="min-w-0 max-w-[34%] shrink truncate text-meta text-secondary">
                           {l.usedByName}
                         </span>
-                        <span className="shrink-0 font-mono text-meta tnum text-accent">
+                        <span className="shrink-0 figure text-meta text-accent-text">
                           #{l.pickNo}
                         </span>
                       </Link>
@@ -258,6 +259,7 @@ export default async function DraftsPage() {
           )}
         </>
       )}
+      <Onward from="/drafts" />
     </div>
   );
 }

@@ -95,12 +95,12 @@ export function LedgerItem({
         // The accent border is a call to action ("this one still needs your why"),
         // so a reader who cannot act on it gets the calm treatment instead.
         readOnly || (alreadyAnnotated && !editing)
-          ? "border-border bg-surface/60"
-          : "border-accent/30 bg-surface/80",
+          ? "border-border bg-surface"
+          : "border-accent-edge bg-surface",
       )}
     >
-      <div className="mb-1 flex items-center gap-2 text-meta uppercase tracking-wide text-faint">
-        <span className="font-mono">{season}</span>
+      <div className="mb-1 flex items-center gap-2 text-meta uppercase tracking-wide text-secondary">
+        <span className="figure">{season}</span>
         <span>·</span>
         <span>wk {week}</span>
         <span>·</span>
@@ -116,7 +116,7 @@ export function LedgerItem({
             rows={3}
             autoFocus={!alreadyAnnotated}
             placeholder="What's the reasoning? What has to be true for this to work?"
-            className="w-full resize-y rounded-[--radius-sm] border border-border bg-bg/60 p-3 text-body leading-relaxed text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+            className="w-full resize-y rounded-[--radius-sm] border border-border bg-bg p-3 font-display text-body leading-relaxed text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
           />
           <div className="mt-2 flex flex-wrap gap-1.5">
             {POSTURES.map((p) => (
@@ -127,7 +127,7 @@ export function LedgerItem({
                 className={cn(
                   "rounded-full border px-2.5 py-1 text-meta font-medium transition-colors",
                   posture === p
-                    ? "border-accent bg-accent/15 text-accent"
+                    ? "border-accent bg-accent-wash text-accent-text"
                     : "border-border text-muted hover:border-border-strong",
                 )}
               >
@@ -168,8 +168,11 @@ export function LedgerItem({
               {posture}
             </span>
           )}
+          {/* The captured reasoning is the one thing in this app that is genuinely the
+              viewer's own writing, so it gets the serif. Nothing around it does - see
+              the note on .figure in globals.css. */}
           {reasoning && (
-            <p className="text-body italic leading-relaxed text-muted">
+            <p className="font-display text-body italic leading-relaxed text-ink">
               &ldquo;{reasoning}&rdquo;
             </p>
           )}
@@ -185,7 +188,7 @@ export function LedgerItem({
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="mt-2 inline-flex items-center gap-1 text-note leading-snug font-medium text-faint hover:text-accent"
+              className="mt-2 inline-flex items-center gap-1 text-note leading-snug font-medium text-faint hover:text-accent-text"
             >
               <Pencil size={12} /> edit
             </button>

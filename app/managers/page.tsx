@@ -7,6 +7,7 @@ import { getPrincipals } from "@/lib/principals";
 import { Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { signed } from "@/lib/ui";
+import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
 
@@ -24,13 +25,13 @@ export default async function ManagersPage() {
           top of the page carries an action instead of dead space. */}
       <header className="mb-2.5">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent-text">
             Manager dossiers
           </p>
           <div className="flex shrink-0 items-center gap-3">
             <Link
               href="/managers/compare"
-              className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+              className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent-text"
             >
               compare two
               <ChevronRight size={12} aria-hidden="true" />
@@ -38,7 +39,7 @@ export default async function ManagersPage() {
             {me != null && (
               <Link
                 href={`/managers/${me}`}
-                className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+                className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent-text"
               >
                 your own file
                 <ChevronRight size={12} aria-hidden="true" />
@@ -52,7 +53,7 @@ export default async function ManagersPage() {
         <p className="mt-0.5 text-[12px] leading-snug text-muted">
           How they act, not what they hold.
         </p>
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 font-mono text-[11px] tnum text-faint">
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 figure text-[11px] text-faint">
           <span>{dossiers.length} scouted</span>
           <span aria-hidden="true">·</span>
           <span>{seasons} seasons</span>
@@ -68,7 +69,7 @@ export default async function ManagersPage() {
 
       {/* One list, hairline-divided. Cards-with-gaps cost ~30px of pure air per
           screen and read as unrelated objects; a divided list reads as a ledger. */}
-      <div className="overflow-hidden rounded-[--radius] border border-border bg-surface/60">
+      <div className="overflow-hidden rounded-[--radius] border border-border bg-surface">
         <ul className="divide-y divide-border">
           {dossiers.map((d) => {
             const p = d.profile;
@@ -107,7 +108,7 @@ export default async function ManagersPage() {
                       <span className="min-w-0 truncate text-[13px] font-semibold leading-tight text-ink">
                         {p.teamName ?? p.displayName}
                       </span>
-                      <span className="min-w-0 shrink truncate text-[11px] leading-tight text-faint">
+                      <span className="min-w-0 shrink truncate text-[11px] leading-tight text-secondary">
                         {p.displayName}
                       </span>
                       {isFormer && d.identity.kind === "former" && (
@@ -115,23 +116,23 @@ export default async function ManagersPage() {
                       )}
                     </div>
                     {titles && (
-                      <div className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-accent">
+                      <div className="mt-0.5 flex items-center gap-1 text-[11px] font-semibold text-accent-text">
                         <Trophy size={11} aria-hidden="true" className="shrink-0" />
                         <span className="truncate">{titles.label}</span>
                       </div>
                     )}
                     {shown.length > 0 && (
-                      <div className="mt-0.5 truncate text-[11px] font-medium leading-tight text-accent">
+                      <div className="mt-0.5 truncate text-[11px] font-medium leading-tight text-accent-text">
                         {shown.join(" · ")}
                         {extra > 0 && (
-                          <span className="text-faint"> +{extra}</span>
+                          <span className="text-secondary"> +{extra}</span>
                         )}
                       </div>
                     )}
                     <p className="mt-0.5 line-clamp-2 text-[11px] leading-[1.45] text-muted">
                       {d.read}
                     </p>
-                    <div className="mt-1 flex flex-wrap items-center gap-x-2 font-mono text-[11px] tnum text-faint">
+                    <div className="mt-1 flex flex-wrap items-center gap-x-2 figure text-[11px] text-secondary">
                       <span className="font-semibold text-muted">
                         {p.trades} trades
                       </span>
@@ -162,11 +163,12 @@ export default async function ManagersPage() {
         </ul>
       </div>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-faint">
+      <p className="mt-3 text-[11px] leading-relaxed text-secondary">
         Reads are inferred from public transactions, not stated intent. Sorted by
         total activity. Tap any manager for their approach notes, trade history and
         favorite partners.
       </p>
+      <Onward from="/managers" />
     </div>
   );
 }

@@ -21,6 +21,7 @@ import { Card, EmptyState, PageHeader, SectionHeader, Stat, Tag } from "@/compon
 import { LocalDate } from "@/components/LocalDate";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { cn } from "@/lib/ui";
+import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
 
@@ -97,7 +98,7 @@ export default async function DealsPage({
       )}
 
       {filterLabel && (
-        <Card className="mb-3 border-accent/30 bg-accent/[0.06]">
+        <Card className="mb-3 border-accent-edge bg-accent-wash">
           <div className="flex items-center justify-between gap-2">
             <p className="min-w-0 text-body leading-snug text-ink">
               <span className="font-semibold">{filterLabel}</span>
@@ -108,13 +109,13 @@ export default async function DealsPage({
             </p>
             <Link
               href="/deals"
-              className="shrink-0 text-meta font-semibold text-accent hover:underline"
+              className="shrink-0 text-meta font-semibold text-accent-text hover:underline"
             >
               clear
             </Link>
           </div>
           {pairing && pairing.dossierCount > pairing.dealCount && (
-            <p className="mt-1 text-meta leading-snug text-faint">
+            <p className="mt-1 text-meta leading-snug text-secondary">
               Their dossiers count {pairing.dossierCount}. A commissioner-executed
               multi-team deal collapses several transactions into one record here, so
               the listable number is the smaller one.
@@ -149,10 +150,10 @@ export default async function DealsPage({
             <li key={t.id}>
               <Link
                 href={dealHref(t.id)}
-                className="block rounded-[--radius-sm] border border-border bg-surface/60 px-3 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
+                className="block rounded-[--radius-sm] border border-border bg-surface px-3 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
               >
                 <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                  <span className="font-mono text-meta tnum text-muted">
+                  <span className="figure text-meta text-muted">
                     <LocalDate ts={t.created} /> · {t.season} wk {t.week}
                   </span>
                   {t.multiTeam && <Tag tone="info">{t.parties.length}-team</Tag>}
@@ -169,7 +170,7 @@ export default async function DealsPage({
                       <span
                         className={cn(
                           "font-semibold",
-                          s.rosterId === ledger.meRosterId ? "text-accent" : "text-ink",
+                          s.rosterId === ledger.meRosterId ? "text-accent-text" : "text-ink",
                         )}
                       >
                         {s.name}
@@ -188,7 +189,7 @@ export default async function DealsPage({
         <>
           <SectionHeader title={`Who trades with whom (${ledger.pairings.length})`} />
           {busiest && (
-            <p className="mb-1.5 text-meta leading-snug text-faint">
+            <p className="mb-1.5 text-meta leading-snug text-secondary">
               Busiest pairing: {byOwner.get(busiest.a)?.name} and{" "}
               {byOwner.get(busiest.b)?.name}, {busiest.dealCount} deals.
             </p>
@@ -201,18 +202,18 @@ export default async function DealsPage({
                 <li key={p.key}>
                   <Link
                     href={`/deals${dealsQueryString({ manager: null, pair: p.key, season: null })}`}
-                    className="flex min-h-11 w-full items-center gap-2 rounded-[--radius-sm] border border-border bg-surface/60 px-3 py-1.5 transition-colors hover:bg-surface-2"
+                    className="flex min-h-11 w-full items-center gap-2 rounded-[--radius-sm] border border-border bg-surface px-3 py-1.5 transition-colors hover:bg-surface-2"
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-body leading-snug text-ink">
-                        {a?.name ?? p.a} <span className="text-faint">&amp;</span>{" "}
+                        {a?.name ?? p.a} <span className="text-secondary">&amp;</span>{" "}
                         {b?.name ?? p.b}
                       </span>
-                      <span className="block truncate text-meta leading-snug text-faint">
+                      <span className="block truncate text-meta leading-snug text-secondary">
                         {p.seasons.join(", ")}
                       </span>
                     </span>
-                    <span className="shrink-0 font-mono text-body tnum text-accent">
+                    <span className="shrink-0 figure text-body text-accent-text">
                       {p.dealCount}
                     </span>
                     <ChevronRight size={13} aria-hidden="true" className="shrink-0 text-faint" />
@@ -231,8 +232,8 @@ export default async function DealsPage({
                   className={cn(
                     "flex min-h-11 w-full items-center gap-2.5 rounded-[--radius-sm] border px-3 py-1.5 transition-colors",
                     m.isMe
-                      ? "border-accent/30 bg-accent/[0.06]"
-                      : "border-border bg-surface/60 hover:bg-surface-2",
+                      ? "border-accent-edge bg-accent-wash"
+                      : "border-border bg-surface hover:bg-surface-2",
                   )}
                 >
                   <TeamAvatar
@@ -245,19 +246,19 @@ export default async function DealsPage({
                   <span className="min-w-0 flex-1">
                     <span className="block truncate text-body font-semibold leading-snug text-ink">
                       {m.name}
-                      {m.isMe && <span className="ml-1.5 text-accent">(you)</span>}
+                      {m.isMe && <span className="ml-1.5 text-accent-text">(you)</span>}
                       {!m.isMe && m.isFormer && (
-                        <span className="ml-1.5 text-faint">
+                        <span className="ml-1.5 text-secondary">
                           former{m.tenureLabel ? ` ${m.tenureLabel}` : ""}
                         </span>
                       )}
                     </span>
-                    <span className="block truncate text-meta leading-snug text-faint">
+                    <span className="block truncate text-meta leading-snug text-secondary">
                       {m.handle}
                     </span>
                   </span>
                   <span className="shrink-0 text-right">
-                    <span className="block font-mono text-body tnum text-ink">
+                    <span className="block figure text-body text-ink">
                       {m.trades}
                     </span>
                     <span className="block text-micro leading-normal text-faint">
@@ -271,6 +272,7 @@ export default async function DealsPage({
           </ul>
         </>
       )}
+      <Onward from="/deals" />
     </div>
   );
 }
@@ -291,8 +293,8 @@ function FilterLink({
       className={cn(
         "inline-flex min-h-11 shrink-0 items-center rounded-full border px-3 text-note font-semibold leading-snug transition-colors",
         active
-          ? "border-accent bg-accent/15 text-accent"
-          : "border-border bg-surface/60 text-muted hover:text-ink",
+          ? "border-accent bg-accent-wash text-accent-text"
+          : "border-border bg-surface text-muted hover:text-ink",
       )}
     >
       {label}

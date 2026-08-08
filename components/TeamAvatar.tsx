@@ -84,7 +84,7 @@ export function TeamAvatar({
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-lg font-mono font-semibold tracking-tight text-white/90",
+        "inline-flex shrink-0 items-center justify-center rounded-lg font-semibold tracking-tight text-white/90",
         ring,
         className,
       )}

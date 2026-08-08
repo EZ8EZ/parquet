@@ -107,7 +107,7 @@ export function DigestPanel({ digest }: { digest: Digest }) {
               <span className="block text-body leading-snug text-ink">
                 {t.description}
               </span>
-              <span className="mt-0.5 block font-mono text-meta tnum text-faint">
+              <span className="mt-0.5 block figure text-meta text-secondary">
                 {t.season} · wk {t.week}
                 {t.mine ? " · you" : ""}
               </span>
@@ -129,7 +129,7 @@ export function DigestPanel({ digest }: { digest: Digest }) {
               <span className="block text-body leading-snug text-ink">
                 {p.label} became {p.playerName}
               </span>
-              <span className="mt-0.5 block font-mono text-meta tnum text-faint">
+              <span className="mt-0.5 block figure text-meta text-secondary">
                 {p.position ? `${p.position} · ` : ""}
                 {p.mine ? "your pick" : p.ownerName}
               </span>
@@ -169,7 +169,7 @@ export function DigestPanel({ digest }: { digest: Digest }) {
 
 function Shell({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-[--radius-sm] border border-border bg-surface/60 p-2.5">
+    <div className="rounded-[--radius-sm] border border-border bg-surface p-2.5">
       {children}
     </div>
   );
@@ -181,7 +181,7 @@ function Shell({ children }: { children: React.ReactNode }) {
  */
 function PrimingNote() {
   return (
-    <p className="text-meta leading-relaxed text-faint">
+    <p className="text-meta leading-relaxed text-secondary">
       Timeline and fragility movement needs a previous reading to subtract, and this visit
       is the first one to store one. Those rows start from your next visit.
     </p>
@@ -206,17 +206,17 @@ function Group({
   return (
     <div className="mt-2">
       <div className="flex items-center gap-1.5">
-        <span className="shrink-0 text-accent">{icon}</span>
+        <span className="shrink-0 text-accent-text">{icon}</span>
         <h3 className="min-w-0 truncate text-meta font-semibold uppercase tracking-[0.14em] text-muted">
           {title}
         </h3>
-        <span className="font-mono text-meta tnum text-faint">{count}</span>
+        <span className="figure text-meta text-secondary">{count}</span>
       </div>
       <div className="mt-1 space-y-1">{children}</div>
       {count > shown && (
         <Link
           href={href}
-          className="inline-flex min-h-11 items-center gap-0.5 text-meta font-semibold text-accent"
+          className="inline-flex min-h-11 items-center gap-0.5 text-meta font-semibold text-accent-text"
         >
           {count - shown} more
           <ChevronRight size={12} aria-hidden="true" />
@@ -241,7 +241,7 @@ function Row({
       className={cn(
         "flex min-h-11 items-center gap-2 rounded-[--radius-sm] border px-2.5 py-1.5 transition-colors",
         flagged
-          ? "border-accent/30 bg-accent/[0.06] hover:border-accent/60"
+          ? "border-accent-edge bg-accent-wash hover:border-accent-edge"
           : "border-border bg-bg/40 hover:border-border-strong hover:bg-surface-2",
       )}
     >
@@ -273,7 +273,7 @@ function MoveLine({ move }: { move: DigestMoveItem }) {
         {move.mine ? "You" : move.name}
         <span className="text-muted"> · {METRIC_LABEL[move.metric]}</span>
       </span>
-      <span className="mt-0.5 flex items-center gap-1 font-mono text-meta tnum text-faint">
+      <span className="mt-0.5 flex items-center gap-1 figure text-meta text-secondary">
         <span>
           {move.from} to {move.to}
         </span>

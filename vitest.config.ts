@@ -16,7 +16,13 @@ export default defineConfig({
     // specs must never run under vitest's node environment (no browser, no
     // webServer), so the directory is excluded outright rather than relying on
     // naming convention alone.
-    exclude: ["node_modules", ".next", "e2e"],
+    // `.claude/worktrees/` holds whole checkouts of this repo, node_modules and all,
+    // for agents working in isolation. Vitest's include glob walked straight into
+    // them and ran third-party package test suites - 56 failures and 9 uncaught
+    // exceptions from `tsconfig-paths`, none of them this project's code, and enough
+    // noise to hide a real regression completely. Nothing under there is source. The
+    // eslint config carries the same exclusion for the same reason.
+    exclude: ["node_modules", ".next", "e2e", ".claude"],
     // Tests must NEVER touch the network. The app defaults to the live Sleeper
     // provider (so a zero-config deploy serves the real league), so the suite has to
     // pin the synthetic provider explicitly - otherwise any test that reaches a

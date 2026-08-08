@@ -20,7 +20,7 @@ import { cn } from "@/lib/ui";
 const STATE_COPY: Record<StreakState, { label: string; tone: string }> = {
   growing: { label: "live", tone: "text-positive" },
   "at-risk": { label: "at risk", tone: "text-warn" },
-  idle: { label: "idle", tone: "text-faint" },
+  idle: { label: "idle", tone: "text-secondary" },
 };
 
 function StateDot({ state }: { state: StreakState }) {
@@ -60,7 +60,7 @@ function Meter({ progress }: { progress: number }) {
       role="img"
       aria-label={`${pct}% of the way there`}
     >
-      <div className="h-full rounded-full bg-accent/70" style={{ width: `${pct}%` }} />
+      <div className="h-full rounded-full bg-accent-strong" style={{ width: `${pct}%` }} />
     </div>
   );
 }
@@ -87,7 +87,7 @@ export function StreakPanel({
 
   if (streaks.length === 0) {
     return (
-      <div className="rounded-[--radius] border border-border bg-surface/60 p-3">
+      <div className="rounded-[--radius] border border-border bg-surface p-3">
         <p className="text-note leading-relaxed text-muted">
           Nothing is running yet. Streaks appear once this roster has some history to
           measure - a hold that has lasted, or a trade to count from.
@@ -106,11 +106,11 @@ export function StreakPanel({
         <Hourglass size={12} aria-hidden="true" className="shrink-0" />
         <span>
           Counted to{" "}
-          <LocalDate ts={countedAt} className="font-mono tnum text-muted" />
+          <LocalDate ts={countedAt} className="figure text-muted" />
         </span>
       </p>
 
-      <div className="overflow-hidden rounded-[--radius] border border-border bg-surface/60">
+      <div className="overflow-hidden rounded-[--radius] border border-border bg-surface">
         <ul className="divide-y divide-border">
           {streaks.map((s) => (
             <li key={s.id} className="px-3 py-2.5">
@@ -122,7 +122,7 @@ export function StreakPanel({
               </div>
 
               <div className="mt-0.5 flex items-baseline gap-1.5">
-                <span className="font-mono text-lede font-semibold leading-none tnum text-ink">
+                <span className="figure text-lede font-semibold leading-none text-ink">
                   {s.display}
                 </span>
                 <span className="text-meta text-faint">{unitNoun(s)}</span>
@@ -138,7 +138,7 @@ export function StreakPanel({
               {s.next && (
                 <>
                   <Meter progress={s.next.progress} />
-                  <p className="mt-1 flex items-center gap-1 font-mono text-micro tnum text-faint">
+                  <p className="mt-1 flex items-center gap-1 figure text-micro text-faint">
                     <TrendingUp size={11} aria-hidden="true" className="shrink-0" />
                     {s.next.remaining}
                   </p>

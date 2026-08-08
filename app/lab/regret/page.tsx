@@ -96,9 +96,9 @@ function WeekList({ weeks }: { weeks: WeekRow[] }) {
         return (
           <li
             key={w.week}
-            className="flex items-center gap-2 border-b border-border/60 py-1.5 last:border-0"
+            className="flex items-center gap-2 border-b border-border py-1.5 last:border-0"
           >
-            <span className="w-9 shrink-0 font-mono text-micro tnum text-faint">
+            <span className="w-9 shrink-0 figure text-micro text-faint">
               {w.playoff ? "P" : "W"}
               {w.week}
             </span>
@@ -112,14 +112,14 @@ function WeekList({ weeks }: { weeks: WeekRow[] }) {
                 style={{ width: `${pct}%` }}
               />
             </span>
-            <span className="w-12 shrink-0 text-right font-mono text-micro tnum text-ink">
+            <span className="w-12 shrink-0 text-right figure text-micro text-ink">
               {fmt(w.banked)}
             </span>
-            <span className="w-12 shrink-0 text-right font-mono text-micro tnum text-muted">
+            <span className="w-12 shrink-0 text-right figure text-micro text-muted">
               {fmt(w.gap)}
             </span>
             {w.emptySlots > 0 && (
-              <span className="w-3 shrink-0 text-right font-mono text-micro text-warn">
+              <span className="w-3 shrink-0 text-right figure text-micro text-warn">
                 {w.emptySlots}
               </span>
             )}
@@ -137,7 +137,7 @@ function WidestWeek({ w }: { w: WeekRow }) {
         <h3 className="font-display text-lede font-semibold leading-tight text-ink">
           Week {w.week}
         </h3>
-        <span className="font-mono text-note tnum text-muted">
+        <span className="figure text-note text-muted">
           {fmt(w.banked)} banked / {fmt(w.best)} available
         </span>
       </div>
@@ -154,9 +154,9 @@ function WidestWeek({ w }: { w: WeekRow }) {
             {w.slots.map((s) => (
               <li
                 key={s.index}
-                className="flex items-center gap-2 border-b border-border/50 py-1 last:border-0"
+                className="flex items-center gap-2 border-b border-border py-1 last:border-0"
               >
-                <span className="w-8 shrink-0 font-mono text-micro text-faint">
+                <span className="w-8 shrink-0 figure text-micro text-faint">
                   {s.label}
                 </span>
                 <span className="min-w-0 flex-1">
@@ -177,7 +177,7 @@ function WidestWeek({ w }: { w: WeekRow }) {
                   )}
                 </span>
                 <span
-                  className={`font-mono text-micro tnum ${s.empty ? "text-warn" : "text-muted"}`}
+                  className={`figure text-micro ${s.empty ? "text-warn" : "text-muted"}`}
                 >
                   {s.empty ? "empty" : fmt(s.banked)}
                 </span>
@@ -193,7 +193,7 @@ function WidestWeek({ w }: { w: WeekRow }) {
             {w.bestSeven.map((g) => (
               <li
                 key={g.playerId}
-                className="flex items-center gap-2 border-b border-border/50 py-1 last:border-0"
+                className="flex items-center gap-2 border-b border-border py-1 last:border-0"
               >
                 <span className="min-w-0 flex-1 truncate text-micro text-ink">
                   {g.name}
@@ -202,7 +202,7 @@ function WidestWeek({ w }: { w: WeekRow }) {
                   )}
                 </span>
                 <span
-                  className={`font-mono text-micro tnum ${g.banked ? "text-accent" : "text-muted"}`}
+                  className={`figure text-micro ${g.banked ? "text-accent-text" : "text-muted"}`}
                 >
                   {fmt(g.points)}
                 </span>
@@ -223,9 +223,9 @@ function SeasonPills({ seasons, active }: { seasons: string[]; active: string })
           key={s}
           href={`/lab/regret?season=${s}`}
           aria-current={s === active ? "page" : undefined}
-          className={`inline-flex min-h-11 items-center rounded-full border px-3 font-mono text-meta tnum ${
+          className={`inline-flex min-h-11 items-center rounded-full border px-3 figure text-meta ${
             s === active
-              ? "border-accent/40 bg-accent/12 text-accent"
+              ? "border-accent-edge bg-accent-wash text-accent-text"
               : "border-border text-muted"
           }`}
         >
@@ -334,7 +334,7 @@ export default async function RegretPage({
       {ledger.emptySlots > 0 && (
         <Card className="mt-2 border-warn/30 bg-warn/5">
           <p className="text-body leading-relaxed text-ink">
-            <span className="font-mono font-semibold text-warn">
+            <span className="figure font-semibold text-warn">
               {ledger.emptySlots}
             </span>{" "}
             of your {ledger.slotsTotal} slots ({emptyRate.toFixed(1)}%) were never

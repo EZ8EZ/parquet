@@ -16,6 +16,7 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { PageHeader, Card, SectionHeader } from "@/components/ui";
+import { Onward } from "@/components/Onward";
 
 export default function AboutPage() {
   return (
@@ -69,7 +70,7 @@ export default function AboutPage() {
         </p>
         <Link
           href="/teams"
-          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note leading-snug font-semibold text-accent"
+          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note leading-snug font-semibold text-accent-text"
         >
           Pick your team
           <ChevronRight size={13} aria-hidden="true" />
@@ -93,7 +94,7 @@ export default function AboutPage() {
         </p>
         <Link
           href="/awards"
-          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent"
+          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text"
         >
           The Superlatives
           <ChevronRight size={13} aria-hidden="true" />
@@ -102,9 +103,9 @@ export default function AboutPage() {
 
       <SectionHeader title="The two numbers you haven't seen before" />
       <Card>
-        <p className="text-meta font-semibold uppercase tracking-wide text-accent">
+        <p className="text-meta font-semibold uppercase tracking-wide text-accent-text">
           TCI · Timeline Coherence Index{" "}
-          <span className="font-mono normal-case tracking-normal text-faint">
+          <span className="figure normal-case tracking-normal text-secondary">
             (0-100)
           </span>
         </p>
@@ -129,9 +130,9 @@ export default function AboutPage() {
       </Card>
 
       <Card className="mt-2">
-        <p className="text-meta font-semibold uppercase tracking-wide text-accent">
+        <p className="text-meta font-semibold uppercase tracking-wide text-accent-text">
           RFI · Roster Fragility Index{" "}
-          <span className="font-mono normal-case tracking-normal text-faint">
+          <span className="figure normal-case tracking-normal text-secondary">
             (0-100, higher is more fragile)
           </span>
         </p>
@@ -154,7 +155,7 @@ export default function AboutPage() {
         </p>
       </Card>
 
-      <p className="mt-2 text-meta leading-relaxed text-faint">
+      <p className="mt-2 text-meta leading-relaxed text-secondary">
         Both numbers are built from one roster&apos;s own assets, so neither moves
         when somebody else trades, and both read the roster as it stands tonight.
         The words beside them are the league-relative part:
@@ -209,16 +210,17 @@ export default function AboutPage() {
         </ul>
       </Card>
 
-      <p className="mt-5 text-center text-meta leading-relaxed text-faint">
+      <p className="mt-5 text-center text-meta leading-relaxed text-secondary">
         The math behind every value, every curve, every constant is public on the{" "}
         <Link
           href="/methodology"
-          className="font-semibold text-muted underline-offset-2 hover:text-accent hover:underline"
+          className="font-semibold text-muted underline-offset-2 hover:text-accent-text hover:underline"
         >
           methodology page
         </Link>
         . If a number in this app cannot explain itself, that is a bug.
       </p>
+      <Onward from="/about" />
     </div>
   );
 }

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, Lightbulb, Trophy } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
-import { buildDossier } from "@/lib/dossier";
+import { buildDossier, dossiersByOwner } from "@/lib/dossier";
 import { titleSummariesByOwner } from "@/lib/dossier/titles";
 import { getPrincipals } from "@/lib/principals";
 import { partnerIdentity } from "@/lib/dossier/partners";
@@ -11,6 +11,9 @@ import { managerDealsHref } from "@/lib/tradegraph/url";
 import { Tag, DeltaValue, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { BarChart } from "@/components/charts";
+import { ManagerRail } from "@/components/ManagerRail";
+import { DistributionStrip } from "@/components/DistributionStrip";
+import { Onward } from "@/components/Onward";
 import { cn, signed } from "@/lib/ui";
 import type { ReactNode } from "react";
 
@@ -29,17 +32,17 @@ function Metric({
   tone?: "neutral" | "positive" | "negative" | "accent";
 }) {
   return (
-    <div className="rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5">
-      <div className="text-meta uppercase tracking-wide text-faint">{label}</div>
+    <div className="rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5">
+      <div className="text-meta uppercase tracking-wide text-secondary">{label}</div>
       <div
         className={cn(
-          "font-mono text-lede font-semibold leading-tight tnum",
+          "figure text-lede font-semibold leading-tight",
           tone === "positive"
             ? "text-positive"
             : tone === "negative"
               ? "text-negative"
               : tone === "accent"
-                ? "text-accent"
+                ? "text-accent-text"
                 : "text-ink",
         )}
       >
@@ -52,7 +55,7 @@ function Metric({
 
 const POSTURE_TONE: Record<string, string> = {
   rebuilding: "border-info/30 bg-info/[0.08] text-info",
-  contending: "border-accent/30 bg-accent/[0.08] text-accent",
+  contending: "border-accent-edge bg-accent-wash text-accent-text",
   balanced: "border-border bg-elevated text-muted",
 };
 
@@ -77,6 +80,13 @@ export default async function ManagerDetailPage({
   // get wrong - see lib/dossier/titles.ts.
   const titles = p.userId ? titleSummariesByOwner(h, principals).get(p.userId) : undefined;
 
+  // Net pick capital for EVERY principal, so this dossier's figure has the league it
+  // was earned in printed beside it. Same builder /managers and Manager Compare
+  // already call - one pass over the same transactions, no new derivation (D25).
+  const netPicksLeague = [...dossiersByOwner(h, principals).values()].map(
+    (x) => x.profile.picks.net,
+  );
+
   const extras: string[] = [];
   if (p.avgHoldingDays != null) extras.push(`avg hold ${p.avgHoldingDays}d`);
   if (p.deadline.buys || p.deadline.sells)
@@ -95,7 +105,7 @@ export default async function ManagerDetailPage({
       {/* Negative margins keep the 44px tap target from adding visible space. */}
       <Link
         href="/managers"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
+        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
       >
         <ArrowLeft size={13} aria-hidden="true" />
         All dossiers
@@ -110,13 +120,13 @@ export default async function ManagerDetailPage({
           isMe={isMe}
         />
         <div className="min-w-0 flex-1">
-          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
             {isMe ? "Your own file" : "Dossier"}
           </p>
           <h1 className="truncate font-display text-display font-semibold leading-[1.15] text-ink">
             {p.teamName ?? p.displayName}
           </h1>
-          <div className="flex flex-wrap items-center gap-x-2 font-mono text-meta tnum text-faint">
+          <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
             <span className="truncate">{p.displayName}</span>
             <span aria-hidden="true">·</span>
             <span>{p.trades} trades</span>
@@ -127,7 +137,7 @@ export default async function ManagerDetailPage({
       </header>
 
       {titles && (
-        <p className="mb-2 flex items-center gap-1.5 text-note font-semibold text-accent">
+        <p className="mb-2 flex items-center gap-1.5 text-note font-semibold text-accent-text">
           <Trophy size={14} aria-hidden="true" className="shrink-0" />
           {titles.label}
         </p>
@@ -143,7 +153,7 @@ export default async function ManagerDetailPage({
         </div>
       )}
 
-      <p className="rounded-[--radius] border border-border bg-surface/80 p-2.5 text-body leading-[1.42] text-ink">
+      <p className="rounded-[--radius] border border-border bg-surface p-2.5 text-body leading-[1.42] text-ink">
         {d.read}
       </p>
 
@@ -155,7 +165,7 @@ export default async function ManagerDetailPage({
             <Lightbulb
               size={13}
               aria-hidden="true"
-              className="mt-[3px] shrink-0 text-accent"
+              className="mt-[3px] shrink-0 text-accent-text"
             />
             <p className="text-note leading-snug text-ink/90">{t}</p>
           </li>
@@ -190,7 +200,28 @@ export default async function ManagerDetailPage({
           }
         />
       </div>
-      <p className="mt-1.5 font-mono text-meta leading-relaxed tnum text-faint">
+
+      {/*
+       * "Pick capital +6" is the dossier's sharpest behavioural claim and, on its
+       * own, an unreadable one: +6 over five seasons could be the most aggressive
+       * pick buyer in the league or an ordinary Tuesday. This is the only SIGNED
+       * distribution in the app, so it is the one place the diverging pair does real
+       * work - magenta below zero, green above, split at a meaningful centre rather
+       * than at an arbitrary median. Position and the printed rank carry the same
+       * reading, so the hue is never load-bearing on its own
+       * (lib/chart-colors.ts, rules 1 and 3).
+       */}
+      <DistributionStrip
+        label="Net picks, against the league"
+        values={netPicksLeague}
+        mine={p.picks.net}
+        format={(n) => (n > 0 ? `+${n}` : `${n}`)}
+        signed
+        sub="Picks acquired minus picks spent, over every recorded season. Neither end is better: buying picks and spending them are both strategies."
+        className="mt-1.5 rounded-[--radius-sm] border border-border bg-surface py-1.5"
+      />
+
+      <p className="mt-1.5 figure text-meta leading-relaxed text-secondary">
         {extras.join(" · ")}
       </p>
 
@@ -225,7 +256,7 @@ export default async function ManagerDetailPage({
               : "."}
           </p>
           {!luck.allPlay && (
-            <p className="mt-1 text-meta leading-relaxed text-faint">
+            <p className="mt-1 text-meta leading-relaxed text-secondary">
               From season point totals (points for vs. points against), not
               week-by-week play - this league&apos;s per-week history isn&apos;t
               loaded for the live provider (see lib/history.ts). Not the same as a
@@ -255,7 +286,7 @@ export default async function ManagerDetailPage({
               <span
                 key={s.season}
                 className={cn(
-                  "inline-flex items-baseline gap-1.5 rounded-full border px-2 py-0.5 font-mono text-meta tnum",
+                  "inline-flex items-baseline gap-1.5 rounded-full border px-2 py-0.5 figure text-meta",
                   POSTURE_TONE[s.posture] ?? POSTURE_TONE.balanced,
                 )}
               >
@@ -274,12 +305,12 @@ export default async function ManagerDetailPage({
           <SectionHeader
             title="Trade activity"
             action={
-              <span className="font-mono text-meta tnum text-faint">
+              <span className="figure text-meta text-secondary">
                 {p.trades} across {tradesData.length} seasons
               </span>
             }
           />
-          <div className="rounded-[--radius] border border-border bg-surface/60 px-2 pb-1 pt-2">
+          <div className="rounded-[--radius] border border-border bg-surface px-2 pb-1 pt-2">
             <BarChart data={tradesData} height={104} />
           </div>
         </>
@@ -295,14 +326,14 @@ export default async function ManagerDetailPage({
                 // link was always trying to do, back when the only destination was a
                 // ring with their strands lit.
                 href={p.userId ? managerDealsHref(p.userId) : "/deals"}
-                className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent"
+                className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent-text"
               >
                 their deals
                 <ChevronRight size={12} aria-hidden="true" />
               </Link>
             }
           />
-          <div className="overflow-hidden rounded-[--radius] border border-border bg-surface/60">
+          <div className="overflow-hidden rounded-[--radius] border border-border bg-surface">
             <ul className="divide-y divide-border">
               {p.tradePartners.slice(0, 6).map((tp) => {
                 const t = partnerIdentity(h, principals, tp);
@@ -323,13 +354,13 @@ export default async function ManagerDetailPage({
                       <span className="min-w-0 flex-1 truncate text-note font-medium text-ink">
                         {t.name}
                         {t.tenureLabel && (
-                          <span className="text-meta font-normal text-faint">
+                          <span className="text-meta font-normal text-secondary">
                             {" "}
                             {t.tenureLabel}
                           </span>
                         )}
                       </span>
-                      <span className="shrink-0 font-mono text-meta tnum text-muted">
+                      <span className="shrink-0 figure text-meta text-muted">
                         {tp.count} deal{tp.count === 1 ? "" : "s"}
                       </span>
                       <ChevronRight
@@ -346,23 +377,24 @@ export default async function ManagerDetailPage({
         </>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {[
-          { href: "/trade", label: "Price a trade" },
-          { href: "/plan", label: "Game plan" },
-          { href: "/drafts", label: "Pick lineage" },
-        ].map((a) => (
-          <Link
-            key={a.href}
-            href={a.href}
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
-          >
-            {a.label}
-          </Link>
-        ))}
-      </div>
+      {/*
+       * These three chips used to be "Price a trade / Game plan / Pick lineage" -
+       * three generic app destinations on a page whose entire subject is one specific
+       * person. A reader who has just finished reading what a rival values had no
+       * path to a trade WITH THEM; they got a blank trade builder. Same rule as
+       * everywhere else a manager is named (lib/nav.ts).
+       */}
+      <SectionHeader title={isMe ? "Your own file" : `More on ${p.teamName ?? p.displayName}`} />
+      <ManagerRail
+        rosterId={rosterId}
+        ownerId={p.userId ?? null}
+        isMe={isMe}
+        omit={[`/managers/${rosterId}`]}
+      />
 
-      <p className="mt-3 text-meta leading-relaxed text-faint">
+      <Onward from="/managers" />
+
+      <p className="mt-3 text-meta leading-relaxed text-secondary">
         Read from {p.totalTransactions} recorded moves ({signed(p.picks.net)} net
         picks). Behavior only - no roster contents, no stated intent.
       </p>

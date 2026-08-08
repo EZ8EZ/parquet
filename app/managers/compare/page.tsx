@@ -43,6 +43,8 @@ import {
   ManagerComparePicker,
   type CompareOption,
 } from "@/components/ManagerComparePicker";
+import { ManagerRail } from "@/components/ManagerRail";
+import { Onward } from "@/components/Onward";
 import { cn, signed } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -100,8 +102,8 @@ function Val({ cell, lead }: { cell: Cell; lead: boolean }) {
     <div className="min-w-0">
       <div
         className={cn(
-          "font-mono text-body leading-tight tnum",
-          lead ? "font-semibold text-accent" : "text-ink",
+          "figure text-body leading-tight",
+          lead ? "font-semibold text-accent-text" : "text-ink",
         )}
       >
         {cell.main}
@@ -154,24 +156,24 @@ function Side({
       />
       <Link
         href={dossierHref(d)}
-        className="mt-1 flex min-h-11 items-center truncate text-body font-semibold leading-tight text-ink transition-colors hover:text-accent"
+        className="mt-1 flex min-h-11 items-center truncate text-body font-semibold leading-tight text-ink transition-colors hover:text-accent-text"
       >
         {p.teamName ?? p.displayName}
       </Link>
-      <div className="truncate text-meta leading-tight text-faint">
+      <div className="truncate text-meta leading-tight text-secondary">
         {p.displayName}
       </div>
       {d.identity.kind === "former" && (
         <Tag className="mt-1">former {d.identity.tenureLabel}</Tag>
       )}
       {titles && (
-        <div className="mt-1 flex items-center gap-1 text-meta font-semibold text-accent">
+        <div className="mt-1 flex items-center gap-1 text-meta font-semibold text-accent-text">
           <Trophy size={11} aria-hidden="true" className="shrink-0" />
           <span className="truncate">{titles.label}</span>
         </div>
       )}
       {shown.length > 0 && (
-        <div className="mt-1 text-meta font-medium leading-snug text-accent">
+        <div className="mt-1 text-meta font-medium leading-snug text-accent-text">
           {shown.join(" · ")}
         </div>
       )}
@@ -186,7 +188,7 @@ function Side({
  */
 function CompareSheet({ rows }: { rows: Row[] }) {
   return (
-    <div className="overflow-hidden rounded-[--radius] border border-border bg-surface/60">
+    <div className="overflow-hidden rounded-[--radius] border border-border bg-surface">
       <ul className="divide-y divide-border">
         {rows.map((r) => (
           <li
@@ -242,13 +244,13 @@ export default async function CompareManagersPage({
     <>
       <Link
         href="/managers"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
+        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
       >
         <ArrowLeft size={13} aria-hidden="true" />
         All dossiers
       </Link>
       <header className="mb-2.5">
-        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
           Manager compare
         </p>
         <h1 className="font-display text-display font-semibold leading-[1.1] text-ink">
@@ -258,7 +260,7 @@ export default async function CompareManagersPage({
           The same numbers for two managers, from the same reads their own dossiers
           use.
         </p>
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 font-mono text-meta tnum text-faint">
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
           <span>{options.length} managers</span>
           <span aria-hidden="true">·</span>
           <span className="inline-flex items-center gap-1 text-warn">
@@ -314,7 +316,7 @@ export default async function CompareManagersPage({
                 <Link
                   key={s.href}
                   href={s.href}
-                  className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-ink transition-colors hover:border-accent/40 hover:text-accent"
+                  className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-3 text-note font-semibold text-ink transition-colors hover:border-accent-edge hover:text-accent-text"
                 >
                   {s.label}
                 </Link>
@@ -322,6 +324,9 @@ export default async function CompareManagersPage({
             </div>
           )}
         </Card>
+        {/* The empty branch is a dead end too, and it is the one a reader most often
+            lands on: arriving with no pair chosen and no idea who to pick. */}
+        <Onward from="/managers/compare" />
       </div>
     );
   }
@@ -530,7 +535,7 @@ export default async function CompareManagersPage({
           edge && (
             <Link
               href={pairDealsHref(edge.key)}
-              className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent"
+              className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent-text"
             >
               their deals
               <ChevronRight size={12} aria-hidden="true" />
@@ -542,7 +547,7 @@ export default async function CompareManagersPage({
         {edge ? (
           <>
             <p className="text-body leading-relaxed text-ink">
-              <span className="font-mono font-semibold tnum text-accent">
+              <span className="figure font-semibold text-accent-text">
                 {dealsListed} deal{dealsListed === 1 ? "" : "s"}
               </span>{" "}
               <span className="text-muted">
@@ -550,7 +555,7 @@ export default async function CompareManagersPage({
               </span>
             </p>
             {dossierCount > dealsListed && (
-              <p className="mt-1 text-meta leading-relaxed text-faint">
+              <p className="mt-1 text-meta leading-relaxed text-secondary">
                 Their dossiers count {dossierCount}. A commissioner-executed
                 multi-team deal collapses several transactions into one record here, so
                 the listable number is the smaller one.
@@ -593,9 +598,9 @@ export default async function CompareManagersPage({
         {[aD, bD].map((d) => (
           <div
             key={d.profile.userId ?? d.profile.displayName}
-            className="rounded-[--radius] border border-border bg-surface/80 p-2.5"
+            className="rounded-[--radius] border border-border bg-surface p-2.5"
           >
-            <div className="mb-0.5 text-meta font-semibold uppercase tracking-wide text-accent">
+            <div className="mb-0.5 text-meta font-semibold uppercase tracking-wide text-accent-text">
               {d.profile.teamName ?? d.profile.displayName}
             </div>
             <p className="text-note leading-[1.42] text-ink">{d.read}</p>
@@ -603,20 +608,30 @@ export default async function CompareManagersPage({
         ))}
       </div>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
+      {/*
+       * WHAT TO DO WITH THE COMPARISON. This was two dossier links, and the whole
+       * point of reading two rivals side by side is deciding whether to call one of
+       * them - which was the one thing this page could not get you to. Every surface
+       * the app holds about each of them, per side, from the one rule in lib/nav.ts.
+       */}
+      <SectionHeader title="Take it further" />
+      <div className="space-y-1.5">
         {[aD, bD].map((d) => (
-          <Link
-            key={dossierHref(d)}
-            href={dossierHref(d)}
-            className="inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
-          >
-            {d.profile.teamName ?? d.profile.displayName}
-            <ChevronRight size={12} aria-hidden="true" />
-          </Link>
+          <div key={dossierHref(d)} className="min-w-0">
+            <p className="mb-0.5 truncate text-meta font-semibold uppercase tracking-wide text-secondary">
+              {d.profile.teamName ?? d.profile.displayName}
+            </p>
+            <ManagerRail
+              rosterId={d.identity.kind === "former" ? null : d.identity.rosterId}
+              ownerId={d.profile.userId ?? null}
+              isFormer={d.identity.kind === "former"}
+              isMe={d.profile.userId === h.me.userId}
+            />
+          </div>
         ))}
       </div>
 
-      <p className="mt-3 text-meta leading-relaxed text-faint">
+      <p className="mt-3 text-meta leading-relaxed text-secondary">
         Gold marks a side only where more is plainly more: pick capital, and the lower
         fragility index when both rosters are playing to win now. A low fragility score
         on a team that has already sold means it has little left to lose, so that
@@ -624,6 +639,8 @@ export default async function CompareManagersPage({
         scoped to each manager&apos;s own tenure, so a roster that changed hands reads
         as two people rather than one blended average.
       </p>
+
+      <Onward from="/managers/compare" />
     </div>
   );
 }

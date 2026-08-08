@@ -28,7 +28,7 @@ export default async function PlanPage() {
     return (
       <p className="text-muted">
         Couldn&apos;t identify your roster.{" "}
-        <Link href="/teams" className="text-accent underline">
+        <Link href="/teams" className="text-accent-text underline">
           Pick a team
         </Link>
         .
@@ -72,12 +72,12 @@ export default async function PlanPage() {
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-center justify-between gap-3">
-            <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+            <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
               Game plan
             </p>
             <Link
               href="/roster"
-              className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
+              className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
             >
               your roster
               <ChevronRight size={12} aria-hidden="true" />
@@ -86,7 +86,7 @@ export default async function PlanPage() {
           <h1 className="font-display text-display font-semibold leading-[1.12] text-ink">
             How to improve this team
           </h1>
-          <div className="flex flex-wrap items-center gap-x-2 font-mono text-meta tnum text-faint">
+          <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
             <span className="truncate">{h.me.teamName ?? h.me.displayName}</span>
             <span aria-hidden="true">·</span>
             <span>
@@ -97,10 +97,10 @@ export default async function PlanPage() {
       </header>
 
       {/* The verdict, up top - the one thing that must be readable on landing. */}
-      <section className="rounded-[--radius] border border-border bg-surface/80 p-2.5">
+      <section className="rounded-[--radius] border border-border bg-surface p-2.5">
         <div className="mb-1 flex items-center gap-2">
           <Tag tone={dir.tone}>{dir.label}</Tag>
-          <span className="text-meta uppercase tracking-wide text-faint">
+          <span className="text-meta uppercase tracking-wide text-secondary">
             recommended direction
           </span>
         </div>
@@ -121,7 +121,7 @@ export default async function PlanPage() {
       </section>
 
       {/* Diagnosis figures as one strip, with the position reads folded in. */}
-      <div className="mt-1.5 flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface/60">
+      <div className="mt-1.5 flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface">
         {[
           { v: dx.starCount, l: "stars", s: "cornerstone+", tone: "text-ink" },
           {
@@ -135,13 +135,13 @@ export default async function PlanPage() {
           <div key={s.l} className="flex-1 px-1.5 py-1.5 text-center">
             <div
               className={cn(
-                "font-mono text-lede font-semibold leading-tight tnum",
+                "figure text-lede font-semibold leading-tight",
                 s.tone,
               )}
             >
               {s.v}
             </div>
-            <div className="text-meta uppercase tracking-wide text-faint">{s.l}</div>
+            <div className="text-meta uppercase tracking-wide text-secondary">{s.l}</div>
             <div className="text-meta leading-tight text-muted">{s.s}</div>
           </div>
         ))}
@@ -155,7 +155,7 @@ export default async function PlanPage() {
             tl.posture === "straddling"
               ? "border-negative/30 bg-negative/[0.06]"
               : timelineAgrees
-                ? "border-border bg-surface/60"
+                ? "border-border bg-surface"
                 : "border-warn/30 bg-warn/[0.05]"
           }`}
         >
@@ -165,7 +165,7 @@ export default async function PlanPage() {
             </span>
             <Link
               href="/league"
-              className="font-mono text-meta tnum text-faint underline-offset-2 hover:text-accent hover:underline"
+              className="figure text-meta text-secondary underline-offset-2 hover:text-accent-text hover:underline"
             >
               TCI {tl.tci} · value ~{tl.rosterDuration.toFixed(1)}s out
             </Link>
@@ -213,7 +213,7 @@ export default async function PlanPage() {
         </h2>
         <Link
           href="/trade"
-          className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent"
+          className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent-text"
         >
           price one out
           <ChevronRight size={12} aria-hidden="true" />
@@ -226,12 +226,12 @@ export default async function PlanPage() {
           return (
             <article
               key={m.id}
-              className="rounded-[--radius] border border-border bg-surface/70 p-2.5"
+              className="rounded-[--radius] border border-border bg-surface p-2.5"
             >
               <div className="flex items-baseline gap-2">
                 <span
                   aria-hidden="true"
-                  className="shrink-0 font-mono text-meta font-semibold text-accent"
+                  className="shrink-0 figure text-meta font-semibold text-accent-text"
                 >
                   {String(i + 1).padStart(2, "0")}
                 </span>
@@ -331,14 +331,14 @@ export default async function PlanPage() {
           <Link
             key={a.href}
             href={a.href}
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
           >
             {a.label}
           </Link>
         ))}
       </div>
 
-      <p className="mt-2 text-meta leading-relaxed text-faint">
+      <p className="mt-2 text-meta leading-relaxed text-secondary">
         Parquet can&apos;t execute trades - copy a pitch and send it from Sleeper.
       </p>
     </div>

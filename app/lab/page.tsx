@@ -3,6 +3,7 @@ import { ChevronRight, FlaskConical } from "lucide-react";
 import { PageHeader, Card } from "@/components/ui";
 import { ExperimentBadge } from "@/components/ExperimentBadge";
 import { EXPERIMENTS } from "@/lib/lab";
+import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
 
@@ -38,13 +39,13 @@ export default function LabPage() {
           <Link
             key={e.slug}
             href={e.href}
-            className="block rounded-[--radius] border border-border bg-surface/60 p-3.5 transition-colors hover:border-border-strong hover:bg-surface-2"
+            className="block rounded-[--radius] border border-border bg-surface p-3.5 transition-colors hover:border-border-strong hover:bg-surface-2"
           >
             <div className="flex items-start gap-2.5">
               <FlaskConical
                 size={16}
                 aria-hidden="true"
-                className="mt-0.5 shrink-0 text-accent"
+                className="mt-0.5 shrink-0 text-accent-text"
               />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-2">
@@ -58,7 +59,7 @@ export default function LabPage() {
                   />
                 </div>
                 <p className="mt-1 text-note leading-snug text-muted">{e.premise}</p>
-                <p className="mt-1.5 text-meta leading-snug text-faint">
+                <p className="mt-1.5 text-meta leading-snug text-secondary">
                   <span className="font-semibold uppercase tracking-[0.14em] text-warn">
                     Doubt
                   </span>{" "}
@@ -70,11 +71,12 @@ export default function LabPage() {
         ))}
       </div>
 
-      <p className="mt-5 text-meta leading-snug text-faint">
+      <p className="mt-5 text-meta leading-snug text-secondary">
         The Lab sits one tap off the main path on purpose. It has a single entry on the
         full index and appears nowhere else, so an unfinished idea cannot crowd a
         finished one.
       </p>
+      <Onward from="/lab" />
     </div>
   );
 }

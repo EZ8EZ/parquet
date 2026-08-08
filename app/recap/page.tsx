@@ -18,6 +18,7 @@ import { MetricGloss } from "@/components/MetricGloss";
 import { AwardBadge, GROUP_TONE, iconForAward } from "@/components/AwardBadge";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { fmtValue } from "@/lib/ui";
+import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
 
@@ -87,18 +88,18 @@ export default async function RecapPage() {
         <div
           className={
             champion.isViewer
-              ? "mb-1 rounded-[--radius] border border-accent/45 bg-accent/[0.09] p-3"
-              : "mb-1 rounded-[--radius] border border-border bg-surface/60 p-3"
+              ? "mb-1 rounded-[--radius] border border-accent-edge bg-accent-wash p-3"
+              : "mb-1 rounded-[--radius] border border-border bg-surface p-3"
           }
         >
           <div className="flex items-start gap-2.5">
             <Trophy
               size={18}
               aria-hidden="true"
-              className={champion.isViewer ? "mt-0.5 shrink-0 text-accent" : "mt-0.5 shrink-0 text-faint"}
+              className={champion.isViewer ? "mt-0.5 shrink-0 text-accent-text" : "mt-0.5 shrink-0 text-faint"}
             />
             <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-faint">
+              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-secondary">
                 {season} champion
               </div>
               <div className="mt-0.5 font-display text-[19px] font-semibold leading-tight text-ink">
@@ -138,7 +139,7 @@ export default async function RecapPage() {
       <SectionHeader
         title={`${possessive} decisions that season`}
         action={
-          <span className="font-mono text-[11px] tnum text-faint">
+          <span className="figure text-[11px] text-secondary">
             {notableDecisions.length} of {decisions.length}
           </span>
         }
@@ -149,12 +150,12 @@ export default async function RecapPage() {
           {routineDecisions.length > 0 ? " - just the smaller moves below." : "."}
         </EmptyState>
       ) : (
-        <div className="overflow-hidden rounded-[--radius] border border-border bg-surface/60">
+        <div className="overflow-hidden rounded-[--radius] border border-border bg-surface">
           <ul className="divide-y divide-border">
             {notableDecisions.map((d) => (
               <li key={d.transactionId} className="px-2.5 py-1.5">
                 <div className="flex items-baseline gap-2">
-                  <span className="w-9 shrink-0 font-mono text-[11px] tnum text-faint">
+                  <span className="w-9 shrink-0 figure text-[11px] text-secondary">
                     wk {d.week}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">
@@ -162,7 +163,7 @@ export default async function RecapPage() {
                   </span>
                 </div>
                 {d.annotation && (
-                  <p className="mt-0.5 pl-11 text-[11px] italic leading-snug text-muted">
+                  <p className="mt-0.5 pl-11 font-display text-meta italic leading-snug text-secondary">
                     &quot;{d.annotation.reasoning}&quot;
                   </p>
                 )}
@@ -173,7 +174,7 @@ export default async function RecapPage() {
       )}
 
       {routineDecisions.length > 0 && (
-        <details className="mt-2 rounded-[--radius] border border-border bg-surface/60">
+        <details className="mt-2 rounded-[--radius] border border-border bg-surface">
           <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-2.5 py-1.5 text-[12px] font-semibold text-muted">
             <History size={14} className="shrink-0 text-faint" aria-hidden="true" />
             {routineDecisions.length} smaller waiver move
@@ -183,7 +184,7 @@ export default async function RecapPage() {
             {routineDecisions.map((d) => (
               <li key={d.transactionId} className="px-2.5 py-1.5">
                 <div className="flex items-baseline gap-2">
-                  <span className="w-9 shrink-0 font-mono text-[11px] tnum text-faint">
+                  <span className="w-9 shrink-0 figure text-[11px] text-secondary">
                     wk {d.week}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">
@@ -199,7 +200,7 @@ export default async function RecapPage() {
       <SectionHeader
         title="Traded picks that became players"
         action={
-          <span className="font-mono text-[11px] tnum text-faint">
+          <span className="figure text-[11px] text-secondary">
             {picksResolved.length}
           </span>
         }
@@ -214,14 +215,14 @@ export default async function RecapPage() {
             <Link
               key={p.key}
               href={`/drafts/${season}`}
-              className="flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 transition-colors hover:bg-surface-2"
+              className="flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 transition-colors hover:bg-surface-2"
             >
               <PlayerAvatar name={p.playerName} team={null} size="sm" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
                   {p.playerName}
                 </span>
-                <span className="block truncate text-[11px] leading-tight text-faint">
+                <span className="block truncate text-[11px] leading-tight text-secondary">
                   {p.label}
                   {p.position ? ` · ${p.position}` : ""}
                   {" · "}
@@ -253,14 +254,14 @@ export default async function RecapPage() {
             <Link
               key={a.id}
               href="/awards"
-              className="flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-accent/30 bg-surface/60 px-2.5 py-1.5 transition-colors hover:bg-surface-2"
+              className="flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-accent-edge bg-surface px-2.5 py-1.5 transition-colors hover:bg-surface-2"
             >
               <AwardBadge icon={iconForAward(a.id)} tone={GROUP_TONE[a.group]} rank="winner" />
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
                   {a.title}
                 </span>
-                <span className="block truncate text-[11px] leading-tight text-faint">
+                <span className="block truncate text-[11px] leading-tight text-secondary">
                   {a.statLine}
                 </span>
               </span>
@@ -278,13 +279,13 @@ export default async function RecapPage() {
       <div className="grid grid-cols-2 gap-2.5">
         <Link
           href="/league"
-          className="rounded-[--radius-sm] border border-border bg-surface/60 p-3 transition-colors hover:bg-surface-2"
+          className="rounded-[--radius-sm] border border-border bg-surface p-3 transition-colors hover:bg-surface-2"
         >
           <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-faint">
             <Activity size={12} aria-hidden="true" />
             timeline
           </div>
-          <div className="mt-0.5 font-mono text-xl font-semibold tnum text-ink">
+          <div className="mt-0.5 figure text-xl font-semibold text-ink">
             {timelineToday ? timelineToday.tci.toFixed(0) : "-"}
           </div>
           <div className="mt-0.5 text-[11px] leading-snug text-muted">
@@ -303,13 +304,13 @@ export default async function RecapPage() {
         </Link>
         <Link
           href="/roster"
-          className="rounded-[--radius-sm] border border-border bg-surface/60 p-3 transition-colors hover:bg-surface-2"
+          className="rounded-[--radius-sm] border border-border bg-surface p-3 transition-colors hover:bg-surface-2"
         >
           <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-faint">
             <ShieldQuestion size={12} aria-hidden="true" />
             fragility
           </div>
-          <div className="mt-0.5 font-mono text-xl font-semibold tnum text-ink">
+          <div className="mt-0.5 figure text-xl font-semibold text-ink">
             {fragilityToday ? fragilityToday.fragility.toFixed(0) : "-"}
           </div>
           <div className="mt-0.5 text-[11px] leading-snug text-muted">
@@ -327,6 +328,7 @@ export default async function RecapPage() {
       </div>
       {/* Both indexes land here as bare numbers - define them in place, quietly. */}
       <MetricGloss className="mt-1" />
+      <Onward from="/recap" />
     </div>
   );
 }

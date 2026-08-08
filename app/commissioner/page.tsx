@@ -11,6 +11,7 @@ import { getTradedPickLineages } from "@/lib/lineage";
 import { getAuditLog, getStaleRosters, type AuditEntry } from "@/lib/commissioner";
 import { notableWaiverLabel } from "@/lib/ledger";
 import { EmptyState, PageHeader, SectionHeader, Tag } from "@/components/ui";
+import { Onward } from "@/components/Onward";
 import { cn, fmtValue } from "@/lib/ui";
 import { LineageCard } from "../drafts/parts";
 import { SeatLinks } from "./seats";
@@ -31,7 +32,7 @@ function AuditRow({ e }: { e: AuditEntry }) {
   const href = e.tradeHref ?? (e.rosterId != null ? `/managers/${e.rosterId}` : null);
   const inner = (
     <>
-      <span className="w-11 shrink-0 font-mono text-meta tnum text-faint">
+      <span className="w-11 shrink-0 figure text-meta text-secondary">
         wk {e.week}
       </span>
       <Tag tone={TYPE_TONE[e.type] ?? "neutral"} className="shrink-0">
@@ -126,7 +127,7 @@ export default async function CommissionerPage() {
               <Link
                 key={r.rosterId}
                 href={`/managers/${r.rosterId}`}
-                className="flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-warn/30 bg-surface/60 px-2.5 py-1.5 transition-colors hover:bg-surface-2"
+                className="flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-warn/30 bg-surface px-2.5 py-1.5 transition-colors hover:bg-surface-2"
               >
                 <ShieldAlert size={15} className="shrink-0 text-warn" aria-hidden="true" />
                 <span className="min-w-0 flex-1">
@@ -166,7 +167,7 @@ export default async function CommissionerPage() {
       )}
 
       {pendingPicks.length > 0 && (
-        <details className="mt-2 rounded-[--radius] border border-border bg-surface/60">
+        <details className="mt-2 rounded-[--radius] border border-border bg-surface">
           <summary className="flex min-h-11 cursor-pointer items-center gap-2 px-2.5 py-1.5 text-note font-semibold text-muted">
             <Hourglass size={14} className="shrink-0 text-faint" aria-hidden="true" />
             {pendingPicks.length} more traded pick{pendingPicks.length === 1 ? "" : "s"}{" "}
@@ -183,7 +184,7 @@ export default async function CommissionerPage() {
       <SectionHeader
         title="Transaction audit log"
         action={
-          <span className="font-mono text-meta tnum text-faint">
+          <span className="figure text-meta text-secondary">
             {fmtValue(auditLog.length)} of {fmtValue(h.transactions.length)}
           </span>
         }
@@ -198,29 +199,52 @@ export default async function CommissionerPage() {
           Trades and {waiverLabel} will show up here as they happen.
         </EmptyState>
       ) : (
-        <div className="space-y-3">
-          {seasonsDesc.map((season) => (
-            <div
+        /*
+         * THE DIET. This log rendered every season of every notable move expanded,
+         * and it is most of why the longest page in the app was 10,125px - a wall
+         * whose newest and only actionable rows sat at the top and whose remaining
+         * four fifths nobody scrolled. Seasons are `<details>` now, with the current
+         * one open and the rest closed, which is the same idiom the pending-picks
+         * list two sections up already uses. Nothing is removed: every row is one tap
+         * away and the count is printed on the closed summary, so a reader can see
+         * how much is behind each without opening it.
+         */
+        <div className="space-y-1.5">
+          {seasonsDesc.map((season, i) => (
+            <details
               key={season}
-              className="overflow-hidden rounded-[--radius] border border-border bg-surface/60"
+              open={i === 0}
+              className="group overflow-hidden rounded-[--radius] border border-border bg-surface"
             >
-              <div className="flex items-center justify-between border-b border-border px-2.5 py-1">
-                <span className="font-mono text-note font-semibold tnum text-ink">
-                  {season}
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-1">
+                <span className="flex items-center gap-1.5">
+                  <ChevronRight
+                    size={13}
+                    aria-hidden="true"
+                    className="shrink-0 text-faint transition-transform group-open:rotate-90"
+                  />
+                  <span className="figure text-note font-semibold text-ink">
+                    {season}
+                  </span>
                 </span>
-                <span className="font-mono text-meta tnum text-faint">
-                  {bySeason.get(season)!.length}
+                <span className="figure text-meta text-secondary">
+                  {bySeason.get(season)!.length} notable
                 </span>
-              </div>
-              <ul className={cn("divide-y divide-border")}>
+              </summary>
+              <ul className={cn("divide-y divide-border border-t border-border")}>
                 {bySeason.get(season)!.map((e) => (
                   <AuditRow key={e.transactionId} e={e} />
                 ))}
               </ul>
-            </div>
+            </details>
           ))}
         </div>
       )}
+
+      {/* Third of the four zero-outbound surfaces, and the one that also had zero
+          INBOUND links - the longest page in the app was one nobody could navigate
+          to. /league now carries the doorway; this is the way back out. */}
+      <Onward from="/commissioner" />
     </div>
   );
 }

@@ -54,7 +54,7 @@ function SplitBars({ rows }: { rows: { label: string; players: number; picks: nu
               fontSize="11"
               textAnchor="end"
               fill="var(--color-ink)"
-              className="font-mono"
+              className="figure"
             >
               {fmtValue(r.players + r.picks)}
             </text>
@@ -113,30 +113,30 @@ function Column({
 }) {
   return (
     <div
-      className={`rounded-[--radius-sm] border bg-surface/60 p-3 ${
+      className={`rounded-[--radius-sm] border bg-surface p-3 ${
         hypothetical ? "border-dashed border-border-strong" : "border-border"
       }`}
     >
-      <div className="text-meta uppercase tracking-wide text-faint">{title}</div>
-      <div className="font-mono text-display font-semibold leading-tight tnum text-ink">
+      <div className="text-meta uppercase tracking-wide text-secondary">{title}</div>
+      <div className="figure text-display font-semibold leading-tight text-ink">
         {fmtValue(total)}
       </div>
       <dl className="mt-2 space-y-0.5 text-meta text-muted">
         <div className="flex justify-between gap-2">
           <dt>{playerCount} players</dt>
-          <dd className="font-mono tnum">{fmtValue(players)}</dd>
+          <dd className="figure">{fmtValue(players)}</dd>
         </div>
         <div className="flex justify-between gap-2">
           <dt>Picks</dt>
-          <dd className="font-mono tnum">{fmtValue(picks)}</dd>
+          <dd className="figure">{fmtValue(picks)}</dd>
         </div>
         <div className="flex justify-between gap-2">
           <dt>TCI</dt>
-          <dd className="font-mono tnum">{tci}</dd>
+          <dd className="figure">{tci}</dd>
         </div>
         <div className="flex justify-between gap-2">
           <dt>Duration</dt>
-          <dd className="font-mono tnum">{duration.toFixed(1)}s</dd>
+          <dd className="figure">{duration.toFixed(1)}s</dd>
         </div>
       </dl>
     </div>
@@ -145,7 +145,7 @@ function Column({
 
 function PlayerLine({ p }: { p: CounterfactualPlayer }) {
   return (
-    <li className="flex items-center gap-2.5 border-b border-border/60 py-1.5 last:border-0">
+    <li className="flex items-center gap-2.5 border-b border-border py-1.5 last:border-0">
       <PlayerAvatar name={p.name} playerId={p.playerId} size="sm" />
       <span className="min-w-0 flex-1">
         <span className="block truncate text-note font-semibold leading-tight text-ink">
@@ -160,7 +160,7 @@ function PlayerLine({ p }: { p: CounterfactualPlayer }) {
       ) : (
         <Tag tone="accent">gone</Tag>
       )}
-      <span className="w-14 shrink-0 text-right font-mono text-note tnum text-ink">
+      <span className="w-14 shrink-0 text-right figure text-note text-ink">
         {p.priced ? fmtValue(p.value) : "n/a"}
       </span>
     </li>
@@ -307,7 +307,7 @@ export default async function CounterfactualPage() {
       </div>
 
       <SectionHeader title="The trade-free roster" />
-      <p className="mb-2 text-meta leading-snug text-faint">
+      <p className="mb-2 text-meta leading-snug text-secondary">
         Your startup haul, every pick you were born with resolved to the player it
         became, and every waiver add you never dropped. Trimmed by value to the{" "}
         {c.rosterSlots} spots you actually field.
@@ -321,7 +321,7 @@ export default async function CounterfactualPage() {
       {c.unpriced.length > 0 && (
         <>
           <SectionHeader title="Not priced" />
-          <p className="mb-2 text-meta leading-snug text-faint">
+          <p className="mb-2 text-meta leading-snug text-secondary">
             On no NBA roster today. Listed rather than scored zero, and excluded from
             every total above.
           </p>
@@ -339,13 +339,13 @@ export default async function CounterfactualPage() {
         </Disclosure>
       </div>
 
-      <p className="mt-2 text-meta leading-snug text-faint">
+      <p className="mt-2 text-meta leading-snug text-secondary">
         Both columns are priced with the same model as{" "}
-        <Link href="/values" className="text-accent">
+        <Link href="/values" className="text-accent-text">
           asset values
         </Link>
         , and scored for coherence with the same index as{" "}
-        <Link href="/league" className="text-accent">
+        <Link href="/league" className="text-accent-text">
           the league timeline
         </Link>
         . There is no verdict here on purpose: trading value for pick capital is a

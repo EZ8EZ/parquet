@@ -28,11 +28,11 @@ export default function NotFound() {
           See everything
         </ButtonLink>
       </div>
-      <p className="mt-4 text-center text-meta leading-relaxed text-faint">
+      <p className="mt-4 text-center text-meta leading-relaxed text-secondary">
         New to Parquet?{" "}
         <Link
           href="/about"
-          className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-2 hover:text-accent hover:underline"
+          className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-2 hover:text-accent-text hover:underline"
         >
           What this is, and what the numbers mean
         </Link>

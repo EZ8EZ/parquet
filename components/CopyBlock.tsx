@@ -21,7 +21,7 @@ export function CopyBlock({ text, label = "Copy for Sleeper" }: { text: string; 
             setCopied(true);
             setTimeout(() => setCopied(false), 1500);
           }}
-          className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-meta font-semibold text-accent hover:bg-accent/10"
+          className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-meta font-semibold text-accent-text hover:bg-accent-wash"
         >
           {copied ? <Check size={12} /> : <Copy size={12} />}
           {copied ? "copied" : "copy"}

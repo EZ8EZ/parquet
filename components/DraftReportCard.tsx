@@ -41,7 +41,7 @@ function StandoutRow({
   return (
     <Link
       href={boardHref(g.season, g.pickNo)}
-      className="flex min-h-11 items-start gap-2 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2 transition-colors hover:bg-surface-2"
+      className="flex min-h-11 items-start gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2 transition-colors hover:bg-surface-2"
     >
       <PlayerAvatar name={g.playerName} team={meta.team} playerId={g.playerId} size="sm" />
       <span className="min-w-0 flex-1">
@@ -56,7 +56,7 @@ function StandoutRow({
         <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
           {g.playerName}
         </span>
-        <span className="block truncate text-[11px] leading-tight text-faint">
+        <span className="block truncate text-[11px] leading-tight text-secondary">
           {meta.position ?? "-"}
           {meta.team ? ` · ${meta.team}` : ""}
           {meta.age != null ? ` · ${meta.age}y` : ""}
@@ -128,22 +128,22 @@ export function DraftReportCard({
         <Link
           href={`/drafts/${grade.season}`}
           aria-label={`Open the ${grade.season} draft board`}
-          className="-my-2 -mr-1 inline-flex min-h-11 items-center gap-0.5 px-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+          className="-my-2 -mr-1 inline-flex min-h-11 items-center gap-0.5 px-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent-text"
         >
           board
           <ChevronRight size={13} aria-hidden="true" />
         </Link>
       </div>
-      <p className="mt-0.5 font-mono text-[11px] tnum text-faint">
+      <p className="mt-0.5 figure text-[11px] text-faint">
         {grade.rounds} rd · {grade.teams} tm · {grade.gradedPicks} of {grade.totalPicks} picks graded
       </p>
 
-      <div className="mt-2 flex items-end justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface/60 px-3 py-2">
+      <div className="mt-2 flex items-end justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface px-3 py-2">
         <span>
-          <span className="block text-[10.5px] uppercase tracking-wide text-faint">
+          <span className="block text-[10.5px] uppercase tracking-wide text-secondary">
             value captured against the board
           </span>
-          <span className="font-mono text-2xl font-semibold tnum text-accent">
+          <span className="figure text-2xl font-semibold text-accent-text">
             {pct(grade.captureRate)}
           </span>
         </span>
@@ -182,7 +182,7 @@ export function DraftReportCard({
       )}
 
       {grade.isStartup && (
-        <p className="mt-1.5 text-[10.5px] leading-snug text-faint">
+        <p className="mt-1.5 text-[10.5px] leading-snug text-secondary">
           One-off startup draft: graded against the board only. A {grade.rounds}-round
           class is not a fair slot-surplus comparison against a normal rookie draft, so
           that stat is left off this card.

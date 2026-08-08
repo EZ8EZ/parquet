@@ -16,7 +16,7 @@ export interface TeamOption {
 }
 
 const WINDOW_TONE: Record<string, string> = {
-  "win-now": "text-accent",
+  "win-now": "text-accent-text",
   rebuilding: "text-info",
   balanced: "text-muted",
 };
@@ -100,7 +100,7 @@ export function TeamPicker({
           people often type that instead. */}
       <form
         onSubmit={resolveUsername}
-        className="mb-5 rounded-[--radius] border border-border bg-surface/60 p-4"
+        className="mb-5 rounded-[--radius] border border-border bg-surface p-4"
       >
         <label
           htmlFor="sleeper-username"
@@ -123,7 +123,7 @@ export function TeamPicker({
               }}
               autoComplete="username"
               placeholder="e.g. EZ8"
-              className="w-full rounded-full border border-border bg-bg/60 py-2.5 pl-9 pr-3 text-body leading-relaxed text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+              className="w-full rounded-full border border-border bg-bg/60 py-2.5 pl-9 pr-3 text-body leading-relaxed text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
             />
           </div>
           <button
@@ -138,7 +138,7 @@ export function TeamPicker({
         {error ? (
           <p className="mt-2 text-meta leading-relaxed text-negative">{error}</p>
         ) : (
-          <p className="mt-2 text-meta leading-relaxed text-faint">
+          <p className="mt-2 text-meta leading-relaxed text-secondary">
             Your team name works too. Not in this league? Pick a team below to explore.
           </p>
         )}
@@ -153,7 +153,7 @@ export function TeamPicker({
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder="Find a team…"
-          className="w-full rounded-full border border-border bg-surface py-2.5 pl-9 pr-3 text-body leading-relaxed text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+          className="w-full rounded-full border border-border bg-surface py-2.5 pl-9 pr-3 text-body leading-relaxed text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
         />
       </div>
 
@@ -169,8 +169,8 @@ export function TeamPicker({
                 className={cn(
                   "flex w-full items-center gap-3 rounded-[--radius] border p-4 text-left transition-colors",
                   active
-                    ? "border-accent/50 bg-accent/[0.07]"
-                    : "border-border bg-surface/60 hover:border-border-strong hover:bg-surface-2",
+                    ? "border-accent-edge bg-accent-wash"
+                    : "border-border bg-surface hover:border-border-strong hover:bg-surface-2",
                   pending !== null && "opacity-60",
                 )}
               >
@@ -179,12 +179,12 @@ export function TeamPicker({
                     <span className="truncate text-body leading-relaxed font-semibold text-ink">
                       {t.teamName}
                     </span>
-                    {active && <Check size={14} className="shrink-0 text-accent" />}
+                    {active && <Check size={14} className="shrink-0 text-accent-text" />}
                   </div>
                   <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-meta text-faint">
                     <span>{t.ownerName}</span>
                     <span>·</span>
-                    <span className="font-mono tnum">{t.record}</span>
+                    <span className="figure">{t.record}</span>
                     <span>·</span>
                     <span className={WINDOW_TONE[t.window] ?? "text-muted"}>
                       {t.window}
@@ -197,13 +197,13 @@ export function TeamPicker({
                   )}
                 </div>
                 <div className="shrink-0 text-right">
-                  <div className="font-mono text-body leading-relaxed font-semibold tnum text-ink">
+                  <div className="figure text-body leading-relaxed font-semibold text-ink">
                     {fmtValue(t.totalValue)}
                   </div>
                   <div className="text-micro text-faint">total value</div>
                 </div>
                 {pending === t.rosterId && (
-                  <Loader2 size={16} className="animate-spin text-accent" />
+                  <Loader2 size={16} className="animate-spin text-accent-text" />
                 )}
               </button>
             </li>

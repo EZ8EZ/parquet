@@ -61,7 +61,7 @@ function ManagerMetricPills({
     <span className="inline-flex flex-wrap items-center gap-1">
       <Link
         href="/league"
-        className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2/70 px-1.5 py-0.5 text-micro font-semibold leading-normal text-muted transition-colors hover:text-ink"
+        className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-1.5 py-0.5 text-micro font-semibold leading-normal text-muted transition-colors hover:text-ink"
       >
         <Tag tone={POSTURE_TONE[metric.posture]}>{metric.tci} TCI</Tag>
         <span className="text-faint">{metric.posture}</span>
@@ -69,7 +69,7 @@ function ManagerMetricPills({
       {metric.fragility != null && metric.fragilityBand && (
         <Link
           href={`/managers/${rosterId}`}
-          className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2/70 px-1.5 py-0.5 text-micro font-semibold leading-normal text-muted transition-colors hover:text-ink"
+          className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-1.5 py-0.5 text-micro font-semibold leading-normal text-muted transition-colors hover:text-ink"
         >
           <Layers size={10} aria-hidden="true" className="shrink-0" />
           <Tag tone={fragilityTone(metric.fragilityBand, metric.posture)}>
@@ -111,7 +111,7 @@ export function ManagerLink({
           isMe={isMe}
         />
         <span className="flex min-w-0 items-baseline gap-1">
-          <span className="truncate text-body font-semibold leading-snug text-ink group-hover:text-accent">
+          <span className="truncate text-body font-semibold leading-snug text-ink group-hover:text-accent-text">
             {node.name}
           </span>
           {isMe ? (
@@ -154,7 +154,7 @@ export function PlayerNowRow({
   return (
     <Link
       href={playerLineageHref(pid)}
-      className="mt-1.5 flex items-center gap-1.5 rounded-[--radius-sm] border border-border/70 bg-surface/50 px-2 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
+      className="mt-1.5 flex items-center gap-1.5 rounded-[--radius-sm] border border-border bg-surface px-2 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
       aria-label={`${label}: worth ${fmtValue(now.value)} today. Open where he came from.`}
     >
       <PlayerAvatar name={label} team={now.team} playerId={pid} size="sm" />
@@ -168,10 +168,10 @@ export function PlayerNowRow({
         </span>
         <span className="block text-meta leading-snug text-muted">
           worth{" "}
-          <span className="font-mono font-semibold text-ink">{fmtValue(now.value)}</span>{" "}
+          <span className="figure font-semibold text-ink">{fmtValue(now.value)}</span>{" "}
           today · {now.tier} · {now.duration.toFixed(1)}s
         </span>
-        <span className="block truncate text-meta leading-snug text-faint">
+        <span className="block truncate text-meta leading-snug text-secondary">
           {now.heldBy != null && names[now.heldBy]
             ? `now on ${names[now.heldBy]} · where he came from`
             : "where he came from"}

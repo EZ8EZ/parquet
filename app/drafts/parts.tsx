@@ -17,7 +17,7 @@ function Hop({ from, to }: { from: string; to: string }) {
   return (
     <span className="flex min-w-0 items-center gap-1 text-meta text-faint">
       <span className="truncate">{from}</span>
-      <MoveRight size={11} className="shrink-0 text-accent" aria-hidden="true" />
+      <MoveRight size={11} className="shrink-0 text-accent-text" aria-hidden="true" />
       <span className="truncate font-medium text-muted">{to}</span>
     </span>
   );
@@ -83,7 +83,7 @@ export function LineageCard({
           derivation, two doors. The card above is unchanged. */}
       <Link
         href={lineageHref(pickKey(l.season, l.round, l.originalRoster))}
-        className="flex min-h-11 items-center gap-1 px-2.5 text-meta font-semibold text-faint transition-colors hover:text-accent"
+        className="flex min-h-11 items-center gap-1 px-2.5 text-meta font-semibold text-faint transition-colors hover:text-accent-text"
       >
         How this pick got where it went
         <ChevronRight size={12} aria-hidden="true" />
@@ -108,12 +108,12 @@ function LineageCardBody({
           : `${l.season} ${roundLabel(l.round)}: still in flight. Open the ${l.season} board.`
       }
       className={cn(
-        "block rounded-[--radius] border bg-surface/70 px-2.5 py-2 transition-colors hover:bg-surface-2",
+        "block rounded-[--radius] border bg-surface px-2.5 py-2 transition-colors hover:bg-surface-2",
         p ? p.border : "border-border",
       )}
     >
       <div className="flex items-baseline gap-2">
-        <span className="shrink-0 font-mono text-note font-semibold tnum text-ink">
+        <span className="shrink-0 figure text-note font-semibold text-ink">
           {l.season} {roundLabel(l.round)}
         </span>
         {p && (
@@ -138,7 +138,7 @@ function LineageCardBody({
             <span className="block truncate text-body font-semibold leading-tight text-ink">
               {l.playerName}
             </span>
-            <span className="block truncate text-meta leading-tight text-faint">
+            <span className="block truncate text-meta leading-tight text-secondary">
               {l.position ?? "-"}
               {l.team ? ` · ${l.team}` : ""}
               {l.age != null ? ` · ${l.age}y` : ""}
@@ -151,7 +151,7 @@ function LineageCardBody({
                 : ""}
             </span>
           </span>
-          <span className="shrink-0 font-mono text-body font-semibold tnum text-accent">
+          <span className="shrink-0 figure text-body font-semibold text-accent-text">
             #{l.pickNo}
           </span>
           <ChevronRight size={13} className="shrink-0 text-faint" aria-hidden="true" />
@@ -192,13 +192,13 @@ export function BoardPickRow({
       <span className="w-8 shrink-0 text-center">
         <span
           className={cn(
-            "block font-mono text-body font-semibold leading-tight tnum",
-            p.isMine || highlighted ? "text-accent" : "text-muted",
+            "block figure text-body font-semibold leading-tight",
+            p.isMine || highlighted ? "text-accent-text" : "text-muted",
           )}
         >
           {p.pickNo}
         </span>
-        <span className="block font-mono text-meta leading-tight tnum text-faint">
+        <span className="block figure text-meta leading-tight text-secondary">
           {p.round}.{String(p.draftSlot).padStart(2, "0")}
         </span>
       </span>
@@ -214,7 +214,7 @@ export function BoardPickRow({
         <span className="block truncate text-body font-semibold leading-tight text-ink">
           {p.playerName ?? "-"}
         </span>
-        <span className="block truncate text-meta leading-tight text-faint">
+        <span className="block truncate text-meta leading-tight text-secondary">
           {p.position ?? "-"}
           {p.team ? ` · ${p.team}` : ""}
           {p.age != null ? ` · ${p.age}y` : ""}
@@ -225,7 +225,7 @@ export function BoardPickRow({
         <span
           className={cn(
             "block truncate text-meta leading-tight",
-            p.isMine ? "font-semibold text-accent" : "text-muted",
+            p.isMine ? "font-semibold text-accent-text" : "text-muted",
           )}
         >
           {p.usedByName ?? "-"}
@@ -242,10 +242,10 @@ export function BoardPickRow({
   const frame = cn(
     "flex min-h-11 items-center gap-2 rounded-[--radius-sm] border px-2 py-1",
     highlighted
-      ? "border-accent bg-accent/[0.08]"
+      ? "border-accent bg-accent-wash"
       : p.isMine
-        ? "border-accent/30 bg-surface-2/70"
-        : "border-border bg-surface/50",
+        ? "border-accent-edge bg-surface-2"
+        : "border-border bg-surface",
   );
 
   return (
@@ -285,7 +285,7 @@ export function SeasonTile({
     <Link
       href={`/drafts/${season}`}
       aria-label={`${season} draft board`}
-      className="flex min-h-11 flex-col justify-center rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
+      className="flex min-h-11 flex-col justify-center rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
     >
       <span className="flex items-baseline gap-1.5">
         <span className="font-display text-lede font-semibold leading-none text-ink">
@@ -294,7 +294,7 @@ export function SeasonTile({
         {pickCount === 0 ? (
           <Tag tone="warn">upcoming</Tag>
         ) : (
-          <span className="font-mono text-meta tnum text-muted">
+          <span className="figure text-meta text-muted">
             {pickCount} picks
           </span>
         )}
@@ -304,12 +304,12 @@ export function SeasonTile({
           className="ml-auto shrink-0 text-faint"
         />
       </span>
-      <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 font-mono text-meta tnum text-faint">
+      <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 figure text-meta text-secondary">
         <span>
           {rounds} rd · {teams} tm
         </span>
         {tradedCount > 0 && <span className="text-info">{tradedCount} traded</span>}
-        {mineCount > 0 && <span className="text-accent">{mineCount} yours</span>}
+        {mineCount > 0 && <span className="text-accent-text">{mineCount} yours</span>}
       </span>
     </Link>
   );

@@ -46,7 +46,7 @@ export interface ThemeMeta {
 export const THEME_CHROME: Record<Theme, string> = {
   dark: "#0b0c0e",
   light: "#f6f4f0",
-  contrast: "#000000",
+  contrast: "#0a0a0c",
 };
 
 export const THEME_META: ThemeMeta[] = [
@@ -63,7 +63,7 @@ export const THEME_META: ThemeMeta[] = [
   {
     id: "contrast",
     label: "High contrast",
-    description: "Pure black, white text, visible borders. No decorative wash.",
+    description: "Near-black, white text, visible borders. No decorative wash.",
   },
 ];
 
