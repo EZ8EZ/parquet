@@ -190,7 +190,9 @@ export default function AboutPage() {
             Commissioner-executed trades arrive from the platform with no pick
             record. A version of this app inferred those picks; tested against a
             real league, it attributed six unrelated pick moves to one deal, so it
-            was deleted. Anything still inferred is labeled &quot;(inferred)&quot;.
+            was deleted. Nothing here is inferred - those deals are marked &quot;no
+            pick record&quot; instead, and the unattributed pick moves are listed
+            on their own.
           </Refusal>
           <Refusal>
             Trade value added counts players only, because picks are missing from

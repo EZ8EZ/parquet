@@ -30,7 +30,6 @@ function move(p: Partial<AssetMove> & Pick<AssetMove, "assetKey" | "from" | "to"
     kind: p.assetKey.startsWith("k:") ? "pick" : "player",
     label: p.label ?? p.assetKey,
     became: null,
-    inferred: false,
     tradeId: p.tradeId ?? "t",
     season: p.season ?? "2023",
     week: p.week ?? 1,
