@@ -132,8 +132,14 @@ describe("packageFragilityNote over the fixture league", () => {
     const note = packageFragilityNote(
       h,
       ME,
-      [asset("Franz Wagner"), asset("Domantas Sabonis"), asset("Julius Randle")],
-      [asset("Nikola Jokic")],
+      // Re-picked when the age curve was recalibrated from real NBA production
+      // (lib/valuation/ageCurve.ts). The old package no longer concentrates anything
+      // for a real reason rather than an incidental one: the measured curve is far
+      // kinder to players past 32 than the hand-set one was, so this roster's veteran
+      // tail now carries enough startable value to absorb losing three mid pieces.
+      // The assertions below are unchanged - only the package that exercises them.
+      [asset("Luka Doncic"), asset("Scottie Barnes"), asset("Franz Wagner")],
+      [asset("Ja Morant")],
     );
     expect(note?.direction).toBe("creates");
     expect(note!.after.damageShare).toBeGreaterThan(note!.before.damageShare);
@@ -158,7 +164,10 @@ describe("packageFragilityNote over the fixture league", () => {
 
   it("says nothing about a swap of comparable pieces", () => {
     expect(
-      packageFragilityNote(h, ME, [asset("Scottie Barnes")], [asset("Cade Cunningham")]),
+      // Also re-picked after the age-curve recalibration. Cunningham is now enough of
+      // an upgrade on Barnes to move the single point of failure; Mitchell sits the
+      // same distance the other side of him and is the genuinely comparable piece.
+      packageFragilityNote(h, ME, [asset("Scottie Barnes")], [asset("Donovan Mitchell")]),
     ).toBeNull();
   });
 
