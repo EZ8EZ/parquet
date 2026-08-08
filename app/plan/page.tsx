@@ -4,6 +4,7 @@ import { getLeagueHistory } from "@/lib/history";
 import { buildGamePlan } from "@/lib/gameplan";
 import { getPrincipals } from "@/lib/principals";
 import { leagueTimelines } from "@/lib/metrics/duration";
+import { leagueWindows, windowSynthesis } from "@/lib/metrics/window";
 import { Tag } from "@/components/ui";
 import { MetricGloss } from "@/components/MetricGloss";
 import { TeamAvatar } from "@/components/TeamAvatar";
@@ -52,6 +53,30 @@ export default async function PlanPage() {
     tl != null &&
     tl.posture !== "straddling" &&
     (dx.direction === "retool" || DIR_TO_POSTURE[dx.direction] === tl.posture);
+
+  /*
+   * THE SYNTHESIS, and the only genuinely new sentence on this page.
+   *
+   * Every derivation behind it already existed: the roster's own value window, the
+   * other thirteen, and the arithmetic of which of them intersect (lib/metrics/window.ts).
+   * Nowhere in the app were they ever joined, and the join is the thing a manager
+   * actually does privately and badly - "my window is 2029; who else is bidding for
+   * 2029". /plan is where it belongs because it is the one page whose subject is the
+   * decision rather than the reading.
+   *
+   * COUNTS ONLY. It says how many rosters share the window and how many are dated
+   * away from it; it does not say what to do about either, because that is the moves
+   * list below, and it does not infer that anyone is a seller, because intent is not
+   * something the app can see (D19).
+   *
+   * Rendered ONLY for a roster with a readable single window. When the viewer
+   * straddles, `windowSynthesis` says so - but the timeline check directly above is
+   * already saying exactly that at length, and two paragraphs making one point is the
+   * density this page has repeatedly been cut back from.
+   */
+  const windows = leagueWindows(h);
+  const windowLine =
+    windows.me?.state === "window" ? windowSynthesis(windows) : null;
 
   /** Team identity for a partner roster, for the target row's logo. */
   const teamOf = (id: number) => {
@@ -185,6 +210,17 @@ export default async function PlanPage() {
                     1,
                   )} seasons out, TCI ${tl.tci}). One of them is wrong. Each move below should shift the timeline toward the plan, or the plan should change.`}
           </p>
+          {windowLine && (
+            <p className="mt-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
+              {windowLine}{" "}
+              <Link
+                href="/league"
+                className="text-meta font-semibold text-accent-text underline-offset-2 hover:underline"
+              >
+                see the window map
+              </Link>
+            </p>
+          )}
         </div>
       )}
       {/* The index appears here as a bare figure - give a first-time reader the

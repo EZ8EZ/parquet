@@ -7,6 +7,7 @@ import { titleSummariesByOwner } from "@/lib/dossier/titles";
 import { getPrincipals } from "@/lib/principals";
 import { partnerIdentity } from "@/lib/dossier/partners";
 import { scheduleLuckForRoster } from "@/lib/metrics/scheduleLuck";
+import { windowLabel, windowsByRoster } from "@/lib/metrics/window";
 import { dealHref, managerDealsHref } from "@/lib/tradegraph/url";
 import { buybacksByRoster } from "@/lib/agency";
 import { LocalDate } from "@/components/LocalDate";
@@ -89,6 +90,16 @@ export default async function ManagerDetailPage({
     (x) => x.profile.picks.net,
   );
 
+  /*
+   * WHEN THIS ROSTER PAYS OFF - one line, beside the posture that was already here.
+   *
+   * The dossier's posture chips say what this manager's roster HAS BEEN each season.
+   * The window says when the roster they hold today pays off, which is the fact a
+   * reader is holding when they decide whether to call. Same derivation /league's
+   * window map draws from (lib/metrics/window.ts), through the league-wide entry point
+   * so a straddled roster reads as straddled here too.
+   */
+  const win = windowsByRoster(h).get(rosterId) ?? null;
   // Round trips this manager made. One pass over transactions already in the corpus
   // (lib/agency), keyed by the roster that ORIGINALLY owned the pick, which is the
   // only roster for which "bought back" means anything.
@@ -352,9 +363,18 @@ export default async function ManagerDetailPage({
         </p>
       )}
 
-      {p.postureBySeason.length > 0 && (
+      {(p.postureBySeason.length > 0 || win) && (
         <>
           <SectionHeader title="Posture by season" />
+          {win && (
+            <p className="mb-1 text-note leading-snug text-ink/85">
+              {win.state === "window"
+                ? `${isMe ? "Your" : "Their"} window opens ${win.open} and closes ${win.close}, peaking ${win.peak}.`
+                : win.state === "split"
+                  ? `${isMe ? "Your" : "Their"} assets disagree about when ${isMe ? "you" : "they"} win: the middle half of the value runs ${windowLabel(win)}, which is a spread rather than a window.`
+                  : `Too few valued assets to read a window from.`}
+            </p>
+          )}
           <div className="flex flex-wrap gap-1">
             {p.postureBySeason.map((s) => (
               <span
@@ -470,7 +490,8 @@ export default async function ManagerDetailPage({
 
       <p className="mt-3 text-meta leading-relaxed text-secondary">
         Read from {p.totalTransactions} recorded moves ({signed(p.picks.net)} net
-        picks). Behavior only - no roster contents, no stated intent.
+        picks). Behavior, not stated intent. The window line is the one reading here
+        that comes from what they hold rather than from what they have done.
       </p>
     </div>
   );

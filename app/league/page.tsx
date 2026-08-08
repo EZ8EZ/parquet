@@ -4,6 +4,7 @@ import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
 import { leagueTimelines } from "@/lib/metrics/duration";
+import { leagueWindows, windowShort, windowSynthesis } from "@/lib/metrics/window";
 import { leagueFragility } from "@/lib/metrics/fragility";
 import { buildQuadrantView } from "@/lib/metrics/quadrant";
 import { LeagueBoard } from "@/components/LeagueBoard";
@@ -40,6 +41,10 @@ export default async function LeaguePage() {
   const h = await getLeagueHistory();
   const ranked = leagueValueRanking(h);
   const timelines = leagueTimelines(h);
+  // Same two numbers the deleted duration scatter plotted, read as calendar seasons -
+  // see lib/metrics/window.ts. Not a third walk of the league: it is `leagueTimelines`
+  // plus quartile arithmetic over the assets those profiles already carry.
+  const windows = leagueWindows(h);
   const fragility = leagueFragility(h);
   const form = await currentFormByRoster(h);
   const meId = h.me.rosterId;
@@ -90,7 +95,7 @@ export default async function LeaguePage() {
 
   // Same join, for the roster list: one row now carries what three lists used to.
   const metricByRoster = new Map(board.points.map((p) => [p.rosterId, p]));
-  const durationByRoster = new Map(timelines.map((t) => [t.rosterId, t.rosterDuration]));
+  const windowByRoster = new Map(windows.rows.map((w) => [w.rosterId, w]));
 
   return (
     <div>
@@ -139,8 +144,14 @@ export default async function LeaguePage() {
       {/*
         ONE CHART. It used to be two, each with its own fourteen-row list under it, and
         then the power ranking made a fourth rendering of the same fourteen rosters.
-        Both scatters plot TCI on y and differ only in what sits on x, so they are one
-        toggled board now - see components/LeagueBoard.tsx and lib/league/url.ts.
+        One toggled board now - see components/LeagueBoard.tsx and lib/league/url.ts.
+
+        The duration x TCI scatter that was the first tab is GONE, replaced rather than
+        joined: the window map reads its spans off the same two numbers that scatter
+        plotted, on an axis of real seasons, and answers the question the scatter could
+        not - who else pays off when you do. The page's height is unchanged, which is
+        the constraint round 8 bought at the cost of three renderings and which a new
+        chart alongside the old one would have spent again.
       */}
       <SectionHeader
         title="The board"
@@ -152,12 +163,22 @@ export default async function LeaguePage() {
           so the boundary never actually suspends. */}
       <Suspense fallback={null}>
         <LeagueBoard
-          points={board.points.map((p) => ({
-            n: p.n,
-            duration: durationByRoster.get(p.rosterId) ?? 0,
-            tci: p.tci,
-            isMe: p.isMe,
-          }))}
+          windows={{
+            rows: windows.rows.map((w) => ({
+              rosterId: w.rosterId,
+              n: nByRoster.get(w.rosterId) ?? 0,
+              name: w.teamName ?? w.ownerName,
+              isMe: w.isMe,
+              state: w.state,
+              open: w.open,
+              peak: w.peak,
+              close: w.close,
+            })),
+            first: windows.first,
+            last: windows.last,
+            currentSeason: windows.currentSeason,
+            synthesis: windowSynthesis(windows),
+          }}
           view={board}
         />
       </Suspense>
@@ -187,6 +208,7 @@ export default async function LeaguePage() {
           const pct = Math.max(3, Math.round((r.totalValue / leaderValue) * 100));
           const f = form.get(r.rosterId);
           const m = metricByRoster.get(r.rosterId);
+          const w = windowByRoster.get(r.rosterId);
           return (
             <li key={r.rosterId}>
               {/* The whole row is the hit area - one target, one destination. */}
@@ -232,9 +254,13 @@ export default async function LeaguePage() {
                     <span className={WINDOW_INK[r.window]}>{r.window}</span>
                   </span>
                   {/* The line that used to be two separate fourteen-row lists.
-                      NUMBERS FIRST, WORD LAST, and that ordering is the whole design of
-                      this line: at 375px it is the first thing on the row with no room
-                      to spare, so what truncation eats has to be the recoverable half.
+                      WINDOW FIRST, NUMBERS NEXT, WORD LAST, and that ordering is the
+                      whole design of this line: at 375px it is the first thing on the
+                      row with no room to spare, so what truncation eats has to be the
+                      recoverable half. The window leads because the board above is now
+                      the window map, and this line is the only TEXT rendering of what
+                      that chart draws - fourteen SVG spans have no screen-reader path
+                      of their own beyond the chart's one summary label.
                       Posture is a label the board itself prints; TCI and RFI are the
                       figures the two deleted lists existed to carry.
 
@@ -245,7 +271,10 @@ export default async function LeaguePage() {
                       percentile terms, for the roster you selected. */}
                   {m && (
                     <span className="block truncate figure text-meta text-secondary">
-                      TCI <span className="text-muted">{m.tci}</span> · RFI{" "}
+                      <span className="text-muted">
+                        {w ? windowShort(w) : "-"}
+                      </span>{" "}
+                      · TCI <span className="text-muted">{m.tci}</span> · RFI{" "}
                       <span className="text-muted">{m.fragility}</span> ·{" "}
                       <span className={POSTURE_INK[m.posture] ?? "text-muted"}>
                         {m.posture}

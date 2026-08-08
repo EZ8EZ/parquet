@@ -591,6 +591,17 @@ export default async function MethodologyPage() {
             only bad quadrant.
           </li>
           <li>
+            <span className="font-semibold text-ink">
+              A roster&apos;s WINDOW is the middle half of its value.
+            </span>{" "}
+            Duration and dispersion describe one roster; a window puts fourteen of them
+            on one axis of seasons. It is the value-weighted 25th, 50th and 75th
+            percentile of asset duration - where the value actually is, rather than a
+            centre plus a spread, which would assume a symmetry a straddled roster does
+            not have. A roster below the coherence floor is drawn as its two ends with
+            nothing between them: the range is real, the peak is not.
+          </li>
+          <li>
             <span className="font-semibold text-ink">Posture is league-relative.</span> A
             3.8-season roster is win-now in a league of rebuilders and a rebuilder in a
             league of veterans, so contending / ascending / rebuilding are assigned by
@@ -682,7 +693,7 @@ export default async function MethodologyPage() {
 
       <p className="mt-6 text-center text-meta leading-relaxed text-secondary">
         Player and pick constants live in <span className="font-mono">lib/valuation/config.ts</span>;
-        the timeline math in <span className="font-mono">lib/metrics/duration.ts</span>;
+        the timeline math in <span className="font-mono">lib/metrics/duration.ts</span> and <span className="font-mono">lib/metrics/window.ts</span>;
         fragility in <span className="font-mono">lib/metrics/fragility.ts</span>.
         Ranking tiers are not part of the model - they break where the value distribution
         actually cliffs, instead of at fixed thresholds. A crowdsourced vote-driven market
