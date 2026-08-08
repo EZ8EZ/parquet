@@ -4,7 +4,13 @@
  * Transparency is the differentiator, not accuracy (DECISIONS.md D5). The
  * /methodology page renders these constants directly, and the whole model is a
  * handful of multipliers over a consensus-rank base. Tune here; the UI updates.
+ *
+ * ONE EXCEPTION to "every weight is here": the age anchors are imported from
+ * `./ageCurve.ts` rather than typed out, because they are no longer a tuning
+ * decision. They are a measurement, and hand-editing a measurement is how a
+ * measurement stops being one.
  */
+import { DERIVED_AGE_CURVE } from "./ageCurve";
 
 export interface ValuationConfig {
   /**
@@ -24,6 +30,9 @@ export interface ValuationConfig {
    * Dynasty age curve. Anchors are [age, multiplier]; values between anchors are
    * linearly interpolated. Youth carries a premium; production is discounted as
    * a player ages out of a dynasty window.
+   *
+   * MEASURED, not hand-set: every anchor is a row of `./ageCurve.ts`, derived from
+   * 4,587 real NBA player-seasons scored under this league's own settings.
    */
   ageAnchors: Array<[number, number]>;
   /** Injury model. See `./injury.ts` for the derivation and every calibration note. */
@@ -151,18 +160,36 @@ export interface CanonicalLine {
 export const VALUATION_CONFIG: ValuationConfig = {
   maxValue: 10000,
   rankDecay: 0.021,
-  ageAnchors: [
-    [19, 1.16],
-    [21, 1.14],
-    [23, 1.08],
-    [25, 1.02],
-    [27, 1.0],
-    [29, 0.9],
-    [31, 0.78],
-    [33, 0.62],
-    [35, 0.45],
-    [38, 0.3],
-  ],
+  /**
+   * AGE. Every anchor is a measured row of `./ageCurve.ts` - one per year from 19 to
+   * 36, so linear interpolation has nothing to interpolate and the curve in the model
+   * IS the curve in the table. The old ten hand-set anchors were replaced wholesale.
+   *
+   * Three things changed materially, all in the same direction: the model had been
+   * punishing age harder than the games do. 33 moves from 0.62 to 0.671, 35 from 0.45
+   * to 0.570, and the old 38 anchor of 0.30 is gone entirely. The young end moved the
+   * other way - 21 falls from 1.14 to 1.071 - because the old curve had youth's
+   * premium spread across the early twenties, and the data puts almost all of it
+   * before 21.
+   *
+   * THE PEAK IS UNCHANGED AT EXACTLY 1.16, and that is not a coincidence, it is D28.
+   * `theoreticalMaxMultiplier()` folds the largest age anchor into the constant every
+   * value in this app is divided by, so a moved peak would rescale every price in the
+   * product and quietly change what `tierOf()`'s thresholds mean. The derivation
+   * therefore scales its whole curve to the peak the hand-set anchors already had.
+   * Only the SHAPE is recalibrated - and shape is the entire content of an age curve,
+   * because the level divides out.
+   *
+   * BELOW 19 AND ABOVE 36 the sample thins out (at 37 the thinnest horizon cell holds
+   * 15 careers, at 39 it holds 7), so there is no anchor past 36 and `ageMultiplier`
+   * holds flat at the last one instead. That is the honest shape of the ignorance: a
+   * 40-year-old who is still producing is priced like a 36-year-old who is still
+   * producing, which is generous, and it is stated rather than dressed up as a
+   * measured decline. This is the one part of the curve asserted rather than measured.
+   */
+  ageAnchors: DERIVED_AGE_CURVE.map(
+    (r) => [r.age, r.multiplier] as [number, number],
+  ),
   /**
    * INJURY. Read `./injury.ts` first: it carries the model, the arithmetic, and the
    * argument for every number below. The short version of the calibration:

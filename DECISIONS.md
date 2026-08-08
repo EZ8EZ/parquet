@@ -1526,3 +1526,88 @@ the half-measure `.figure` replaced, deleted at its final call site; a duplicate
 `.figure` / `.edge-hilite` block in `globals.css`; and `--motion-*` declared in both
 `globals.css` and `interaction.css` - two agents independently fixing the same
 missing-declaration bug, which is precisely how the declaration went missing.
+
+## D49. THE AGE CURVE IS MEASURED NOW, and the half that could not be measured says so
+The ten `ageAnchors` in `lib/valuation/config.ts` were hand-tuned. Every price in the
+app was bent by them, and nothing anywhere justified a single one of the numbers. The
+question they answer - "when does a dynasty asset stop being worth what it costs" - is
+also the question this product is best placed in the world to answer, because it holds
+five seasons of one league's real transactions.
+
+**That framing was wrong, and finding out why is the decision.** The question splits in
+two, and only one half is answerable.
+
+**A. When does PRODUCTION decline?** Fully reconstructable, and the sample is as large
+as you want it. This league is five seasons old; the NBA is not. The scoring settings
+are known (and, checked rather than assumed, byte-identical across all five seasons in
+the chain), the box scores are public back to 2013-14, so any historical player-season
+can be scored under this league's own formula. That is arithmetic on games that were
+actually played, not inference. `scripts/derive-age-curve.ts` does it over **4,587
+qualified player-seasons**, and `lib/valuation/ageCurve.ts` is the committed result.
+
+Three biases had to be survived, and the middle one is the whole game:
+ - **Era.** Production per 36 minutes, then divided by that season's own league mean.
+   A role change is not decline and a scoring boom is not improvement.
+ - **Survivorship.** The curve never compares different players. It follows the same
+   player forward five seasons, and a player who stopped clearing the bar contributes a
+   **zero, not a missing value**. This is the difference between this curve and every
+   curve that concludes 36-year-olds are fine: the 36-year-olds still playing are fine,
+   and 49% of them are not still playing. That column is published.
+ - **Horizon.** A dynasty multiplier is what is left, not what is happening, so the
+   value at each age is the discounted sum of the next five seasons at 0.9 a year - the
+   same constant the pick model already uses, so the two agree what a year costs.
+
+The hand-set curve turned out to be **too harsh on age and too generous to the early
+twenties**: 33 moves 0.62 -> 0.671, 35 moves 0.45 -> 0.570, the asserted 38 anchor of
+0.30 is gone, and 21 falls 1.14 -> 1.071. 1,479 of 1,750 priced players moved.
+
+**The peak stayed at exactly 1.16, and that is D28.** `theoreticalMaxMultiplier()`
+folds the largest age anchor into the constant every value is divided by, so a moved
+peak silently rescales the whole product and changes what `tierOf()`'s thresholds mean.
+The derivation scales its curve to the peak the hand-set anchors already had. Only the
+SHAPE is recalibrated, which is the entire content of an age curve - the level divides
+out. Verified bit-for-bit: the ceiling is 1.2170096908167976 before and after.
+
+**B. When does THIS LEAGUE stop paying?** Not reconstructable, and `lib/valuation/
+exitWindow.ts` exists to say so with numbers. A price is what fourteen specific people
+believed on a specific day; no box-score arithmetic recovers it for seasons the league
+did not exist for. So this half gets the five seasons it has: 91 trades, and after
+setting aside 46 pick-only sides, 42 with no priced player cost and 22 where picks
+outweighed players (D24), **110 usable acquisitions spread over eight age buckets**.
+
+It refuses, and the refusal is arithmetic rather than a feeling. The effect under test
+is the curve's slope, about 5% across a two-year bucket, so a bucket can only speak to
+it if no single deal carries more than 5% of the bucket. Measured concentrations run
+16% to 64%. **Every bucket fails, by a factor of three or more.** The bar is
+falsifiable, not decorative: `SUFFICIENCY` is a threshold on real quantities and a test
+pins that a thick, evenly spread bucket passes it. Nothing in the model is calibrated
+against this table, and the table is published anyway, because looking and finding
+nothing is a result.
+
+**The gap between A and B is the actual finding, and it is a gap in what is knowable,
+not a gap in two measurements.** 32% of a player's dynasty value goes between 29 and
+34, measured. Whether this league discounts it is unanswerable here - the correlation
+between age at a trade and how the deal turned out is reported and its sign is
+explicitly worth nothing, because every bucket behind it fails the bar. One half rests
+on 4,587 player-seasons and the other on 110. Only the first is allowed to move a price.
+
+**Surfacing.** `firstCliffAge()` derives, rather than hardcodes, the first age past the
+reference where the measured curve steps down harder than a typical year - 30 on this
+table, at 10.6% against a 3.6% median. A one-word marker on /values and /roster says an
+asset is past it. It is a coordinate on a published curve, never a verdict (D6): the
+model already charged him for his age, the marker only says which part of the curve did
+the charging. It is plain text in the meta line rather than a chip, because a `shrink-0`
+chip overran the sparkline and ate the position code on the tightest real row.
+
+**Cost (D25).** The derivation is offline (14 requests, ~2.5MB) and its output is a
+committed constant - a calibration does not need recomputing per request. The market
+half touches no network at all: it reads transactions already on the corpus. Nothing was
+added to `assembleCorpus()`.
+
+Rejected: tuning the anchors to the league's own trades (the D19 error, on a sample
+three times too thin); grading trades with the ordinary valuation (circular - today's
+price of a 35-year-old already carries the multiplier under test, so everything is
+priced age-blind here); extending the curve past 36 (at 37 the thinnest cell holds 15
+careers, so it holds flat and says so); keeping the old 0.30 anchor at 38 (asserted, and
+the thin cells at 37-38 sit near 0.53, not near 0.30); shipping the market half silently
+(the count of trades at each age is the thing worth knowing).

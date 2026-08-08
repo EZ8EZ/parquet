@@ -30,6 +30,7 @@ import { PlayerAvatar } from "./PlayerAvatar";
 import { Sparkline } from "./charts";
 import { cn, fmtValue, fold } from "@/lib/ui";
 import { playerLineageHref } from "@/lib/tradegraph/url";
+import { firstCliffAge, pastFirstCliff } from "@/lib/valuation/ageCurve";
 import {
   VALUE_FILTERS,
   parseValuesParams,
@@ -174,10 +175,33 @@ export function ValueAssetRow({
               </span>
             )}
           </span>
+          {/*
+            THE MARKER, and it is deliberately a word in this line rather than a chip
+            beside it. A chip has to be `shrink-0` to keep its shape, and on the
+            tightest real row here - a long name, a sparkline, and "High-End Rotation"
+            in the value column - a shrink-0 anything overruns the sparkline and eats
+            the position code on its way. As plain text it truncates with everything
+            else and cannot break the row at any width.
+
+            One word, in the same secondary voice as the rest of the line. Not a badge,
+            not red, and not competing with the injury chip above it: the injury chip
+            is a warning, this is a coordinate on a published curve. It sits before
+            `meta` so the owner's name is what gives way first, and colour does no
+            encoding at all here, which is the point.
+          */}
           <span className="mt-px block truncate figure text-meta text-secondary">
             {position ?? "-"}
             {team ? ` · ${team}` : ""}
             {age != null ? ` · ${age}y` : ""}
+            {pastFirstCliff(age) ? (
+              <span
+                className="font-semibold"
+                title={`Past ${firstCliffAge()}: the steepest single year in the measured age curve`}
+              >
+                {" · "}
+                <span aria-hidden="true">▾</span> downslope
+              </span>
+            ) : null}
             {meta ? ` · ${meta}` : ""}
           </span>
           {share != null && (
@@ -232,7 +256,23 @@ export function ValueAssetRow({
               <Fact label="injury" value={(injuryDetail ?? injury)!} />
             )}
             {age != null && <Fact label="age" value={`${age}`} />}
+            {pastFirstCliff(age) && (
+              <Fact
+                label="age curve"
+                value={`downslope, past ${firstCliffAge()}`}
+              />
+            )}
           </dl>
+          {/* The marker's whole explanation, in the one place there is room for it.
+              Says what was measured and what it does not claim; no advice (D6). */}
+          {pastFirstCliff(age) && (
+            <p className="mt-1.5 text-meta leading-snug text-secondary">
+              Turning {firstCliffAge()} costs more dynasty value than any other single
+              year before 34, measured across 4,587 NBA player-seasons. That discount
+              is already inside the number on the left. What this league will pay is a
+              separate question, and five seasons of trades cannot answer it.
+            </p>
+          )}
           <p className="mt-1.5 text-meta leading-snug text-secondary">
             Value is built from consensus rank, then bent by age, injury, role and
             position.{" "}
