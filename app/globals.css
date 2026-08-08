@@ -198,19 +198,12 @@
   --tci-4: #53e39c;
 
   /*
-   * MOTION. Three durations and one curve, so the app has ONE motion system rather
-   * than a duration invented per component.
-   *
-   * These are not new values - they are the ones already in use by name across the
-   * app (`var(--motion-base)` on the Desk drawer, `var(--motion-fast)` on its
-   * reduced-motion fallback). They are restated here because the declarations went
-   * missing in a merge and every reference was resolving to nothing, which silently
-   * disables the animation rather than failing loudly.
+   * MOTION lives in interaction.css, imported at the top of this file into the same
+   * `@theme`. It was briefly declared in both places - two agents fixing the same
+   * missing-declaration bug independently - and two copies of a token is how the
+   * declarations went missing in the first place. One copy, next to the animation
+   * CSS that uses it: see `--motion-fast/base/slow` and `--ease-out` there.
    */
-  --motion-fast: 120ms;
-  --motion-base: 180ms;
-  --motion-slow: 260ms;
-  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 :root {
@@ -414,38 +407,10 @@ body {
   font-family: var(--font-mono);
   font-feature-settings: "tnum";
 }
-.tnum {
-  font-variant-numeric: tabular-nums;
-}
-/*
- * THE FIGURE FACE.
- *
- * This app used to set its NUMBERS in the mono face and its REASONING in generic UI
- * sans - exactly inverted for a product whose thesis is "a memory of your own
- * decisions, not a stat site." 1,227 mono nodes against 34 serif ones, and literally
- * one serif node on /values.
- *
- * The serif never touches a number at the FT, the WSJ, The Athletic or Brex. Vercel
- * and Linear both reserve mono for code and identifiers and set figures in their sans
- * with tabular + slashed-zero; Vercel's design doc says so outright. Inter's tabular
- * figures give the same column alignment mono was being used for, without mono's
- * "this is a terminal" cost - and slashed-zero keeps 0 and O apart, which was the
- * other real thing mono was buying.
- *
- * So: `.figure` on quantities, `font-mono` on IDENTIFIERS ONLY (pick notation,
- * transaction ids, asset keys - codes, not amounts), `font-display` on captured
- * reasoning. Where a number and an identifier share a row they get different faces,
- * and that is correct rather than an inconsistency.
- */
-.figure {
-  font-variant-numeric: tabular-nums slashed-zero;
-  font-feature-settings: "tnum", "zero";
-}
-/* The catchlight on a plane that genuinely floats. Class rather than a utility so the
- * theme override is the only place the value is stated. */
-.edge-hilite {
-  box-shadow: var(--edge-hilite);
-}
+/* `.tnum` used to live here. It was the half-measure `.figure` replaced - tabular
+ * figures without the slashed zero - and by the end of the type swap it had exactly
+ * one call site left, on the Desk's status lead. Two classes that mean almost the
+ * same thing is how a figure ends up set two ways in one card, so there is one. */
 /*
  * THE FIGURE FACE.
  *

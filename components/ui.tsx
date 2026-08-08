@@ -218,9 +218,6 @@ export function DeltaValue({ n, suffix }: { n: number; suffix?: string }) {
   );
 }
 
-export function Divider() {
-  return <div className="rule my-5" />;
-}
 
 export function EmptyState({
   icon,

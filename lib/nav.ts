@@ -5,14 +5,15 @@
  * be two independently hand-maintained arrays claiming to be "the deeper pages," and
  * they had already silently diverged - neither included Manager Compare or `/rank`,
  * a fact nobody noticed because there was no single place that would have caught it.
- * This file is that place. Home and League both render their curated shortcuts by
- * filtering THIS array (see `curated: true` below) rather than keeping their own
- * lists, so the two can no longer drift apart, and `/more` renders the whole thing
- * as the one page that promises completeness.
+ * This file is that place, and `/more` renders the whole thing as the one page that
+ * promises completeness.
  *
- * EXACTLY TWO SURFACES RENDER THE WHOLE REGISTRY: the Desk's drawer, and `/more`
- * behind it as the no-JS and crawler fallback. Home briefly made a third, which put
- * the same index on screen three ways; it now renders none of it (see `homeNext`).
+ * NEITHER SHORTCUT LIST SURVIVES. Home's grid went first (it now ends with the
+ * situational steps `homeNext` builds); League's pill row followed, and with it the
+ * `curated` flag that fed both. A curated ten drawn from every group is an index, and
+ * the app already has exactly two of those - the Desk's drawer, and `/more` behind it
+ * as the no-JS and crawler fallback. Every other page says where it lets you out
+ * through `onwardFrom`, which is a reason rather than a list.
  *
  * Deliberately plain data, no icons: this file has to stay importable from a Server
  * Component and a plain data module alike without pulling in `lucide-react` (see
@@ -43,8 +44,6 @@ export interface NavSurface {
   /** The Desk's destination row is 1/4 of a 390pt screen wide, so a slot label has
    *  to be one short word. Only `primary` surfaces need one. */
   short?: string;
-  /** Also shown in Home's and League's shortcut lists - see the file header. */
-  curated?: true;
 }
 
 export const ALL_SURFACES: NavSurface[] = [
@@ -62,39 +61,38 @@ export const ALL_SURFACES: NavSurface[] = [
   { href: "/ledger", label: "Decision ledger", short: "Record", sub: "Capture your reasoning at the moment of conviction", group: "Primary", primary: true },
 
   // ---------------------------------------------------------------- your team
-  { href: "/recap", label: "Season recap", sub: "Last season, recapped from what actually happened", group: "Your team", curated: true },
+  { href: "/recap", label: "Season recap", sub: "Last season, recapped from what actually happened", group: "Your team" },
 
   // ---------------------------------------------------------------- the league
   { href: "/league", label: "League", sub: "Standings, timelines, everyone's window", group: "The league" },
-  { href: "/managers", label: "Dossiers", sub: "Scout your rivals", group: "The league", curated: true },
-  { href: "/managers/compare", label: "Manager Compare", sub: "Any two managers, side by side", group: "The league", curated: true },
-  { href: "/awards", label: "League awards", sub: "Who's who, statistically", group: "The league", curated: true },
+  { href: "/managers", label: "Dossiers", sub: "Scout your rivals", group: "The league" },
+  { href: "/managers/compare", label: "Manager Compare", sub: "Any two managers, side by side", group: "The league" },
+  { href: "/awards", label: "League awards", sub: "Who's who, statistically", group: "The league" },
   { href: "/commissioner", label: "Commissioner tools", sub: "League health checks and an audit log", group: "The league" },
 
   // ---------------------------------------------------------------- trading
-  { href: "/trade", label: "Trade", sub: "Build and evaluate a deal", group: "Trading", curated: true },
+  { href: "/trade", label: "Trade", sub: "Build and evaluate a deal", group: "Trading" },
   { href: "/trade/finder", label: "Trade Finder", sub: "Auto-suggested packages, priced both ways", group: "Trading" },
   // Replaces /web. The ring is gone (see lib/tradegraph's header for the measurement
   // that killed it); what a reader wanted from it was always a specific deal, and
   // every deal now has its own page underneath this index.
-  { href: "/deals", label: "Every deal", sub: "One page per trade, and what each side is worth today", group: "Trading", curated: true },
+  { href: "/deals", label: "Every deal", sub: "One page per trade, and what each side is worth today", group: "Trading" },
 
   // ---------------------------------------------------------------- drafts & values
   // "Pick lineage", not "Draft history". The registry said one thing and the page,
   // its two children and all six inbound links said the other, so the same surface
   // had two names depending on which door you came through. The six call sites won:
   // lineage is what the page actually does, and a rename here fixes all of them.
-  { href: "/drafts", label: "Pick lineage", sub: "What your picks became", group: "Drafts & values", curated: true },
+  { href: "/drafts", label: "Pick lineage", sub: "What your picks became", group: "Drafts & values" },
   { href: "/drafts/grades", label: "Draft report cards", sub: "Grade every past draft class", group: "Drafts & values" },
-  { href: "/values", label: "Asset values", sub: "Players and picks, one model", group: "Drafts & values", curated: true },
-  // Curated as of round 9. It is a real draft board that the Trade Finder already
-  // reads (`readCustomOrder` feeds every package's conviction line), and it appeared
-  // in no shortcut list anywhere in the app - a feature doing live work behind a
-  // door nobody could find.
-  { href: "/rank", label: "Build your own ranking", sub: "Blend your own board against the field's", group: "Drafts & values", curated: true },
+  { href: "/values", label: "Asset values", sub: "Players and picks, one model", group: "Drafts & values" },
+  // A real draft board that the Trade Finder already reads - `readCustomOrder` feeds
+  // every package's conviction line - so it earns its listing on work it is already
+  // doing rather than on novelty.
+  { href: "/rank", label: "Build your own ranking", sub: "Blend your own board against the field's", group: "Drafts & values" },
 
   // ---------------------------------------------------------------- the app
-  { href: "/analyst", label: "The Analyst", sub: "Audit your own thinking", group: "The app", curated: true },
+  { href: "/analyst", label: "The Analyst", sub: "Audit your own thinking", group: "The app" },
   { href: "/about", label: "What this is", sub: "The premise, both indexes, and why nothing gets a grade", group: "The app" },
   { href: "/methodology", label: "Methodology", sub: "How the values and both indexes actually work", group: "The app" },
   { href: "/settings", label: "Settings", sub: "Theme, and how you view the app", group: "The app" },
@@ -108,9 +106,9 @@ export const ALL_SURFACES: NavSurface[] = [
   // no-JS and crawler fallback for the drawer, and as the drawer's own "see
   // everything" target.
   { href: "/more", label: "Everything in Parquet", sub: "Search, and every surface in one list", group: "The app" },
-  // ONE entry for the whole Lab, and deliberately neither `primary` nor `curated`:
+  // ONE entry for the whole Lab, and deliberately not `primary`:
   // the experiments behind it are unfinished by construction and must not compete
-  // with finished surfaces for a slot or a shortcut. The Lab's own index lists them;
+  // with finished surfaces for a permanent slot. The Lab's own index lists them;
   // this registry lists the Lab. See lib/lab/index.ts.
   { href: "/lab", label: "The Lab", sub: "Experiments. They may be wrong, and they may vanish", group: "The app" },
 ];
@@ -389,21 +387,6 @@ export function managerLinks(m: {
  */
 export function primarySurfaces(): NavSurface[] {
   return ALL_SURFACES.filter((s) => s.primary);
-}
-
-/**
- * The shortcut set. ONE consumer now: /league's pill row.
- *
- * It was Home's grid and League's pill row, which is why it exists as a filter over
- * the registry rather than as either page's own array - the two had already silently
- * diverged once. Home no longer reads it, and no longer renders any index at all: it
- * ends with the situational steps `homeNext` builds, because a landing page that
- * lists everything is a third copy of the drawer. The filter stays because /league
- * still needs a short list rather than all twenty-four surfaces, and because "which
- * surfaces are worth a shortcut" is a judgement that belongs in the registry either way.
- */
-export function curatedSurfaces(): NavSurface[] {
-  return ALL_SURFACES.filter((s) => s.curated);
 }
 
 /** Everything worth putting on the full index, grouped in registry order. */

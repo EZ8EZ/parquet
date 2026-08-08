@@ -13,10 +13,11 @@
  * where the tick sits, how the crowd is bunched around it, and the printed rank.
  *
  * COLOUR (see lib/chart-colors.ts for the rules and their measurements):
- * - The crowd is the SEQUENTIAL SINGLE-HUE magnitude ramp - one hue, five strengths,
- *   strongest at the top of the range. That is genuine work, not decoration: it makes
- *   a cluster at one end legible as a cluster rather than as evenly grey pickets, and
- *   single-hue ramps are the only kind that survive every colour vision deficiency.
+ * - The crowd is ONE HUE AT ONE STRENGTH. It briefly rode the magnitude ramp, which
+ *   was a mistake twice over: a tick's position already states its value, so the ramp
+ *   restated it, and the ramp's weak steps fall under 3:1 on every ground, so the low
+ *   tail faded toward its own background. A strip that quietly loses its tail is worse
+ *   than a strip with no colour variation at all.
  * - A `signed` strip uses the CVD-safe diverging pair instead, split at zero.
  * - Nothing is encoded in colour alone. Delete every fill and the position, the
  *   height difference and the printed rank still carry the whole reading.
@@ -37,7 +38,6 @@ import {
   CHART_GRID,
   CHART_NEUTRAL,
   divergingFill,
-  magnitudeOpacity,
 } from "@/lib/chart-colors";
 import { ordinal } from "@/lib/derive/describe";
 import { cn } from "@/lib/ui";
@@ -155,7 +155,6 @@ export function DistributionStrip({
         {clean.map((v, i) => {
           const isMine = mine != null && v === mine;
           if (isMine) return null;
-          const f = (v - lo) / span;
           return (
             <rect
               key={`${v}-${i}`}
@@ -165,7 +164,13 @@ export function DistributionStrip({
               height={10}
               rx={1}
               fill={signed ? divergingFill(v) : CHART_ACCENT}
-              opacity={signed ? 0.75 : magnitudeOpacity(f)}
+              // FLAT, not the magnitude ramp. A peer tick's position IS its value,
+              // so ramping opacity with position adds nothing - and it subtracts
+              // something real: the ramp's bottom steps sit under 3:1 on every
+              // ground (see lib/chart-colors.ts rule 2), so the left tail of the
+              // distribution faded out. "Nobody is down there" is the one thing this
+              // strip must never say by accident.
+              opacity={0.75}
             />
           );
         })}
@@ -201,7 +206,7 @@ export function DistributionStrip({
        * should stay on the type scale. So the ticks stay in the SVG and the two
        * numbers came out of it.
        */}
-      <div className="-mt-0.5 flex items-baseline justify-between gap-2 font-mono text-micro tnum text-secondary">
+      <div className="-mt-0.5 flex items-baseline justify-between gap-2 figure text-micro text-secondary">
         <span>{format(lo)}</span>
         <span>{format(hi)}</span>
       </div>

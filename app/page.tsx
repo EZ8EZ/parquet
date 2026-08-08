@@ -74,9 +74,9 @@ export default async function HomePage() {
       {mayCapture && ledger.unannotatedNotable > 0 && (
         <Link
           href="/ledger"
-          className="mb-3 flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-accent/30 bg-accent/10 px-2.5 py-2 transition-colors hover:border-accent/60"
+          className="mb-3 flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-accent-edge bg-accent-wash px-2.5 py-2 transition-colors hover:border-accent"
         >
-          <ScrollText size={15} aria-hidden="true" className="shrink-0 text-accent" />
+          <ScrollText size={15} aria-hidden="true" className="shrink-0 text-accent-text" />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-body font-semibold leading-tight text-ink">
               {ledger.unannotatedNotable} decision
@@ -86,7 +86,7 @@ export default async function HomePage() {
               Log why you made them - while you still remember.
             </span>
           </span>
-          <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-accent" />
+          <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-accent-text" />
         </Link>
       )}
 
@@ -94,7 +94,7 @@ export default async function HomePage() {
           names WHOSE strategy, because "You said win-now. You sold." only lands when
           the reader knows who "you" is - obvious to the manager in their own seat,
           not to a leaguemate seeing this app (or this seat) for the first time. */}
-      <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+      <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
         Revealed strategy · {p.teamName ?? p.displayName}
       </p>
       <h1 className="mt-0.5 font-display text-display font-semibold leading-[1.12] text-ink">
@@ -117,7 +117,7 @@ export default async function HomePage() {
                 <Tag tone="neutral">did: {c.revealedSeason}</Tag>
                 <Link
                   href="/ledger"
-                  className="inline-flex min-h-11 items-center text-note font-semibold text-accent underline-offset-2 hover:underline"
+                  className="inline-flex min-h-11 items-center text-note font-semibold text-accent-text underline-offset-2 hover:underline"
                 >
                   see the moves
                   <ChevronRight size={13} aria-hidden="true" />
@@ -146,7 +146,7 @@ export default async function HomePage() {
             contradicts it yet.{" "}
             <Link
               href="/ledger"
-              className="font-semibold text-accent underline-offset-2 hover:underline"
+              className="font-semibold text-accent-text underline-offset-2 hover:underline"
             >
               See what you said
             </Link>
@@ -232,7 +232,7 @@ export default async function HomePage() {
             "3y+ still running" reads as a contradiction unless this says which
             population it measures. The metric itself is untouched - it feeds The
             Tortoise/Hot Potato and the dossiers, which have their own context. */}
-        <p className="mt-1 font-mono text-meta leading-snug tnum text-faint">
+        <p className="mt-1 figure text-meta leading-snug text-faint">
           {holdYears ? `avg completed hold ${holdYears}y · ` : ""}
           {p.acquisitions.count} in / {p.disposals.count} out ·{" "}
           {ledger.annotated}/{ledger.notable} annotated
@@ -284,7 +284,7 @@ export default async function HomePage() {
                 <span className="max-w-[8rem] truncate text-note font-semibold text-ink">
                   {tp.displayName}
                 </span>
-                <span className="font-mono text-meta tnum text-accent">
+                <span className="figure text-meta text-accent-text">
                   {tp.count}
                 </span>
               </Link>
@@ -330,7 +330,7 @@ export default async function HomePage() {
         First time here?{" "}
         <Link
           href="/about"
-          className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-2 hover:text-accent hover:underline"
+          className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-2 hover:text-accent-text hover:underline"
         >
           What this is, and what the numbers mean
         </Link>
@@ -338,7 +338,7 @@ export default async function HomePage() {
           Or{" "}
           <Link
             href="/more"
-            className="underline-offset-2 hover:text-accent hover:underline"
+            className="underline-offset-2 hover:text-accent-text hover:underline"
           >
             every page in one list
           </Link>
@@ -370,7 +370,7 @@ function Figure({
       <span className="truncate text-meta uppercase tracking-wide text-faint">
         {label}
       </span>
-      <span className="truncate font-mono text-lede font-semibold leading-tight tnum text-ink">
+      <span className="truncate figure text-lede font-semibold leading-tight text-ink">
         {value}
       </span>
       <span className="truncate text-meta leading-tight text-muted">{sub}</span>
@@ -384,7 +384,7 @@ function Micro({ label, value }: { label: string; value: string }) {
       <div className="truncate text-meta uppercase tracking-wide text-faint">
         {label}
       </div>
-      <div className="truncate font-mono text-body font-semibold tnum text-ink">
+      <div className="truncate figure text-body font-semibold text-ink">
         {value}
       </div>
     </div>

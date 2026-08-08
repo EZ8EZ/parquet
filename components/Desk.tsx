@@ -330,7 +330,7 @@ export function Desk({ data }: { data: DeskData | null }) {
                             aria-current={active ? "page" : undefined}
                             className={cn(
                               "flex min-h-11 items-start gap-2 rounded-[--radius-sm] border bg-surface px-2 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2",
-                              active ? "border-accent/60" : "border-border",
+                              active ? "border-accent-edge" : "border-border",
                             )}
                           >
                             <Icon
@@ -338,7 +338,7 @@ export function Desk({ data }: { data: DeskData | null }) {
                               aria-hidden="true"
                               className={cn(
                                 "mt-[3px] shrink-0",
-                                active ? "text-accent" : "text-faint",
+                                active ? "text-accent-text" : "text-faint",
                               )}
                             />
                             <span className="min-w-0 flex-1">
@@ -358,7 +358,7 @@ export function Desk({ data }: { data: DeskData | null }) {
 
             <Link
               href="/more"
-              className="mb-2 mt-3 flex min-h-11 items-center justify-center gap-1 rounded-[--radius-sm] border border-dashed border-border text-note font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+              className="mb-2 mt-3 flex min-h-11 items-center justify-center gap-1 rounded-[--radius-sm] border border-dashed border-border text-note font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
             >
               See everything on one page
               <ChevronRight size={13} aria-hidden="true" />
@@ -387,7 +387,7 @@ export function Desk({ data }: { data: DeskData | null }) {
                     className={cn(
                       "flex min-h-[3.25rem] flex-col items-center justify-center gap-1 rounded-[--radius-sm] border px-1 text-center transition-colors",
                       active
-                        ? "border-accent/60 bg-accent/10 text-accent"
+                        ? "border-accent-edge bg-accent-wash text-accent-text"
                         : "border-border bg-surface text-muted hover:border-border-strong hover:bg-surface-2",
                     )}
                   >
@@ -474,8 +474,8 @@ export function Desk({ data }: { data: DeskData | null }) {
                   <span className="truncate">
                     <b
                       className={cn(
-                        "font-semibold tnum",
-                        data.status.tone === "todo" ? "text-accent" : "text-ink",
+                        "font-semibold figure",
+                        data.status.tone === "todo" ? "text-accent-text" : "text-ink",
                       )}
                     >
                       {data.status.lead}
@@ -543,14 +543,14 @@ export function Desk({ data }: { data: DeskData | null }) {
             className={cn(
               "flex h-[53px] w-full items-center justify-center gap-2 border-t px-3.5 transition-colors",
               expanded
-                ? "border-accent/40 bg-accent/10 text-accent"
+                ? "border-accent-edge bg-accent-wash text-accent-text"
                 : "border-border text-ink hover:bg-surface-2",
             )}
           >
             {expanded ? (
               <ChevronDown size={18} aria-hidden="true" className="shrink-0" />
             ) : (
-              <LayoutGrid size={18} aria-hidden="true" className="shrink-0 text-accent" />
+              <LayoutGrid size={18} aria-hidden="true" className="shrink-0 text-accent-text" />
             )}
             <span className="min-w-0">
               <span className="block text-body font-semibold leading-none">
@@ -559,7 +559,7 @@ export function Desk({ data }: { data: DeskData | null }) {
               <span
                 className={cn(
                   "mt-1 block truncate text-micro leading-none",
-                  expanded ? "text-accent/80" : "text-faint",
+                  expanded ? "text-accent-text" : "text-faint",
                 )}
               >
                 {expanded ? "Back to the page" : "Every page in Parquet, and search"}

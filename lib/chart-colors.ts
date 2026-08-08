@@ -21,6 +21,18 @@
  * ramp is gold on the dark ground and dark ochre on Paper without this file knowing
  * which ground it is on, because the opacity composites against whatever is behind it.
  *
+ * MEASURED, AND THE LIMIT IS REAL: composited against its own ground, the ramp runs
+ * 1.55 / 1.99 / 2.61 / 3.86 / 5.92 on Paper, 1.89 / 2.85 / 4.21 / 6.78 / 10.18 on
+ * dark, 2.05 / 3.42 / 5.44 / 9.34 / 14.75 on contrast. The bottom two steps are under
+ * 3:1 on every ground, and no floor fixes it: the weakest step only clears 3:1 at
+ * opacity 0.70 or above, and a five-step ramp from 0.70 to 1.00 is not a ramp anyone
+ * can read. An opacity ramp cannot be both a legible ordering and 3:1 at every step.
+ * So the ramp is only ever a THIRD encoding - it is allowed where a length and a
+ * printed number already carry the value independently (the bar charts, the receipt),
+ * and it is not allowed where a mark's visibility is itself the datum. That is why
+ * DistributionStrip's peer ticks are flat: their position is the value, and ramping
+ * them faded the low tail out of a chart whose whole job is showing the tail.
+ *
  * RULE 3. SIGNED VALUES USE A CVD-SAFE DIVERGING PAIR, AND IT IS NOT RED/GREEN.
  * `RdYlGn` - the reflex choice - is not colourblind-safe at any class count. `PiYG`
  * still reads as "red-ish versus green-ish" to a trichromat while staying separable
@@ -28,13 +40,15 @@
  * are shifted off canonical PiYG (#c51b7d / #4d9221) for one reason: canonical
  * magenta measures 2.69:1 against the dark ground, which is under the 3:1 bar a
  * graphical object has to clear. Measured contrast of the shipped pair, against all
- * three grounds this app has:
+ * three grounds this app has - and against each theme's card surface as well, since a
+ * chart sits on a card more often than on the page:
  *
- *                      Paper #f6f4f0   Dark #0b0c0e   Contrast #000000
- *   low   #d2569f          3.35             4.30            5.57
- *   high  #4d9221          3.43             4.17            5.45
+ *                    Paper bg / surface   Dark bg / surface   Contrast bg / surface
+ *   low   #d2569f       3.43   3.74         5.19   4.71         5.57   4.80
+ *   high  #4d9221       3.51   3.82         5.08   4.61         5.45   4.70
  *
- * All six clear 3:1. None clears 4.5:1 on all three, which is rule 4.
+ * All twelve clear 3:1; the tightest is 3.43. None clears 4.5:1 on all three, which
+ * is rule 4.
  *
  * RULE 4. THE FILL VALUE AND THE TEXT VALUE OF A HUE ARE DIFFERENT VALUES.
  * A colour that works as a 10px-tall bar does not work as 11px type, and the split
@@ -50,8 +64,6 @@
 
 /** Ink for a printed figure sitting inside or beside a chart. */
 export const CHART_INK = "var(--color-ink)";
-/** Ink for a secondary figure - a median, a count, an axis value. */
-export const CHART_MUTED = "var(--color-muted)";
 /** Ink for axis labels and anything the eye should skip on the first pass. */
 export const CHART_FAINT = "var(--color-faint)";
 /** Rules, frames, baselines. */
@@ -87,12 +99,11 @@ export const DIVERGING: { low: ChartHue; high: ChartHue } = {
 /**
  * The five-step single-hue magnitude ramp, weakest first.
  *
- * The floor is 0.3, not 0. A ramp that starts near zero renders its bottom step as
- * an almost-invisible mark, which is wrong twice over: the low end of a distribution
- * is a real observation, not an absence, and the high-contrast theme exists
- * specifically to stop this app from asking anyone to squint. Five steps between
- * 0.3 and 1 are still plainly ordered; five between 0.1 and 1 are ordered and one of
- * them is a ghost.
+ * The floor is 0.3 rather than 0 so the bottom step is a mark and not a ghost. It is
+ * NOT enough to clear 3:1 - see the measurements in the header - and raising it until
+ * it does would flatten the ramp into five indistinguishable steps. The floor buys
+ * visibility, not contrast compliance, which is exactly why a caller may only reach
+ * for this ramp when a length and a printed number are already carrying the value.
  */
 export const MAGNITUDE_STEPS = [0.3, 0.45, 0.6, 0.8, 1] as const;
 

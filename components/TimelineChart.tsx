@@ -117,7 +117,7 @@ export function TimelineQuadrant({
         strokeDasharray="2 3"
       />
       {/* Region captions */}
-      <text x={padL + 5} y={padT + 11} fontSize="8" fill={FAINT} className="font-mono">
+      <text x={padL + 5} y={padT + 11} fontSize="8" fill={FAINT}>
         CONTEND
       </text>
       <text
@@ -126,7 +126,6 @@ export function TimelineQuadrant({
         fontSize="8"
         fill={FAINT}
         textAnchor="end"
-        className="font-mono"
       >
         REBUILD
       </text>
@@ -136,7 +135,6 @@ export function TimelineQuadrant({
         fontSize="8"
         fill={NEG}
         opacity={0.85}
-        className="font-mono"
       >
         STRADDLE
       </text>
@@ -157,7 +155,7 @@ export function TimelineQuadrant({
             textAnchor="middle"
             fontSize="9"
             fill={FAINT}
-            className="font-mono"
+            className="figure"
           >
             {d}
           </text>
@@ -180,7 +178,7 @@ export function TimelineQuadrant({
           textAnchor="end"
           fontSize="9"
           fill={t === coherenceFloor ? NEG : FAINT}
-          className="font-mono"
+          className="figure"
         >
           {t}
         </text>
@@ -216,7 +214,7 @@ export function TimelineQuadrant({
               textAnchor={labelLeft ? "end" : "start"}
               fontSize="8.5"
               fill={p.isMe ? ACCENT : MUTED}
-              className="font-mono"
+              className="figure"
             >
               {p.n}
             </text>

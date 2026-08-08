@@ -13,7 +13,6 @@ import { fmtValue } from "@/lib/ui";
 import { ordinal } from "@/lib/derive/describe";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperLeagueUrl } from "@/lib/sleeperLinks";
-import { curatedSurfaces } from "@/lib/nav";
 import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
@@ -136,30 +135,6 @@ export default async function LeaguePage() {
           </>
         )}
       </p>
-
-      {/* Same registry Home's grid and /more read (lib/nav.ts) - this pill row and
-          Home's grid used to be two independently hand-kept lists that had already
-          silently diverged before round 6 (neither included Manager Compare or
-          /rank). One shared source instead of two, plus a real full index for
-          everything not curated here. */}
-      <nav aria-label="League sections" className="scroll-x mt-2 flex gap-1.5">
-        {curatedSurfaces().map((s) => (
-          <Link
-            key={s.href}
-            href={s.href}
-            className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border bg-surface px-3 text-note font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
-          >
-            {s.label}
-          </Link>
-        ))}
-        <Link
-          href="/more"
-          className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-full border border-dashed border-border px-3 text-note font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
-        >
-          All surfaces
-          <ChevronRight size={12} aria-hidden="true" />
-        </Link>
-      </nav>
 
       {/*
         ONE CHART. It used to be two, each with its own fourteen-row list under it, and
@@ -304,11 +279,12 @@ export default async function LeaguePage() {
         })}
       </ul>
 
-      {/* This is also /commissioner's first inbound link in the app's history. The
-          pill row above is the CURATED set and adding a commissioner-only surface to
-          it would put a tool most of the league cannot use in front of all of them;
-          the onward row is where a page says what a reader might want next, which is
-          exactly the register that link belongs in. */}
+      {/* This is also /commissioner's first inbound link in the app's history, and
+          the onward row is the right register for it: a page saying what THIS reader
+          might want next can offer a commissioner-only tool without putting it in
+          front of the twelve managers who cannot use it. The pill row that used to
+          sit above the board could not make that distinction, which is part of why
+          it is gone - see lib/nav.ts. */}
       <Onward from="/league" />
     </div>
   );

@@ -98,15 +98,6 @@ export function unrecordedPickMoves(h: LeagueHistory): UnrecordedPickMove[] {
   return out;
 }
 
-/** Unrecorded pick moves that involve a given roster (either side). */
-export function unrecordedPickMovesFor(
-  h: LeagueHistory,
-  rosterId: number,
-): UnrecordedPickMove[] {
-  return unrecordedPickMoves(h).filter(
-    (m) => m.toRoster === rosterId || m.fromRoster === rosterId,
-  );
-}
 
 /**
  * Rank every roster by current strength, 1 = strongest.

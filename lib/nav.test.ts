@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   ALL_SURFACES,
-  curatedSurfaces,
   groupedSurfaces,
   homeNext,
   managerLinks,
@@ -59,20 +58,6 @@ describe("the surface registry", () => {
     for (const s of ALL_SURFACES) {
       expect(s.primary === true, `${s.href}`).toBe(s.group === "Primary");
     }
-  });
-});
-
-describe("curatedSurfaces", () => {
-  it("is the set /league renders as its pill row", () => {
-    // Was "the set Home and League both render". Home renders no index at all now -
-    // it ends with `homeNext` - so this describes one consumer, not two.
-    const curated = curatedSurfaces();
-    expect(curated.length).toBeGreaterThan(0);
-    for (const s of curated) expect(s.curated).toBe(true);
-  });
-
-  it("never includes a primary tab - those already have a permanent tab", () => {
-    for (const s of curatedSurfaces()) expect(s.primary).toBeUndefined();
   });
 });
 

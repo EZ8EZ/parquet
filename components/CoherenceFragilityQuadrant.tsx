@@ -172,7 +172,7 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
 
           {/* Corner captions. Descriptive on the fragility axis ("spread" /
               "top-heavy"), directional only on the coherence axis. */}
-          <text x={X0 + 4} y={Y0 - 6} fontSize="7.5" fill={FAINT} className="font-mono">
+          <text x={X0 + 4} y={Y0 - 6} fontSize="7.5" fill={FAINT}>
             {QUADRANTS.agreedSpread.label}
           </text>
           <text
@@ -181,11 +181,10 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
             fontSize="7.5"
             fill={FAINT}
             textAnchor="end"
-            className="font-mono"
           >
             {QUADRANTS.agreedTopHeavy.label}
           </text>
-          <text x={X0 + 4} y={Y1 + 11} fontSize="7.5" fill={FAINT} className="font-mono">
+          <text x={X0 + 4} y={Y1 + 11} fontSize="7.5" fill={FAINT}>
             {QUADRANTS.splitSpread.label}
           </text>
           <text
@@ -194,7 +193,6 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
             fontSize="7.5"
             fill={NEG}
             textAnchor="end"
-            className="font-mono"
           >
             {QUADRANTS.splitTopHeavy.label}
           </text>
@@ -216,7 +214,7 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
                 textAnchor="middle"
                 fontSize="8.5"
                 fill={FAINT}
-                className="font-mono"
+                className="figure"
               >
                 {t}
               </text>
@@ -230,7 +228,7 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
               textAnchor="end"
               fontSize="8.5"
               fill={FAINT}
-              className="font-mono"
+              className="figure"
             >
               {t}
             </text>
@@ -321,7 +319,7 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
                   fontSize="8"
                   fontWeight={p.isMe || isSel ? 700 : 400}
                   fill={p.isMe ? ACCENT : isSel ? "var(--color-ink)" : MUTED}
-                  className="font-mono"
+                  className="figure"
                 >
                   {p.n}
                 </text>
@@ -332,7 +330,7 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
 
         {/* Scale legend. A multi-hue ramp always ships one. */}
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="font-mono text-micro uppercase tracking-wide text-faint">
+          <span className="text-micro uppercase tracking-wide text-faint">
             TCI
           </span>
           {TCI_BANDS.map((b) => (
@@ -342,7 +340,7 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
                 className="inline-block h-2.5 w-2.5 rounded-full"
                 style={{ background: STEP_INK[b.step - 1] }}
               />
-              <span className="font-mono text-micro tnum text-faint">{b.range}</span>
+              <span className="figure text-micro text-faint">{b.range}</span>
             </span>
           ))}
         </div>
@@ -368,22 +366,22 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
           }`}
         >
           <p className="truncate text-body font-semibold leading-tight text-ink">
-            <span className="mr-1.5 font-mono text-meta tnum text-secondary">
+            <span className="mr-1.5 figure text-meta text-secondary">
               {selected.n}
             </span>
             {selected.name}
             {selected.isMe && (
-              <span className="ml-1.5 font-mono text-meta text-accent-text">you</span>
+              <span className="ml-1.5 text-meta text-accent-text">you</span>
             )}
           </p>
           <div className="mt-1 flex flex-wrap items-center gap-1.5">
             <Tag tone={selected.quadrant === "splitTopHeavy" ? "negative" : "neutral"}>
               {q.label}
             </Tag>
-            <span className="font-mono text-meta tnum text-secondary">
+            <span className="figure text-meta text-secondary">
               {selected.tci} TCI · {selected.posture}
             </span>
-            <span className="font-mono text-meta tnum text-secondary">
+            <span className="figure text-meta text-secondary">
               {selected.fragility} RFI · {selected.fragilityBand}
             </span>
           </div>
@@ -404,7 +402,7 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
               {selected.spofShare != null && (
                 <>
                   {" "}
-                  <span className="font-mono tnum">
+                  <span className="figure">
                     ({Math.round(selected.spofShare * 100)}% of startable value)
                   </span>
                 </>
@@ -458,7 +456,7 @@ export function CoherenceFragilityQuadrant({ view }: { view: QuadrantView }) {
               />
               <span
                 aria-hidden="true"
-                className={`font-mono text-meta leading-none tnum ${
+                className={`figure text-meta leading-none ${
                   p.isMe ? "font-semibold text-accent-text" : "text-muted"
                 }`}
               >

@@ -75,7 +75,7 @@ export function LineChart({
       {data.map((d, i) => (
         <g key={i}>
           <circle cx={x(i)} cy={y(d.value)} r={3.5} fill={color} />
-          <text x={x(i)} y={y(d.value) - 9} textAnchor="middle" fontSize="10" fill="var(--color-ink)" className="font-mono">
+          <text x={x(i)} y={y(d.value) - 9} textAnchor="middle" fontSize="10" fill="var(--color-ink)" className="figure">
             {format(d.value)}
           </text>
           <text x={x(i)} y={H - padY + 14} textAnchor="middle" fontSize="10" fill={MUTED}>
@@ -136,7 +136,7 @@ export function BarChart({
               // distribution rather than as six identical blocks (rule 2).
               opacity={signed ? 0.9 : magnitudeOpacity(Math.abs(d.value) / maxAbs)}
             />
-            <text x={cx + barW / 2} y={labelY} textAnchor="middle" fontSize="10" fill="var(--color-ink)" className="font-mono">
+            <text x={cx + barW / 2} y={labelY} textAnchor="middle" fontSize="10" fill="var(--color-ink)" className="figure">
               {format(d.value)}
             </text>
             <text x={cx + barW / 2} y={H - 5} textAnchor="middle" fontSize="10" fill={MUTED}>
@@ -203,7 +203,7 @@ export function SideBars({
               textAnchor="end"
               fontSize="11"
               fill="var(--color-accent)"
-              className="font-mono"
+              className="figure"
             >
               {format(d.value)}
             </text>
@@ -258,7 +258,7 @@ export function AgeStrip({
       {avg > 0 && (
         <g>
           <line x1={x(avg)} y1={8} x2={x(avg)} y2={H / 2 + 8} stroke="var(--color-info)" strokeWidth={1.5} strokeDasharray="3 2" />
-          <text x={x(avg)} y={6} textAnchor="middle" fontSize="9" fill="var(--color-info)" className="font-mono">
+          <text x={x(avg)} y={6} textAnchor="middle" fontSize="9" fill="var(--color-info)" className="figure">
             avg {avg.toFixed(1)}
           </text>
         </g>
@@ -380,7 +380,7 @@ export function PositionRadar({
             <text x={lp.x} y={lp.y} textAnchor="middle" fontSize="11" fontWeight={600} fill="var(--color-ink)">
               {d.label}
             </text>
-            <text x={lp.x} y={lp.y + 12} textAnchor="middle" fontSize="9" fill={MUTED} className="font-mono">
+            <text x={lp.x} y={lp.y + 12} textAnchor="middle" fontSize="9" fill={MUTED} className="figure">
               {format(d.value)}
             </text>
           </g>
