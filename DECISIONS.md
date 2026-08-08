@@ -1526,3 +1526,76 @@ the half-measure `.figure` replaced, deleted at its final call site; a duplicate
 `.figure` / `.edge-hilite` block in `globals.css`; and `--motion-*` declared in both
 `globals.css` and `interaction.css` - two agents independently fixing the same
 missing-declaration bug, which is precisely how the declaration went missing.
+
+## D49. PICK AGENCY: the pick's value is a function of WHOSE SEASON sets it, and this league's draft order is not reverse standings
+
+Two numbers already described every future pick in this app - what it is worth
+(`lib/picks.ts`, priced by the strength of the team that owes it) and when it pays
+off (`lib/metrics/duration.ts`). Neither answered the question an experienced dynasty
+manager asks first: **is the outcome of this pick mine to move, or am I a passenger
+on somebody else's season?** Those are categorically different assets. A pick set by
+your own season is an instrument; a pick set by somebody else's is a claim on a
+stranger's intentions, and it is worth what THEY decide to do next.
+
+The join was small and had been sitting in plain sight for eight rounds. Every pick
+already carries its ORIGINAL roster, straight off Sleeper's traded-pick records, and
+the original roster is exactly the roster whose season orders the draft the pick sits
+in. Posture per roster (`leagueTimelines`) and current form (`currentFormByRoster`)
+both already existed. `lib/agency` puts them beside each other and costs one array
+walk over data every calling page already holds - no new requests anywhere.
+
+**THE DRAFT ORDER HERE IS NOT REVERSE STANDINGS, AND THAT IS A MEASUREMENT, NOT A
+HEDGE.** The premise "your own pick is an instrument" quietly assumes a mapping from
+your record to your slot, and it would have been very easy to assume that mapping is
+the identity and then build lottery odds on top of it. Sleeper's league settings
+carry no draft-order rule of any kind (checked: `playoff_seed_type`, `playoff_type`,
+`playoff_teams`, and nothing else touches the draft), so the only way to know is to
+compare the ASSIGNED slot order against the previous season's final standings.
+`draftOrderFidelity` does exactly that, and on the live league **all four completed
+rookie drafts deviate from strict reverse standings, by up to four places**: in the
+2026 draft a 10-10 roster took slot 2 while a 4-16 roster took slot 5, and in 2025
+the roster that finished 11th of 14 took slot 1. So the app states the relationship
+as a tendency, models no slot, computes no odds, and prints the measurement next to
+the claim on /roster. Rejected: assuming reverse standings (contradicted by all four
+drafts on record); building a lottery simulator (the mechanism is not in the data,
+and inventing one is the D19 failure with better graphics).
+
+Two smaller consequences worth stating. A pick is marked **settled** once the season
+that orders its draft is over, because agency is a live quantity and nobody's
+decisions move a 2026 pick any more - EZ8's own 2026 first is already spent in that
+sense, whoever holds it. And the read is deliberately available for a pick the OTHER
+side is sending, which is what lets the trade evaluator print "you are acquiring a
+pick whose value depends on a team that is contending" rather than only pricing it.
+
+## D50. THE BUYBACK IS A FACT WITH TWO PROVENANCES, AND NEVER AN INTENT
+
+`pickBuybacks` detects a manager reacquiring a pick they originally owned. It is a
+genuine behavioural tell - it is the one transaction that converts a manager's own
+season from a result into an asset they control - and the live league contains
+**fifteen recorded instances and two more the snapshot alone evidences**, including
+the one the owner described from memory: 6-Month Plan reacquiring their own 2026
+first from kdewitt4 on 2025-11-13, after 449 days away.
+
+**IT SAYS WHAT HAPPENED AND REFUSES TO SAY WHY (D19).** Intent is not in this corpus.
+A pick can come home as a throw-in, as the cheapest matching value in somebody else's
+deal, or entirely on purpose, and nothing in the transaction log distinguishes them.
+Naming a manager a tanker from a round trip and a losing streak is precisely the
+inference D19 exists to refuse, and the copy on every surface stops at the round trip.
+
+**TWO SOURCES, LABELLED DIFFERENTLY, because the record is honestly uneven.**
+RECORDED round trips come from a trade transaction that names the pick, so they carry
+a date, a deal to link to, and a count of the hops the pick made while away.
+SNAPSHOT-ONLY round trips are visible in Sleeper's traded-picks snapshot - the pick is
+back with its original roster, having arrived from somebody else - with no transaction
+explaining the move, which is the D19 gap: a commissioner-executed trade always
+carries `draft_picks: []`. Those are reported (the fact is real) and carry **no date
+at all** rather than a guessed one, and the UI says "no transaction records this move"
+in its own copy. Rejected: reporting only the recorded ones (silently drops real
+history); dating the snapshot-only ones from the surrounding trades (a guess about
+WHICH deal, which is exactly what D19 deleted a working engine over).
+
+Detection reads one hop - `previousOwner !== original && newOwner === original` - and
+never assumes the pick came straight back, which matters: EZ8's own 2024 first left
+on 2023-10-27, moved on once more while it was away, and came home 71 days later
+having changed hands three times. It also reports the same pick twice when it
+genuinely came home twice, because those are two separate decisions.
