@@ -1,23 +1,10 @@
 /**
  * Quiet skeleton, not a spinner (DECISIONS.md D15: dark editorial, no cheery
  * loading copy). This route walks the whole league's rosters to find trades, so
- * it is one of the few pages slow enough to need a placeholder at all.
+ * it is one of the slowest pages in the app.
  */
-import { SkeletonLine, SkeletonCard } from "@/components/ui";
+import { LoadingPage } from "@/components/PageSkeleton";
 
 export default function Loading() {
-  return (
-    <div>
-      <div className="mb-3">
-        <SkeletonLine className="h-3 w-28" />
-        <SkeletonLine className="mt-2 h-7 w-2/3" />
-        <SkeletonLine className="mt-1.5 h-4 w-full" />
-      </div>
-      <div className="space-y-2">
-        <SkeletonCard />
-        <SkeletonCard />
-        <SkeletonCard />
-      </div>
-    </div>
-  );
+  return <LoadingPage cards={3} />;
 }
