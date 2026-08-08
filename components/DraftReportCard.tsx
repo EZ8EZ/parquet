@@ -56,7 +56,7 @@ function StandoutRow({
         <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
           {g.playerName}
         </span>
-        <span className="block truncate text-[11px] leading-tight text-secondary">
+        <span className="block truncate text-meta leading-tight text-secondary">
           {meta.position ?? "-"}
           {meta.team ? ` · ${meta.team}` : ""}
           {meta.age != null ? ` · ${meta.age}y` : ""}
@@ -72,7 +72,7 @@ function StandoutRow({
             return pr ? pr.teamName || pr.displayName : rosterName(h, g.rosterId);
           })()}
         </span>
-        <span className="mt-0.5 block text-[11px] leading-snug text-muted">{detail}</span>
+        <span className="mt-0.5 block text-meta leading-snug text-muted">{detail}</span>
       </span>
       <ChevronRight size={13} className="mt-1 shrink-0 text-faint" aria-hidden="true" />
     </Link>
@@ -128,13 +128,13 @@ export function DraftReportCard({
         <Link
           href={`/drafts/${grade.season}`}
           aria-label={`Open the ${grade.season} draft board`}
-          className="-my-2 -mr-1 inline-flex min-h-11 items-center gap-0.5 px-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent-text"
+          className="-my-2 -mr-1 inline-flex min-h-11 items-center gap-0.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
         >
           board
           <ChevronRight size={13} aria-hidden="true" />
         </Link>
       </div>
-      <p className="mt-0.5 figure text-[11px] text-faint">
+      <p className="mt-0.5 figure text-meta text-faint">
         {grade.rounds} rd · {grade.teams} tm · {grade.gradedPicks} of {grade.totalPicks} picks graded
       </p>
 
@@ -148,7 +148,7 @@ export function DraftReportCard({
           </span>
         </span>
         {grade.regret < 0 && (
-          <span className="text-right text-[11px] leading-snug text-muted">
+          <span className="text-right text-meta leading-snug text-muted">
             {fmtValue(Math.abs(grade.regret))} pts
             <br />
             left on the board

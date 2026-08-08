@@ -99,7 +99,7 @@ export default async function RecapPage() {
               className={champion.isViewer ? "mt-0.5 shrink-0 text-accent-text" : "mt-0.5 shrink-0 text-faint"}
             />
             <div className="min-w-0 flex-1">
-              <div className="text-[11px] font-semibold uppercase tracking-[0.16em] text-secondary">
+              <div className="text-meta font-semibold uppercase tracking-[0.16em] text-secondary">
                 {season} champion
               </div>
               <div className="mt-0.5 font-display text-[19px] font-semibold leading-tight text-ink">
@@ -139,7 +139,7 @@ export default async function RecapPage() {
       <SectionHeader
         title={`${possessive} decisions that season`}
         action={
-          <span className="figure text-[11px] text-secondary">
+          <span className="figure text-meta text-secondary">
             {notableDecisions.length} of {decisions.length}
           </span>
         }
@@ -155,7 +155,7 @@ export default async function RecapPage() {
             {notableDecisions.map((d) => (
               <li key={d.transactionId} className="px-2.5 py-1.5">
                 <div className="flex items-baseline gap-2">
-                  <span className="w-9 shrink-0 figure text-[11px] text-secondary">
+                  <span className="w-9 shrink-0 figure text-meta text-secondary">
                     wk {d.week}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">
@@ -184,7 +184,7 @@ export default async function RecapPage() {
             {routineDecisions.map((d) => (
               <li key={d.transactionId} className="px-2.5 py-1.5">
                 <div className="flex items-baseline gap-2">
-                  <span className="w-9 shrink-0 figure text-[11px] text-secondary">
+                  <span className="w-9 shrink-0 figure text-meta text-secondary">
                     wk {d.week}
                   </span>
                   <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">
@@ -200,7 +200,7 @@ export default async function RecapPage() {
       <SectionHeader
         title="Traded picks that became players"
         action={
-          <span className="figure text-[11px] text-secondary">
+          <span className="figure text-meta text-secondary">
             {picksResolved.length}
           </span>
         }
@@ -222,7 +222,7 @@ export default async function RecapPage() {
                 <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
                   {p.playerName}
                 </span>
-                <span className="block truncate text-[11px] leading-tight text-secondary">
+                <span className="block truncate text-meta leading-tight text-secondary">
                   {p.label}
                   {p.position ? ` · ${p.position}` : ""}
                   {" · "}
@@ -240,7 +240,7 @@ export default async function RecapPage() {
         href="/awards"
         cta="all awards"
       />
-      <p className="-mt-1 mb-1.5 text-[11px] leading-snug text-muted">
+      <p className="-mt-1 mb-1.5 text-meta leading-snug text-muted">
         Career standings as of today, not wins from {season} specifically - Superlatives
         has no per-season snapshot.
       </p>
@@ -261,7 +261,7 @@ export default async function RecapPage() {
                 <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
                   {a.title}
                 </span>
-                <span className="block truncate text-[11px] leading-tight text-secondary">
+                <span className="block truncate text-meta leading-tight text-secondary">
                   {a.statLine}
                 </span>
               </span>
@@ -272,7 +272,7 @@ export default async function RecapPage() {
       )}
 
       <SectionHeader title="Where things stand today" />
-      <p className="-mt-1 mb-1.5 text-[11px] leading-snug text-muted">
+      <p className="-mt-1 mb-1.5 text-meta leading-snug text-muted">
         Present-day readings, not a {season} snapshot - this app has no historical
         roster data to recompute either index as of a past date.
       </p>
@@ -281,14 +281,14 @@ export default async function RecapPage() {
           href="/league"
           className="rounded-[--radius-sm] border border-border bg-surface p-3 transition-colors hover:bg-surface-2"
         >
-          <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-faint">
+          <div className="flex items-center gap-1.5 text-meta uppercase tracking-wide text-faint">
             <Activity size={12} aria-hidden="true" />
             timeline
           </div>
           <div className="mt-0.5 figure text-xl font-semibold text-ink">
             {timelineToday ? timelineToday.tci.toFixed(0) : "-"}
           </div>
-          <div className="mt-0.5 text-[11px] leading-snug text-muted">
+          <div className="mt-0.5 text-meta leading-snug text-muted">
             {timelineToday ? (
               <>
                 <Tag tone="accent" className="mb-1">
@@ -306,14 +306,14 @@ export default async function RecapPage() {
           href="/roster"
           className="rounded-[--radius-sm] border border-border bg-surface p-3 transition-colors hover:bg-surface-2"
         >
-          <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-faint">
+          <div className="flex items-center gap-1.5 text-meta uppercase tracking-wide text-faint">
             <ShieldQuestion size={12} aria-hidden="true" />
             fragility
           </div>
           <div className="mt-0.5 figure text-xl font-semibold text-ink">
             {fragilityToday ? fragilityToday.fragility.toFixed(0) : "-"}
           </div>
-          <div className="mt-0.5 text-[11px] leading-snug text-muted">
+          <div className="mt-0.5 text-meta leading-snug text-muted">
             {fragilityToday ? (
               // Posture-conditioned: brittle is an alarm on a roster playing for this
               // season and a plain description on one that has already sold (D23).

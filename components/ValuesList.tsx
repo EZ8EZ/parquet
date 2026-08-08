@@ -158,7 +158,7 @@ export function ValueAssetRow({
         className="flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left"
       >
         {rank != null && (
-          <span className="w-5 shrink-0 text-right figure text-[11px] text-secondary">
+          <span className="w-5 shrink-0 text-right figure text-meta text-secondary">
             {rank}
           </span>
         )}
@@ -169,12 +169,12 @@ export function ValueAssetRow({
               {name}
             </span>
             {injury && (
-              <span className="shrink-0 rounded bg-negative/15 px-1 text-[11px] font-semibold leading-tight text-negative">
+              <span className="shrink-0 rounded bg-negative/15 px-1 text-meta font-semibold leading-tight text-negative">
                 {injury}
               </span>
             )}
           </span>
-          <span className="mt-px block truncate figure text-[11px] text-secondary">
+          <span className="mt-px block truncate figure text-meta text-secondary">
             {position ?? "-"}
             {team ? ` · ${team}` : ""}
             {age != null ? ` · ${age}y` : ""}
@@ -199,7 +199,7 @@ export function ValueAssetRow({
             {fmtValue(value)}
           </span>
           {tier && (
-            <span className="block whitespace-nowrap text-[11px] leading-tight text-secondary">
+            <span className="block whitespace-nowrap text-meta leading-tight text-secondary">
               {tier}
             </span>
           )}
@@ -233,7 +233,7 @@ export function ValueAssetRow({
             )}
             {age != null && <Fact label="age" value={`${age}`} />}
           </dl>
-          <p className="mt-1.5 text-[11px] leading-snug text-secondary">
+          <p className="mt-1.5 text-meta leading-snug text-secondary">
             Value is built from consensus rank, then bent by age, injury, role and
             position.{" "}
             <Link
@@ -254,7 +254,7 @@ export function ValueAssetRow({
               ) : (
                 <Link
                   href={playerLineageHref(playerId)}
-                  className="mt-2 flex min-h-11 items-center justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 text-[11px] font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
+                  className="mt-2 flex min-h-11 items-center justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 text-meta font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
                 >
                   Where he came from
                   <ChevronRight size={13} aria-hidden="true" />
@@ -272,10 +272,10 @@ export function ValueAssetRow({
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <dt className="truncate text-[11px] uppercase tracking-wide text-secondary">
+      <dt className="truncate text-meta uppercase tracking-wide text-secondary">
         {label}
       </dt>
-      <dd className="truncate figure text-[11px] font-semibold text-ink">
+      <dd className="truncate figure text-meta font-semibold text-ink">
         {value}
       </dd>
     </div>
@@ -392,7 +392,7 @@ export function ValuesList({ rows }: { rows: ValueRow[] }) {
               )}
             >
               {f}
-              <span className="figure text-[11px] opacity-60">
+              <span className="figure text-meta opacity-60">
                 {counts[f] ?? 0}
               </span>
             </button>
@@ -403,12 +403,12 @@ export function ValuesList({ rows }: { rows: ValueRow[] }) {
       {/* Count and sort share a line: always visible, unlike a control parked at
           the end of the horizontally scrolling filter row. */}
       <div className="flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate figure text-[11px] text-secondary">
+        <p className="min-w-0 truncate figure text-meta text-secondary">
           {filtered.length} match{filtered.length === 1 ? "" : "es"} ·{" "}
           {Math.min(limit, filtered.length)} shown
         </p>
         <div className="flex shrink-0 items-center gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-secondary">sort</span>
+          <span className="text-meta uppercase tracking-wide text-secondary">sort</span>
           {(["value", "age"] as Sort[]).map((s) => (
             <button
               key={s}
@@ -458,7 +458,7 @@ export function ValuesList({ rows }: { rows: ValueRow[] }) {
           className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full border border-border bg-surface text-sm font-semibold text-ink transition-colors hover:border-accent hover:text-accent-text"
         >
           Show {Math.min(PAGE, filtered.length - shown.length)} more
-          <span className="figure text-[11px] text-secondary">
+          <span className="figure text-meta text-secondary">
             of {filtered.length}
           </span>
         </button>

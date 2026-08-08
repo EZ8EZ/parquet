@@ -41,7 +41,7 @@ export function PlayerRow({
             </span>
           )}
         </div>
-        <div className="text-[11px] text-secondary">
+        <div className="text-meta text-secondary">
           {position ?? "-"}
           {team ? ` · ${team}` : ""}
           {age != null ? ` · ${age}y` : ""}

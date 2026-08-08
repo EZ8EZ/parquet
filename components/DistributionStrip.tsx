@@ -34,7 +34,6 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import {
   CHART_ACCENT,
-  CHART_FAINT,
   CHART_GRID,
   CHART_NEUTRAL,
   divergingFill,
@@ -44,7 +43,7 @@ import { ordinal } from "@/lib/derive/describe";
 import { cn } from "@/lib/ui";
 
 const W = 320;
-const H = 36;
+const H = 30;
 /** The rail the ticks stand on. */
 const BASE = 26;
 const PAD = 6;
@@ -117,7 +116,7 @@ export function DistributionStrip({
             <ChevronRight size={11} aria-hidden="true" className="shrink-0" />
           )}
         </span>
-        <span className="shrink-0 font-mono text-meta tnum">
+        <span className="shrink-0 figure text-meta">
           {mine != null && (
             <span className="font-semibold text-ink">{format(mine)}</span>
           )}
@@ -192,20 +191,20 @@ export function DistributionStrip({
             />
           </g>
         )}
-        <text x={PAD} y={H - 1} fontSize="8" fill={CHART_FAINT} className="font-mono">
-          {format(lo)}
-        </text>
-        <text
-          x={W - PAD}
-          y={H - 1}
-          fontSize="8"
-          textAnchor="end"
-          fill={CHART_FAINT}
-          className="font-mono"
-        >
-          {format(hi)}
-        </text>
       </svg>
+      {/*
+       * THE RANGE IS HTML, NOT SVG TEXT, and that is not a style preference.
+       * This viewBox is 320 units wide and the layout caps the column at 672px, so
+       * everything inside the drawing renders at up to 2x - an 8px SVG label lands
+       * at 16px on a wide phone in landscape, larger than the body type it is
+       * supposed to sit under. Geometry should scale with the chart; a caption
+       * should stay on the type scale. So the ticks stay in the SVG and the two
+       * numbers came out of it.
+       */}
+      <div className="-mt-0.5 flex items-baseline justify-between gap-2 font-mono text-micro tnum text-secondary">
+        <span>{format(lo)}</span>
+        <span>{format(hi)}</span>
+      </div>
       {sub && <p className="-mt-0.5 text-meta leading-snug text-secondary">{sub}</p>}
     </>
   );

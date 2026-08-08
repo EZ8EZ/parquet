@@ -84,8 +84,17 @@ export const DIVERGING: { low: ChartHue; high: ChartHue } = {
   high: { fill: "#4d9221", text: CHART_INK, name: "green" },
 };
 
-/** The five-step single-hue magnitude ramp, weakest first. */
-export const MAGNITUDE_STEPS = [0.18, 0.34, 0.54, 0.76, 1] as const;
+/**
+ * The five-step single-hue magnitude ramp, weakest first.
+ *
+ * The floor is 0.3, not 0. A ramp that starts near zero renders its bottom step as
+ * an almost-invisible mark, which is wrong twice over: the low end of a distribution
+ * is a real observation, not an absence, and the high-contrast theme exists
+ * specifically to stop this app from asking anyone to squint. Five steps between
+ * 0.3 and 1 are still plainly ordered; five between 0.1 and 1 are ordered and one of
+ * them is a ghost.
+ */
+export const MAGNITUDE_STEPS = [0.3, 0.45, 0.6, 0.8, 1] as const;
 
 /**
  * Strength for a magnitude mark, given where it sits in its own range.
