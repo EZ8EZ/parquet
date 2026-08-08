@@ -7,6 +7,7 @@ import { PageHeader } from "@/components/ui";
 import { TeamPicker, type TeamOption } from "@/components/TeamPicker";
 import { NEXT_PARAM, safeNextPath } from "@/lib/auth/entry";
 import { readLensRosterId } from "@/lib/auth/server";
+import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
 
@@ -74,15 +75,16 @@ export default async function TeamsPage({
       />
       {/* This page is where a leaguemate first meets the "viewing as" idea, so it is
           also the natural doorway to the page that explains the rest of the app. */}
-      <p className="mt-4 text-center text-meta leading-relaxed text-faint">
+      <p className="mt-4 text-center text-meta leading-relaxed text-secondary">
         New to Parquet?{" "}
         <Link
           href="/about"
-          className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-2 hover:text-accent hover:underline"
+          className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-2 hover:text-accent-text hover:underline"
         >
           What this is, and what the numbers mean
         </Link>
       </p>
+      <Onward from="/teams" />
     </div>
   );
 }

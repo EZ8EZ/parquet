@@ -22,6 +22,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    /*
+     * Agent scratch space. `.claude/worktrees/` holds whole checkouts of this repo,
+     * which eslint will happily walk - it does not read .gitignore in flat config, so
+     * `pnpm lint` was reporting 6,603 problems in copies of files that are not the
+     * ones being linted. Nothing under here is source.
+     */
+    ".claude/**",
   ]),
 ]);
 

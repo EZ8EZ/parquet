@@ -25,14 +25,33 @@
  * of pixels are non-opaque on every player checked). Browsers sniff image bytes
  * rather than trust the extension or header, so this already renders as a
  * transparent cutout with NO extra work. The `background` below is not a fallback
- * hack for that — it's the intentional backdrop the cutout sits on, in the same team
- * colors as the monogram, so a floating head never looks accidental on any of the
- * three themes and there's no risk of a dark hairline vanishing against a dark page.
+ * hack for that — it's the intentional backdrop the cutout sits on, so a floating
+ * head never looks accidental on any of the three themes and there's no risk of a
+ * dark hairline vanishing against a dark page.
+ *
+ * WHY THE TEAM COLOURS ARE NOT THE BACKGROUND ANY MORE.
+ *
+ * This used to paint the whole disc in a full-saturation two-stop team gradient —
+ * about 30 of them, most at chroma well above anything else in the palette. On
+ * /values that made ~40 avatars the loudest objects on the page, louder than the
+ * accent, which is supposed to be the only saturated thing in this app. And they
+ * encoded nothing: the team abbreviation is already printed as text three characters
+ * to the right of the disc, so the colour was a second, less legible copy of a datum
+ * the reader already had.
+ *
+ * Now: the disc is --color-elevated, the monogram is real ink on it, and the team hue
+ * survives as a 2px left edge — present if you know to look for it, never competing
+ * with the row's actual content. Themed surface means it re-colours with the theme
+ * for free instead of being three hard-coded near-blacks.
  */
 import { useState } from "react";
 import { cn } from "@/lib/ui";
 
-/** A handful of NBA team [primary, secondary] colors; extend as needed. */
+/**
+ * NBA team primary colours. Used ONLY for the 2px identity edge now — never as a
+ * fill — so the saturation that made these unusable as a background is harmless here:
+ * a 2px sliver has no area to shout with.
+ */
 const TEAM_COLORS: Record<string, [string, string]> = {
   BOS: ["#007A33", "#0b3d1f"], LAL: ["#552583", "#FDB927"], GSW: ["#1D428A", "#FFC72C"],
   MIL: ["#00471B", "#EEE1C6"], DEN: ["#0E2240", "#FEC524"], PHI: ["#006BB6", "#ED174C"],
@@ -51,10 +70,12 @@ function hashHue(s: string): number {
   for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) % 360;
   return h;
 }
-function colorsFor(team: string | null, name: string): [string, string] {
-  if (team && TEAM_COLORS[team]) return TEAM_COLORS[team];
-  const hue = hashHue(name);
-  return [`hsl(${hue} 45% 32%)`, `hsl(${(hue + 40) % 360} 45% 22%)`];
+/** The one team-derived colour left in this component: the 2px identity edge. */
+function edgeFor(team: string | null, name: string): string {
+  if (team && TEAM_COLORS[team]) return TEAM_COLORS[team][0];
+  // No team on file. A hashed hue is still stable per player and still not load-
+  // bearing; it can sit at moderate chroma because it is two pixels wide.
+  return `hsl(${hashHue(name)} 45% 45%)`;
 }
 function initials(name: string): string {
   const parts = name.trim().split(/\s+/);
@@ -79,7 +100,17 @@ export function PlayerAvatar({
 }) {
   const [failed, setFailed] = useState(false);
   const px = SIZES[size];
-  const [c1, c2] = colorsFor(team ?? null, name);
+  const edge = edgeFor(team ?? null, name);
+  // The disc is a themed surface, never a team colour. The team is a 2px stripe at the
+  // far left, painted as a gradient stop rather than a `border-left` on purpose: a
+  // border on a `rounded-full` box is drawn as an ARC, which reads as a coloured ring
+  // and is exactly the loud thing this change is removing. A gradient stop is a
+  // straight edge that the circle then clips to a sliver.
+  const disc = {
+    width: px,
+    height: px,
+    background: `linear-gradient(90deg, ${edge} 0 2px, var(--color-elevated) 2px)`,
+  };
   // Defaults to OFF (D39). NEXT_PUBLIC_* is inlined at BUILD time, so this deploy's
   // own env needs NEXT_PUBLIC_USE_PLAYER_PHOTOS=true set explicitly — the unset case
   // now means "forked or configured without thinking about licensing," which must
@@ -100,8 +131,8 @@ export function PlayerAvatar({
         height={px}
         decoding="async"
         onError={() => setFailed(true)}
-        className={cn("shrink-0 rounded-full object-cover object-top ring-1 ring-ink/10", className)}
-        style={{ width: px, height: px, background: `linear-gradient(135deg, ${c1}, ${c2})` }}
+        className={cn("shrink-0 rounded-full object-cover object-top ring-1 ring-border-strong", className)}
+        style={disc}
       />
     );
   }
@@ -111,15 +142,12 @@ export function PlayerAvatar({
     <span
       aria-hidden="true"
       className={cn(
-        "inline-flex shrink-0 items-center justify-center rounded-full font-mono font-semibold text-white/90 ring-1 ring-ink/10",
+        // Monogram, not a code: it is a person's initials, so it takes the sans like
+        // every other name in the app rather than the identifier face.
+        "inline-flex shrink-0 items-center justify-center rounded-full font-semibold text-ink ring-1 ring-border-strong",
         className,
       )}
-      style={{
-        width: px,
-        height: px,
-        fontSize,
-        background: `linear-gradient(135deg, ${c1}, ${c2})`,
-      }}
+      style={{ ...disc, fontSize }}
     >
       {initials(name)}
     </span>

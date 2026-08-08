@@ -133,7 +133,7 @@ export function ProvenanceRail({ chain, showTitle, className }: ProvenanceRailPr
   return (
     <div className={className}>
       {showTitle && (
-        <p className="mb-1 text-meta font-semibold uppercase tracking-[0.16em] text-accent">
+        <p className="mb-1 text-meta font-semibold uppercase tracking-[0.16em] text-accent-text">
           {chain.kind === "pick" ? "Pick provenance" : "Provenance"}
         </p>
       )}
@@ -219,7 +219,7 @@ export function ProvenanceRail({ chain, showTitle, className }: ProvenanceRailPr
             className="min-w-0 -mt-1.5"
           >
             {i > 0 && times[i] > times[i - 1] && (
-              <p className="font-mono text-micro leading-normal tnum text-faint">
+              <p className="figure text-micro leading-normal text-faint">
                 {formatGap(times[i] - times[i - 1])} later
               </p>
             )}
@@ -241,7 +241,7 @@ function NodeBody({
   if (node.node === "resolution") return <ResolutionBody r={node} />;
   return (
     <div>
-      <p className="text-body font-semibold leading-snug text-accent">Today</p>
+      <p className="text-body font-semibold leading-snug text-accent-text">Today</p>
       <p className="text-meta leading-snug text-muted">{node.text}</p>
     </div>
   );
@@ -251,7 +251,7 @@ function OriginBody({ o }: { o: ProvenanceOrigin }) {
   return (
     <div>
       <p className="text-body font-semibold leading-snug text-ink">{o.text}</p>
-      <p className="font-mono text-micro leading-normal tnum text-faint">
+      <p className="figure text-micro leading-normal text-faint">
         {o.dated ? <LocalDate ts={o.at} /> : "on or before the record opens"}
       </p>
     </div>
@@ -267,7 +267,7 @@ function HopBody({ h }: { h: ProvenanceHop }) {
         aria-label={`Traded to ${h.toName} in ${h.season}. Open the deal.`}
       >
         <span className="min-w-0">
-          <span className="block truncate text-body font-semibold leading-snug text-ink group-hover:text-accent">
+          <span className="block truncate text-body font-semibold leading-snug text-ink group-hover:text-accent-text">
             Traded to {h.toName}
           </span>
           <span className="block truncate text-meta leading-snug text-muted">
@@ -277,10 +277,10 @@ function HopBody({ h }: { h: ProvenanceHop }) {
         <ChevronRight
           size={13}
           aria-hidden="true"
-          className="mt-0.5 shrink-0 text-faint group-hover:text-accent"
+          className="mt-0.5 shrink-0 text-faint group-hover:text-accent-text"
         />
       </Link>
-      <p className="font-mono text-micro leading-normal tnum text-faint">
+      <p className="figure text-micro leading-normal text-faint">
         <LocalDate ts={h.at} /> · {h.season} wk {h.week}
         {h.inferred && <span className="ml-1 text-warn">pick inferred</span>}
       </p>
@@ -316,7 +316,7 @@ function ResolutionBody({ r }: { r: ProvenanceResolution }) {
           className="mt-0.5 shrink-0 text-faint group-hover:text-info"
         />
       </Link>
-      <p className="font-mono text-micro leading-normal tnum text-faint">
+      <p className="figure text-micro leading-normal text-faint">
         {r.dated ? <LocalDate ts={r.at} /> : `${r.season} draft`}
       </p>
     </div>

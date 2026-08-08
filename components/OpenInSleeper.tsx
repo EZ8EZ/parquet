@@ -30,7 +30,7 @@ export function OpenInSleeper({
   if (!href) return null;
 
   // External navigation to a third-party app: always noopener/noreferrer.
-  const common = "text-muted transition-colors hover:text-accent";
+  const common = "text-muted transition-colors hover:text-accent-text";
 
   if (variant === "icon") {
     return (

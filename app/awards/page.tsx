@@ -7,6 +7,7 @@ import { TeamAvatar } from "@/components/TeamAvatar";
 import { AwardBadge, GROUP_TONE, iconForAward, type BadgeTone } from "@/components/AwardBadge";
 import type { LeagueUser } from "@/lib/providers/types";
 import { cn } from "@/lib/ui";
+import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
 
@@ -94,7 +95,7 @@ function AwardSubtitle({ text }: { text: string }) {
     <details className="group mt-0.5">
       <summary className="cursor-pointer list-none py-1 text-meta leading-snug text-muted">
         {head}{" "}
-        <span className="whitespace-nowrap font-semibold text-accent">
+        <span className="whitespace-nowrap font-semibold text-accent-text">
           more
           <ChevronRight
             size={11}
@@ -130,7 +131,7 @@ function AwardCard({
     <article
       className={cn(
         "rounded-[--radius] border p-2.5",
-        isMe ? "border-accent/40 bg-accent/[0.06]" : "border-border bg-surface/70",
+        isMe ? "border-accent-edge bg-accent-wash" : "border-border bg-surface",
       )}
     >
       {/* Title and the winning number share a line: the figure is the headline. */}
@@ -138,7 +139,7 @@ function AwardCard({
         <h3 className="min-w-0 flex-1 font-display text-lede font-semibold leading-tight text-ink">
           {award.title}
         </h3>
-        <span className="shrink-0 font-mono text-note font-semibold tnum text-accent">
+        <span className="shrink-0 figure text-note font-semibold text-accent-text">
           {award.statLine}
         </span>
       </div>
@@ -150,7 +151,7 @@ function AwardCard({
         className={cn(
           "mt-1.5 flex min-h-11 items-center gap-2 rounded-[--radius-sm] border px-2 py-1.5 transition-colors",
           isMe
-            ? "border-accent/40 bg-accent/[0.07] hover:bg-accent/[0.11]"
+            ? "border-accent-edge bg-accent-wash hover:border-accent"
             : "border-border-strong bg-surface-2 hover:bg-elevated",
         )}
       >
@@ -172,7 +173,7 @@ function AwardCard({
             ) : w.isFormer ? (
               <Tag>former{w.tenureLabel ? ` ${w.tenureLabel}` : ""}</Tag>
             ) : (
-              <span className="min-w-0 shrink truncate text-meta text-faint">
+              <span className="min-w-0 shrink truncate text-meta text-secondary">
                 {w.displayName}
               </span>
             )}
@@ -186,7 +187,7 @@ function AwardCard({
       {w.partnerRosterId != null && (
         <Link
           href={`/managers/${w.partnerRosterId}`}
-          className="-my-1 flex min-h-11 items-center gap-1 px-2 text-meta font-semibold text-accent"
+          className="-my-1 flex min-h-11 items-center gap-1 px-2 text-meta font-semibold text-accent-text"
         >
           also see {w.partnerLabel}
           <ChevronRight size={12} aria-hidden="true" />
@@ -240,12 +241,12 @@ function RunnerUpRow({
       ariaLabel={`${place}: ${entrant.label}, ${entrant.stat}`}
       className={cn(
         "flex min-h-11 items-center gap-2 rounded-[--radius-sm] px-1.5 transition-colors",
-        isMe ? "bg-accent/[0.05]" : "hover:bg-surface-2",
+        isMe ? "bg-accent-wash" : "hover:bg-surface-2",
       )}
     >
       <span
         aria-hidden="true"
-        className="w-3 shrink-0 font-mono text-meta tnum text-faint"
+        className="w-3 shrink-0 figure text-meta text-faint"
       >
         {place.replace(/\D/g, "")}
       </span>
@@ -260,7 +261,7 @@ function RunnerUpRow({
       <span
         className={cn(
           "min-w-0 flex-1 truncate text-note",
-          isMe ? "font-semibold text-accent" : "text-muted",
+          isMe ? "font-semibold text-accent-text" : "text-muted",
         )}
       >
         {entrant.label}
@@ -275,7 +276,7 @@ function RunnerUpRow({
           crushed the team name beside it to a single character ("6...", "5..."),
           and still pushed the page 79px past the viewport on every iPhone. The
           name is what this page is FOR, so the stat yields first. */}
-      <span className="min-w-0 shrink truncate font-mono text-meta tnum text-faint">
+      <span className="min-w-0 shrink truncate figure text-meta text-secondary">
         {entrant.stat}
       </span>
     </EntrantLink>
@@ -312,12 +313,12 @@ export default async function AwardsPage() {
     <div>
       <header className="mb-2">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
             League awards
           </p>
           <Link
             href="/league"
-            className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
+            className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
           >
             the league
             <ChevronRight size={12} aria-hidden="true" />
@@ -343,7 +344,7 @@ export default async function AwardsPage() {
       ) : (
         <>
           {/* Figures inline, hairline-separated: three cards cost 90px for four numbers. */}
-          <div className="flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface/60">
+          <div className="flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface">
             {[
               { v: awards.length, l: "awards", t: undefined as string | undefined },
               {
@@ -366,13 +367,13 @@ export default async function AwardsPage() {
               <div key={s.l} className="flex-1 px-1 py-1.5 text-center">
                 <div
                   className={cn(
-                    "font-mono text-lede font-semibold leading-tight tnum",
-                    i === 0 ? "text-accent" : "text-ink",
+                    "figure text-lede font-semibold leading-tight",
+                    i === 0 ? "text-accent-text" : "text-ink",
                   )}
                 >
                   {s.v}
                 </div>
-                <div className="text-meta uppercase tracking-wide text-faint">
+                <div className="text-meta uppercase tracking-wide text-secondary">
                   {s.t ? (
                     <abbr
                       title={s.t}
@@ -394,10 +395,10 @@ export default async function AwardsPage() {
               <a
                 key={g.id}
                 href={`#${g.id}`}
-                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface/60 px-2.5 text-note font-medium text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 text-note font-medium text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
               >
                 {g.label}
-                <span className="font-mono text-meta tnum text-faint">
+                <span className="figure text-meta text-secondary">
                   {g.items.length}
                 </span>
               </a>
@@ -405,7 +406,7 @@ export default async function AwardsPage() {
           </nav>
 
           {mine.length > 0 && (
-            <p className="mt-2 rounded-[--radius] border border-accent/30 bg-accent/[0.06] px-2.5 py-1.5 text-meta leading-snug text-muted">
+            <p className="mt-2 rounded-[--radius] border border-accent-edge bg-accent-wash px-2.5 py-1.5 text-meta leading-snug text-muted">
               <span className="font-semibold text-ink">Your mantel:</span>{" "}
               {mine.map((a) => a.title).join(", ")}.
             </p>
@@ -456,6 +457,7 @@ export default async function AwardsPage() {
           </Disclosure>
         </>
       )}
+      <Onward from="/awards" />
     </div>
   );
 }

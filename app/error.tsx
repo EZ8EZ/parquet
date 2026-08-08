@@ -49,11 +49,11 @@ export default function Error({
           Try again
         </button>
       </div>
-      <p className="mt-4 text-center text-meta leading-relaxed text-faint">
+      <p className="mt-4 text-center text-meta leading-relaxed text-secondary">
         Still stuck?{" "}
         <Link
           href="/"
-          className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-2 hover:text-accent hover:underline"
+          className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-2 hover:text-accent-text hover:underline"
         >
           Back to Home
         </Link>

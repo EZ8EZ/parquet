@@ -6,6 +6,7 @@ import { analyzeRoster, leagueValueRanking } from "@/lib/roster";
 import { leagueTimelines } from "@/lib/metrics/duration";
 import { PageHeader, SectionHeader, Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
+import { Onward } from "@/components/Onward";
 import {
   TradeBuilder,
   type PickOption,
@@ -48,6 +49,7 @@ export default async function TradePage() {
         age: v.age,
         value: v.value,
         owner: r.teamName ?? r.ownerName,
+        ownerRosterId: r.rosterId,
       })),
     )
     .sort((a, b) => b.value - a.value);
@@ -57,6 +59,7 @@ export default async function TradePage() {
   const toPickOption = (
     p: (typeof ranking)[number]["picks"]["picks"][number],
     owner?: string,
+    ownerRosterId?: number,
   ): PickOption => ({
     id: `${p.season}-${p.round}-${p.originalRoster}`,
     season: p.season,
@@ -65,10 +68,13 @@ export default async function TradePage() {
     label: p.label,
     value: p.value,
     owner,
+    ownerRosterId,
   });
   const myPicks: PickOption[] = (mine?.picks.picks ?? []).map((p) => toPickOption(p));
   const otherPicks: PickOption[] = others
-    .flatMap((r) => r.picks.picks.map((p) => toPickOption(p, r.teamName ?? r.ownerName)))
+    .flatMap((r) =>
+      r.picks.picks.map((p) => toPickOption(p, r.teamName ?? r.ownerName, r.rosterId)),
+    )
     .sort((a, b) => b.value - a.value);
 
   // The most motivated partners on the board: lowest timeline coherence. A
@@ -91,7 +97,7 @@ export default async function TradePage() {
       <nav aria-label="Trade tools" className="mb-2 flex gap-1.5">
         <Link
           href="/trade/finder"
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
         >
           Find a trade for me
           <ChevronRight size={13} aria-hidden="true" />
@@ -134,7 +140,7 @@ export default async function TradePage() {
                 <li key={t.rosterId}>
                   <Link
                     href={`/managers/${t.rosterId}`}
-                    className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
+                    className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
                   >
                     <TeamAvatar
                       name={t.teamName ?? t.ownerName}
@@ -146,7 +152,7 @@ export default async function TradePage() {
                       <span className="block truncate text-body font-semibold leading-tight text-ink">
                         {t.teamName ?? t.ownerName}
                       </span>
-                      <span className="block truncate font-mono text-meta tnum leading-tight text-faint">
+                      <span className="block truncate figure text-meta leading-tight text-secondary">
                         TCI {t.tci} · value ~{t.rosterDuration.toFixed(1)}s out ·{" "}
                         {Math.round(t.nowShare * 100)}% now /{" "}
                         {Math.round(t.laterShare * 100)}% later
@@ -163,7 +169,7 @@ export default async function TradePage() {
               );
             })}
           </ul>
-          <p className="mt-1.5 text-meta leading-snug text-faint">
+          <p className="mt-1.5 text-meta leading-snug text-secondary">
             The lowest-coherence rosters in the league. Their assets disagree about
             when they win, and either fix - consolidating young or cashing out old -
             runs through a trade. Read the dossier before you call.
@@ -171,21 +177,7 @@ export default async function TradePage() {
         </>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {[
-          { href: "/plan", label: "What should I even offer?" },
-          { href: "/values", label: "Asset values" },
-          { href: "/drafts", label: "Pick lineage" },
-        ].map((a) => (
-          <Link
-            key={a.href}
-            href={a.href}
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
-          >
-            {a.label}
-          </Link>
-        ))}
-      </div>
+      <Onward from="/trade" />
     </div>
   );
 }

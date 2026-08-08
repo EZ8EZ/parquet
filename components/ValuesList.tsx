@@ -146,7 +146,7 @@ export function ValueAssetRow({
         "overflow-hidden rounded-[--radius-sm] border transition-colors duration-700",
         open
           ? "border-border-strong bg-surface-2"
-          : "border-border bg-surface/60 hover:border-border-strong",
+          : "border-border bg-surface hover:border-border-strong",
         justArrived && "ring-2 ring-accent",
       )}
     >
@@ -158,7 +158,7 @@ export function ValueAssetRow({
         className="flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left"
       >
         {rank != null && (
-          <span className="w-5 shrink-0 text-right font-mono text-[11px] tnum text-faint">
+          <span className="w-5 shrink-0 text-right figure text-meta text-secondary">
             {rank}
           </span>
         )}
@@ -169,12 +169,12 @@ export function ValueAssetRow({
               {name}
             </span>
             {injury && (
-              <span className="shrink-0 rounded bg-negative/15 px-1 text-[11px] font-semibold leading-tight text-negative">
+              <span className="shrink-0 rounded bg-negative/15 px-1 text-meta font-semibold leading-tight text-negative">
                 {injury}
               </span>
             )}
           </span>
-          <span className="mt-px block truncate font-mono text-[11px] tnum text-faint">
+          <span className="mt-px block truncate figure text-meta text-secondary">
             {position ?? "-"}
             {team ? ` · ${team}` : ""}
             {age != null ? ` · ${age}y` : ""}
@@ -183,7 +183,7 @@ export function ValueAssetRow({
           {share != null && (
             <span className="mt-1 block h-[3px] w-full overflow-hidden rounded-full bg-elevated">
               <span
-                className="block h-full rounded-full bg-accent/70"
+                className="block h-full rounded-full bg-accent-strong"
                 style={{ width: `${Math.max(2, Math.round(share * 100))}%` }}
               />
             </span>
@@ -195,11 +195,11 @@ export function ValueAssetRow({
           </span>
         )}
         <span className="shrink-0 text-right">
-          <span className="block font-mono text-[13px] font-semibold leading-tight tnum text-ink">
+          <span className="block figure text-[13px] font-semibold leading-tight text-ink">
             {fmtValue(value)}
           </span>
           {tier && (
-            <span className="block whitespace-nowrap text-[11px] leading-tight text-faint">
+            <span className="block whitespace-nowrap text-meta leading-tight text-secondary">
               {tier}
             </span>
           )}
@@ -209,7 +209,7 @@ export function ValueAssetRow({
           aria-hidden="true"
           className={cn(
             "shrink-0 text-faint transition-transform",
-            open && "rotate-180 text-accent",
+            open && "rotate-180 text-accent-text",
           )}
         />
       </button>
@@ -233,12 +233,12 @@ export function ValueAssetRow({
             )}
             {age != null && <Fact label="age" value={`${age}`} />}
           </dl>
-          <p className="mt-1.5 text-[11px] leading-snug text-faint">
+          <p className="mt-1.5 text-meta leading-snug text-secondary">
             Value is built from consensus rank, then bent by age, injury, role and
             position.{" "}
             <Link
               href="/methodology"
-              className="font-semibold text-accent underline-offset-2 hover:underline"
+              className="font-semibold text-accent-text underline-offset-2 hover:underline"
             >
               How this is built
             </Link>
@@ -254,7 +254,7 @@ export function ValueAssetRow({
               ) : (
                 <Link
                   href={playerLineageHref(playerId)}
-                  className="mt-2 flex min-h-11 items-center justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 text-[11px] font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+                  className="mt-2 flex min-h-11 items-center justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 text-meta font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
                 >
                   Where he came from
                   <ChevronRight size={13} aria-hidden="true" />
@@ -272,10 +272,10 @@ export function ValueAssetRow({
 function Fact({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <dt className="truncate text-[11px] uppercase tracking-wide text-faint">
+      <dt className="truncate text-meta uppercase tracking-wide text-secondary">
         {label}
       </dt>
-      <dd className="truncate font-mono text-[11px] font-semibold tnum text-ink">
+      <dd className="truncate figure text-meta font-semibold text-ink">
         {value}
       </dd>
     </div>
@@ -375,7 +375,7 @@ export function ValuesList({ rows }: { rows: ValueRow[] }) {
             onChange={(e) => reset(() => setQ(e.target.value))}
             placeholder={`Search ${rows.length} valued players`}
             aria-label="Search players"
-            className="h-11 w-full rounded-full border border-border bg-surface pl-9 pr-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+            className="h-11 w-full rounded-full border border-border bg-surface pl-9 pr-3 text-sm text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
           />
         </div>
         <div className="scroll-x mt-1.5 flex items-center gap-1.5">
@@ -387,12 +387,12 @@ export function ValuesList({ rows }: { rows: ValueRow[] }) {
               className={cn(
                 "flex shrink-0 items-center gap-1 rounded-full border px-2.5 text-xs font-medium transition-colors",
                 pos === f
-                  ? "border-accent bg-accent/15 text-accent"
+                  ? "border-accent bg-accent-wash text-accent-text"
                   : "border-border text-muted hover:border-border-strong",
               )}
             >
               {f}
-              <span className="font-mono text-[11px] tnum opacity-60">
+              <span className="figure text-meta opacity-60">
                 {counts[f] ?? 0}
               </span>
             </button>
@@ -403,12 +403,12 @@ export function ValuesList({ rows }: { rows: ValueRow[] }) {
       {/* Count and sort share a line: always visible, unlike a control parked at
           the end of the horizontally scrolling filter row. */}
       <div className="flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate font-mono text-[11px] tnum text-faint">
+        <p className="min-w-0 truncate figure text-meta text-secondary">
           {filtered.length} match{filtered.length === 1 ? "" : "es"} ·{" "}
           {Math.min(limit, filtered.length)} shown
         </p>
         <div className="flex shrink-0 items-center gap-1">
-          <span className="text-[11px] uppercase tracking-wide text-faint">sort</span>
+          <span className="text-meta uppercase tracking-wide text-secondary">sort</span>
           {(["value", "age"] as Sort[]).map((s) => (
             <button
               key={s}
@@ -417,7 +417,7 @@ export function ValuesList({ rows }: { rows: ValueRow[] }) {
               className={cn(
                 "rounded-full border px-2.5 text-xs font-medium transition-colors",
                 sort === s
-                  ? "border-accent bg-accent/15 text-accent"
+                  ? "border-accent bg-accent-wash text-accent-text"
                   : "border-border text-muted hover:border-border-strong",
               )}
             >
@@ -455,10 +455,10 @@ export function ValuesList({ rows }: { rows: ValueRow[] }) {
       {filtered.length > shown.length && (
         <button
           onClick={() => setLimit((l) => l + PAGE)}
-          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full border border-border bg-surface/60 text-sm font-semibold text-ink transition-colors hover:border-accent hover:text-accent"
+          className="mt-2 flex w-full items-center justify-center gap-1.5 rounded-full border border-border bg-surface text-sm font-semibold text-ink transition-colors hover:border-accent hover:text-accent-text"
         >
           Show {Math.min(PAGE, filtered.length - shown.length)} more
-          <span className="font-mono text-[11px] tnum text-faint">
+          <span className="figure text-meta text-secondary">
             of {filtered.length}
           </span>
         </button>

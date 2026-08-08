@@ -13,6 +13,7 @@ import Link from "next/link";
 import { ArrowLeft, ChevronRight, Lock } from "lucide-react";
 import { PageHeader, SectionHeader } from "@/components/ui";
 import { ThemeToggle } from "@/components/ThemeToggle";
+import { Onward } from "@/components/Onward";
 
 export const metadata = {
   title: "Settings - Parquet",
@@ -23,7 +24,7 @@ export default function SettingsPage() {
     <div>
       <Link
         href="/"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
+        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
       >
         <ArrowLeft size={13} aria-hidden="true" />
         Home
@@ -41,13 +42,13 @@ export default function SettingsPage() {
       <SectionHeader title="Where you are" />
       <Link
         href="/teams"
-        className="flex min-h-11 items-center gap-2.5 rounded-[--radius] border border-border bg-surface/60 px-3 py-2.5 transition-colors hover:border-border-strong hover:bg-surface-2"
+        className="flex min-h-11 items-center gap-2.5 rounded-[--radius] border border-border bg-surface px-3 py-2.5 transition-colors hover:border-border-strong hover:bg-surface-2"
       >
         <span className="min-w-0 flex-1">
           <span className="block text-body font-semibold leading-tight text-ink">
             Switch team
           </span>
-          <span className="block text-meta leading-tight text-faint">
+          <span className="block text-meta leading-tight text-secondary">
             Run the whole app as a different manager
           </span>
         </span>
@@ -61,6 +62,7 @@ export default function SettingsPage() {
           anywhere, and it is not part of the league data this app reads.
         </span>
       </p>
+      <Onward from="/settings" />
     </div>
   );
 }

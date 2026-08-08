@@ -28,6 +28,7 @@ import { cn, fmtValue, fold } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTradeUrl } from "@/lib/sleeperLinks";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { ManagerRail } from "@/components/ManagerRail";
 
 export interface PlayerOption {
   id: string;
@@ -37,6 +38,9 @@ export interface PlayerOption {
   age: number | null;
   value: number;
   owner?: string;
+  /** Whose roster it is on today. What makes the counterparty of a package
+   *  identifiable, and therefore linkable - see `counterpartyOf` below. */
+  ownerRosterId?: number;
 }
 
 /**
@@ -53,6 +57,8 @@ export interface PickOption {
   value: number;
   /** Current owner's team name (for the other side's picker). */
   owner?: string;
+  /** Whose roster holds it today. See PlayerOption.ownerRosterId. */
+  ownerRosterId?: number;
 }
 
 interface ModalItem {
@@ -125,9 +131,9 @@ function PickerModal({
           onChange={(e) => setQ(e.target.value)}
           placeholder={searchLabel}
           aria-label={searchLabel}
-          className="mb-2 h-11 w-full rounded-full border border-border bg-surface px-4 text-body leading-relaxed text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+          className="mb-2 h-11 w-full rounded-full border border-border bg-surface px-4 text-body leading-relaxed text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
         />
-        <p className="mb-1 font-mono text-meta tnum text-faint">
+        <p className="mb-1 figure text-meta text-secondary">
           {filtered.length} shown · esc to close
         </p>
         <div className="flex-1 space-y-1 overflow-y-auto pb-4">
@@ -138,17 +144,17 @@ function PickerModal({
             <button
               key={o.id}
               onClick={() => onPick(o.id)}
-              className="flex min-h-11 w-full items-center justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 text-left transition-colors hover:border-border-strong hover:bg-surface-2"
+              className="flex min-h-11 w-full items-center justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 text-left transition-colors hover:border-border-strong hover:bg-surface-2"
             >
               <span className="min-w-0">
                 <span className="block truncate text-body font-semibold leading-tight text-ink">
                   {o.name}
                 </span>
-                <span className="block truncate font-mono text-meta tnum leading-tight text-faint">
+                <span className="block truncate figure text-meta leading-tight text-secondary">
                   {o.meta}
                 </span>
               </span>
-              <span className="shrink-0 font-mono text-body font-semibold tnum text-muted">
+              <span className="shrink-0 figure text-body font-semibold text-muted">
                 {fmtValue(o.value)}
               </span>
             </button>
@@ -193,7 +199,7 @@ function AssetRow({
         )}
         <span className="min-w-0">
           <span className="block truncate text-body leading-tight text-ink">{label}</span>
-          <span className="block truncate font-mono text-meta tnum leading-tight text-faint">
+          <span className="block truncate figure text-meta leading-tight text-secondary">
             {meta ? `${meta} · ` : ""}
             {fmtValue(value)}
           </span>
@@ -230,12 +236,12 @@ function SideColumn({
   total: number;
 }) {
   return (
-    <div className="rounded-[--radius] border border-border bg-surface/60 p-2">
+    <div className="rounded-[--radius] border border-border bg-surface p-2">
       <div className="mb-1.5 flex items-center justify-between px-0.5">
         <span className="text-meta font-semibold uppercase tracking-wide text-muted">
           {label}
         </span>
-        <span className="font-mono text-body font-semibold tnum text-ink">
+        <span className="figure text-body font-semibold text-ink">
           {fmtValue(total)}
         </span>
       </div>
@@ -261,7 +267,7 @@ function SideColumn({
           />
         ))}
         {players.length + picks.length === 0 && (
-          <p className="px-0.5 py-2 text-meta leading-snug text-faint">
+          <p className="px-0.5 py-2 text-meta leading-snug text-secondary">
             Nothing yet - add a player or a pick.
           </p>
         )}
@@ -269,13 +275,13 @@ function SideColumn({
       <div className="mt-1.5 flex gap-1.5">
         <button
           onClick={onAddPlayer}
-          className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-full border border-border text-note leading-snug font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+          className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-full border border-border text-note leading-snug font-medium text-muted transition-colors hover:border-accent hover:text-accent-text"
         >
           <Plus size={14} aria-hidden="true" /> player
         </button>
         <button
           onClick={onAddPick}
-          className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-full border border-border text-note leading-snug font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+          className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-full border border-border text-note leading-snug font-medium text-muted transition-colors hover:border-accent hover:text-accent-text"
         >
           <Plus size={14} aria-hidden="true" /> pick
         </button>
@@ -503,7 +509,13 @@ export function TradeBuilder({
       )}
 
       <div ref={resultRef} className="scroll-mt-4">
-        {result && <TradeResult r={result} leagueId={leagueId} />}
+        {result && (
+          <TradeResult
+            r={result}
+            leagueId={leagueId}
+            counterparty={counterpartyOf([...get, ...getPicks])}
+          />
+        )}
       </div>
 
       {picker && modal && (
@@ -520,20 +532,53 @@ export function TradeBuilder({
   );
 }
 
+/**
+ * WHO YOU ARE ACTUALLY TRADING WITH.
+ *
+ * The evaluation names two sides and, until now, named neither of the PEOPLE. "What
+ * does this manager actually value" was the third most common complaint in a survey
+ * of dynasty tooling, and this app answers it better than most - on a dossier the
+ * trade result had no link to. The package itself knows: whoever holds the most
+ * value on the incoming side is the counterparty. A package assembled out of two
+ * rivals' rosters (the builder allows it, Sleeper does not) resolves to the larger
+ * contributor rather than refusing to name anyone.
+ */
+function counterpartyOf(
+  incoming: { value: number; owner?: string; ownerRosterId?: number }[],
+): { rosterId: number; name: string } | null {
+  const byRoster = new Map<number, { value: number; name: string }>();
+  for (const a of incoming) {
+    if (a.ownerRosterId == null) continue;
+    const cur = byRoster.get(a.ownerRosterId) ?? { value: 0, name: a.owner ?? "" };
+    byRoster.set(a.ownerRosterId, { value: cur.value + a.value, name: cur.name || a.owner || "" });
+  }
+  let best: { rosterId: number; name: string } | null = null;
+  let bestValue = -1;
+  for (const [rosterId, v] of byRoster) {
+    if (v.value > bestValue) {
+      bestValue = v.value;
+      best = { rosterId, name: v.name };
+    }
+  }
+  return best && best.name ? best : null;
+}
+
 function TradeResult({
   r,
   leagueId,
+  counterparty,
 }: {
   r: TradeEvaluation;
   leagueId?: string | null;
+  counterparty: { rosterId: number; name: string } | null;
 }) {
   const dirTone =
-    r.direction === "buying" ? "text-accent" : r.direction === "selling" ? "text-info" : "text-muted";
+    r.direction === "buying" ? "text-accent-text" : r.direction === "selling" ? "text-info" : "text-muted";
   return (
     <div className="mt-4 space-y-2">
-      <div className="rounded-[--radius] border border-border bg-surface/60 p-3 text-center">
-        <div className="text-meta uppercase tracking-wide text-faint">Value to you</div>
-        <div className={cn("font-mono text-display leading-tight font-semibold tnum", r.delta >= 0 ? "text-positive" : "text-negative")}>
+      <div className="rounded-[--radius] border border-border bg-surface p-3 text-center">
+        <div className="text-meta uppercase tracking-wide text-secondary">Value to you</div>
+        <div className={cn("figure text-display leading-tight font-semibold", r.delta >= 0 ? "text-positive" : "text-negative")}>
           {r.delta >= 0 ? "+" : ""}{fmtValue(r.delta)}
         </div>
         <div className="mt-0.5 text-note leading-snug text-muted">
@@ -547,7 +592,7 @@ function TradeResult({
                 <span className={cn("text-meta uppercase tracking-wide", k === "send" ? "text-negative" : "text-positive")}>
                   you {k}
                 </span>
-                <span className="font-mono text-meta font-semibold tnum text-ink">
+                <span className="figure text-meta font-semibold text-ink">
                   {fmtValue(side.total)}
                 </span>
               </div>
@@ -555,7 +600,7 @@ function TradeResult({
                 {side.assets.map((a) => (
                   <li key={a.id} className="flex items-baseline justify-between gap-1 text-meta leading-snug">
                     <span className="min-w-0 truncate text-ink/85">{a.label}</span>
-                    <span className="shrink-0 font-mono text-meta tnum text-faint">
+                    <span className="shrink-0 figure text-meta text-secondary">
                       {fmtValue(a.value)}
                     </span>
                   </li>
@@ -571,6 +616,25 @@ function TradeResult({
       <Block title="The assumption that has to be true" tone="accent">{r.keyAssumption}</Block>
       <Block title="What your history says" tone="warn">{r.historyCheck}</Block>
       {r.consolidationNote && <Block title="Consolidation">{r.consolidationNote}</Block>}
+
+      {counterparty && (
+        <div className="rounded-[--radius] border border-border bg-surface p-3">
+          <div className="mb-1 text-meta font-semibold uppercase tracking-wide text-muted">
+            Before you send it
+          </div>
+          <p className="text-body leading-relaxed text-ink/90">
+            You are asking{" "}
+            <span className="font-semibold text-ink">{counterparty.name}</span> to say
+            yes. Read what they have actually paid for in five seasons, and what the
+            app would have proposed to them on its own.
+          </p>
+          <ManagerRail
+            rosterId={counterparty.rosterId}
+            ownerId={null}
+            className="mt-1.5"
+          />
+        </div>
+      )}
 
       <div className="rounded-[--radius] border border-border bg-bg/70 p-3">
         {/* Sleeper has no write API, so we can't send the proposal - the trade
@@ -595,11 +659,11 @@ function Block({
   tone?: "neutral" | "accent" | "warn";
 }) {
   const border =
-    tone === "accent" ? "border-accent/30" : tone === "warn" ? "border-warn/30" : "border-border";
+    tone === "accent" ? "border-accent-edge" : tone === "warn" ? "border-warn/30" : "border-border";
   const head =
-    tone === "accent" ? "text-accent" : tone === "warn" ? "text-warn" : "text-muted";
+    tone === "accent" ? "text-accent-text" : tone === "warn" ? "text-warn" : "text-muted";
   return (
-    <div className={cn("rounded-[--radius] border bg-surface/60 p-3", border)}>
+    <div className={cn("rounded-[--radius] border bg-surface p-3", border)}>
       <div className={cn("mb-1 text-meta font-semibold uppercase tracking-wide", head)}>{title}</div>
       <p className="text-body leading-relaxed text-ink/90">{children}</p>
     </div>

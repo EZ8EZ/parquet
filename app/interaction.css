@@ -1,0 +1,185 @@
+/*
+ * ============================================================================
+ * PARQUET INTERACTION LAYER
+ *
+ * Everything about how this app answers a finger: press feedback, the motion
+ * vocabulary, the reduced-motion contract, and the one view transition.
+ *
+ * A SEPARATE FILE on purpose. globals.css is the colour and type system and it is
+ * large and frequently rewritten; interaction is an orthogonal concern with a
+ * different owner and a different argument behind every value, and folding it in
+ * would mean two unrelated systems sharing one 600-line file. It is pulled in by a
+ * single `@import` at the top of globals.css and is otherwise self-contained - the
+ * only things it reads from the design system are `--color-*`.
+ * ============================================================================
+ */
+
+/*
+ * MOTION - three durations and ONE curve, and that is the whole vocabulary.
+ *
+ * Every number here is short enough to stay under the ~300ms ceiling where a
+ * transition reads as responsiveness rather than as waiting, and every one of them is
+ * spent on `transform` or `opacity` only. Those two are the properties the compositor
+ * can animate without the main thread, which matters here more than usual: these pages
+ * assemble a league corpus and hydrate a fair amount of chart code, so the main thread
+ * is genuinely busy at exactly the moment a reader is pressing something. An animation
+ * on `height` or `background-position` would stutter under that load. A transform
+ * will not.
+ *
+ *   fast  120ms  press feedback and colour changes - the reply to a finger
+ *   base  180ms  a panel arriving or leaving (the Desk drawer already used this)
+ *   slow  260ms  view transitions, where the job is to let the eye track one object
+ *                moving to a new place
+ *
+ * Linear ships 100 / 150 / 175ms for the equivalent jobs; these sit in the same range,
+ * a touch longer because this is a touch app rather than a keyboard one.
+ *
+ * ONE curve, and it is an ease-OUT: fast at the start, settling at the end, which is
+ * what makes a press feel like it answered instantly. No ease-in-out (it delays the
+ * answer), no spring, no overshoot - an overshoot on a panel bolted to the bottom edge
+ * of a phone reads as the whole page wobbling.
+ *
+ * These are tokens because they were literals: `180ms cubic-bezier(...)` was written
+ * out twice in globals.css and 128 `transition-*` utilities across the components
+ * silently defaulted to Tailwind's own 150ms / cubic-bezier(0.4, 0, 0.2, 1), so the
+ * app had three motion systems and no single place to change any of them.
+ *
+ * In `@theme` rather than `:root` so Tailwind generates `duration-*` and `ease-*`
+ * utilities from them, which is what lets a component reach for the token instead of
+ * inventing another literal.
+ */
+@theme {
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 260ms;
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/*
+ * ============================ PRESS FEEDBACK ============================
+ *
+ * The audit that produced this block: the app had 140 `hover:` utilities and exactly
+ * ONE `:active` state in the entire codebase (the /rank drag handle). Hover does not
+ * exist on the device this app is built for. So every button, every disclosure, every
+ * card that is secretly a link had no reply to a finger at all - you pressed, and the
+ * only evidence anything had happened was the page eventually changing.
+ *
+ * Deliberately ONE global rule rather than 140 component edits. Press feedback is a
+ * property of "this thing is pressable", which the markup already says, and a
+ * per-component `active:scale-[0.97]` would have drifted within two rounds exactly the
+ * way the type scale and the duplicated nav arrays did.
+ *
+ * `scale(0.97)`, not 0.95 and not a colour change. 0.97 is under the threshold where
+ * you consciously watch the element shrink but over the threshold where the finger
+ * registers that something answered - it reads as the surface giving slightly under
+ * pressure, which is the physical metaphor a touch UI is borrowing. Transform only, so
+ * it composites and cannot stutter behind a busy main thread.
+ *
+ * WHAT IS DELIBERATELY NOT IN THE SELECTOR
+ *   - bare `a[href]`. Scaling an inline link inside a paragraph would reflow nothing
+ *     but would look like the sentence twitched. Links that are CONTROLS in this app
+ *     all carry `min-h-11` (ButtonLink, EmptyState's cta, SectionHeader's cta, the
+ *     tappable rows), which is what `[class~="min-h-11"]` picks up - the app's own
+ *     existing convention rather than a new one invented here.
+ *   - `:disabled` and `[aria-disabled]`. A control that is not going to do anything
+ *     must not pretend it is.
+ *   - inputs, textareas, the /rank weight slider. Those are direct manipulation: the
+ *     thing under the finger is the value, and moving it would fight the gesture.
+ *
+ * `:where()` keeps the whole thing at zero specificity, so any component that has a
+ * reason to opt out can do so with a plain utility class and win.
+ */
+:where(button, summary, [role="button"], [role="tab"], [class~="min-h-11"]) {
+  transition: transform var(--motion-fast) var(--ease-out);
+  /*
+   * iOS paints its own grey rectangle over anything tappable. It is a different shape
+   * from our controls, a different colour under all three themes, and it fires on
+   * scroll as well as on press. We now have our own answer, so the browser's goes.
+   */
+  -webkit-tap-highlight-color: transparent;
+  /*
+   * Removes double-tap-to-zoom on controls, which is the thing that makes a quick
+   * second tap on a button feel like it was swallowed.
+   */
+  touch-action: manipulation;
+}
+:where(button, summary, [role="button"], [role="tab"], [class~="min-h-11"]):active:not(
+    :disabled
+  ):not([aria-disabled="true"]) {
+  transform: scale(0.97);
+}
+
+/*
+ * REDUCED MOTION - reduce, not remove.
+ *
+ * The spec is explicit that the request is for LESS motion rather than none, and the
+ * blanket `* { animation: none }` reset that circulates as a best practice is contrary
+ * to both it and to WebKit's guidance. So the scale goes - it is a decorative squash
+ * and it is the vestibular trigger - and it is replaced by a state change in a channel
+ * the setting permits. A reader who asked for less motion still gets an answer to
+ * their finger. Deleting the feedback outright would punish exactly the people who
+ * asked to be treated carefully.
+ */
+@media (prefers-reduced-motion: reduce) {
+  :where(button, summary, [role="button"], [role="tab"], [class~="min-h-11"]) {
+    transition: opacity var(--motion-fast) var(--ease-out);
+  }
+  :where(button, summary, [role="button"], [role="tab"], [class~="min-h-11"]):active:not(
+      :disabled
+    ):not([aria-disabled="true"]) {
+    transform: none;
+    opacity: 0.68;
+  }
+
+  /*
+   * Spinners: SLOWED, not stopped. A stopped spinner is not a calmer spinner, it is a
+   * broken one - the rotation IS the message, and this is the case the spec means when
+   * it says to keep motion that conveys meaning. Halving the angular velocity keeps
+   * the message and takes the flicker out of it.
+   */
+  .animate-spin {
+    animation-duration: 2s;
+  }
+}
+
+/*
+ * FOCUS. The ring is defined in globals.css (`outline: 2px solid var(--color-accent)`,
+ * offset 2) and this is the note on why it survives everywhere rather than a second
+ * definition of it: the 2px gap lands on the PARENT's ground rather than on the
+ * control, so a focused `bg-accent` button shows gold / gap / gold instead of a gold
+ * ring lost inside a gold fill. Checked against all three themes - dark #e6b34d on
+ * #0b0c0e, paper #7a5810 on #f6f4f0, contrast #ffd27a on #000 - and the accent clears
+ * the 3:1 non-text bar against its own theme's ground in each.
+ *
+ * The one thing an outline offset cannot survive is a clipping ancestor, and this app
+ * has several horizontally scrolling strips whose children are focusable. They get the
+ * 2px back rather than having the ring shaved off.
+ */
+.scroll-x {
+  padding-block: 2px;
+}
+
+/*
+ * ========================== VIEW TRANSITIONS ==========================
+ *
+ * SAME-document only, and that is a platform fact rather than a preference:
+ * 44 files in this app import `next/link`, so no in-app navigation is a document
+ * navigation, and a `@view-transition { navigation: auto }` rule would animate
+ * precisely nothing while looking in the stylesheet like it did something.
+ *
+ * There is exactly one caller: the /rank reset (components/RankingBoard.tsx via
+ * lib/view-transition.ts), where a single tap relocates every row in the list at once
+ * and the reader is usually holding one specific player in their head. Tracking one
+ * object across a wholesale reshuffle is the one job animation is actually proven to
+ * do, so it is the one place that gets it.
+ *
+ * The UA default is 250ms ease, already inside the ceiling. This restates it as the
+ * app's own token so there is one place to change it, and swaps in the app's single
+ * ease-out curve so a row decelerates into its new slot rather than crawling out of
+ * the old one. `(*)` rather than named rules because the names are generated per row
+ * id - there is nothing to enumerate.
+ */
+::view-transition-group(*) {
+  animation-duration: var(--motion-slow);
+  animation-timing-function: var(--ease-out);
+}

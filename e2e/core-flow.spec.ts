@@ -45,12 +45,14 @@ test("ledger annotate affordance, then the audit-log deep link into the deal rec
   await page.goto("/");
   await expectStableChrome(page);
 
-  // Through the Desk's own destination row, which is where the ledger now lives:
-  // it is one of the four permanent slots (lib/nav.ts, `primary`), so it is no
-  // longer a curated shortcut in Home's "Go deeper" grid and the old
-  // `/Decision ledger/i` link text no longer exists on this page. Scoped to the
-  // Primary navigation on purpose - "Record" is also the label of Home's
-  // record figure, which links to /league, and this test means the slot.
+  // Through the Desk's menu, which is now the ONLY chrome-level way to any
+  // destination: round 8b deleted the four-tab destination row and replaced it with
+  // one worded button (components/Desk.tsx). This is the whole navigation contract
+  // in three lines - a real `<button>` opens it by tap, and the four former slots
+  // are pinned to the bottom of the drawer it opens. Scoped to the Primary
+  // navigation on purpose: "Record" is also the label of Home's record figure,
+  // which links to /league, and this test means the destination.
+  await page.getByRole("button", { name: "Menu", exact: true }).click();
   await page
     .getByRole("navigation", { name: "Primary" })
     .getByRole("link", { name: "Record", exact: true })
@@ -94,6 +96,27 @@ test("ledger annotate affordance, then the audit-log deep link into the deal rec
   // href, not a hand-built URL, so this fails if the row ever stops linking
   // through that function.
   const auditLink = page.locator('a[href="/deals/fx-2022-rebuildA"]');
+
+  // THE AUDIT LOG IS SEASON-FOLDED NOW, and the path grew one step rather than
+  // losing one. Round 9 put every season but the current one behind a closed
+  // `<details>` - that log rendered fully expanded was most of why /commissioner was
+  // the longest page in the app at 10,125px. This deal is from 2022, so it starts
+  // closed.
+  //
+  // Both halves are asserted deliberately. First that the row is ATTACHED while its
+  // season is shut: a disclosure hides content, it must never drop it, and a diet
+  // that quietly stopped rendering four fifths of the audit log would be a data loss
+  // wearing a layout change's clothes. Then that opening the season makes it visible
+  // and the link still works. Anything less than this pair would let "collapsed" and
+  // "deleted" pass the same test.
+  await expect(auditLink).toBeAttached();
+  const season = page.locator("details", { has: auditLink });
+  await expect(season).not.toHaveAttribute("open", /.*/);
+  // The `<summary>` itself, by tag: its ARIA role differs between engines (Chromium
+  // maps it to `button`, others to `group` or nothing at all), and this test runs
+  // headless Chromium today but should not encode that.
+  await season.locator("summary").first().click();
+
   await expect(auditLink).toBeVisible();
   await auditLink.click();
 

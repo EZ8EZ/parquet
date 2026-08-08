@@ -75,7 +75,7 @@ export default async function LineagePage({
   return (
     <div>
       <header className="mb-3">
-        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
           How this got here
         </p>
         <div className="flex items-center gap-2.5">
@@ -91,7 +91,7 @@ export default async function LineagePage({
             <h1 className="min-w-0 font-display text-display font-semibold leading-tight text-ink">
               {player?.fullName ?? chain.label}
             </h1>
-            <p className="font-mono text-meta tnum text-faint">
+            <p className="figure text-meta text-secondary">
               {pid
                 ? [
                     player?.position,
@@ -109,7 +109,7 @@ export default async function LineagePage({
           {value != null && (
             <>
               {" · worth "}
-              <span className="font-mono font-semibold text-ink">
+              <span className="figure font-semibold text-ink">
                 {fmtValue(value)}
               </span>
               {tier ? ` today (${tier})` : " today"}
@@ -153,7 +153,7 @@ export default async function LineagePage({
         {pid && (
           <Link
             href={valuesFocusHref(pid)}
-            className="inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-note font-semibold leading-snug text-muted transition-colors hover:border-accent hover:text-accent"
+            className="inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-surface px-3 text-note font-semibold leading-snug text-muted transition-colors hover:border-accent hover:text-accent-text"
           >
             How he is valued
             <ChevronRight size={13} aria-hidden="true" />
@@ -161,7 +161,7 @@ export default async function LineagePage({
         )}
         <Link
           href="/deals"
-          className="inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-note font-semibold leading-snug text-muted transition-colors hover:border-accent hover:text-accent"
+          className="inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-surface px-3 text-note font-semibold leading-snug text-muted transition-colors hover:border-accent hover:text-accent-text"
         >
           Every deal
           <ChevronRight size={13} aria-hidden="true" />

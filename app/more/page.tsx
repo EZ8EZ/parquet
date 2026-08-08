@@ -5,6 +5,7 @@ import { PageHeader, SectionHeader } from "@/components/ui";
 import { SearchPanel } from "@/components/SearchPanel";
 import { groupedSurfaces } from "@/lib/nav";
 import { iconForSurface } from "@/components/nav-icons";
+import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
 
@@ -60,7 +61,7 @@ export default function MorePage() {
                   <Link
                     key={s.href}
                     href={s.href}
-                    className="flex flex-col items-center gap-1 rounded-[--radius-sm] border border-border bg-surface/40 px-1 py-2 text-center transition-colors hover:border-border-strong hover:bg-surface-2"
+                    className="flex flex-col items-center gap-1 rounded-[--radius-sm] border border-border bg-surface px-1 py-2 text-center transition-colors hover:border-border-strong hover:bg-surface-2"
                   >
                     <Icon size={16} aria-hidden="true" className="text-faint" />
                     <span className="text-micro font-medium leading-tight text-muted">
@@ -78,14 +79,14 @@ export default function MorePage() {
                   <Link
                     key={s.href}
                     href={s.href}
-                    className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
+                    className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
                   >
-                    <Icon size={17} aria-hidden="true" className="shrink-0 text-accent" />
+                    <Icon size={17} aria-hidden="true" className="shrink-0 text-accent-text" />
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-body font-semibold leading-tight text-ink">
                         {s.label}
                       </span>
-                      <span className="block truncate text-meta leading-snug text-faint">
+                      <span className="block truncate text-meta leading-snug text-secondary">
                         {s.sub}
                       </span>
                     </span>
@@ -97,6 +98,7 @@ export default function MorePage() {
           )}
         </div>
       ))}
+      <Onward from="/more" />
     </div>
   );
 }

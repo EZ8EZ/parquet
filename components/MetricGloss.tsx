@@ -80,7 +80,7 @@ export function MetricGloss({
       : "What TCI and RFI measure";
   return (
     <details className={cn("group", className)}>
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-meta font-semibold text-faint transition-colors hover:text-accent">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-meta font-semibold text-faint transition-colors hover:text-accent-text">
         <HelpCircle size={12} aria-hidden="true" className="shrink-0" />
         {label}
         <ChevronRight
@@ -89,7 +89,7 @@ export function MetricGloss({
           className="transition-transform group-open:rotate-90"
         />
       </summary>
-      <div className="mb-2 space-y-2 rounded-[--radius-sm] border border-border bg-surface/60 p-2.5">
+      <div className="mb-2 space-y-2 rounded-[--radius-sm] border border-border bg-surface p-2.5">
         {metrics.map((m) => {
           const g = METRIC_GLOSS[m];
           return (
@@ -97,7 +97,7 @@ export function MetricGloss({
               <span className="font-semibold text-ink">
                 {g.abbr} · {g.name}
               </span>{" "}
-              <span className="font-mono text-meta tnum text-faint">
+              <span className="figure text-meta text-secondary">
                 ({g.scale})
               </span>
               <br />
@@ -105,10 +105,10 @@ export function MetricGloss({
             </p>
           );
         })}
-        <p className="text-meta leading-snug text-faint">{METRIC_GLOSS_NOTE}</p>
+        <p className="text-meta leading-snug text-secondary">{METRIC_GLOSS_NOTE}</p>
         <Link
           href="/methodology"
-          className="inline-flex min-h-11 items-center gap-0.5 text-meta font-semibold text-accent"
+          className="inline-flex min-h-11 items-center gap-0.5 text-meta font-semibold text-accent-text"
         >
           The full method
           <ChevronRight size={12} aria-hidden="true" />

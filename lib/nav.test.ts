@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { ALL_SURFACES, curatedSurfaces, groupedSurfaces, primarySurfaces } from "./nav";
+import {
+  ALL_SURFACES,
+  groupedSurfaces,
+  homeNext,
+  managerLinks,
+  onwardFrom,
+  primarySurfaces,
+  surfacesWithOnward,
+} from "./nav";
 
 describe("the surface registry", () => {
   it("has no duplicate hrefs - the exact bug this file exists to prevent", () => {
@@ -53,15 +61,139 @@ describe("the surface registry", () => {
   });
 });
 
-describe("curatedSurfaces", () => {
-  it("is the exact set Home and League both render - see their own tests", () => {
-    const curated = curatedSurfaces();
-    expect(curated.length).toBeGreaterThan(0);
-    for (const s of curated) expect(s.curated).toBe(true);
+describe("onwardFrom - the no-dead-ends rule", () => {
+  it("gives EVERY registered surface at least two ways out", () => {
+    // The measurement this exists for: four surfaces shipped with zero outbound
+    // links and the app read as a set of destinations rather than one thing. Fixing
+    // the four would have been a patch; this is the rule, so the fifth cannot ship.
+    for (const s of ALL_SURFACES) {
+      expect(
+        onwardFrom(s.href).length,
+        `${s.href} is a dead end - add it to ONWARD in lib/nav.ts`,
+      ).toBeGreaterThanOrEqual(2);
+    }
   });
 
-  it("never includes a primary tab - those already have a permanent tab", () => {
-    for (const s of curatedSurfaces()) expect(s.primary).toBeUndefined();
+  it("defines onward steps for registered surfaces only", () => {
+    const hrefs = new Set(ALL_SURFACES.map((s) => s.href));
+    for (const from of surfacesWithOnward()) {
+      expect(hrefs.has(from), `ONWARD has an entry for unregistered ${from}`).toBe(true);
+    }
+  });
+
+  it("never points a page at itself, and never repeats a destination", () => {
+    for (const s of ALL_SURFACES) {
+      const steps = onwardFrom(s.href);
+      const hrefs = steps.map((x) => x.href);
+      expect(hrefs, `${s.href} links to itself`).not.toContain(s.href);
+      expect(new Set(hrefs).size, `${s.href} repeats a destination`).toBe(hrefs.length);
+    }
+  });
+
+  it("takes every registered destination's name from the registry, never a copy", () => {
+    // The label-drift bug in one sentence: the registry said "Draft history" and all
+    // six inbound links said "Pick lineage". A step that hardcoded a name would
+    // reopen it, so only UNregistered destinations may carry their own label.
+    const byHref = new Map(ALL_SURFACES.map((s) => [s.href, s.label]));
+    for (const s of ALL_SURFACES) {
+      for (const step of onwardFrom(s.href)) {
+        const registered = byHref.get(step.href);
+        if (registered) expect(step.label).toBe(registered);
+      }
+    }
+  });
+
+  it("says WHY, in the reader's voice, and never with an em dash", () => {
+    for (const s of ALL_SURFACES) {
+      for (const step of onwardFrom(s.href)) {
+        expect(step.why.length, `${s.href} -> ${step.href}`).toBeGreaterThan(8);
+        expect(step.why).not.toMatch(/[—–]/);
+      }
+    }
+  });
+
+  it("returns nothing for a path with no entry rather than throwing", () => {
+    // Callers pass a pathname, and a dynamic route legitimately has no entry.
+    expect(onwardFrom("/managers/42")).toEqual([]);
+    expect(onwardFrom("")).toEqual([]);
+  });
+});
+
+describe("homeNext - Home is a landing page, not a third copy of the index", () => {
+  const quiet = { outstanding: 0, moved: false, contradicted: false };
+
+  it("falls back to the baseline when nothing is happening, never to nothing", () => {
+    // A quiet week must still leave the landing page with real ways out - the whole
+    // point of the no-dead-ends rule applies hardest to the page people open first.
+    expect(homeNext(quiet)).toEqual(onwardFrom("/"));
+  });
+
+  it("never offers more than three, however much is going on", () => {
+    const busy = homeNext({ outstanding: 27, moved: true, contradicted: true });
+    expect(busy.length).toBe(3);
+  });
+
+  it("leads with the reasoning still to capture", () => {
+    expect(homeNext({ ...quiet, outstanding: 4 })[0].href).toBe("/ledger");
+  });
+
+  it("never repeats a destination or points back at Home", () => {
+    for (const outstanding of [0, 3]) {
+      for (const moved of [false, true]) {
+        for (const contradicted of [false, true]) {
+          const steps = homeNext({ outstanding, moved, contradicted });
+          const hrefs = steps.map((s) => s.href);
+          expect(new Set(hrefs).size).toBe(hrefs.length);
+          expect(hrefs).not.toContain("/");
+        }
+      }
+    }
+  });
+
+  it("takes its labels from the registry, and says why without an em dash", () => {
+    const byHref = new Map(ALL_SURFACES.map((s) => [s.href, s.label]));
+    for (const step of homeNext({ outstanding: 1, moved: true, contradicted: true })) {
+      expect(step.label).toBe(byHref.get(step.href));
+      expect(step.why).not.toMatch(/[—–]/);
+    }
+  });
+});
+
+describe("managerLinks - wherever a manager is named", () => {
+  it("offers a trade with a current leaguemate", () => {
+    const links = managerLinks({
+      rosterId: 7,
+      ownerId: "u7",
+      isFormer: false,
+      isMe: false,
+    });
+    expect(links.map((l) => l.href)).toEqual([
+      "/managers/7",
+      "/trade/finder?with=7",
+      "/deals?manager=u7",
+    ]);
+  });
+
+  it("never offers a trade with yourself, and offers your own reasoning instead", () => {
+    const links = managerLinks({ rosterId: 3, ownerId: "me", isFormer: false, isMe: true });
+    const hrefs = links.map((l) => l.href);
+    expect(hrefs).not.toContain("/trade/finder?with=3");
+    expect(hrefs).toContain("/ledger");
+  });
+
+  it("never offers a trade with, or a roster page for, a departed manager (D22)", () => {
+    // A former principal holds no roster tonight: there is nothing to trade for and
+    // the roster route would land on whoever replaced them.
+    const links = managerLinks({
+      rosterId: 11,
+      ownerId: "gone",
+      isFormer: true,
+      isMe: false,
+    });
+    const hrefs = links.map((l) => l.href);
+    expect(hrefs).toContain("/managers/former/gone");
+    expect(hrefs).not.toContain("/managers/11");
+    expect(hrefs.some((x) => x.startsWith("/trade/finder"))).toBe(false);
   });
 });
 

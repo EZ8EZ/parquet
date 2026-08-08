@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { AlertTriangle, CheckCircle2, ChevronRight, Repeat, ScrollText, Settings } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ChevronRight, ScrollText } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getStrategyReport } from "@/lib/strategy";
 import { getPrincipals } from "@/lib/principals";
@@ -8,9 +8,9 @@ import { loadDigest } from "@/lib/digest";
 import { currentFormByRoster } from "@/lib/roster";
 import { ordinal } from "@/lib/derive/describe";
 import { liveStreaks } from "@/lib/streaks";
-import { curatedSurfaces } from "@/lib/nav";
+import { homeNext } from "@/lib/nav";
 import { canCapture, readSeat } from "@/lib/auth/server";
-import { iconForSurface } from "@/components/nav-icons";
+import { Onward } from "@/components/Onward";
 import { DigestPanel } from "@/components/DigestPanel";
 import { StreakPanel } from "@/components/StreakPanel";
 import { Wordmark } from "@/components/Brand";
@@ -43,30 +43,12 @@ export default async function HomePage() {
 
   return (
     <div>
-      <div className="flex items-start justify-between gap-3">
-        <Wordmark tagline="Dynasty memory" />
-        <div className="flex shrink-0 items-center gap-1.5">
-          {/* Who am I? - switch teams / enter a username. */}
-          <Link
-            href="/teams"
-            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-note font-medium text-muted transition-colors hover:border-accent hover:text-accent"
-          >
-            <Repeat size={13} aria-hidden="true" />
-            <span className="max-w-[7rem] truncate">
-              {h.me.teamName ?? h.me.displayName}
-            </span>
-          </Link>
-          {/* The display escape hatch. Icon-only so it costs almost no width on the
-              one row every visit starts from - two taps from anywhere in the app. */}
-          <Link
-            href="/settings"
-            aria-label="Settings"
-            className="inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-muted transition-colors hover:border-accent hover:text-accent"
-          >
-            <Settings size={15} aria-hidden="true" />
-          </Link>
-        </div>
-      </div>
+      {/* The wordmark, and nothing beside it. "Switch team" and "Settings" used to sit
+          in this row's right-hand corner - the top-right of the tallest page in the
+          app, which is the single hardest place to reach one-handed on a 6.7" phone.
+          Both now live behind the seat chip in the Desk, which is at the bottom of
+          EVERY page rather than the top of this one (D35, and components/Desk.tsx). */}
+      <Wordmark tagline="Dynasty memory" />
 
       {/* Loud, not subtle: synthetic data that looks plausible is the most dangerous
           failure this app can have, so it must be impossible to mistake for real. */}
@@ -92,9 +74,9 @@ export default async function HomePage() {
       {mayCapture && ledger.unannotatedNotable > 0 && (
         <Link
           href="/ledger"
-          className="mb-3 flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-accent/30 bg-accent/10 px-2.5 py-2 transition-colors hover:border-accent/60"
+          className="mb-3 flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-accent-edge bg-accent-wash px-2.5 py-2 transition-colors hover:border-accent"
         >
-          <ScrollText size={15} aria-hidden="true" className="shrink-0 text-accent" />
+          <ScrollText size={15} aria-hidden="true" className="shrink-0 text-accent-text" />
           <span className="min-w-0 flex-1">
             <span className="block truncate text-body font-semibold leading-tight text-ink">
               {ledger.unannotatedNotable} decision
@@ -104,7 +86,7 @@ export default async function HomePage() {
               Log why you made them - while you still remember.
             </span>
           </span>
-          <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-accent" />
+          <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-accent-text" />
         </Link>
       )}
 
@@ -112,7 +94,7 @@ export default async function HomePage() {
           names WHOSE strategy, because "You said win-now. You sold." only lands when
           the reader knows who "you" is - obvious to the manager in their own seat,
           not to a leaguemate seeing this app (or this seat) for the first time. */}
-      <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+      <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
         Revealed strategy · {p.teamName ?? p.displayName}
       </p>
       <h1 className="mt-0.5 font-display text-display font-semibold leading-[1.12] text-ink">
@@ -135,7 +117,7 @@ export default async function HomePage() {
                 <Tag tone="neutral">did: {c.revealedSeason}</Tag>
                 <Link
                   href="/ledger"
-                  className="inline-flex min-h-11 items-center text-note font-semibold text-accent underline-offset-2 hover:underline"
+                  className="inline-flex min-h-11 items-center text-note font-semibold text-accent-text underline-offset-2 hover:underline"
                 >
                   see the moves
                   <ChevronRight size={13} aria-hidden="true" />
@@ -151,7 +133,7 @@ export default async function HomePage() {
         // serving self-knowledge, and "here's what you said, it still holds" is
         // part of that memory, not just the moments it catches you out. Kept
         // visually calm and clearly not a warning: no red, no AlertTriangle.
-        <div className="mt-3 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2">
+        <div className="mt-3 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={14} aria-hidden="true" className="shrink-0 text-positive" />
             <span className="text-meta font-semibold uppercase tracking-wide text-muted">
@@ -164,7 +146,7 @@ export default async function HomePage() {
             contradicts it yet.{" "}
             <Link
               href="/ledger"
-              className="font-semibold text-accent underline-offset-2 hover:underline"
+              className="font-semibold text-accent-text underline-offset-2 hover:underline"
             >
               See what you said
             </Link>
@@ -172,9 +154,15 @@ export default async function HomePage() {
         </div>
       ) : null}
 
-      {/* Headline figures. Four numbers, four destinations, one card's worth of
-          height instead of four stacked boxes. */}
-      <div className="mt-3 grid grid-cols-2 overflow-hidden rounded-[--radius-sm] border border-border bg-surface/60">
+      {/* What moved while you were gone - the memory the rest of the page cannot give,
+          because every other figure here describes a state rather than a change. */}
+      <SectionHeader title="Since your last visit" />
+      <DigestPanel digest={digest} />
+
+      {/* YOUR SEASON, in figures. Four numbers in one card's worth of height rather
+          than four stacked boxes, and every one of them is a link. */}
+      <SectionHeader title="Your season, in four numbers" />
+      <div className="grid grid-cols-2 overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
         <Figure
           href="/league"
           label="Record"
@@ -226,7 +214,7 @@ export default async function HomePage() {
       {/* Activity tape - the rest of the derived profile, previously unsurfaced. */}
       <Link
         href="/ledger"
-        className="mt-1.5 block rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
+        className="mt-1.5 block rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
       >
         <div className="grid grid-cols-4 gap-1">
           <Micro label="moves" value={`${p.totalTransactions}`} />
@@ -244,17 +232,13 @@ export default async function HomePage() {
             "3y+ still running" reads as a contradiction unless this says which
             population it measures. The metric itself is untouched - it feeds The
             Tortoise/Hot Potato and the dossiers, which have their own context. */}
-        <p className="mt-1 font-mono text-meta leading-snug tnum text-faint">
+        <p className="mt-1 figure text-meta leading-snug text-faint">
           {holdYears ? `avg completed hold ${holdYears}y · ` : ""}
           {p.acquisitions.count} in / {p.disposals.count} out ·{" "}
           {ledger.annotated}/{ledger.notable} annotated
         </p>
       </Link>
 
-      {/* What moved while you were gone - the memory the rest of the page cannot give,
-          because every other figure here describes a state rather than a change. */}
-      <SectionHeader title="Since your last visit" />
-      <DigestPanel digest={digest} />
 
       {/* The natural sibling of the digest, and the other half of the same question:
           that panel is what CHANGED while you were gone, this one is what is still
@@ -295,12 +279,12 @@ export default async function HomePage() {
                     ? `/managers/former/${tp.ownerId}`
                     : `/managers/${tp.rosterId}`
                 }
-                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-border bg-surface/60 px-3 transition-colors hover:border-accent"
+                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-border bg-surface px-3 transition-colors hover:border-accent"
               >
                 <span className="max-w-[8rem] truncate text-note font-semibold text-ink">
                   {tp.displayName}
                 </span>
-                <span className="font-mono text-meta tnum text-accent">
+                <span className="figure text-meta text-accent-text">
                   {tp.count}
                 </span>
               </Link>
@@ -309,47 +293,56 @@ export default async function HomePage() {
         </>
       )}
 
-      {/* Explore - rendered from lib/nav.ts's curated set, not a hand-kept list of
-          its own. That registry is also what League's pill row and the /more index
-          read, which is the actual fix behind round 6's candidate 53: this grid and
-          League's used to be two independently maintained lists that had already
-          silently diverged (neither included Manager Compare or /rank). One shared
-          source means they can't drift apart again. */}
-      <SectionHeader title="Go deeper" />
-      <div className="grid grid-cols-2 gap-1.5">
-        {curatedSurfaces().map((s) => {
-          const Icon = iconForSurface(s.href);
-          return (
-            <HomeLink
-              key={s.href}
-              href={s.href}
-              icon={<Icon size={15} />}
-              title={s.label}
-              sub={s.sub}
-            />
-          );
+
+      {/*
+        WHERE NEXT, and pointedly NOT a menu.
+
+        For one round this page ended with the whole surface registry, grouped exactly
+        as the Desk's drawer groups it and exactly as /more does - three renderings of
+        one index, which is the failure the registry was built to end, one layer up.
+        The drawer is the index: its button says "every page in Parquet, and search",
+        it is on the bottom of every screen, and it is a thumb's width from the reader
+        at all times. So Home stopped being a directory and went back to being a
+        landing page - what changed (the digest, above), what is outstanding (the
+        capture badge at the top), and this: at most three moves that earn their place
+        given what the app actually knows tonight. `homeNext` in lib/nav.ts explains
+        which three facts it reads and why it reads no more than three.
+      */}
+      <Onward
+        steps={homeNext({
+          outstanding: mayCapture ? ledger.unannotatedNotable : 0,
+          moved: digest.state === "changes",
+          contradicted: report.contradictions.length > 0,
         })}
-      </div>
-      <Link
-        href="/more"
-        className="mt-1.5 flex min-h-11 items-center justify-center gap-1 rounded-[--radius-sm] border border-dashed border-border text-note font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
-      >
-        See everything
-        <ChevronRight size={13} aria-hidden="true" />
-      </Link>
+      />
 
       {/* The "Parquet advises; it can't act / Sleeper has no write API" note used to
           sit here. It is a constraint about sending trades, and /trade states it at the
           point where it actually bites (the evaluation ends at "Open Sleeper to send").
-          Home is not where anyone is trying to send anything. */}
+          Home is not where anyone is trying to send anything.
+
+          /more is named here in the smallest type on the page and nowhere else on it,
+          on purpose. It is no longer a feature to promote - the drawer carries the
+          same index from every screen - but it IS the only path to that index for a
+          reader without JavaScript, since the drawer is a client component. One quiet
+          link keeps the guarantee true in the one case the drawer cannot cover. */}
       <p className="mt-5 text-center text-meta leading-relaxed text-faint">
         First time here?{" "}
         <Link
           href="/about"
-          className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-2 hover:text-accent hover:underline"
+          className="inline-flex min-h-11 items-center font-semibold text-muted underline-offset-2 hover:text-accent-text hover:underline"
         >
           What this is, and what the numbers mean
         </Link>
+        <span className="mt-0.5 block">
+          Or{" "}
+          <Link
+            href="/more"
+            className="underline-offset-2 hover:text-accent-text hover:underline"
+          >
+            every page in one list
+          </Link>
+        </span>
       </p>
     </div>
   );
@@ -377,7 +370,7 @@ function Figure({
       <span className="truncate text-meta uppercase tracking-wide text-faint">
         {label}
       </span>
-      <span className="truncate font-mono text-lede font-semibold leading-tight tnum text-ink">
+      <span className="truncate figure text-lede font-semibold leading-tight text-ink">
         {value}
       </span>
       <span className="truncate text-meta leading-tight text-muted">{sub}</span>
@@ -391,40 +384,9 @@ function Micro({ label, value }: { label: string; value: string }) {
       <div className="truncate text-meta uppercase tracking-wide text-faint">
         {label}
       </div>
-      <div className="truncate font-mono text-body font-semibold tnum text-ink">
+      <div className="truncate figure text-body font-semibold text-ink">
         {value}
       </div>
     </div>
-  );
-}
-
-function HomeLink({
-  href,
-  icon,
-  title,
-  sub,
-}: {
-  href: string;
-  icon: React.ReactNode;
-  title: string;
-  sub: string;
-}) {
-  return (
-    <Link
-      href={href}
-      className="flex min-h-11 min-w-0 flex-col justify-center rounded-[--radius-sm] border border-border bg-surface/70 px-2.5 py-2 transition-colors hover:border-accent/50 hover:bg-surface-2"
-    >
-      <span className="flex items-center gap-1.5">
-        <span aria-hidden="true" className="shrink-0 text-accent">
-          {icon}
-        </span>
-        <span className="truncate text-body font-semibold leading-tight text-ink">
-          {title}
-        </span>
-      </span>
-      <span className="mt-0.5 truncate text-meta leading-tight text-faint">
-        {sub}
-      </span>
-    </Link>
   );
 }

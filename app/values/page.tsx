@@ -6,6 +6,7 @@ import { cachedValuePlayers, injuryLabel } from "@/lib/valuation";
 import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
 import { ValuesList, type ValueRow } from "@/components/ValuesList";
 import { fmtValue } from "@/lib/ui";
+import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
 
@@ -82,7 +83,7 @@ export default async function ValuesPage({
   return (
     <div>
       <header className="mb-2">
-        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
           Dynasty values
         </p>
         <div className="flex items-center justify-between gap-3">
@@ -91,7 +92,7 @@ export default async function ValuesPage({
           </h1>
           <Link
             href="/methodology"
-            className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+            className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
           >
             Methodology
           </Link>
@@ -101,7 +102,7 @@ export default async function ValuesPage({
           league&apos;s own scoring settings. Tiers break where the value
           distribution actually cliffs.
         </p>
-        <dl className="mt-2 grid grid-cols-3 divide-x divide-border rounded-[--radius-sm] border border-border bg-surface/60">
+        <dl className="mt-2 grid grid-cols-3 divide-x divide-border rounded-[--radius-sm] border border-border bg-surface">
           <Figure label="ranked" value={`${rows.length}`} />
           <Figure label="top value" value={top ? fmtValue(top.value) : "-"} sub={top?.name} />
           <Figure
@@ -118,7 +119,7 @@ export default async function ValuesPage({
       <nav aria-label="Values sections" className="mt-2 flex gap-1.5">
         <Link
           href="/rank"
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
         >
           Build your own ranking
           <ChevronRight size={13} aria-hidden="true" />
@@ -137,6 +138,7 @@ export default async function ValuesPage({
       <Suspense fallback={null}>
         <ValuesList rows={rows} />
       </Suspense>
+      <Onward from="/values" />
     </div>
   );
 }
@@ -152,8 +154,8 @@ function Figure({
 }) {
   return (
     <div className="min-w-0 px-2.5 py-1.5">
-      <dt className="text-meta uppercase tracking-wide text-faint">{label}</dt>
-      <dd className="truncate font-mono text-lede leading-snug font-semibold tnum text-ink">
+      <dt className="text-meta uppercase tracking-wide text-secondary">{label}</dt>
+      <dd className="truncate figure text-lede leading-snug font-semibold text-ink">
         {value}
       </dd>
       {sub && <dd className="truncate text-meta text-muted">{sub}</dd>}

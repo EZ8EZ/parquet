@@ -96,7 +96,7 @@ export function iconForAward(id: string): LucideIcon {
 }
 
 const TONE_BG: Record<BadgeTone, string> = {
-  accent: "bg-accent/16 border-accent/30",
+  accent: "bg-accent-wash border-accent-edge",
   positive: "bg-positive/16 border-positive/30",
   negative: "bg-negative/16 border-negative/30",
   info: "bg-info/16 border-info/30",
@@ -104,7 +104,7 @@ const TONE_BG: Record<BadgeTone, string> = {
 };
 
 const TONE_ICON: Record<BadgeTone, string> = {
-  accent: "text-accent",
+  accent: "text-accent-text",
   positive: "text-positive",
   negative: "text-negative",
   info: "text-info",

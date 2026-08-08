@@ -182,7 +182,7 @@ export function SearchPanel({
           onChange={(e) => handleQueryChange(e.target.value)}
           placeholder="Search a player, manager, trade or pick"
           aria-label="Search"
-          className="h-11 w-full rounded-full border border-border bg-surface pl-9 pr-3 text-body leading-relaxed text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+          className="h-11 w-full rounded-full border border-border bg-surface pl-9 pr-3 text-body leading-relaxed text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
         />
         {loading && (
           <Loader2
@@ -261,7 +261,7 @@ export function SearchPanel({
 function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
     <div className="mb-3">
-      <h2 className="mb-1 px-1 text-meta font-semibold uppercase tracking-[0.16em] text-faint">
+      <h2 className="mb-1 px-1 text-meta font-semibold uppercase tracking-[0.16em] text-secondary">
         {title}
       </h2>
       {children}
@@ -274,24 +274,24 @@ function PlayerRow({ p }: { p: PlayerResult }) {
     <li>
       <Link
         href={valuesFocusHref(p.id)}
-        className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
+        className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
       >
         <PlayerAvatar name={p.name} team={p.team} playerId={p.id} size="sm" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-body font-semibold leading-tight text-ink">
             {p.name}
           </div>
-          <div className="truncate text-meta leading-tight text-faint">
+          <div className="truncate text-meta leading-tight text-secondary">
             {[p.position, p.team, p.age != null ? `${p.age}y` : null]
               .filter(Boolean)
               .join(" - ")}
           </div>
         </div>
         <div className="shrink-0 text-right">
-          <div className="font-mono text-note font-semibold tnum text-ink">
+          <div className="figure text-note font-semibold text-ink">
             {fmtValue(p.value)}
           </div>
-          <div className="text-micro uppercase tracking-wide text-accent">
+          <div className="text-micro uppercase tracking-wide text-accent-text">
             {p.tier}
           </div>
         </div>
@@ -301,7 +301,7 @@ function PlayerRow({ p }: { p: PlayerResult }) {
           the place where "how did he get where he is" is most worth one tap. */}
       <Link
         href={playerLineageHref(p.id)}
-        className="flex min-h-11 items-center gap-1 px-2.5 text-meta font-semibold text-faint transition-colors hover:text-accent"
+        className="flex min-h-11 items-center gap-1 px-2.5 text-meta font-semibold text-faint transition-colors hover:text-accent-text"
       >
         Where he came from
         <ChevronRight size={12} aria-hidden="true" />
@@ -315,7 +315,7 @@ function ManagerRow({ m }: { m: ManagerResult }) {
     <li>
       <Link
         href={m.href}
-        className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
+        className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
       >
         <TeamAvatar name={m.name} avatarId={m.avatar} teamLogoUrl={m.teamLogoUrl} size="sm" />
         <div className="min-w-0 flex-1">
@@ -324,7 +324,7 @@ function ManagerRow({ m }: { m: ManagerResult }) {
               {m.name}
             </span>
             {m.displayName !== m.name && (
-              <span className="min-w-0 shrink truncate text-meta leading-tight text-faint">
+              <span className="min-w-0 shrink truncate text-meta leading-tight text-secondary">
                 {m.displayName}
               </span>
             )}
@@ -352,7 +352,7 @@ function TradeRow({
     <li
       className={cn(
         "overflow-hidden rounded-[--radius-sm] border transition-colors",
-        expanded ? "border-border-strong bg-surface-2" : "border-border bg-surface/60",
+        expanded ? "border-border-strong bg-surface-2" : "border-border bg-surface",
       )}
     >
       <button
@@ -366,7 +366,7 @@ function TradeRow({
           <div className={cn("text-note leading-snug text-ink", !expanded && "truncate")}>
             {t.description}
           </div>
-          <div className="mt-0.5 font-mono text-micro tnum text-faint">
+          <div className="mt-0.5 figure text-micro text-faint">
             {t.season} - week {t.week}
           </div>
         </div>
@@ -375,7 +375,7 @@ function TradeRow({
         <div className="border-t border-border px-2.5 py-1.5">
           <Link
             href={dealHref(t.id)}
-            className="inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent"
+            className="inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent-text"
           >
             Open this deal
             <ChevronRight size={13} aria-hidden="true" />
@@ -391,14 +391,14 @@ function PickRow({ p }: { p: PickResult }) {
     <li>
       <Link
         href={p.href}
-        className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
+        className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
       >
         <GitBranch size={16} aria-hidden="true" className="shrink-0 text-faint" />
         <div className="min-w-0 flex-1">
           <div className="truncate text-body font-semibold leading-tight text-ink">
             {p.label}
           </div>
-          <div className="truncate text-meta leading-tight text-faint">
+          <div className="truncate text-meta leading-tight text-secondary">
             {p.resolved
               ? `${p.playerName ?? "no player"} - ${p.ownerName}`
               : `Not yet drafted - held by ${p.ownerName}`}

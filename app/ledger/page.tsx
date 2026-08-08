@@ -6,6 +6,7 @@ import { getPrincipals } from "@/lib/principals";
 import { captureBlock, readSeat } from "@/lib/auth/server";
 import { LedgerItem } from "@/components/LedgerItem";
 import { PageHeader, SectionHeader, Stat, EmptyState } from "@/components/ui";
+import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
 
@@ -39,7 +40,7 @@ export default async function LedgerPage() {
       />
 
       {blocked === "other-lens" && (
-        <div className="mb-3 flex items-start gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2">
+        <div className="mb-3 flex items-start gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2">
           <Eye size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-faint" />
           <p className="min-w-0 text-meta leading-relaxed text-muted">
             You are viewing {h.me.teamName ?? h.me.displayName}. Captured reasoning
@@ -50,7 +51,7 @@ export default async function LedgerPage() {
       )}
 
       {blocked === "unclaimed" && (
-        <div className="mb-3 flex items-start gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2">
+        <div className="mb-3 flex items-start gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2">
           <KeyRound size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-faint" />
           <p className="min-w-0 text-meta leading-relaxed text-muted">
             This browser has not claimed a seat, so it cannot write as anyone. Ask the
@@ -129,17 +130,18 @@ export default async function LedgerPage() {
       )}
 
       {blocked === "unclaimed" && (
-        <p className="mt-4 text-center text-meta leading-relaxed text-faint">
+        <p className="mt-4 text-center text-meta leading-relaxed text-secondary">
           Everything else in Parquet is public league data.{" "}
           <Link
             href="/about"
-            className="inline-flex min-h-11 items-center gap-0.5 font-semibold text-muted underline-offset-2 hover:text-accent hover:underline"
+            className="inline-flex min-h-11 items-center gap-0.5 font-semibold text-muted underline-offset-2 hover:text-accent-text hover:underline"
           >
             What this is
             <ChevronRight size={12} aria-hidden="true" />
           </Link>
         </p>
       )}
+      <Onward from="/ledger" />
     </div>
   );
 }

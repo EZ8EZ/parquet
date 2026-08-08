@@ -139,14 +139,3 @@ export function sleeperTradeUrl(leagueId: string | null | undefined): string | n
   return league ? `${league}/trades` : null;
 }
 
-/**
- * A player's page on Sleeper (stats, news, projections).
- * Route: `/nba/players/:playerId` — server-rendered; verified by both status
- * code and by the player's real name appearing in the `<title>`.
- *
- * Sport segment comes first. Do NOT use `/players/nba/:id`, which is a JSON API
- * endpoint (see header note).
- */
-export function sleeperPlayerUrl(playerId: string | null | undefined): string | null {
-  return isNumericId(playerId) ? `${WEB_BASE}/nba/players/${playerId}` : null;
-}

@@ -30,7 +30,7 @@ export function PlayerRow({
   injury?: string | null;
 }) {
   return (
-    <div className="flex items-center gap-3 rounded-[--radius-sm] border border-border bg-surface/60 px-3 py-2.5">
+    <div className="flex items-center gap-3 rounded-[--radius-sm] border border-border bg-surface px-3 py-2.5">
       <PlayerAvatar name={name} team={team} playerId={playerId} size="md" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
@@ -41,7 +41,7 @@ export function PlayerRow({
             </span>
           )}
         </div>
-        <div className="text-[11px] text-faint">
+        <div className="text-meta text-secondary">
           {position ?? "-"}
           {team ? ` · ${team}` : ""}
           {age != null ? ` · ${age}y` : ""}
@@ -50,10 +50,10 @@ export function PlayerRow({
       {right ?? (
         value != null && (
           <div className="text-right">
-            <div className="font-mono text-sm font-semibold tnum text-ink">
+            <div className="figure text-sm font-semibold text-ink">
               {fmtValue(value)}
             </div>
-            {tier && <div className="text-[10px] text-faint">{tier}</div>}
+            {tier && <div className="text-[10px] text-secondary">{tier}</div>}
           </div>
         )
       )}

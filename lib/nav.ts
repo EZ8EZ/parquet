@@ -5,10 +5,15 @@
  * be two independently hand-maintained arrays claiming to be "the deeper pages," and
  * they had already silently diverged - neither included Manager Compare or `/rank`,
  * a fact nobody noticed because there was no single place that would have caught it.
- * This file is that place. Home and League both render their curated shortcuts by
- * filtering THIS array (see `curated: true` below) rather than keeping their own
- * lists, so the two can no longer drift apart, and `/more` renders the whole thing
- * as the one page that promises completeness.
+ * This file is that place, and `/more` renders the whole thing as the one page that
+ * promises completeness.
+ *
+ * NEITHER SHORTCUT LIST SURVIVES. Home's grid went first (it now ends with the
+ * situational steps `homeNext` builds); League's pill row followed, and with it the
+ * `curated` flag that fed both. A curated ten drawn from every group is an index, and
+ * the app already has exactly two of those - the Desk's drawer, and `/more` behind it
+ * as the no-JS and crawler fallback. Every other page says where it lets you out
+ * through `onwardFrom`, which is a reason rather than a list.
  *
  * Deliberately plain data, no icons: this file has to stay importable from a Server
  * Component and a plain data module alike without pulling in `lucide-react` (see
@@ -39,8 +44,6 @@ export interface NavSurface {
   /** The Desk's destination row is 1/4 of a 390pt screen wide, so a slot label has
    *  to be one short word. Only `primary` surfaces need one. */
   short?: string;
-  /** Also shown in Home's and League's shortcut lists - see the file header. */
-  curated?: true;
 }
 
 export const ALL_SURFACES: NavSurface[] = [
@@ -58,31 +61,38 @@ export const ALL_SURFACES: NavSurface[] = [
   { href: "/ledger", label: "Decision ledger", short: "Record", sub: "Capture your reasoning at the moment of conviction", group: "Primary", primary: true },
 
   // ---------------------------------------------------------------- your team
-  { href: "/recap", label: "Season recap", sub: "Last season, recapped from what actually happened", group: "Your team", curated: true },
+  { href: "/recap", label: "Season recap", sub: "Last season, recapped from what actually happened", group: "Your team" },
 
   // ---------------------------------------------------------------- the league
   { href: "/league", label: "League", sub: "Standings, timelines, everyone's window", group: "The league" },
-  { href: "/managers", label: "Dossiers", sub: "Scout your rivals", group: "The league", curated: true },
-  { href: "/managers/compare", label: "Manager Compare", sub: "Any two managers, side by side", group: "The league", curated: true },
-  { href: "/awards", label: "League awards", sub: "Who's who, statistically", group: "The league", curated: true },
+  { href: "/managers", label: "Dossiers", sub: "Scout your rivals", group: "The league" },
+  { href: "/managers/compare", label: "Manager Compare", sub: "Any two managers, side by side", group: "The league" },
+  { href: "/awards", label: "League awards", sub: "Who's who, statistically", group: "The league" },
   { href: "/commissioner", label: "Commissioner tools", sub: "League health checks and an audit log", group: "The league" },
 
   // ---------------------------------------------------------------- trading
-  { href: "/trade", label: "Trade", sub: "Build and evaluate a deal", group: "Trading", curated: true },
+  { href: "/trade", label: "Trade", sub: "Build and evaluate a deal", group: "Trading" },
   { href: "/trade/finder", label: "Trade Finder", sub: "Auto-suggested packages, priced both ways", group: "Trading" },
   // Replaces /web. The ring is gone (see lib/tradegraph's header for the measurement
   // that killed it); what a reader wanted from it was always a specific deal, and
   // every deal now has its own page underneath this index.
-  { href: "/deals", label: "Every deal", sub: "One page per trade, and what each side is worth today", group: "Trading", curated: true },
+  { href: "/deals", label: "Every deal", sub: "One page per trade, and what each side is worth today", group: "Trading" },
 
   // ---------------------------------------------------------------- drafts & values
-  { href: "/drafts", label: "Draft history", sub: "What your picks became", group: "Drafts & values", curated: true },
+  // "Pick lineage", not "Draft history". The registry said one thing and the page,
+  // its two children and all six inbound links said the other, so the same surface
+  // had two names depending on which door you came through. The six call sites won:
+  // lineage is what the page actually does, and a rename here fixes all of them.
+  { href: "/drafts", label: "Pick lineage", sub: "What your picks became", group: "Drafts & values" },
   { href: "/drafts/grades", label: "Draft report cards", sub: "Grade every past draft class", group: "Drafts & values" },
-  { href: "/values", label: "Asset values", sub: "Players and picks, one model", group: "Drafts & values", curated: true },
+  { href: "/values", label: "Asset values", sub: "Players and picks, one model", group: "Drafts & values" },
+  // A real draft board that the Trade Finder already reads - `readCustomOrder` feeds
+  // every package's conviction line - so it earns its listing on work it is already
+  // doing rather than on novelty.
   { href: "/rank", label: "Build your own ranking", sub: "Blend your own board against the field's", group: "Drafts & values" },
 
   // ---------------------------------------------------------------- the app
-  { href: "/analyst", label: "The Analyst", sub: "Audit your own thinking", group: "The app", curated: true },
+  { href: "/analyst", label: "The Analyst", sub: "Audit your own thinking", group: "The app" },
   { href: "/about", label: "What this is", sub: "The premise, both indexes, and why nothing gets a grade", group: "The app" },
   { href: "/methodology", label: "Methodology", sub: "How the values and both indexes actually work", group: "The app" },
   { href: "/settings", label: "Settings", sub: "Theme, and how you view the app", group: "The app" },
@@ -96,12 +106,275 @@ export const ALL_SURFACES: NavSurface[] = [
   // no-JS and crawler fallback for the drawer, and as the drawer's own "see
   // everything" target.
   { href: "/more", label: "Everything in Parquet", sub: "Search, and every surface in one list", group: "The app" },
-  // ONE entry for the whole Lab, and deliberately neither `primary` nor `curated`:
+  // ONE entry for the whole Lab, and deliberately not `primary`:
   // the experiments behind it are unfinished by construction and must not compete
-  // with finished surfaces for a slot or a shortcut. The Lab's own index lists them;
+  // with finished surfaces for a permanent slot. The Lab's own index lists them;
   // this registry lists the Lab. See lib/lab/index.ts.
   { href: "/lab", label: "The Lab", sub: "Experiments. They may be wrong, and they may vanish", group: "The app" },
 ];
+
+/**
+ * WHERE THIS PAGE LETS YOU OUT.
+ *
+ * The round-8 measurement that produced this: four surfaces had zero outbound links,
+ * and the app read as "a set of destinations with no connective tissue - every
+ * journey ends by bouncing off the bottom bar." A dead end is not a styling problem,
+ * it is a missing answer to the only question a reader has when they finish reading:
+ * *what would I want next?*
+ *
+ * So it is data, in the same file as the destinations themselves, and `nav.test.ts`
+ * pins that EVERY registered surface has at least two - which is what stops the next
+ * dead end from being shipped rather than merely fixing the four that exist.
+ *
+ * `why` is the load-bearing half. A row of bare page names is a second navigation
+ * bar; a row that says what the next page answers is a continuation of the sentence
+ * this page just finished. Written as the question you are holding when you leave,
+ * never as a description of the destination.
+ */
+export interface OnwardStep {
+  href: string;
+  /** The question this page leaves you with, that the destination answers. */
+  why: string;
+  /** Only for destinations outside the registry (the Lab's experiments). Everything
+   *  registered takes its name from the registry, so a rename can never desync. */
+  label?: string;
+}
+
+const ONWARD: Record<string, OnwardStep[]> = {
+  "/": [
+    { href: "/plan", why: "So what do I do about it?" },
+    { href: "/ledger", why: "Write down why, before I forget" },
+    { href: "/league", why: "Where does that put me?" },
+  ],
+  "/roster": [
+    { href: "/plan", why: "What would actually improve this?" },
+    { href: "/trade/finder", why: "Who has what I am missing?" },
+    { href: "/lab/counterfactual", why: "What if I had never traded?", label: "The counterfactual roster" },
+  ],
+  "/plan": [
+    { href: "/trade/finder", why: "Find the partner for that move" },
+    { href: "/trade", why: "Price a specific package" },
+    { href: "/ledger", why: "Record the reasoning while it is fresh" },
+  ],
+  "/ledger": [
+    { href: "/deals", why: "See the deals themselves" },
+    { href: "/recap", why: "How did last season actually go?" },
+    { href: "/analyst", why: "Argue with someone who has read all of it" },
+  ],
+  "/recap": [
+    { href: "/ledger", why: "What was I thinking at the time?" },
+    { href: "/awards", why: "How did that compare to everyone?" },
+    { href: "/lab/regret", why: "What did I leave on the bench?", label: "The regret ledger" },
+  ],
+  "/league": [
+    { href: "/managers", why: "Who are these people?" },
+    { href: "/awards", why: "Who is best at what?" },
+    { href: "/commissioner", why: "Is anything broken?" },
+  ],
+  "/managers": [
+    { href: "/managers/compare", why: "Put two of them side by side" },
+    { href: "/trade/finder", why: "Which of them should I call?" },
+    { href: "/deals", why: "What have they actually done?" },
+  ],
+  "/managers/compare": [
+    { href: "/trade/finder", why: "Is there a deal between these two?" },
+    { href: "/deals", why: "Every trade, in full" },
+    { href: "/awards", why: "Who wins what, league-wide" },
+  ],
+  "/awards": [
+    { href: "/managers", why: "Read the winner's full dossier" },
+    { href: "/drafts/grades", why: "How did the drafting actually grade?" },
+    { href: "/methodology", why: "What is each award measuring?" },
+  ],
+  "/commissioner": [
+    { href: "/deals", why: "Open any of those transactions" },
+    { href: "/league", why: "Back to the standings" },
+    { href: "/drafts", why: "Where the stuck picks came from" },
+  ],
+  "/trade": [
+    { href: "/ledger", why: "Capture why you are doing this" },
+    { href: "/trade/finder", why: "Or let the app propose one" },
+    { href: "/values", why: "Check what a piece is worth" },
+  ],
+  "/trade/finder": [
+    { href: "/trade", why: "Adjust the package by hand" },
+    { href: "/rank", why: "Price it against your own board" },
+    { href: "/managers", why: "Read who you are dealing with" },
+  ],
+  "/deals": [
+    { href: "/ledger", why: "The reasoning you captured on yours" },
+    { href: "/managers/compare", why: "Two managers, head to head" },
+    { href: "/drafts", why: "What the picks in them became" },
+  ],
+  "/drafts": [
+    { href: "/drafts/grades", why: "How did each class grade out?" },
+    { href: "/rank", why: "Build your own board for the next one" },
+    { href: "/values", why: "What are those picks worth now?" },
+  ],
+  "/drafts/grades": [
+    { href: "/drafts", why: "Follow one pick's whole story" },
+    { href: "/awards", why: "Who drafts well, across all seasons" },
+    { href: "/methodology", why: "How a pick is graded" },
+  ],
+  "/values": [
+    { href: "/rank", why: "Disagree with the model" },
+    { href: "/trade", why: "Put these into a package" },
+    { href: "/methodology", why: "Where does this number come from?" },
+  ],
+  "/rank": [
+    { href: "/trade/finder", why: "Find deals priced on your board" },
+    { href: "/values", why: "Compare it against the model" },
+    { href: "/drafts", why: "How your last board turned out" },
+  ],
+  "/analyst": [
+    { href: "/ledger", why: "Capture what it changed your mind about" },
+    { href: "/plan", why: "Turn the argument into a move" },
+    { href: "/managers", why: "Check its read on a rival" },
+  ],
+  "/about": [
+    { href: "/methodology", why: "How the numbers are actually built" },
+    { href: "/teams", why: "Run it as any manager in the league" },
+    { href: "/more", why: "Everything there is" },
+  ],
+  "/methodology": [
+    { href: "/values", why: "See the model on real players" },
+    { href: "/league", why: "See both indexes on real rosters" },
+    { href: "/lab", why: "What is still being tested" },
+  ],
+  "/settings": [
+    { href: "/teams", why: "Look at someone else's team" },
+    { href: "/about", why: "What this app is for" },
+    { href: "/more", why: "Everything there is" },
+  ],
+  "/teams": [
+    { href: "/league", why: "The standings first" },
+    { href: "/managers", why: "Or read them before you pick" },
+  ],
+  "/more": [
+    { href: "/about", why: "What this app is for" },
+    { href: "/methodology", why: "How the numbers are built" },
+  ],
+  "/lab": [
+    { href: "/roster", why: "Back to the real roster" },
+    { href: "/methodology", why: "How the finished metrics work" },
+  ],
+};
+
+/**
+ * The next steps off a surface, resolved against the registry.
+ *
+ * Returns `[]` for an unregistered path rather than throwing - callers pass
+ * `usePathname()` output, and a dynamic route (`/managers/42`) legitimately has no
+ * entry of its own.
+ */
+export function onwardFrom(href: string): { href: string; label: string; why: string }[] {
+  return resolveSteps(ONWARD[href] ?? []);
+}
+
+function resolveSteps(steps: OnwardStep[]): { href: string; label: string; why: string }[] {
+  return steps.map((s) => ({
+    href: s.href,
+    label: s.label ?? ALL_SURFACES.find((x) => x.href === s.href)?.label ?? s.href,
+    why: s.why,
+  }));
+}
+
+/**
+ * HOME'S NEXT STEPS, WHICH ARE NOT A MENU.
+ *
+ * For one round Home rendered the WHOLE registry, and so did `/more`, and so did the
+ * Desk's drawer: three copies of one index, which is the very "wall of stuff" the
+ * registry was built to end, moved one layer up. The drawer is the complete index -
+ * its button promises every page in Parquet plus search, and it is on the bottom of
+ * every screen - so Home does not need to be a second one. Home's job is the other
+ * half: what changed, what is outstanding, and the two or three moves worth making
+ * right now.
+ *
+ * "Right now" is read from three facts the app knows for certain, and nothing else.
+ * Deliberately NOT a phase-aware rule engine: `currentLeague.status` carries four
+ * values against six real modes of a dynasty season, so anything keyed to it would
+ * fire on the wrong boundaries. These three questions have unambiguous answers - is
+ * there reasoning still to capture, did anything actually move since the last visit,
+ * does the record contradict what was said. Each true fact promotes ONE step to the
+ * front; the baseline (`ONWARD["/"]`) then fills the remainder, so a completely quiet
+ * week still ends with three real ways out rather than an empty rail.
+ */
+export interface HomeFacts {
+  /** Notable decisions with no reasoning captured, in a seat allowed to capture it. */
+  outstanding: number;
+  /** The digest has something to report since the last visit. */
+  moved: boolean;
+  /** Stated posture and revealed behaviour disagree. */
+  contradicted: boolean;
+}
+
+export function homeNext(f: HomeFacts): { href: string; label: string; why: string }[] {
+  const front: OnwardStep[] = [];
+  if (f.outstanding > 0) {
+    // NOT the baseline's "Write down why, before I forget": when this fires, the
+    // capture badge at the top of Home is already saying almost exactly that, and two
+    // near-identical sentences on one page read as a stutter rather than as emphasis.
+    front.push({ href: "/ledger", why: "Which decisions still have no why?" });
+  }
+  if (f.moved) {
+    front.push({ href: "/deals", why: "What were those moves actually worth?" });
+  }
+  if (f.contradicted) {
+    front.push({ href: "/analyst", why: "Argue with someone who has read all of it" });
+  }
+  const seen = new Set(front.map((s) => s.href));
+  const rest = (ONWARD["/"] ?? []).filter((s) => !seen.has(s.href));
+  return resolveSteps([...front, ...rest].slice(0, 3));
+}
+
+/** Every surface that has onward steps defined. Test-facing. */
+export function surfacesWithOnward(): string[] {
+  return Object.keys(ONWARD);
+}
+
+/**
+ * EVERYTHING THE APP KNOWS ABOUT ONE MANAGER, AS LINKS.
+ *
+ * The single most repeated integration failure in this app: a surface names a
+ * manager, and does not link to what the app already knows about them. Four separate
+ * instances of it were catalogued - the Trade Finder unreachable from the dossier
+ * that decides who to call, the dossier unreachable from the trade result naming its
+ * counterparty, the ledger unreachable from a trade log, and a rival's numbers
+ * unreachable from the comparison of two rivals. They are one bug, so they get one
+ * fix, and it lives here rather than as markup copied to four call sites.
+ *
+ * The FORMER-MANAGER guard is the same one `ManagerLink` carries and for the same
+ * reason (D22): a departed principal holds no roster, so there is no trade to find
+ * with them and no roster page to route to. They keep the two links that are
+ * genuinely about the person - their own record, and their deals.
+ */
+export function managerLinks(m: {
+  rosterId: number | null;
+  ownerId: string | null;
+  isFormer: boolean;
+  isMe: boolean;
+}): { href: string; label: string }[] {
+  const out: { href: string; label: string }[] = [];
+  if (m.isFormer && m.ownerId) {
+    out.push({ href: `/managers/former/${m.ownerId}`, label: "Their record" });
+  } else if (m.rosterId != null) {
+    out.push({ href: `/managers/${m.rosterId}`, label: m.isMe ? "Your dossier" : "Dossier" });
+  }
+  if (!m.isFormer && m.rosterId != null && !m.isMe) {
+    // The whole point of item one: the finder is reachable from the moment a trade
+    // is being contemplated, not only from /plan and the drawer.
+    out.push({ href: `/trade/finder?with=${m.rosterId}`, label: "Find a trade" });
+  }
+  if (m.ownerId) {
+    out.push({ href: `/deals?manager=${encodeURIComponent(m.ownerId)}`, label: "Their deals" });
+  }
+  if (m.isMe) {
+    // Item three: a trade log with no path to the reasoning captured about those
+    // same trades.
+    out.push({ href: "/ledger", label: "Your reasoning" });
+  }
+  return out;
+}
 
 /**
  * The Desk's four destination slots, in registry order.
@@ -114,12 +387,6 @@ export const ALL_SURFACES: NavSurface[] = [
  */
 export function primarySurfaces(): NavSurface[] {
   return ALL_SURFACES.filter((s) => s.primary);
-}
-
-/** Home's and League's shared shortcut set - see the file header for why this is a
- *  filter over the one registry rather than its own list. */
-export function curatedSurfaces(): NavSurface[] {
-  return ALL_SURFACES.filter((s) => s.curated);
 }
 
 /** Everything worth putting on the full index, grouped in registry order. */

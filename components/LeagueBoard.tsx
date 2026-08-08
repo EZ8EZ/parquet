@@ -60,7 +60,7 @@ export function LeagueBoard({
       <div
         role="tablist"
         aria-label="Board axes"
-        className="mb-1.5 flex gap-1 rounded-full border border-border bg-surface/60 p-1"
+        className="mb-1.5 flex gap-1 rounded-full border border-border bg-surface p-1"
       >
         {BOARD_TABS.map((t) => {
           const on = t.id === board;
@@ -74,12 +74,12 @@ export function LeagueBoard({
               className={cn(
                 "flex min-h-11 flex-1 flex-col items-center justify-center rounded-full px-2 transition-colors",
                 on
-                  ? "bg-accent/15 text-accent"
+                  ? "bg-accent-wash text-accent-text"
                   : "text-muted hover:bg-surface-2 hover:text-ink",
               )}
             >
               <span className="text-note font-semibold leading-tight">{t.label}</span>
-              <span className="font-mono text-micro leading-tight tnum text-faint">
+              <span className="figure text-micro leading-tight text-faint">
                 {t.axes}
               </span>
             </button>
@@ -88,14 +88,14 @@ export function LeagueBoard({
       </div>
 
       {board === "duration" ? (
-        <div className="rounded-[--radius] border border-border bg-surface/60 p-2.5">
+        <div className="rounded-[--radius] border border-border bg-surface p-2.5">
           <TimelineQuadrant points={points} />
           {/* The chart already prints both axis labels and the word STRADDLE inside
               the tinted band, so the 48-word gloss that used to sit here was mostly
               re-saying the picture. What the picture cannot say is why that band is
               the interesting one - that stays. The definitions go where every other
               definition in this app goes. */}
-          <p className="mt-1 text-meta leading-snug text-faint">
+          <p className="mt-1 text-meta leading-snug text-secondary">
             Inside the tinted band a roster is straddling two timelines at once, which
             makes it the most motivated trade partner on this board.
           </p>

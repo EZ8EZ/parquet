@@ -38,7 +38,7 @@ export async function SeatLinks({ h }: { h: LeagueHistory }) {
           title="Seats"
           action={<Tag tone="neutral">single user</Tag>}
         />
-        <div className="rounded-[--radius] border border-border bg-surface/60 p-3">
+        <div className="rounded-[--radius] border border-border bg-surface p-3">
           <div className="flex items-start gap-2.5">
             <KeyRound size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-faint" />
             <div className="min-w-0">
@@ -134,7 +134,7 @@ export async function SeatLinks({ h }: { h: LeagueHistory }) {
         title="Seats"
         action={<Tag tone="positive">{managers.length} links</Tag>}
       />
-      <div className="mb-2 flex items-start gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2">
+      <div className="mb-2 flex items-start gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2">
         <ShieldCheck size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-positive" />
         <p className="min-w-0 text-meta leading-relaxed text-muted">
           Send each manager their own link, once. Opening it in the browser they use
@@ -148,14 +148,14 @@ export async function SeatLinks({ h }: { h: LeagueHistory }) {
         {managers.map((m) => (
           <div
             key={m.ownerId}
-            className="rounded-[--radius] border border-border bg-surface/60 p-2.5"
+            className="rounded-[--radius] border border-border bg-surface p-2.5"
           >
             <div className="mb-1.5 flex items-baseline gap-2">
               <span className="min-w-0 truncate text-body font-semibold text-ink">
                 {m.displayName}
               </span>
               {m.teamName && (
-                <span className="min-w-0 truncate text-meta text-faint">
+                <span className="min-w-0 truncate text-meta text-secondary">
                   {m.teamName}
                 </span>
               )}
@@ -192,7 +192,7 @@ export async function SeatLinks({ h }: { h: LeagueHistory }) {
                   {unsignable.map((m) => (
                     <li key={m.ownerId} className="text-meta leading-snug text-muted">
                       <span className="font-semibold text-ink">{m.displayName}</span>{" "}
-                      <span className="font-mono text-faint">
+                      <span className="font-mono text-secondary">
                         (id {JSON.stringify(m.ownerId)})
                       </span>
                     </li>

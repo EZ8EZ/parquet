@@ -27,17 +27,17 @@ function Metric({
   tone?: "neutral" | "positive" | "negative" | "accent";
 }) {
   return (
-    <div className="rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5">
-      <div className="text-meta uppercase tracking-wide text-faint">{label}</div>
+    <div className="rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5">
+      <div className="text-meta uppercase tracking-wide text-secondary">{label}</div>
       <div
         className={cn(
-          "font-mono text-lede font-semibold leading-tight tnum",
+          "figure text-lede font-semibold leading-tight",
           tone === "positive"
             ? "text-positive"
             : tone === "negative"
               ? "text-negative"
               : tone === "accent"
-                ? "text-accent"
+                ? "text-accent-text"
                 : "text-ink",
         )}
       >
@@ -50,7 +50,7 @@ function Metric({
 
 const POSTURE_TONE: Record<string, string> = {
   rebuilding: "border-info/30 bg-info/[0.08] text-info",
-  contending: "border-accent/30 bg-accent/[0.08] text-accent",
+  contending: "border-accent-edge bg-accent-wash text-accent-text",
   balanced: "border-border bg-elevated text-muted",
 };
 
@@ -94,7 +94,7 @@ export default async function FormerManagerDetailPage({
       {/* Negative margins keep the 44px tap target from adding visible space. */}
       <Link
         href="/managers"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
+        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
       >
         <ArrowLeft size={13} aria-hidden="true" />
         All dossiers
@@ -108,13 +108,13 @@ export default async function FormerManagerDetailPage({
           size="lg"
         />
         <div className="min-w-0 flex-1">
-          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
             Dossier · former manager
           </p>
           <h1 className="truncate font-display text-display font-semibold leading-[1.15] text-ink">
             {p.teamName ?? p.displayName}
           </h1>
-          <div className="flex flex-wrap items-center gap-x-2 font-mono text-meta tnum text-faint">
+          <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
             <span className="truncate">{p.displayName}</span>
             <span aria-hidden="true">·</span>
             <span>{identity.tenureLabel}</span>
@@ -132,7 +132,7 @@ export default async function FormerManagerDetailPage({
       </p>
 
       {titles && (
-        <p className="mb-2 flex items-center gap-1.5 text-note font-semibold text-accent">
+        <p className="mb-2 flex items-center gap-1.5 text-note font-semibold text-accent-text">
           <Trophy size={14} aria-hidden="true" className="shrink-0" />
           {titles.label}
         </p>
@@ -148,7 +148,7 @@ export default async function FormerManagerDetailPage({
         </div>
       )}
 
-      <p className="rounded-[--radius] border border-border bg-surface/80 p-2.5 text-body leading-[1.42] text-ink">
+      <p className="rounded-[--radius] border border-border bg-surface p-2.5 text-body leading-[1.42] text-ink">
         {d.read}
       </p>
 
@@ -160,7 +160,7 @@ export default async function FormerManagerDetailPage({
             <Lightbulb
               size={13}
               aria-hidden="true"
-              className="mt-[3px] shrink-0 text-accent"
+              className="mt-[3px] shrink-0 text-accent-text"
             />
             <p className="text-note leading-snug text-ink/90">{t}</p>
           </li>
@@ -195,7 +195,7 @@ export default async function FormerManagerDetailPage({
           }
         />
       </div>
-      <p className="mt-1.5 font-mono text-meta leading-relaxed tnum text-faint">
+      <p className="mt-1.5 figure text-meta leading-relaxed text-secondary">
         {extras.join(" · ")}
       </p>
 
@@ -218,7 +218,7 @@ export default async function FormerManagerDetailPage({
               <span
                 key={s.season}
                 className={cn(
-                  "inline-flex items-baseline gap-1.5 rounded-full border px-2 py-0.5 font-mono text-meta tnum",
+                  "inline-flex items-baseline gap-1.5 rounded-full border px-2 py-0.5 figure text-meta",
                   POSTURE_TONE[s.posture] ?? POSTURE_TONE.balanced,
                 )}
               >
@@ -237,12 +237,12 @@ export default async function FormerManagerDetailPage({
           <SectionHeader
             title="Trade activity"
             action={
-              <span className="font-mono text-meta tnum text-faint">
+              <span className="figure text-meta text-secondary">
                 {p.trades} across {tradesData.length} seasons
               </span>
             }
           />
-          <div className="rounded-[--radius] border border-border bg-surface/60 px-2 pb-1 pt-2">
+          <div className="rounded-[--radius] border border-border bg-surface px-2 pb-1 pt-2">
             <BarChart data={tradesData} height={104} />
           </div>
         </>
@@ -257,14 +257,14 @@ export default async function FormerManagerDetailPage({
                 // Straight to this manager's own deals - a former manager's whole
                 // trade record is exactly what the web's node panel shows.
                 href={managerDealsHref(ownerId)}
-                className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent"
+                className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent-text"
               >
                 their deals
                 <ChevronRight size={12} aria-hidden="true" />
               </Link>
             }
           />
-          <div className="overflow-hidden rounded-[--radius] border border-border bg-surface/60">
+          <div className="overflow-hidden rounded-[--radius] border border-border bg-surface">
             <ul className="divide-y divide-border">
               {p.tradePartners.slice(0, 6).map((tp) => {
                 const t = partnerIdentity(h, principals, tp);
@@ -285,13 +285,13 @@ export default async function FormerManagerDetailPage({
                       <span className="min-w-0 flex-1 truncate text-note font-medium text-ink">
                         {t.name}
                         {t.tenureLabel && (
-                          <span className="text-meta font-normal text-faint">
+                          <span className="text-meta font-normal text-secondary">
                             {" "}
                             {t.tenureLabel}
                           </span>
                         )}
                       </span>
-                      <span className="shrink-0 font-mono text-meta tnum text-muted">
+                      <span className="shrink-0 figure text-meta text-muted">
                         {tp.count} deal{tp.count === 1 ? "" : "s"}
                       </span>
                       <ChevronRight
@@ -316,14 +316,14 @@ export default async function FormerManagerDetailPage({
           <Link
             key={a.href}
             href={a.href}
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
           >
             {a.label}
           </Link>
         ))}
       </div>
 
-      <p className="mt-3 text-meta leading-relaxed text-faint">
+      <p className="mt-3 text-meta leading-relaxed text-secondary">
         Read from {p.totalTransactions} recorded moves ({signed(p.picks.net)} net
         picks) across {identity.tenureLabel}. Behavior only - no roster contents, no
         stated intent.

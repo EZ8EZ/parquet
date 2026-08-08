@@ -138,20 +138,20 @@ export default async function DealPage({
     <div>
       <Link
         href="/deals"
-        className="-ml-2 mb-1 inline-flex min-h-11 items-center gap-1 px-2 text-meta font-semibold text-muted transition-colors hover:text-accent"
+        className="-ml-2 mb-1 inline-flex min-h-11 items-center gap-1 px-2 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
       >
         <ChevronLeft size={13} aria-hidden="true" />
         All deals
       </Link>
 
       <header className="mb-3">
-        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
           {record.season} · week {record.week}
         </p>
         <h1 className="font-display text-display font-semibold leading-tight text-ink">
           {record.multiTeam ? `${parties.length}-team deal` : "The deal"}
         </h1>
-        <p className="mt-0.5 font-mono text-meta tnum text-faint">
+        <p className="mt-0.5 figure text-meta text-secondary">
           <LocalDate ts={record.created} />
         </p>
         <p className="mt-1 text-note leading-snug text-muted">{record.summary}</p>
@@ -171,7 +171,7 @@ export default async function DealPage({
       {sides.map((s) => (
         <section
           key={s.rosterId}
-          className="mb-2 rounded-[--radius] border border-border bg-surface/80 p-3"
+          className="mb-2 rounded-[--radius] border border-border bg-surface p-3"
         >
           <div className="flex items-start justify-between gap-2">
             {s.manager ? (
@@ -188,7 +188,7 @@ export default async function DealPage({
               </span>
             )}
             <span className="shrink-0 text-right">
-              <span className="block font-mono text-lede font-semibold leading-tight tnum text-ink">
+              <span className="block figure text-lede font-semibold leading-tight text-ink">
                 {fmtValue(s.total)}
               </span>
               <span className="block text-micro leading-normal text-faint">
@@ -221,7 +221,7 @@ export default async function DealPage({
                     // scored zero, and excluded from the total above.
                     <Link
                       href={playerLineageHref(pid)}
-                      className="flex items-center gap-1.5 rounded-[--radius-sm] border border-border/70 bg-surface/50 px-2 py-1.5 transition-colors hover:bg-surface-2"
+                      className="flex items-center gap-1.5 rounded-[--radius-sm] border border-border bg-surface px-2 py-1.5 transition-colors hover:bg-surface-2"
                     >
                       <PlayerAvatar
                         name={p?.fullName ?? "?"}
@@ -233,7 +233,7 @@ export default async function DealPage({
                         <span className="block truncate text-body font-semibold leading-snug text-ink">
                           {p?.fullName ?? `Player ${pid}`}
                         </span>
-                        <span className="block text-meta leading-snug text-faint">
+                        <span className="block text-meta leading-snug text-secondary">
                           no price today · where he came from
                         </span>
                       </span>
@@ -250,7 +250,7 @@ export default async function DealPage({
                 <li key={`${key}|${dp.previousOwnerId}`}>
                   <Link
                     href={lineageHref(key)}
-                    className="flex items-start gap-1.5 rounded-[--radius-sm] border border-border/70 bg-surface/50 px-2 py-1.5 transition-colors hover:bg-surface-2"
+                    className="flex items-start gap-1.5 rounded-[--radius-sm] border border-border bg-surface px-2 py-1.5 transition-colors hover:bg-surface-2"
                   >
                     <span className="min-w-0 flex-1">
                       <span className="block truncate text-body font-semibold leading-snug text-ink">
@@ -277,7 +277,7 @@ export default async function DealPage({
             })}
 
             {s.playersIn.length === 0 && s.picksIn.length === 0 && (
-              <li className="text-meta leading-snug text-faint">
+              <li className="text-meta leading-snug text-secondary">
                 Nothing recorded incoming on this side.
               </li>
             )}
@@ -333,7 +333,7 @@ export default async function DealPage({
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-meta leading-snug text-faint">
+        <p className="mt-2 text-meta leading-snug text-secondary">
           Every player above opens where he came from. Every pick opens what it became.
         </p>
       </Card>

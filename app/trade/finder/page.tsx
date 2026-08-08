@@ -12,8 +12,12 @@ import {
   type FragilityNote,
 } from "@/lib/tradefinder";
 import { readCustomOrder } from "@/lib/rankings/customOrderServer";
+import { leagueTimelines } from "@/lib/metrics/duration";
+import { leagueFragility } from "@/lib/metrics/fragility";
 import { PageHeader, SectionHeader, Stat, Tag, DeltaValue } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
+import { ManagerRail } from "@/components/ManagerRail";
+import { Onward } from "@/components/Onward";
 import { fmtValue } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
@@ -40,7 +44,7 @@ export default async function TradeFinderPage({
     return (
       <p className="text-muted">
         Couldn&apos;t identify your roster.{" "}
-        <Link href="/teams" className="text-accent underline">
+        <Link href="/teams" className="text-accent-text underline">
           Pick a team
         </Link>
         .
@@ -89,7 +93,7 @@ export default async function TradeFinderPage({
               <li key={r.rosterId}>
                 <Link
                   href={`/trade/finder?with=${r.rosterId}`}
-                  className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
+                  className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
                 >
                   <TeamAvatar
                     name={r.name}
@@ -111,13 +115,13 @@ export default async function TradeFinderPage({
                       {r.bestIdea ?? "Nothing clears the bar right now."}
                     </span>
                     {r.tags.length > 0 && (
-                      <span className="mt-0.5 block truncate font-mono text-micro leading-tight text-faint">
+                      <span className="mt-0.5 block truncate figure text-micro leading-tight text-faint">
                         {r.tags.join(" · ")} · {r.trades} trades
                       </span>
                     )}
                   </span>
                   <span className="shrink-0 text-right">
-                    <span className="block font-mono text-body font-semibold tnum text-accent">
+                    <span className="block figure text-body font-semibold text-accent-text">
                       {r.mutual > 0 ? fmtValue(r.mutual) : "-"}
                     </span>
                     <span className="block text-micro uppercase tracking-wide text-faint">
@@ -130,26 +134,15 @@ export default async function TradeFinderPage({
             );
           })}
         </ul>
-        <p className="mt-1.5 text-meta leading-snug text-faint">
+        <p className="mt-1.5 text-meta leading-snug text-secondary">
           Room is the smaller of the two sides&apos; fit gain on the best package found.
           Scoring it on the smaller side is deliberate: if only one team gains, it is not
           a trade idea, it is a wish.
         </p>
-        <div className="mt-3 flex flex-wrap gap-1.5">
-          {[
-            { href: "/trade", label: "Price a trade by hand" },
-            { href: "/plan", label: "What should I even offer?" },
-            { href: "/managers", label: "Manager dossiers" },
-          ].map((a) => (
-            <Link
-              key={a.href}
-              href={a.href}
-              className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
-            >
-              {a.label}
-            </Link>
-          ))}
-        </div>
+        {/* Was a hand-kept chip row here. Same three destinations, from the registry
+            now, so a rename or a route change cannot leave this page pointing at a
+            name the destination no longer uses. */}
+        <Onward from="/trade/finder" />
       </div>
     );
   }
@@ -170,6 +163,15 @@ export default async function TradeFinderPage({
   const ownerId = h.rostersById.get(partnerId)?.ownerId;
   const user = ownerId ? h.usersById.get(ownerId) : undefined;
   const stance = STANCE[result.partner.stance];
+
+  // Both proprietary metrics for both sides of the deal being contemplated. Same two
+  // league-wide passes /league and the dossiers already run.
+  const timelines = leagueTimelines(h);
+  const fragility = leagueFragility(h);
+  const theirTl = timelines.find((t) => t.rosterId === partnerId);
+  const myTl = timelines.find((t) => t.rosterId === rosterId);
+  const theirFr = fragility.find((f) => f.rosterId === partnerId);
+  const myFr = fragility.find((f) => f.rosterId === rosterId);
   const selected = pkgParam
     ? result.packages.find((p) => p.id === pkgParam)
     : undefined;
@@ -179,7 +181,7 @@ export default async function TradeFinderPage({
     <div>
       <Link
         href={selected ? `/trade/finder?with=${partnerId}` : "/trade/finder"}
-        className="mb-1 -ml-2 inline-flex min-h-11 items-center gap-1 px-2 text-note font-semibold text-muted transition-colors hover:text-accent"
+        className="mb-1 -ml-2 inline-flex min-h-11 items-center gap-1 px-2 text-note font-semibold text-muted transition-colors hover:text-accent-text"
       >
         <ArrowLeft size={13} aria-hidden="true" />
         {selected ? "All ideas" : "All partners"}
@@ -192,7 +194,7 @@ export default async function TradeFinderPage({
           teamLogoUrl={user?.teamLogoUrl}
         />
         <div className="min-w-0">
-          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
             Trade finder
           </p>
           <h1 className="min-w-0 font-display text-display font-semibold leading-tight text-ink">
@@ -209,26 +211,71 @@ export default async function TradeFinderPage({
 
       {/* The dossier's own words, not a paraphrase: this is the read the finder
           searched against, so the user can judge the premise before the packages. */}
-      <div className="rounded-[--radius-sm] border border-border bg-surface/60 p-2.5">
-        <div className="flex items-center gap-1.5 text-meta font-semibold uppercase tracking-wide text-accent">
+      <div className="rounded-[--radius-sm] border border-border bg-surface p-2.5">
+        <div className="flex items-center gap-1.5 text-meta font-semibold uppercase tracking-wide text-accent-text">
           <Lightbulb size={12} aria-hidden="true" />
           How to approach them
         </div>
         <p className="mt-1 text-note leading-snug text-muted">
           {result.dossier.approachTips[0]}
         </p>
-        <p className="mt-1 font-mono text-meta leading-snug text-faint">
+        <p className="mt-1 text-meta leading-snug text-secondary">
           Their holes: {result.partner.weakPositions.join(", ") || "none obvious"} · Their
           surplus: {result.partner.strongPositions.join(", ") || "none obvious"} · Your
           holes: {result.you.weakPositions.join(", ") || "none obvious"}
         </p>
-        <Link
-          href={`/managers/${partnerId}`}
-          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent"
-        >
-          Full dossier
-          <ChevronRight size={13} aria-hidden="true" />
-        </Link>
+
+        {/*
+         * BOTH PROPRIETARY METRICS, ON THE SURFACE WHERE THEY CHANGE A DECISION.
+         * TCI and RFI were reported on /league and on the dossiers and were absent
+         * from the one screen where a trade is actually being weighed - which made
+         * them figures to admire rather than figures to use. Two rosters that agree
+         * about WHEN they win have very little to trade; two that disagree have a
+         * lot, and that is the single most useful thing to know before reading a
+         * package. Both passes are already computed elsewhere in this app and are
+         * cheap synchronous walks over data in hand (D25) - no new derivation.
+         */}
+        {theirTl && myTl && (
+          <div className="mt-1.5 border-t border-border pt-1.5">
+            <div className="flex flex-wrap items-center gap-x-2 gap-y-1 figure text-meta text-secondary">
+              <span>
+                them{" "}
+                <span className="font-semibold text-ink">{theirTl.tci}</span> TCI ·{" "}
+                {theirTl.posture}
+                {theirFr && (
+                  <>
+                    {" "}
+                    · <span className="font-semibold text-ink">{Math.round(theirFr.fragility)}</span>{" "}
+                    RFI
+                  </>
+                )}
+              </span>
+              <span>
+                you <span className="font-semibold text-ink">{myTl.tci}</span> TCI ·{" "}
+                {myTl.posture}
+                {myFr && (
+                  <>
+                    {" "}
+                    · <span className="font-semibold text-ink">{Math.round(myFr.fragility)}</span>{" "}
+                    RFI
+                  </>
+                )}
+              </span>
+            </div>
+            <p className="mt-1 text-meta leading-snug text-muted">
+              {theirTl.posture === myTl.posture
+                ? `You are both ${myTl.posture}. Two rosters pointed at the same season want the same players, so the room between you is narrow and any deal has to be a genuine swap of shapes rather than of timelines.`
+                : `They are ${theirTl.posture} and you are ${myTl.posture}. That disagreement about when to win is where trade room comes from - the same asset is worth different amounts to each of you.`}
+            </p>
+          </div>
+        )}
+
+        <ManagerRail
+          rosterId={partnerId}
+          ownerId={ownerId ?? null}
+          className="mt-1.5"
+          omit={["/trade/finder"]}
+        />
       </div>
 
       {selected ? (
@@ -247,7 +294,7 @@ export default async function TradeFinderPage({
               <li key={p.id}>
                 <Link
                   href={`/trade/finder?with=${partnerId}&pkg=${p.id}`}
-                  className="block min-h-11 rounded-[--radius] border border-border bg-surface/80 p-3 transition-colors hover:border-accent/40 hover:bg-surface-2"
+                  className="block min-h-11 rounded-[--radius] border border-border bg-surface p-3 transition-colors hover:border-accent-edge hover:bg-surface-2"
                 >
                   <div className="flex items-start justify-between gap-2">
                     <h3 className="min-w-0 font-display text-lede font-semibold leading-tight text-ink">
@@ -263,14 +310,14 @@ export default async function TradeFinderPage({
                     <AssetLine label="You send" assets={p.give} />
                     <AssetLine label="You get" assets={p.get} />
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 font-mono text-meta tnum text-faint">
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 figure text-meta text-secondary">
                     <span>
                       value <DeltaValue n={p.evaluation.delta} /> (
                       {p.evaluation.deltaPct > 0 ? "+" : ""}
                       {p.evaluation.deltaPct}%)
                     </span>
                     <span>{p.evaluation.direction}</span>
-                    <span className="text-accent">room {fmtValue(p.fit.mutual)}</span>
+                    <span className="text-accent-text">room {fmtValue(p.fit.mutual)}</span>
                   </div>
                   {p.theirCase[0] && (
                     <p className="mt-1.5 text-note leading-snug text-muted">
@@ -289,11 +336,13 @@ export default async function TradeFinderPage({
 
       <ul className="mt-3 space-y-1">
         {result.caveats.map((c) => (
-          <li key={c} className="text-meta leading-snug text-faint">
+          <li key={c} className="text-meta leading-snug text-secondary">
             {c}
           </li>
         ))}
       </ul>
+
+      <Onward from="/trade/finder" />
     </div>
   );
 }
@@ -307,9 +356,9 @@ function AssetLine({ label, assets }: { label: string; assets: FinderAsset[] }) 
       <span className="min-w-0 flex-1 text-note leading-snug text-ink">
         {assets.map((a, i) => (
           <span key={a.id}>
-            {i > 0 && <span className="text-faint"> + </span>}
+            {i > 0 && <span className="text-secondary"> + </span>}
             {a.label}
-            <span className="font-mono text-meta tnum text-faint"> {fmtValue(a.value)}</span>
+            <span className="figure text-meta text-secondary"> {fmtValue(a.value)}</span>
           </span>
         ))}
       </span>
@@ -328,7 +377,7 @@ function ConvictionLine({ notes }: { notes: ConvictionNote[] }) {
   return (
     <p
       className={`mt-1.5 text-note leading-snug ${
-        summary.verdict === "supports" ? "text-accent" : "text-warn"
+        summary.verdict === "supports" ? "text-accent-text" : "text-warn"
       }`}
     >
       {summary.text}
@@ -380,7 +429,7 @@ function ConvictionBlock({
     return (
       <>
         <SectionHeader title="Against your own ranking" />
-        <div className="rounded-[--radius-sm] border border-border bg-surface/60 p-2.5">
+        <div className="rounded-[--radius-sm] border border-border bg-surface p-2.5">
           <p className="text-note leading-snug text-muted">
             You have not ranked anyone yet, so every value here is consensus only.
             Rank a board and this package will show you where you and consensus
@@ -388,7 +437,7 @@ function ConvictionBlock({
           </p>
           <Link
             href="/rank"
-            className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent"
+            className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text"
           >
             Rank the board
             <ChevronRight size={13} aria-hidden="true" />
@@ -417,7 +466,7 @@ function ConvictionBlock({
             key={`${n.side}-${n.playerId}`}
             className={`flex gap-1.5 rounded-[--radius-sm] border px-2.5 py-1.5 text-note leading-snug text-muted ${
               n.verdict === "supports"
-                ? "border-accent/25 bg-accent/10"
+                ? "border-accent-edge bg-accent-wash"
                 : "border-warn/25 bg-warn/10"
             }`}
           >
@@ -425,18 +474,18 @@ function ConvictionBlock({
               size={12}
               aria-hidden="true"
               className={`mt-0.5 shrink-0 ${
-                n.verdict === "supports" ? "text-accent" : "text-warn"
+                n.verdict === "supports" ? "text-accent-text" : "text-warn"
               }`}
             />
             {n.text}
           </li>
         ))}
       </ul>
-      <p className="mt-1 text-meta leading-snug text-faint">
+      <p className="mt-1 text-meta leading-snug text-secondary">
         Every value on this page is built from consensus ranks, which is what makes
         the comparison meaningful. Your ranking annotates the packages here; it does
         not reprice them, so a package this page suggests still prices identically on{" "}
-        <Link href="/trade" className="text-accent underline">
+        <Link href="/trade" className="text-accent-text underline">
           the hand-built trade page
         </Link>
         .
@@ -550,12 +599,12 @@ function Read({
     <div
       className={
         accent
-          ? "rounded-[--radius-sm] border border-accent/25 bg-accent/10 p-2.5"
-          : "rounded-[--radius-sm] border border-border bg-surface/60 p-2.5"
+          ? "rounded-[--radius-sm] border border-accent-edge bg-accent-wash p-2.5"
+          : "rounded-[--radius-sm] border border-border bg-surface p-2.5"
       }
     >
       <div
-        className={`text-micro font-semibold uppercase tracking-wide ${accent ? "text-accent" : "text-faint"}`}
+        className={`text-micro font-semibold uppercase tracking-wide ${accent ? "text-accent-text" : "text-faint"}`}
       >
         {label}
       </div>
@@ -572,10 +621,10 @@ function AssetTable({
   side: NonNullable<ReturnType<typeof findTrades>>["packages"][number]["evaluation"]["give"];
 }) {
   return (
-    <div className="rounded-[--radius-sm] border border-border bg-surface/60">
+    <div className="rounded-[--radius-sm] border border-border bg-surface">
       <div className="flex items-center justify-between border-b border-border px-2.5 py-1.5">
         <span className="text-micro uppercase tracking-wide text-faint">{title}</span>
-        <span className="font-mono text-meta tnum text-muted">
+        <span className="figure text-meta text-muted">
           {fmtValue(side.total)}
           {side.avgAge != null && ` · avg ${side.avgAge}`}
         </span>
@@ -586,9 +635,9 @@ function AssetTable({
             <span className="min-w-0 flex-1 truncate text-note text-ink">{a.label}</span>
             {a.tier && <span className="shrink-0 text-micro text-faint">{a.tier}</span>}
             {a.age != null && (
-              <span className="shrink-0 font-mono text-micro tnum text-faint">{a.age}</span>
+              <span className="shrink-0 figure text-micro text-faint">{a.age}</span>
             )}
-            <span className="shrink-0 font-mono text-note tnum font-semibold text-ink">
+            <span className="shrink-0 figure text-note font-semibold text-ink">
               {fmtValue(a.value)}
             </span>
           </li>

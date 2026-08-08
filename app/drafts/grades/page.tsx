@@ -5,6 +5,7 @@ import { getPrincipals } from "@/lib/principals";
 import { seasonDraftGrades } from "@/lib/metrics/draftGrades";
 import { PageHeader, EmptyState } from "@/components/ui";
 import { DraftReportCard } from "@/components/DraftReportCard";
+import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
 
@@ -18,7 +19,7 @@ export default async function DraftGradesPage() {
       {/* Negative margin keeps the 44px tap target from adding visual space. */}
       <Link
         href="/drafts"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
+        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
       >
         <ArrowLeft size={13} aria-hidden="true" />
         Pick lineage
@@ -43,6 +44,7 @@ export default async function DraftGradesPage() {
           ))}
         </div>
       )}
+      <Onward from="/drafts/grades" />
     </div>
   );
 }

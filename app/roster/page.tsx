@@ -12,6 +12,8 @@ import { buildProvenance, type ProvenanceChain } from "@/lib/provenance";
 import { loadProvenanceSource } from "@/lib/provenance/source";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { AgeStrip, BarChart, PositionRadar } from "@/components/charts";
+import { DistributionStrip } from "@/components/DistributionStrip";
+import { Onward } from "@/components/Onward";
 import { ageMultiplier } from "@/lib/valuation";
 import { fmtValue } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
@@ -94,7 +96,8 @@ export default async function RosterPage() {
   // Pulled from the full league ranking rather than a standalone analyzeRoster call so
   // `window` is classified against the same league-relative distribution /league uses -
   // otherwise the same team could read "win-now" on one page and "balanced" on another.
-  const a = leagueValueRanking(h).find((r) => r.rosterId === rosterId)!;
+  const ranked = leagueValueRanking(h);
+  const a = ranked.find((r) => r.rosterId === rosterId)!;
   const win = WINDOW_COPY[a.window];
 
   // One chain per rostered player, built from one assembly. `loadProvenanceSource`
@@ -137,6 +140,20 @@ export default async function RosterPage() {
     : null;
   const slotCount = lineupSlots(h).length;
   const tciRank = timelines.findIndex((t) => t.rosterId === rosterId) + 1;
+  // THE COMPARISON THE HEADLINE NUMBERS WERE MISSING. Every figure in the stat rail
+  // is scored against these same fourteen rosters and `ranked` is already in hand, so
+  // the distribution costs an array walk over data the page has already paid for -
+  // no second valuation pass, no new derivation (D25).
+  const share5 = (r: (typeof ranked)[number]) =>
+    r.playerValue
+      ? Math.round((r.valued.slice(0, 5).reduce((s, v) => s + v.value, 0) / r.playerValue) * 100)
+      : 0;
+  const dist = {
+    totalValue: ranked.map((r) => r.totalValue),
+    pickCapital: ranked.map((r) => r.picks.total),
+    top5: ranked.map(share5),
+    tci: timelines.map((t) => t.tci),
+  };
   const longest = tl?.assets.slice(0, 3) ?? [];
   const shortest = tl ? [...tl.assets].slice(-3).reverse() : [];
   const form = (await currentFormByRoster(h)).get(rosterId);
@@ -157,7 +174,7 @@ export default async function RosterPage() {
               isMe
             />
             <div className="min-w-0">
-              <p className="truncate text-meta font-semibold uppercase tracking-[0.18em] text-accent">
+              <p className="truncate text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
                 {a.teamName ?? "Your team"}
               </p>
               <h1 className="truncate font-display text-display font-semibold leading-tight text-ink">
@@ -173,12 +190,12 @@ export default async function RosterPage() {
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
           {/* One string, so a wrap never leaves a dangling separator. */}
-          <span className="font-mono text-meta tnum text-faint">
+          <span className="figure text-meta text-secondary">
             <span className="font-semibold text-ink">
               {form ? `${form.wins}-${form.losses}` : `${a.record.wins}-${a.record.losses}`}
             </span>{" "}
             {form && !form.isLive && (
-              <span className="text-faint">({form.season} final, {ordinal(form.rank)} of {form.teams}) </span>
+              <span className="text-secondary">({form.season} final, {ordinal(form.rank)} of {form.teams}) </span>
             )}
             · {a.valued.length} players · {a.picks.picks.length} picks · core age{" "}
             <span className="font-semibold text-ink">{a.coreAge ?? "-"}</span>
@@ -198,31 +215,54 @@ export default async function RosterPage() {
         <p className="mt-1 text-note leading-snug text-muted">{win.note}</p>
       </header>
 
-      {/* Stat rail: one card, hairline dividers, every cell a destination. */}
-      <div className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface/60">
-        <StatCell
+      {/*
+       * THE HEADLINE NUMBERS, WITH THE ONLY THING THAT MAKES THEM MEAN ANYTHING.
+       *
+       * This was two blocks: a three-cell rail printing "TOTAL VALUE 26,641" and,
+       * directly under it, a strip printing "TOTAL VALUE 26,641 - 11th of 14". Same
+       * three figures, twice, in 150px. One block now - each row keeps the
+       * destination its cell linked to, and gains the distribution the cell could
+       * never carry. A rank on its own ("11th") does not say whether the pack is
+       * bunched or strung out, and the pack is the reading.
+       */}
+      <div className="space-y-1.5 rounded-[--radius-sm] border border-border bg-surface p-1.5">
+        <DistributionStrip
           href="/values"
           label="Total value"
-          value={fmtValue(a.totalValue)}
-          sub={`${fmtValue(a.playerValue)} players`}
+          sub={`${fmtValue(a.playerValue)} of it in players`}
+          values={dist.totalValue}
+          mine={a.totalValue}
+          format={fmtValue}
+          betterEnd="high"
         />
-        <StatCell
+        <DistributionStrip
           href="/drafts"
           label="Pick capital"
-          value={fmtValue(a.picks.total)}
           sub={`${a.picks.firsts} firsts${
             a.picks.extraFirsts === 0
               ? " at baseline"
-              : ` (${a.picks.extraFirsts > 0 ? "+" : ""}${a.picks.extraFirsts})`
+              : ` (${a.picks.extraFirsts > 0 ? "+" : ""}${a.picks.extraFirsts} against baseline)`
           }`}
-          tone={a.picks.extraFirsts >= 0 ? "positive" : "negative"}
+          values={dist.pickCapital}
+          mine={a.picks.total}
+          format={fmtValue}
+          betterEnd="high"
         />
-        <StatCell
+        {/* No `betterEnd`: concentration is a shape, not a score. A top-heavy roster
+            is a contender's roster and a rebuild's problem, and the app does not get
+            to decide which one you are (D23). */}
+        <DistributionStrip
           href="/plan"
           label="Top 5 share"
-          value={`${top5Share}%`}
-          sub="of player value"
+          sub="of player value, in your best five"
+          values={dist.top5}
+          mine={top5Share}
+          format={(n) => `${n}%`}
         />
+        <p className="px-1.5 text-meta leading-snug text-secondary">
+          Every tick is one of the {dist.totalValue.length} rosters. The dashed line is
+          the league median, not a pass mark.
+        </p>
       </div>
 
       {/* Timeline: WHEN this roster's value arrives, and whether the assets agree.
@@ -238,29 +278,39 @@ export default async function RosterPage() {
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-baseline gap-3">
                 <span>
-                  <span className="font-mono text-lede leading-tight font-semibold tnum text-ink">
+                  <span className="figure text-lede leading-tight font-semibold text-ink">
                     {tl.rosterDuration.toFixed(1)}s
                   </span>
-                  <span className="ml-1 text-meta uppercase tracking-wide text-faint">
+                  <span className="ml-1 text-meta uppercase tracking-wide text-secondary">
                     duration
                   </span>
                 </span>
                 <span>
-                  <span className="font-mono text-lede leading-tight font-semibold tnum text-ink">
+                  <span className="figure text-lede leading-tight font-semibold text-ink">
                     {tl.tci}
                   </span>
-                  <span className="ml-1 text-meta uppercase tracking-wide text-faint">
+                  <span className="ml-1 text-meta uppercase tracking-wide text-secondary">
                     TCI · {tciRank}/{timelines.length}
                   </span>
                 </span>
               </div>
               <Tag tone={POSTURE_TONE[tl.posture]}>{tl.posture}</Tag>
             </div>
-            <p className="mt-1 font-mono text-meta tnum text-faint">
+            <p className="mt-1 figure text-meta text-secondary">
               {Math.round(tl.nowShare * 100)}% of value pays off inside 2 seasons ·{" "}
               {Math.round(tl.laterShare * 100)}% arrives 4+ out · dispersion{" "}
               {tl.dispersion.toFixed(2)}s
             </p>
+            {/* TCI is the one number in this app most often read as a percentage,
+                which it is not. Fourteen ticks say what "61" is worth here in a way
+                the rank alone does not. */}
+            <DistributionStrip
+              label="League TCI"
+              values={dist.tci}
+              mine={tl.tci}
+              betterEnd="high"
+              className="mt-1.5"
+            />
             <p className="mt-1.5 text-note leading-snug text-ink/85">{tl.read}</p>
             {/* Fragility's actionable half, on the page that owns your roster.
                 Deliberately the two numbers and not the 0-100 index: a name and a
@@ -283,7 +333,7 @@ export default async function RosterPage() {
                   <span className="font-semibold text-ink">
                     {fr.singlePointOfFailure.name}
                   </span>{" "}
-                  <span className="font-mono tnum">
+                  <span className="figure">
                     ({Math.round(fr.singlePointOfFailure.damageShare * 100)}% of startable
                     value)
                   </span>{" "}
@@ -308,7 +358,7 @@ export default async function RosterPage() {
                           narrow column on one line, and clipping it loses exactly the
                           part that makes the qualifier worth having. */}
                       <span className="min-w-0 text-ink/85">{as.label}</span>
-                      <span className="shrink-0 font-mono text-meta tnum text-muted">
+                      <span className="shrink-0 figure text-meta text-muted">
                         {as.duration.toFixed(1)}s
                       </span>
                     </li>
@@ -316,7 +366,7 @@ export default async function RosterPage() {
                 </ul>
               </div>
               <div className="min-w-0">
-                <p className="text-meta uppercase tracking-wide text-accent">
+                <p className="text-meta uppercase tracking-wide text-accent-text">
                   Shortest-dated
                 </p>
                 <ul className="mt-0.5 space-y-0.5">
@@ -326,7 +376,7 @@ export default async function RosterPage() {
                       className="flex items-baseline justify-between gap-1.5 text-meta leading-snug"
                     >
                       <span className="min-w-0 text-ink/85">{as.label}</span>
-                      <span className="shrink-0 font-mono text-meta tnum text-muted">
+                      <span className="shrink-0 figure text-meta text-muted">
                         {as.duration.toFixed(1)}s
                       </span>
                     </li>
@@ -335,7 +385,7 @@ export default async function RosterPage() {
               </div>
             </div>
             <details className="group mt-1.5">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-meta font-semibold uppercase tracking-wide text-accent">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-meta font-semibold uppercase tracking-wide text-accent-text">
                 <ChevronRight
                   size={13}
                   aria-hidden="true"
@@ -350,7 +400,7 @@ export default async function RosterPage() {
                     className="flex items-baseline justify-between gap-2 text-meta leading-snug"
                   >
                     <span className="min-w-0 truncate text-ink/85">{as.label}</span>
-                    <span className="shrink-0 font-mono text-meta tnum text-muted">
+                    <span className="shrink-0 figure text-meta text-muted">
                       {as.duration.toFixed(1)}s · {fmtValue(as.value)}
                     </span>
                   </li>
@@ -376,7 +426,7 @@ export default async function RosterPage() {
           </p>
         </Card>
       ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface/60">
+        <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
           {a.picks.seasons.map((season) => {
             const forSeason = a.picks.picks.filter((p) => p.season === season);
             if (!forSeason.length) return null;
@@ -390,10 +440,10 @@ export default async function RosterPage() {
                   className="block min-h-11 px-2.5 py-2 transition-colors hover:bg-surface-2"
                 >
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className="font-mono text-body font-semibold tnum text-ink">
+                    <span className="figure text-body font-semibold text-ink">
                       {season}
                     </span>
-                    <span className="flex items-center gap-1 font-mono text-meta tnum text-muted">
+                    <span className="flex items-center gap-1 figure text-meta text-muted">
                       {forSeason.length} picks ·{" "}
                       {fmtValue(forSeason.reduce((s, p) => s + p.value, 0))}
                       <ChevronRight size={13} aria-hidden="true" className="text-faint" />
@@ -422,23 +472,23 @@ export default async function RosterPage() {
       <SectionHeader title="Roster shape" />
       <Card className="p-3">
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-meta font-semibold uppercase tracking-wide text-faint">
+          <span className="text-meta font-semibold uppercase tracking-wide text-secondary">
             Age curve
           </span>
-          <span className="font-mono text-meta tnum text-muted">
+          <span className="figure text-meta text-muted">
             {ages.length} ages · core {a.coreAge ?? "-"}
           </span>
         </div>
         <AgeStrip ages={ages} height={58} />
-        <p className="text-center text-meta text-faint">
+        <p className="text-center text-meta text-secondary">
           Each dot is a rostered player. The dashed line is your average.
         </p>
         <div className="rule my-2.5" />
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-meta font-semibold uppercase tracking-wide text-faint">
+          <span className="text-meta font-semibold uppercase tracking-wide text-secondary">
             Positional value
           </span>
-          <span className="truncate font-mono text-meta tnum text-muted">
+          <span className="truncate figure text-meta text-muted">
             {posCounts}
           </span>
         </div>
@@ -457,7 +507,7 @@ export default async function RosterPage() {
         href="/values"
         cta="all values"
       />
-      <p className="-mt-1 mb-1.5 font-mono text-meta tnum text-faint">
+      <p className="-mt-1 mb-1.5 figure text-meta text-secondary">
         {a.valued.length} players · bar = share of {fmtValue(a.playerValue)} player
         value · line = {TRAJECTORY_SEASONS}-season age-curve trajectory
       </p>
@@ -494,44 +544,8 @@ export default async function RosterPage() {
           />
         ))}
       </ul>
+
+      <Onward from="/roster" />
     </div>
-  );
-}
-
-
-function StatCell({
-  href,
-  label,
-  value,
-  sub,
-  tone = "neutral",
-}: {
-  href: string;
-  label: string;
-  value: string;
-  sub: string;
-  tone?: "neutral" | "positive" | "negative";
-}) {
-  const color =
-    tone === "positive"
-      ? "text-positive"
-      : tone === "negative"
-        ? "text-negative"
-        : "text-ink";
-  return (
-    <Link
-      href={href}
-      className="flex min-h-11 min-w-0 flex-col justify-center px-2.5 py-2 transition-colors hover:bg-surface-2"
-    >
-      <span className="truncate text-meta uppercase tracking-wide text-faint">
-        {label}
-      </span>
-      <span
-        className={`truncate font-mono text-lede font-semibold leading-tight tnum ${color}`}
-      >
-        {value}
-      </span>
-      <span className="truncate text-meta leading-tight text-muted">{sub}</span>
-    </Link>
   );
 }

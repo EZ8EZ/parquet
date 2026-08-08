@@ -38,6 +38,7 @@ import {
   disagreements as computeDisagreements,
 } from "@/lib/rankings";
 import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
+import { withViewTransition } from "@/lib/view-transition";
 import { injuryLabel, valuePlayers } from "@/lib/valuation";
 import {
   CUSTOM_RANK_STORAGE_KEY,
@@ -196,7 +197,18 @@ export function RankingBoard({
       setResetArmed(true);
       return;
     }
-    setOrder(poolIds);
+    /*
+     * The ONE animated state change on this page, and the only one that earns it.
+     *
+     * A drag is not animated and must not be: the row is already glued to the finger,
+     * and a tween on top of direct manipulation is a fight the finger loses. Reset is
+     * the opposite - one tap silently relocates every row in the list at once, and the
+     * reader is almost always holding a specific player in their head ("where did the
+     * guy I moved to 3 end up?"). Tracking one object across a wholesale reshuffle is
+     * the single thing animation is actually proven to help with, so this is where it
+     * goes and nowhere else. See lib/view-transition.ts for the guards.
+     */
+    withViewTransition(() => setOrder(poolIds));
     setCustomized(false);
     setResetArmed(false);
     // Clear the legacy localStorage save too, or the migration read on the next
@@ -339,7 +351,7 @@ export function RankingBoard({
           >
             Blend weight
           </label>
-          <span className="font-mono text-base font-semibold tnum text-accent">
+          <span className="figure text-base font-semibold text-accent">
             {weight}%
           </span>
         </div>
@@ -357,7 +369,7 @@ export function RankingBoard({
             background: `linear-gradient(to right, var(--color-accent) ${weight}%, var(--color-elevated) ${weight}%)`,
           }}
         />
-        <p className="mt-1.5 text-[11px] leading-snug text-muted">{weightCopy(weight)}</p>
+        <p className="mt-1.5 text-meta leading-snug text-muted">{weightCopy(weight)}</p>
       </Card>
 
       <SectionHeader
@@ -367,7 +379,7 @@ export function RankingBoard({
             type="button"
             onClick={handleReset}
             className={cn(
-              "inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border px-3 text-[11px] font-semibold transition-colors",
+              "inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border px-3 text-meta font-semibold transition-colors",
               resetArmed
                 ? "border-negative/40 bg-negative/12 text-negative"
                 : "border-border text-muted hover:border-border-strong",
@@ -378,7 +390,7 @@ export function RankingBoard({
           </button>
         }
       />
-      <p className="-mt-1 mb-1.5 text-[11px] leading-snug text-faint">
+      <p className="-mt-1 mb-1.5 text-meta leading-snug text-faint">
         Drag the handle to reorder. Your position in this list is your rank;
         everything else on the page follows it.
       </p>
@@ -403,6 +415,14 @@ export function RankingBoard({
           return (
             <li
               key={id}
+              /*
+               * The name that lets the reset transition follow THIS row to its new
+               * slot. Suppressed while a drag is in flight: that row is being moved by
+               * an imperative `style.transform` on every frame, and a captured element
+               * is lifted out of the layout for the duration of a transition, which
+               * would tear the finger away from it.
+               */
+              style={dragging ? undefined : { viewTransitionName: `rank-row-${id}` }}
               className={cn(
                 "relative flex h-14 items-center gap-2 rounded-[--radius-sm] border px-2 transition-colors",
                 dragging
@@ -421,7 +441,7 @@ export function RankingBoard({
               >
                 <GripVertical size={18} aria-hidden="true" />
               </button>
-              <span className="w-6 shrink-0 text-right font-mono text-[11px] tnum text-faint">
+              <span className="w-6 shrink-0 text-right figure text-meta text-faint">
                 {i + 1}
               </span>
               <PlayerAvatar name={p.fullName} team={p.team} playerId={p.playerId} size="sm" />
@@ -431,23 +451,23 @@ export function RankingBoard({
                     {p.fullName}
                   </span>
                   {injury && (
-                    <span className="shrink-0 rounded bg-negative/15 px-1 text-[11px] font-semibold leading-tight text-negative">
+                    <span className="shrink-0 rounded bg-negative/15 px-1 text-meta font-semibold leading-tight text-negative">
                       {injury}
                     </span>
                   )}
                 </span>
-                <span className="mt-px block truncate font-mono text-[11px] tnum text-faint">
+                <span className="mt-px block truncate figure text-meta text-faint">
                   {p.position ?? "-"}
                   {p.team ? ` · ${p.team}` : ""}
                   {p.age != null ? ` · ${p.age}y` : ""} · cons #{p.searchRank}
                 </span>
               </span>
               <span className="shrink-0 text-right">
-                <span className="block font-mono text-[13px] font-semibold leading-tight tnum text-ink">
+                <span className="block figure text-[13px] font-semibold leading-tight text-ink">
                   {v ? fmtValue(v.value) : "-"}
                 </span>
                 {tier && (
-                  <span className="block whitespace-nowrap text-[11px] leading-tight text-faint">
+                  <span className="block whitespace-nowrap text-meta leading-tight text-faint">
                     {tier}
                   </span>
                 )}
@@ -458,7 +478,7 @@ export function RankingBoard({
       </ul>
 
       <SectionHeader title="Where you disagree with consensus" />
-      <p className="-mt-1 mb-1.5 text-[11px] leading-snug text-faint">
+      <p className="-mt-1 mb-1.5 text-meta leading-snug text-faint">
         Sorted biggest gap first. This cuts both ways: it is your strongest
         convictions and, read the other way, exactly where you are most likely
         wrong.
@@ -478,7 +498,7 @@ export function RankingBoard({
                   <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
                     {g.name}
                   </span>
-                  <span className="block truncate font-mono text-[11px] tnum text-faint">
+                  <span className="block truncate figure text-meta text-faint">
                     you #{g.yourRank} · consensus #{g.consensusRank}
                   </span>
                 </span>
@@ -495,9 +515,9 @@ export function RankingBoard({
 function Figure({ label, value, sub }: { label: string; value: string; sub?: string | null }) {
   return (
     <div className="min-w-0 px-2.5 py-1.5">
-      <dt className="text-[11px] uppercase tracking-wide text-faint">{label}</dt>
-      <dd className="truncate font-mono text-base font-semibold tnum text-ink">{value}</dd>
-      {sub && <dd className="truncate text-[11px] text-muted">{sub}</dd>}
+      <dt className="text-meta uppercase tracking-wide text-faint">{label}</dt>
+      <dd className="truncate figure text-base font-semibold text-ink">{value}</dd>
+      {sub && <dd className="truncate text-meta text-muted">{sub}</dd>}
     </div>
   );
 }
