@@ -62,7 +62,9 @@ describe("the surface registry", () => {
 });
 
 describe("curatedSurfaces", () => {
-  it("is the exact set Home and League both render - see their own tests", () => {
+  it("is the set /league renders as its pill row", () => {
+    // Was "the set Home and League both render". Home is a full-registry hub now and
+    // reads groupedSurfaces instead, so this describes one consumer, not two.
     const curated = curatedSurfaces();
     expect(curated.length).toBeGreaterThan(0);
     for (const s of curated) expect(s.curated).toBe(true);

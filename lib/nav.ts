@@ -335,8 +335,16 @@ export function primarySurfaces(): NavSurface[] {
   return ALL_SURFACES.filter((s) => s.primary);
 }
 
-/** Home's and League's shared shortcut set - see the file header for why this is a
- *  filter over the one registry rather than its own list. */
+/**
+ * The shortcut set. ONE consumer now: /league's pill row.
+ *
+ * It was Home's grid and League's pill row, which is why it exists as a filter over
+ * the registry rather than as either page's own array - the two had already silently
+ * diverged once. Home has since been rebuilt as a hub rendering the WHOLE registry by
+ * group, so it no longer reads this. The filter stays because /league still needs a
+ * short list rather than all twenty-four surfaces, and because "which surfaces are
+ * worth a shortcut" is a judgement that belongs in the registry either way.
+ */
 export function curatedSurfaces(): NavSurface[] {
   return ALL_SURFACES.filter((s) => s.curated);
 }

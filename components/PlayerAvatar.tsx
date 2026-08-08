@@ -101,14 +101,15 @@ export function PlayerAvatar({
   const [failed, setFailed] = useState(false);
   const px = SIZES[size];
   const edge = edgeFor(team ?? null, name);
-  // The disc itself is a themed surface, never a team colour. `borderLeft` carries the
-  // team, and `background-clip: padding-box` keeps the surface from bleeding under it.
+  // The disc is a themed surface, never a team colour. The team is a 2px stripe at the
+  // far left, painted as a gradient stop rather than a `border-left` on purpose: a
+  // border on a `rounded-full` box is drawn as an ARC, which reads as a coloured ring
+  // and is exactly the loud thing this change is removing. A gradient stop is a
+  // straight edge that the circle then clips to a sliver.
   const disc = {
     width: px,
     height: px,
-    background: "var(--color-elevated)",
-    borderLeft: `2px solid ${edge}`,
-    backgroundClip: "padding-box" as const,
+    background: `linear-gradient(90deg, ${edge} 0 2px, var(--color-elevated) 2px)`,
   };
   // Defaults to OFF (D39). NEXT_PUBLIC_* is inlined at BUILD time, so this deploy's
   // own env needs NEXT_PUBLIC_USE_PLAYER_PHOTOS=true set explicitly — the unset case
