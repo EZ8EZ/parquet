@@ -125,6 +125,23 @@ export function sleeperTeamUrl(
 }
 
 /**
+ * The league's matchup screen — where a lock-in slot actually gets spent.
+ * Route: `/leagues/:league/matchup` — present in Sleeper's client route table
+ * (see the list in the header; singular, unlike `/trades`).
+ *
+ * Sleeper is READ-ONLY to us: there is no write API, so Parquet can never lock a
+ * player. For a decision made while a game is on, the app-switch is most of the
+ * cost of the decision, which is why the start line puts this link next to the
+ * board rather than at the bottom of the page. It takes no week parameter — the
+ * route table has no `/matchup/:week` variant — so it lands on the current week,
+ * which is the only week a live reader wants anyway.
+ */
+export function sleeperMatchupUrl(leagueId: string | null | undefined): string | null {
+  const league = sleeperLeagueUrl(leagueId);
+  return league ? `${league}/matchup` : null;
+}
+
+/**
  * The league's trade centre — where a proposal actually gets sent.
  * Route: `/leagues/:league/trades` (PLURAL — see the header note; `/trade`
  * singular is a SPA catch-all, not a real route).

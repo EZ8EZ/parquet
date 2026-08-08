@@ -85,6 +85,11 @@ export default async function LineagePage({
               team={player?.team ?? null}
               playerId={pid}
               size="md"
+              // The crest replaces the team abbreviation that used to sit in the
+              // line below - one header, one player, the kind of "fewer, larger"
+              // spot this app's imagery is supposed to earn rather than the
+              // opposite of the 260-row lists where the letters stay text.
+              teamBadge
             />
           )}
           <div className="min-w-0">
@@ -93,11 +98,7 @@ export default async function LineagePage({
             </h1>
             <p className="figure text-meta text-secondary">
               {pid
-                ? [
-                    player?.position,
-                    player?.team,
-                    player?.age != null ? `${player.age}y` : null,
-                  ]
+                ? [player?.position, player?.age != null ? `${player.age}y` : null]
                     .filter(Boolean)
                     .join(" · ")
                 : "draft pick"}

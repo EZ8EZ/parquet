@@ -94,14 +94,6 @@ export interface DraftPickRef {
   ownerId: number;
   /** Who owned it before. */
   previousOwnerId: number;
-  /**
-   * True when this pick was NOT recorded on the transaction and we inferred its
-   * involvement from the traded-picks snapshot. Commissioner rows always carry
-   * `draft_picks: []` (see API_NOTES), so a hand-executed trade's picks can only be
-   * inferred, never confirmed. Inference is a guess about WHICH deal moved the pick,
-   * so the UI must label these rather than presenting them as recorded fact.
-   */
-  inferred?: boolean;
 }
 
 export interface Transaction {

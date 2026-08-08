@@ -20,7 +20,17 @@ describe("manager dossiers", () => {
   it("produces a dossier for every non-user manager", async () => {
     const principals = await getPrincipals(h);
     const all = getAllDossiers(h, principals);
-    expect(all.length).toBe(h.rosters.length - 1);
+    // One per CURRENT roster (minus you) plus one per departed principal - NOT
+    // `h.rosters.length - 1`. The fixture's roster 9 succession means there are more
+    // managers than seats: the departed predecessor gets their own dossier alongside
+    // the successor who now holds roster 9's seat, so this count is one bigger than
+    // the roster count would suggest. A test pinned to `h.rosters.length - 1` here
+    // would have quietly gone back to counting seats instead of people.
+    const formerCount = principals.principals.filter(
+      (pr) => pr.isFormer && pr.ownerId !== h.me.userId,
+    ).length;
+    expect(formerCount).toBeGreaterThan(0);
+    expect(all.length).toBe(h.rosters.length - 1 + formerCount);
     for (const d of all) {
       expect(d.read.length).toBeGreaterThan(0);
       expect(d.approachTips.length).toBeGreaterThan(0);
@@ -71,17 +81,22 @@ describe("manager dossiers", () => {
 /**
  * THE TRAP THIS SESSION IS WARNED ABOUT: a scoping change that looks right in
  * isolation but silently changes the numbers for every roster that never changed
- * hands. The fixture league has no successions - `hasSuccessions` must be false -
- * so `buildDossier` must take the unscoped branch and produce EXACTLY what the
- * pre-scoping code produced: the same profile numbers, tags and read for the same
- * roster, every call.
+ * hands. The fixture league now HAS a succession (roster 9, see
+ * lib/providers/fixture/generate.ts's `SUCCESSION`) so `hasSuccessions` is true
+ * league-wide - but roster 2 (the churner used throughout this file) never changed
+ * hands, and `buildDossier` must still take that roster's unscoped-equivalent branch
+ * and produce EXACTLY what the pre-scoping code produced: the same profile numbers,
+ * tags and read for the same roster, every call.
  */
-describe("a league where nothing has changed hands stays unscoped", () => {
+describe("a roster that never changed hands stays unscoped", () => {
   const h = buildFixtureHistory();
 
-  it("the fixture corpus has no successions to scope against", async () => {
+  it("the league has a succession, but not on the roster under test here", async () => {
     const principals = await getPrincipals(h);
-    expect(principals.hasSuccessions).toBe(false);
+    expect(principals.hasSuccessions).toBe(true);
+    const churnerRosterId = rosterFor("churner");
+    const pr = principals.principals.find((p) => p.currentRosterId === churnerRosterId);
+    expect(pr?.tenures.length).toBe(1);
   });
 
   it("produces byte-identical dossiers across repeated derivations", async () => {
@@ -99,6 +114,49 @@ describe("a league where nothing has changed hands stays unscoped", () => {
     const seasons = h.chain.length || 1;
     const expected = Math.round((d.profile.trades / seasons) * 10) / 10;
     expect(d.tradesPerSeason).toBe(expected);
+  });
+});
+
+/**
+ * REGRESSION: per-season rates divided by the LEAGUE's seasons rather than the
+ * manager's own. Roster 9 - the fixture's real succession - is exactly this: the
+ * departed "BigTrades" (u9) made 18 trades across three seasons (2022-2024) and
+ * "kdewitt4" (u15) has made 15 across two (2025-2026), against a five-season league.
+ * A dossier that divided by `h.chain.length` (5) instead of the principal's own
+ * tenure would print 3.6/season for BigTrades and 3.0/season for kdewitt4 - both
+ * wrong, and wrong in the SAME direction, because both tenures are shorter than the
+ * league itself. Dividing by the manager's own tenure is the only version where
+ * these two numbers can both be right at once.
+ */
+describe("per-season rate uses the manager's own tenure, not the league's, across a real succession", () => {
+  const h = buildFixtureHistory();
+
+  it("the departed predecessor's rate is trades over their 3 seasons, not the league's 5", async () => {
+    const principals = await getPrincipals(h);
+    const predecessor = principals.principals.find((p) => p.ownerId === "u9")!;
+    expect(predecessor.isFormer).toBe(true);
+    expect(predecessor.seasons).toEqual(["2022", "2023", "2024"]);
+
+    const d = buildFormerDossier(h, "u9", principals)!;
+    expect(d.profile.trades).toBe(18);
+    expect(d.tradesPerSeason).toBe(6); // 18 / 3, their own tenure
+    expect(d.tradesPerSeason).not.toBe(
+      Math.round((d.profile.trades / (h.chain.length || 1)) * 10) / 10, // 3.6, the bug
+    );
+  });
+
+  it("the current successor's rate is trades over their 2 seasons, not the league's 5", async () => {
+    const principals = await getPrincipals(h);
+    const successor = principals.principals.find((p) => p.ownerId === "u15")!;
+    expect(successor.isFormer).toBe(false);
+    expect(successor.seasons).toEqual(["2025", "2026"]);
+
+    const d = buildDossier(h, 9, principals);
+    expect(d.profile.trades).toBe(15);
+    expect(d.tradesPerSeason).toBe(7.5); // 15 / 2, their own tenure
+    expect(d.tradesPerSeason).not.toBe(
+      Math.round((d.profile.trades / (h.chain.length || 1)) * 10) / 10, // 3.0, the bug
+    );
   });
 });
 

@@ -28,6 +28,14 @@ export {
   maxInjuryMultiplier,
 } from "./injury";
 export type { InjuryAssessment, InjuryInput } from "./injury";
+export {
+  AGE_CURVE_PROVENANCE,
+  CURVE_SUPPORTED_MAX,
+  CURVE_SUPPORTED_MIN,
+  DERIVED_AGE_CURVE,
+  firstCliffAge,
+} from "./ageCurve";
+export type { DerivedAgeRow } from "./ageCurve";
 
 export interface ValueBreakdown {
   playerId: string;

@@ -157,7 +157,10 @@ export function PlayerNowRow({
       className="mt-1.5 flex items-center gap-1.5 rounded-[--radius-sm] border border-border bg-surface px-2 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
       aria-label={`${label}: worth ${fmtValue(now.value)} today. Open where he came from.`}
     >
-      <PlayerAvatar name={label} team={now.team} playerId={pid} size="sm" />
+      {/* The receipt never prints the player's NBA team anywhere in this row (value,
+          tier and duration are all this app's own numbers) - the crest is the only
+          place that context appears here, not a second copy of it. */}
+      <PlayerAvatar name={label} team={now.team} playerId={pid} size="sm" teamBadge />
       <span className="min-w-0 flex-1">
         {/* THE NAME. It was absent for rounds, because this row only ever appeared
             underneath a tree node that had already printed it - on a receipt it is

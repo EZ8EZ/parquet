@@ -1,12 +1,18 @@
 import { getLeagueHistory } from "@/lib/history";
 import { VALUATION_CONFIG, type InjuryClass } from "@/lib/valuation/config";
 import {
+  AGE_CURVE_PROVENANCE,
+  CURVE_SUPPORTED_MAX,
+  CURVE_SUPPORTED_MIN,
+  DERIVED_AGE_CURVE,
   INJURY_CLASS_LABELS,
   ageMultiplier,
+  firstCliffAge,
   pickValue,
   positionMultipliers,
   slotValue,
 } from "@/lib/valuation";
+import { deriveExitWindow } from "@/lib/valuation/exitWindow";
 import { pickDuration, playerDuration } from "@/lib/metrics/duration";
 import {
   W_LOO,
@@ -34,6 +40,14 @@ export default async function MethodologyPage() {
   }));
 
   const ageExamples = [19, 22, 25, 28, 31, 34, 37];
+  const cliff = firstCliffAge();
+  const peakAnchor = Math.max(...cfg.ageAnchors.map(([, m]) => m));
+  const decline29to34 = Math.round(
+    (1 - ageMultiplier(34) / ageMultiplier(29)) * 100,
+  );
+  // The market half. Pure arithmetic over transactions already on the corpus - no
+  // request, no memoized slot, nothing added to assembleCorpus (D25).
+  const market = deriveExitWindow(h);
 
   // Live league shape for the pick model - the model reads these, so the page does too.
   const teams = h.currentLeague.totalRosters || h.rosters.length || 12;
@@ -142,16 +156,171 @@ export default async function MethodologyPage() {
         <LineChart data={baseExamples} format={(n) => n.toLocaleString()} />
       </Card>
 
-      <SectionHeader title="2 · Age curve (dynasty premium for youth)" />
+      <SectionHeader title="2 · Age curve, measured" />
       <Card>
         <LineChart
           data={ageExamples.map((a) => ({ label: `${a}`, value: Math.round(ageMultiplier(a) * 100) }))}
           yLabel="age multiplier (%)"
           format={(n) => `${n}%`}
         />
-        <p className="mt-2 text-center text-meta text-secondary">
-          Anchors (linearly interpolated):{" "}
-          {cfg.ageAnchors.map(([a, m]) => `${a}→${m}`).join("  ")}
+        <p className="mt-3 text-body leading-relaxed text-muted">
+          These multipliers used to be hand-set. They are now measured from{" "}
+          <span className="figure text-ink">
+            {AGE_CURVE_PROVENANCE.playerSeasons.toLocaleString()}
+          </span>{" "}
+          real NBA player-seasons ({AGE_CURVE_PROVENANCE.firstSeason} through{" "}
+          {AGE_CURVE_PROVENANCE.lastSeason}), every one of them scored under this
+          league&apos;s own settings. The league is only five seasons old; the games
+          are not. Production is taken per 36 minutes and divided by that season&apos;s
+          own league mean, so a role change is not read as decline and a scoring era is
+          not read as everyone improving. Then the same players are followed{" "}
+          {AGE_CURVE_PROVENANCE.horizon} seasons forward, discounted{" "}
+          {AGE_CURVE_PROVENANCE.discountPerSeason} a year.
+        </p>
+        <p className="mt-2 text-body leading-relaxed text-muted">
+          A player who stopped clearing the bar counts as a zero, not as missing data.
+          That one choice is the difference between this and the age curves that
+          conclude 36-year-olds hold up fine: the 36-year-olds still playing do hold up
+          fine, and half of them are not still playing.
+        </p>
+
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-meta">
+            <caption className="sr-only">
+              Measured age curve: multiplier, sample size and one-season survival at
+              each age
+            </caption>
+            <thead>
+              <tr className="text-secondary">
+                <th scope="col" className="py-1 pr-2 text-left font-semibold">age</th>
+                <th scope="col" className="py-1 pr-2 text-right font-semibold">multiplier</th>
+                <th scope="col" className="py-1 pr-2 text-right font-semibold">n</th>
+                <th scope="col" className="py-1 text-right font-semibold">
+                  still playing +1
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {DERIVED_AGE_CURVE.map((r) => (
+                <tr key={r.age} className="border-t border-border">
+                  <th
+                    scope="row"
+                    className="figure py-1 pr-2 text-left font-normal text-ink"
+                  >
+                    {r.age}
+                    {r.age === cliff && <span className="ml-1 text-secondary">▾</span>}
+                  </th>
+                  <td className="figure py-1 pr-2 text-right text-ink">
+                    {r.multiplier.toFixed(3)}
+                  </td>
+                  <td className="figure py-1 pr-2 text-right text-secondary">
+                    {r.cohort}
+                  </td>
+                  <td className="figure py-1 text-right text-secondary">
+                    {Math.round(r.stillPlaying * 100)}%
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="mt-2 text-meta leading-snug text-secondary">
+          ▾ marks {cliff}, the steepest single year anywhere before 34, and the age the
+          quiet marker on /values and /roster points at. Below {CURVE_SUPPORTED_MIN}{" "}
+          and above {CURVE_SUPPORTED_MAX} the curve holds flat: past{" "}
+          {CURVE_SUPPORTED_MAX} the thinnest sample cell holds fifteen careers, which
+          is not enough to draw a line through. The peak stays exactly{" "}
+          <span className="figure text-ink">{peakAnchor}</span>, deliberately - it is
+          folded into the constant every value in this app is divided by, so moving it
+          would rescale every price here for no reason at all.
+        </p>
+      </Card>
+
+      <SectionHeader title="2b · What this league actually paid" />
+      <Card>
+        <p className="text-body leading-relaxed text-muted">
+          The curve above says when production declines. It does not say when{" "}
+          <span className="text-ink">this league</span> stops paying, and those are
+          different questions. A price is what fourteen people believed on a given day,
+          and no amount of box-score arithmetic recovers that for seasons the league
+          did not exist for. So this half gets only the five seasons it has:{" "}
+          <span className="figure text-ink">{market.tradesRead}</span> trades, yielding{" "}
+          <span className="figure text-ink">{market.acquisitions}</span> usable player
+          acquisitions after setting aside {market.sidesPickOnly} pick-only sides,{" "}
+          {market.sidesNoPricedCost} with no priced cost, and {market.sidesPickHeavy}{" "}
+          where picks outweighed the players.
+        </p>
+
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-meta">
+            <caption className="sr-only">
+              Realised return by age at the time of the trade, with sample size
+            </caption>
+            <thead>
+              <tr className="text-secondary">
+                <th scope="col" className="py-1 pr-2 text-left font-semibold">
+                  age when traded
+                </th>
+                <th scope="col" className="py-1 pr-2 text-right font-semibold">n</th>
+                <th scope="col" className="py-1 pr-2 text-right font-semibold">
+                  back per 100 paid
+                </th>
+                <th scope="col" className="py-1 text-right font-semibold">
+                  biggest single deal
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {market.buckets.map((b) => (
+                <tr key={b.label} className="border-t border-border">
+                  <th scope="row" className="py-1 pr-2 text-left font-normal text-ink">
+                    {b.label}
+                  </th>
+                  <td className="figure py-1 pr-2 text-right text-ink">{b.n}</td>
+                  <td className="figure py-1 pr-2 text-right text-secondary">
+                    {b.n ? Math.round(b.ratio * 100) : "-"}
+                  </td>
+                  <td className="figure py-1 text-right text-secondary">
+                    {b.n ? `${Math.round(b.concentration * 100)}%` : "-"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
+        <p className="mt-2 text-meta leading-snug text-secondary">
+          Every bucket fails the bar, and the last column is why. A bucket is being
+          asked to resolve an effect worth about five percent, and in every one of them
+          a single deal carries far more of the total than that. So nothing in the
+          model is calibrated against this table. It is published because looking and
+          finding nothing is a result, and because the count of trades at each age is
+          itself the thing worth knowing.
+        </p>
+        <p className="mt-2 text-meta leading-snug text-secondary">
+          Two limits, stated rather than buried. Everything here is priced at
+          today&apos;s value, so it describes how deals turned out, not how they were
+          reasoned, and it is not a forecast. And picks are a separate model, so a side
+          that was mostly picks is weak evidence about the player who came with it;
+          commissioner-run trades record no picks at all, which is not detectable and
+          not corrected for.
+        </p>
+        <p className="mt-2 text-meta leading-snug text-secondary">
+          The gap between the two halves is the finding. Production keeps a measured
+          schedule: <span className="figure text-ink">{decline29to34}%</span>{" "}
+          of a player&apos;s dynasty value goes between 29 and 34, and that is what the
+          price above already charges him. Whether this league charges the same is the
+          part that cannot be answered. The correlation between age at the trade and
+          how the deal turned out is{" "}
+          <span className="figure text-ink">
+            {market.rho != null ? market.rho.toFixed(2) : "-"}
+          </span>
+          , and its sign is worth nothing: every bucket behind it fails the bar. One
+          half of this section rests on{" "}
+          {AGE_CURVE_PROVENANCE.playerSeasons.toLocaleString()} player-seasons and the
+          other on {market.acquisitions}. Only the first half is allowed to move a
+          price.
         </p>
       </Card>
 

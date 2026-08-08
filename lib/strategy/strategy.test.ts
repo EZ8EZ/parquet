@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { annotation, buildFixtureHistory } from "../testing/fixtureHistory";
 import { annotationKey, type Annotation, type LeagueHistory } from "../history";
+import { getPrincipals } from "../principals";
 import type { Transaction } from "../providers/types";
 import { getStrategyReport } from "./index";
 
@@ -178,5 +179,47 @@ describe("annotation authorship — one trade, two authors, shared transactionId
     expect(report.statedPostures.some((sp) => sp.transactionId === "t-not-mine")).toBe(
       false,
     );
+  });
+});
+
+/**
+ * REGRESSION: the home page's "Revealed strategy" led with "TRADES MADE 22" for a
+ * manager who made 4, and "PICK CAPITAL 0" against a real -9 - both from
+ * `deriveManagerProfile` reading the WHOLE seat's history instead of the viewer's own
+ * tenure. Roster 9 is the fixture's one succeeded seat: "BigTrades" (u9) made 18
+ * trades across 2022-2024, "kdewitt4" (u15) has made 15 since 2025 - a seat-keyed read
+ * of roster 9 today blends both into 33, which belongs to neither person.
+ */
+describe("getStrategyReport — the viewer's own tenure only, across a succession", () => {
+  const h = buildFixtureHistory();
+  const asSuccessor = (): LeagueHistory => ({
+    ...h,
+    me: { userId: "u15", rosterId: 9, displayName: "kdewitt4", teamName: "Second Wave" },
+  });
+
+  it("without a principals index, roster 9's report is still the old seat-keyed blend (reproducible)", () => {
+    const report = getStrategyReport(asSuccessor());
+    // The predecessor's own 18 trades are baked into this figure - not kdewitt4's.
+    expect(report.profile.trades).toBeGreaterThan(15);
+  });
+
+  it("with the principals index, the successor's own report counts only their own trades", async () => {
+    const principals = await getPrincipals(h);
+    const report = getStrategyReport(asSuccessor(), principals);
+    expect(report.profile.trades).toBe(15);
+    // Strictly less than the blended, seat-keyed figure - proves scoping did
+    // something rather than passing by coincidence.
+    const unscoped = getStrategyReport(asSuccessor());
+    expect(report.profile.trades).toBeLessThan(unscoped.profile.trades);
+  });
+
+  it("the departed predecessor's own report is confined to 2022-2024 the same way", async () => {
+    const principals = await getPrincipals(h);
+    const asPredecessor: LeagueHistory = {
+      ...h,
+      me: { userId: "u9", rosterId: 9, displayName: "BigTrades", teamName: "Blockbuster" },
+    };
+    const report = getStrategyReport(asPredecessor, principals);
+    expect(report.profile.trades).toBe(18);
   });
 });

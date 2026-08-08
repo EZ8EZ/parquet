@@ -157,7 +157,9 @@ export default async function DealsPage({
                     <LocalDate ts={t.created} /> · {t.season} wk {t.week}
                   </span>
                   {t.multiTeam && <Tag tone="info">{t.parties.length}-team</Tag>}
-                  {t.hasInferredPicks && <Tag tone="warn">picks inferred</Tag>}
+                  {t.commissionerExecuted && (
+                    <Tag tone="warn">no pick record</Tag>
+                  )}
                   <ChevronRight
                     size={13}
                     aria-hidden="true"

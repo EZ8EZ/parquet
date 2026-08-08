@@ -10,6 +10,9 @@ import { pickValue, tierOf, valuePlayer } from "../valuation";
 import { strengthRanks } from "../picks";
 import { ordinal, rosterName } from "../derive/describe";
 import { getStrategyReport } from "../strategy";
+import { posturesByRoster, readPickAgency } from "../agency";
+import { leagueTimelines } from "../metrics/duration";
+import type { OwnedPick } from "../picks";
 
 export interface PickInput {
   round: number;
@@ -55,6 +58,19 @@ export interface TradeEvaluation {
   keyAssumption: string;
   historyCheck: string;
   consolidationNote: string | null;
+  /**
+   * WHOSE SEASON DECIDES THE PICKS IN THIS DEAL.
+   *
+   * The evaluator already prices a pick by the strength of the team that owes it.
+   * What it never said is the thing an experienced dynasty manager checks first:
+   * whether the outcome of the pick belongs to you or to somebody else, and what
+   * that somebody else's roster is currently built to do. "You are acquiring a pick
+   * whose value depends on a team that is contending" is exactly the kind of thesis
+   * this output exists to print, and it was missing.
+   *
+   * Empty when the deal moves no picks, or when the picks carry no original roster.
+   */
+  agencyNotes: string[];
 }
 
 function valueSide(
@@ -175,7 +191,60 @@ export function evaluateTrade(h: LeagueHistory, input: TradeInput): TradeEvaluat
     keyAssumption,
     historyCheck,
     consolidationNote,
+    agencyNotes: buildAgencyNotes(h, input),
   };
+}
+
+/**
+ * The agency read for the picks in a deal.
+ *
+ * Computed LAST and only when the deal actually contains an attributable pick, so a
+ * player-for-player trade never pays for the league-wide timeline pass that posture
+ * needs. Trades carry at most a handful of picks, so this is a short list by
+ * construction rather than by truncation.
+ */
+function buildAgencyNotes(h: LeagueHistory, input: TradeInput): string[] {
+  const mine = h.me.rosterId;
+  if (mine == null) return [];
+  const attributable = [...input.get.picks, ...input.give.picks].some(
+    (p) => p.originalRosterId != null,
+  );
+  if (!attributable) return [];
+
+  const postures = posturesByRoster(leagueTimelines(h));
+  const notes: string[] = [];
+
+  const asOwned = (p: PickInput): OwnedPick => ({
+    season: p.season,
+    round: p.round,
+    originalRoster: p.originalRosterId!,
+    acquired: p.originalRosterId !== mine,
+    fromName: null,
+    value: 0,
+    label: `${p.season} ${ordinal(p.round)}`,
+  });
+
+  for (const p of input.get.picks) {
+    if (p.originalRosterId == null) continue;
+    const r = readPickAgency(h, mine, asOwned(p), { postures });
+    notes.push(
+      r.controlled
+        ? `Incoming: this brings your own ${r.pick.label} back to you. ${r.note}`
+        : `Incoming: ${r.note}`,
+    );
+  }
+  for (const p of input.give.picks) {
+    if (p.originalRosterId == null) continue;
+    // Sending it: the question is what YOU are handing over, so the read is taken
+    // from the receiving side's point of view rather than restating your own.
+    const r = readPickAgency(h, mine, asOwned(p), { postures });
+    notes.push(
+      r.controlled
+        ? `Outgoing: you are sending a pick your own ${r.determiningSeason} season sets. Whoever holds it after this is a passenger on your results, and you stop being able to convert your own season into this asset.`
+        : `Outgoing: you are sending a pick ${r.determinedByName}'s ${r.determiningSeason} season sets${r.posture ? `, and their roster reads ${r.posture}` : ""}. You were a passenger on it either way.`,
+    );
+  }
+  return notes;
 }
 
 function buildHistoryCheck(

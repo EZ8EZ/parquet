@@ -4,30 +4,20 @@
     {
       "name": "parquet-dev",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "dev"
-      ],
+      "runtimeArgs": ["dev"],
       "port": 3000,
       "autoPort": true
     },
     {
       "name": "parquet-dev-schedule-luck",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "dev",
-        "-p",
-        "3450"
-      ],
+      "runtimeArgs": ["dev", "-p", "3450"],
       "port": 3450
     },
     {
       "name": "parquet-dev-provenance",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "dev",
-        "-p",
-        "3488"
-      ],
+      "runtimeArgs": ["dev", "-p", "3488"],
       "port": 3488
     },
     {
@@ -38,32 +28,20 @@
     {
       "name": "parquet-dev-annotations",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "dev",
-        "-p",
-        "3461"
-      ],
+      "runtimeArgs": ["dev", "-p", "3461"],
       "port": 3461
     },
     {
       "name": "parquet-dev-4fixes",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "dev",
-        "-p",
-        "3472"
-      ],
+      "runtimeArgs": ["dev", "-p", "3472"],
       "port": 3472
     },
     {
-      "name": "parquet-dev-window",
+      "name": "parquet-dev-imagery",
       "runtimeExecutable": "pnpm",
-      "runtimeArgs": [
-        "dev",
-        "-p",
-        "3531"
-      ],
-      "port": 3531
+      "runtimeArgs": ["dev", "-p", "3495"],
+      "port": 3495
     }
   ]
 }
