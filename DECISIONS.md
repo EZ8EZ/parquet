@@ -1344,3 +1344,124 @@ a tree node that had already printed it, so on a receipt - where it is the whole
 rendered a value with nobody attached to it. Rejected: a "winner" or a value delta (D6);
 pricing the picks to complete the total (D24 - a number that looks complete and is not);
 a redirect that reconstructs `/web?trade=<id>` into `/deals/<id>` (see D43).
+
+## D46. DEAD ENDS ARE A DATA PROBLEM, so the fix is a table and a failing test
+Four surfaces shipped with zero outbound links and the app read, correctly, as "a set
+of destinations with no connective tissue - every journey ends by bouncing off the
+bottom bar." Repairing those four would have been a patch that says nothing about the
+fifth. `ONWARD` in `lib/nav.ts` is a map from every registered surface to at least two
+next steps, and `nav.test.ts` fails the build when a surface has fewer - so the next
+dead end cannot be shipped, only designed.
+
+**The `why` is the load-bearing half, not the href.** Each step prints the QUESTION
+this page leaves you holding, with the destination's name underneath it: "So what do I
+do about it? / Plan", "Who has what I am missing? / Trade Finder". A row of bare page
+names would be the drawer again, two inches higher up, and the drawer is already one
+tap away at all times. Registered destinations take their label FROM the registry
+rather than carrying a copy, pinned by a test, because a hardcoded name is exactly how
+the label drift below happened.
+
+**`managerLinks()` collapses four separately-reported integration failures into one
+rule.** A survey of dynasty tooling found the complaints were not about missing
+features; they were about this app's own features being unreachable from where they
+would change a decision. Named: the Trade Finder unreachable from `/managers` and
+Manager Compare, where two rivals are being weighed; the dossier unreachable from the
+trade evaluation naming its counterparty ("what does this manager actually value" was
+the third most common complaint in that corpus, and the dossier answers it); the
+decision ledger unreachable from a trade log; and both proprietary metrics absent from
+the Trade Finder. Those are one bug in four costumes - **a surface names a manager and
+does not link to what the app already knows about them** - so they get one function,
+and the former-manager guard (D22) lives inside it rather than at four call sites where
+three of them would forget it. `components/ManagerRail.tsx` renders whatever it
+returns.
+
+The Trade Finder's partner view additionally prints both postures side by side, because
+that is the reading that actually moves a trade: two rosters that agree about WHEN they
+win have little room between them, and two that disagree have a lot. Same two
+league-wide passes `/league` already runs, no new derivation (D25).
+
+**`/commissioner` had zero inbound links and zero outbound ones** - the longest page in
+the app, at 10,125px, was one nobody could navigate to. `/league`'s onward row is the
+door, deliberately not the curated pill row: a commissioner-only tool in front of all
+fourteen managers is a different claim from "you might want this next". Its audit log
+now folds by season with the current one open, which is most of that height. The e2e
+deep link into a 2022 deal grew a step rather than losing one, and asserts BOTH that the
+row is still attached while its season is shut and that opening it works - anything less
+would let "collapsed" and "deleted" pass the same test.
+
+**Label drift, fixed at the source.** The registry called `/drafts` "Draft history"; the
+page, its two children and all six inbound links called it "Pick lineage". Six against
+one, and lineage is what the page does. `/rank` became `curated`: it feeds every Trade
+Finder package's conviction line and appeared in no shortcut list anywhere in the app,
+which is a feature doing live work behind a door nobody could find. `/lab` was NOT
+promoted - D42 is explicit that unfinished work must not compete with finished work for
+a slot - so its two experiments are reached as onward steps from the pages whose
+question they answer instead.
+
+Rejected: adding `<Onward>` to the layout (owned by another pass, and Home is a
+registry hub that would be advertising itself); one shared "related pages" component
+keyed on content similarity (the value is in the sentence, and a sentence has to be
+written); putting the commissioner in the curated row.
+
+## D47. THE CHART COLOUR VOCABULARY, and why the text half of a hue cannot be a hex
+The app's restraint had been read as timidity in its charts, and the reflex fix - a
+red-to-green ramp - is the one encoding that is unreadable to the ~8% of men with a
+red-green deficiency. `lib/chart-colors.ts` is four rules with their measurements.
+
+1. **Colour is never the only encoding** (WCAG 1.4.1). Every hue sits beside a
+   position, a length or a printed number carrying the same value. The acceptance test
+   is literal: delete every fill and the chart still reads.
+2. **Magnitude is one hue at five strengths**, applied as opacity over
+   `var(--color-accent)`. Single-hue sequential ramps carry their ordering in
+   lightness, so they survive every form of CVD - and using the accent rather than a
+   fixed hex makes the ramp theme-proof by construction rather than by a token per
+   theme, which matters because the theme blocks are owned elsewhere. The floor is 0.3,
+   not 0: the low end of a distribution is an observation, not an absence, and the
+   high-contrast theme exists to stop this app asking anyone to squint.
+3. **Signed values use PiYG, not RdYlGn.** `RdYlGn` is not colourblind-safe at any
+   class count; PiYG still reads as red-ish against green-ish to a trichromat while
+   staying separable under deuteranopia and protanopia. The endpoints are shifted off
+   canonical PiYG (`#c51b7d` / `#4d9221`) to `#d2569f` / `#4d9221` for one measured
+   reason: canonical magenta is 2.69:1 against the dark ground, under the 3:1 a
+   graphical object must clear. Shipped pair, against all three grounds -
+   `#d2569f`: 3.35 / 4.30 / 5.57. `#4d9221`: 3.43 / 4.17 / 5.45. All six clear 3:1.
+4. **The fill value and the text value of a hue are different values, and this is
+   forced rather than chosen.** Text needs 4.5:1. Against Paper (relative luminance
+   0.885) that means a text colour at or below ~0.185 luminance; against the dark
+   ground (0.004) it means ~0.19 or above. **No fixed value satisfies both**, so there
+   is no hex that can be legible small type in every Parquet theme. The text half of
+   each hue therefore resolves to the app's own ink token. In practice: the hue goes
+   in the fill, the number goes in ink, and they sit next to each other. A caller that
+   wants to tint type has misread the file.
+
+**`DistributionStrip` is where rule 1 does the most work.** The metrics audit found the
+app printing TCI, RFI, total value, pick capital and top-5 share as bare figures. "Your
+TCI is 61" is unanswerable - 61 out of what, against whom, and is 61 the good end - and
+the comparison was never missing data, only a drawing: all fourteen rosters are already
+in hand every time one of those numbers is printed. One tick per roster, the viewer's
+taller with a triangle above it, the rank printed, the median dashed and explicitly
+labelled as a median rather than a pass mark.
+
+**It never says which end is good.** `betterEnd` only words the rank sentence, and is
+omitted wherever the direction is genuinely not a judgement - top-5 share is a shape
+(a contender's roster and a rebuild's problem), and net pick capital's own caption says
+buying picks and spending them are both strategies (D6, D23).
+
+**/roster's stat rail was deleted, not kept alongside.** It printed "TOTAL VALUE 26,641"
+and the strip printed the same figure with its rank directly underneath: three numbers
+twice in 150px. One block now, each row keeping the destination its cell linked to and
+gaining the distribution the cell could never carry - a rank alone ("11th") does not say
+whether the pack is bunched or strung out, and the pack is the reading.
+
+**Range labels are HTML, not SVG text.** The viewBox is 320 units against a 672px column
+cap, so an 8px SVG caption renders at up to 16px - larger than the body type it sits
+under, and worst in landscape. Geometry scales with the chart; a caption stays on the
+type scale.
+
+Rejected: a per-theme chart palette in `globals.css` (three theme blocks owned by
+another pass, and a ramp defined as opacity over the accent needs none of them); a
+diverging pair on the deal receipt's `SideBars` (it computes no difference on purpose -
+the moment it colours a winner it has issued a verdict, D45); colouring the fragility
+axis of the quadrant (D23 - a green low-RFI end would be a lie); keeping `--color-positive`
+and `--color-negative` as bar fills while leaving them semantic in type (one token
+cannot mean "went up" and "this bar" at once).

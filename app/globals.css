@@ -196,6 +196,21 @@
   --tci-2: #ca7400;
   --tci-3: #84bb50;
   --tci-4: #53e39c;
+
+  /*
+   * MOTION. Three durations and one curve, so the app has ONE motion system rather
+   * than a duration invented per component.
+   *
+   * These are not new values - they are the ones already in use by name across the
+   * app (`var(--motion-base)` on the Desk drawer, `var(--motion-fast)` on its
+   * reduced-motion fallback). They are restated here because the declarations went
+   * missing in a merge and every reference was resolving to nothing, which silently
+   * disables the animation rather than failing loudly.
+   */
+  --motion-fast: 120ms;
+  --motion-base: 180ms;
+  --motion-slow: 260ms;
+  --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
 }
 
 :root {
@@ -599,8 +614,16 @@ a[role="button"],
   from { opacity: 0; }
   to   { opacity: 1; }
 }
+/*
+ * The Desk drawer is the ONE thing in this app that genuinely floats above the page,
+ * so it is the one thing that gets `--shadow-raised`. Everything else - every card,
+ * every panel - separates from its ground by surface, never by shadow. Stated here
+ * rather than as a utility in Desk.tsx so the rule stays enforceable from one place:
+ * if a second selector ever appears in this block, that is the review.
+ */
 .desk-drawer:not([hidden]) {
   animation: desk-drawer-in var(--motion-base) var(--ease-out);
+  box-shadow: var(--shadow-raised), var(--edge-hilite);
 }
 .desk-scrim {
   animation: desk-fade-in var(--motion-base) linear;
