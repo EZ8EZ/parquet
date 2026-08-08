@@ -1526,3 +1526,49 @@ the half-measure `.figure` replaced, deleted at its final call site; a duplicate
 `.figure` / `.edge-hilite` block in `globals.css`; and `--motion-*` declared in both
 `globals.css` and `interaction.css` - two agents independently fixing the same
 missing-declaration bug, which is precisely how the declaration went missing.
+
+## D49. THE WINDOW MAP: QUARTILES, NOT CENTRE-PLUS-SPREAD, AND A STATE INSTEAD OF A FALSE ANSWER
+The Timeline Coherence Index tells a manager when THEIR OWN value pays off. It has never
+told them who else pays off then, and that is the number that decides a trade: a window
+in 2029 shared with three other rosters is a different competitive situation from one
+shared with nobody. The app has computed all fourteen timelines for rounds and never put
+them on one axis.
+
+**A window is the value-weighted interquartile range of asset duration.** Every asset
+already carries a value and a duration in seasons; together those are a distribution, and
+`open` / `peak` / `close` are its 25th, 50th and 75th percentiles, converted to calendar
+seasons. Nothing is modelled and nothing is projected (D19) - the same assets in a
+different order give the same answer, and no future acquisition is assumed.
+
+`duration.ts` already publishes `rosterDuration` and `dispersion`, so centre-plus-spread
+would have been one line and it was the obvious thing to do. It is wrong here for a
+specific reason: mean +/- sigma assumes value is piled symmetrically around the centre,
+and the entire justification for TCI's existence is that dynasty rosters routinely are
+not. A straddled roster's value sits in two lumps with a hole between them, and
+mean +/- sigma prints a confident window centred on the hole. Quantiles assume no shape.
+
+**Straddling gets a state, not a gap and not a window.** Below the coherence floor the
+metric has already said the assets disagree about when this roster wins; drawing a filled
+span across both lumps would be the app contradicting itself in a picture. So a split
+roster is drawn as its two ends with nothing between them, keeps its quartiles (the range
+is true), and loses only the claim that any season inside it is a peak. Below three
+valued assets the three quantiles cannot land on three distinct assets even in principle,
+so that is `unreadable` and it is printed rather than hidden.
+
+**The duration x TCI scatter is deleted, not joined.** It plotted exactly the two numbers
+the window map reads its quartiles from, on an axis of abstract seasons-from-now, and it
+answered "where does everyone sit" without answering "when". Round 8 cut `/league` from
+3,879px to 1,938px by removing duplicate renderings of the same fourteen rosters, and a
+new chart alongside the old one would have spent that back. The coherence x fragility
+board survives as the second tab because it is NOT the same data: RFI has no other home
+on the page. `?board=duration` degrades to the window map, which is the successor to the
+chart such a link was pointing at.
+
+**Feeding it outward, the discipline is that timing is a thesis and never a rating (D6).**
+The Trade Finder prints each partner's window and whether it touches yours, and orders
+the board on mutual fit exactly as before - "they peak opposite you" is why a deal is
+possible, not a claim that this deal beats that one. The per-package timing note is its
+own field rather than a line under "why they say yes" or "what they will push back on",
+because filing it under either heading converts a fact into a verdict. And no string
+anywhere says a roster will sell: an earlier peak is arithmetic, intent is not something
+the app can see.

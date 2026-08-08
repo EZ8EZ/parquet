@@ -24,16 +24,22 @@
  * stale param degrades to the default rather than rendering an empty board.
  */
 
-export const BOARD_AXES = ["duration", "fragility"] as const;
+export const BOARD_AXES = ["windows", "fragility"] as const;
 export type BoardAxes = (typeof BOARD_AXES)[number];
 
-/** Duration leads because it is the older reading and the one /methodology opens on. */
-export const DEFAULT_BOARD: BoardAxes = "duration";
+/**
+ * The window map leads. It was `duration` for one round - the duration x TCI scatter -
+ * and that chart's two numbers are exactly the two the window map reads its quartiles
+ * from, expressed on an axis of real seasons instead of an abstract one. A shared
+ * `?board=duration` link therefore still opens on the successor to the chart it was
+ * pointing at, because an unrecognised value falls through to the default below.
+ */
+export const DEFAULT_BOARD: BoardAxes = "windows";
 
 export const BOARD_PARAM = "board";
 
 export const BOARD_TABS: { id: BoardAxes; label: string; axes: string }[] = [
-  { id: "duration", label: "Timelines", axes: "duration x TCI" },
+  { id: "windows", label: "Windows", axes: "when everyone pays off" },
   { id: "fragility", label: "Fragility", axes: "TCI x RFI" },
 ];
 

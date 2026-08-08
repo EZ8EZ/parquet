@@ -114,11 +114,16 @@ export default async function TradeFinderPage({
                     <span className="mt-0.5 block text-meta leading-snug text-muted line-clamp-2">
                       {r.bestIdea ?? "Nothing clears the bar right now."}
                     </span>
-                    {r.tags.length > 0 && (
-                      <span className="mt-0.5 block truncate figure text-micro leading-tight text-faint">
-                        {r.tags.join(" · ")} · {r.trades} trades
-                      </span>
-                    )}
+                    {/* WHEN they pay off, beside how they behave. The board is still
+                        ordered on mutual fit alone - this is printed, never scored,
+                        because "their window is opposite yours" is why a deal is
+                        possible rather than a rating of this one (D6). */}
+                    <span className="mt-0.5 block truncate figure text-micro leading-tight text-faint">
+                      {r.valueWindow}
+                      {r.sharesYourWindow === true && " · shares your window"}
+                      {r.tags.length > 0 && ` · ${r.tags.join(" · ")}`}
+                      {` · ${r.trades} trades`}
+                    </span>
                   </span>
                   <span className="shrink-0 text-right">
                     <span className="block figure text-body font-semibold text-accent-text">
@@ -547,6 +552,18 @@ function PackageDetail({
             ))}
           </ul>
         </>
+      )}
+
+      {/* Neither a pro nor a con, and filed under neither heading for exactly that
+          reason - see `windowThesis` on SuggestedPackage. It sits between the two
+          cases and the bet because it is the condition both of them are priced under. */}
+      {pkg.windowThesis && (
+        <p className="mt-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 text-note leading-snug text-ink/85">
+          <span className="mr-1 text-meta font-semibold uppercase tracking-wide text-secondary">
+            Timing
+          </span>
+          {pkg.windowThesis}
+        </p>
       )}
 
       {/* The thesis, straight from the evaluator /trade uses. A suggested package and

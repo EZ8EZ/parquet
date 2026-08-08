@@ -33,6 +33,7 @@ import {
 } from "./conviction";
 import { packageFragilityNote, type FragilityNote } from "./fragility";
 import { leagueReplacementValue } from "../metrics/fragility";
+import { leagueWindows, windowShort, windowThesis, type ValueWindow } from "../metrics/window";
 
 export {
   fragilityNoteFor,
@@ -128,6 +129,18 @@ export interface SuggestedPackage {
    * roster is fine" - the surface says neither.
    */
   fragility: FragilityNote | null;
+  /**
+   * When this partner's value pays off relative to the viewer's, as a THESIS.
+   *
+   * Deliberately its own field rather than a line inside `theirCase` or `pushback`,
+   * and that placement is the D6 argument in one decision: a partner whose window
+   * overlaps yours is not a reason they say yes and not a reason they refuse - it is a
+   * tension that prices the whole conversation, and filing it under either heading
+   * would be converting a fact into a verdict. Null whenever either side's assets
+   * disagree about their own timing, which is the honest answer rather than a neutral
+   * one. See lib/metrics/window.ts.
+   */
+  windowThesis: string | null;
   score: number;
 }
 
@@ -151,6 +164,14 @@ export interface PartnerBoardRow {
   bestIdea: string | null;
   trades: number;
   reluctant: boolean;
+  /**
+   * Their window as a bare range ("2029-2031", or "split"), and whether it touches the
+   * viewer's. Printed, never scored: the board is still ranked on mutual fit alone,
+   * because "they peak opposite you" is a thesis about why a deal is possible and not
+   * a claim that this deal is better than that one (D6).
+   */
+  valueWindow: string;
+  sharesYourWindow: boolean | null;
 }
 
 // -------------------------------------------------------------------- constants
@@ -655,6 +676,24 @@ interface Board {
   teams: number;
 }
 
+/**
+ * The league's value windows, keyed by roster, plus the viewer's own.
+ *
+ * A thin wrapper so `findTrades` and `partnerBoard` cannot drift into two different
+ * ways of asking the same question - the failure this codebase keeps catching itself
+ * on, and the reason `stanceOf` is pinned against /plan's `diagnose` in the suite.
+ */
+function windowsFor(
+  h: LeagueHistory,
+  rosterId: number,
+): { me: ValueWindow | null; byRoster: Map<number, ValueWindow> } {
+  const byRoster = new Map(leagueWindows(h).rows.map((r) => [r.rosterId, r]));
+  // Keyed off the roster the CALLER is acting for, not off `h.me`. The finder is
+  // reachable while viewing the app as another manager, and "your window" has to mean
+  // the roster the packages are being built for.
+  return { me: byRoster.get(rosterId) ?? null, byRoster };
+}
+
 function board(h: LeagueHistory): Board {
   const ranking = leagueValueRanking(h);
   const rankOf = new Map(ranking.map((r, i) => [r.rosterId, i + 1]));
@@ -714,6 +753,14 @@ export function findTrades(
   // whole league, and it is identical for every package, so it is computed once here
   // rather than three times inside the loop.
   const replacementValue = leagueReplacementValue(h);
+  // One walk for the pair's timing. The same derivation /league's window map draws and
+  // /plan's synthesis counts, so a package cannot claim a partner peaks opposite you
+  // while the map shows them sitting in your seasons.
+  const wins = windowsFor(h, rosterId);
+  const thesis =
+    wins.me && wins.byRoster.get(partnerRosterId)
+      ? windowThesis(wins.me, wins.byRoster.get(partnerRosterId)!)
+      : null;
   const packages: SuggestedPackage[] = raw.map((pkg, i) => {
     const give = pkg.give.map((p) => p.asset);
     const get = pkg.get.map((p) => p.asset);
@@ -729,6 +776,7 @@ export function findTrades(
       fit: { yours: pkg.yourGain, theirs: pkg.theirGain, mutual: pkg.mutual },
       conviction: convictionNotes({ give, get }, conviction),
       fragility: packageFragilityNote(h, rosterId, give, get, { replacementValue }),
+      windowThesis: thesis,
       score: pkg.score,
     };
   });
@@ -767,6 +815,7 @@ export function partnerBoard(
   const you = appetiteOf(b, rosterId, { viewer: true });
   if (!you) return [];
   const myAssets = assetsOf(b.ranking.find((r) => r.rosterId === rosterId)!);
+  const wins = windowsFor(h, rosterId);
 
   const rows: PartnerBoardRow[] = [];
   for (const a of b.ranking) {
@@ -776,6 +825,7 @@ export function partnerBoard(
     const mine = price(myAssets, you, partner);
     const theirs = price(assetsOf(a), partner, you);
     const best = searchPackages(mine, theirs, you, partner, 1)[0] ?? null;
+    const theirWindow = wins.byRoster.get(a.rosterId) ?? null;
     rows.push({
       rosterId: a.rosterId,
       name: partner.name,
@@ -788,6 +838,14 @@ export function partnerBoard(
         : null,
       trades: dossier.profile.trades,
       reluctant: partner.reluctant,
+      valueWindow: theirWindow ? windowShort(theirWindow) : "-",
+      // Null rather than false when either side has no single window: "they do not
+      // share your window" and "nobody can say when they win" are different facts and
+      // the surface has to be able to tell them apart.
+      sharesYourWindow:
+        wins.me?.state === "window" && theirWindow?.state === "window"
+          ? theirWindow.open! <= wins.me.close! && wins.me.open! <= theirWindow.close!
+          : null,
     });
   }
   return rows.sort((x, y) => y.mutual - x.mutual);

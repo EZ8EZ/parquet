@@ -3,6 +3,7 @@ import { buildFixtureHistory } from "../testing/fixtureHistory";
 import { getPrincipals } from "../principals";
 import { diagnose } from "../gameplan";
 import { analyzeRoster, leagueValueRanking, type RosterAnalysis } from "../roster";
+import { leagueWindows, windowShort, windowThesis } from "../metrics/window";
 import {
   appetiteFor,
   assetsOf,
@@ -683,5 +684,60 @@ describe("partnerBoard", () => {
   it("returns nothing for a roster that is not in the league", async () => {
     const principals = await getPrincipals(h);
     expect(partnerBoard(h, principals, 9999)).toHaveLength(0);
+  });
+
+  /**
+   * THE WINDOW READING IS PRINTED, NOT SCORED (D6).
+   *
+   * The whole point of feeding value windows into the finder is that a roster peaking
+   * opposite the viewer is a natural counterparty - and the whole discipline is that
+   * saying so must not quietly become a ranking. These pin both halves.
+   */
+  it("carries every partner's window without reordering the board on it", async () => {
+    const principals = await getPrincipals(h);
+    const rows = partnerBoard(h, principals, me);
+    const windows = new Map(
+      leagueWindows(h).rows.map((r) => [r.rosterId, r]),
+    );
+    for (const r of rows) {
+      expect(r.valueWindow).toBe(windowShort(windows.get(r.rosterId)!));
+    }
+    // Still ordered on mutual fit alone - identical to the ordering by `mutual`.
+    expect(rows.map((r) => r.rosterId)).toEqual(
+      [...rows].sort((a, b) => b.mutual - a.mutual).map((r) => r.rosterId),
+    );
+  });
+
+  it("distinguishes 'not your window' from 'no window at all'", async () => {
+    const principals = await getPrincipals(h);
+    const windows = new Map(leagueWindows(h).rows.map((r) => [r.rosterId, r]));
+    for (const r of partnerBoard(h, principals, me)) {
+      const theirs = windows.get(r.rosterId)!;
+      if (theirs.state !== "window" || windows.get(me)!.state !== "window") {
+        expect(r.sharesYourWindow).toBeNull();
+      } else {
+        expect(typeof r.sharesYourWindow).toBe("boolean");
+      }
+    }
+  });
+
+  it("states the timing thesis on every package, or on none of them", async () => {
+    const principals = await getPrincipals(h);
+    const other = h.rosters.find((x) => x.rosterId !== me)!.rosterId;
+    const r = findTrades(h, principals, { rosterId: me, partnerRosterId: other })!;
+    const theses = new Set(r.packages.map((p) => p.windowThesis));
+    // One pairing, one timing fact: it cannot differ package to package.
+    expect(theses.size).toBeLessThanOrEqual(1);
+    const t = r.packages[0]?.windowThesis;
+    if (t) {
+      expect(t).toBe(
+        windowThesis(
+          leagueWindows(h).rows.find((w) => w.rosterId === me)!,
+          leagueWindows(h).rows.find((w) => w.rosterId === other)!,
+        ),
+      );
+      // D19: no intent, no prediction.
+      expect(t).not.toMatch(/will (sell|buy|trade)/i);
+    }
   });
 });
