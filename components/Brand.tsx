@@ -29,11 +29,11 @@ export function Wordmark({ tagline }: { tagline?: string }) {
         </svg>
       </Link>
       <div>
-        <div className="font-display text-lg font-semibold leading-none tracking-tight">
+        <div className="font-display text-lede font-semibold leading-none tracking-tight">
           Parquet
         </div>
         {tagline && (
-          <div className="mt-0.5 text-[11px] uppercase tracking-[0.16em] text-faint">
+          <div className="mt-0.5 text-meta uppercase tracking-[0.16em] text-faint">
             {tagline}
           </div>
         )}

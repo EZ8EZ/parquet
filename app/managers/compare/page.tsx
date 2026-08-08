@@ -5,19 +5,19 @@
  * owns it: behaviour from `lib/dossier` (which is principal-aware, so a former manager
  * is their own person rather than a blend with whoever took the team over), roster
  * timeline and posture from `leagueTimelines`, fragility from `leagueFragility`, and
- * the head-to-head count from the trade graph's own owner-keyed edges. If this page
+ * the head-to-head count from the trade ledger's own owner-keyed pairings. If this page
  * ever needs a number none of them expose, the fix is to expose it there - two
  * surfaces disagreeing about the same manager is the exact failure this app cannot
  * afford.
  *
  * The pair lives in the URL (`?a={ownerId}&b={ownerId}`), so a comparison is
- * shareable and bookmarkable, same as the trade web's selection.
+ * shareable and bookmarkable, same as every filtered view of /deals.
  *
  * ONE HONEST ASYMMETRY, and it is the whole reason this page needs care: dossier
  * numbers are scoped to the person, but TCI, posture, duration and fragility describe
  * a ROSTER AS IT STANDS TONIGHT. A departed manager holds no roster, so those four
  * belong to their successor, not to them. Rather than borrow the successor's numbers
- * (the exact bug `ManagerLink` in the trade web guards against), a comparison
+ * (the exact bug `ManagerLink` in components/TradeParts.tsx guards against), a comparison
  * involving a former manager says so and shows only what is genuinely theirs.
  */
 
@@ -28,8 +28,8 @@ import { getLeagueHistory } from "@/lib/history";
 import { dossiersByOwner, type Dossier } from "@/lib/dossier";
 import { titleSummariesByOwner, type TitleSummary } from "@/lib/dossier/titles";
 import { getPrincipals, type Principal } from "@/lib/principals";
-import { buildTradeGraph, pairEdgeKey } from "@/lib/tradegraph";
-import { pairWebHref } from "@/lib/tradegraph/url";
+import { buildTradeLedger, pairEdgeKey } from "@/lib/tradegraph";
+import { pairDealsHref } from "@/lib/tradegraph/url";
 import { leagueTimelines, type TimelineProfile } from "@/lib/metrics/duration";
 import {
   fragilityTone,
@@ -100,14 +100,14 @@ function Val({ cell, lead }: { cell: Cell; lead: boolean }) {
     <div className="min-w-0">
       <div
         className={cn(
-          "font-mono text-[13px] leading-tight tnum",
+          "font-mono text-body leading-tight tnum",
           lead ? "font-semibold text-accent" : "text-ink",
         )}
       >
         {cell.main}
       </div>
       {cell.sub != null && (
-        <div className="mt-px text-[10px] leading-tight text-faint">{cell.sub}</div>
+        <div className="mt-px text-micro leading-tight text-faint">{cell.sub}</div>
       )}
     </div>
   );
@@ -154,24 +154,24 @@ function Side({
       />
       <Link
         href={dossierHref(d)}
-        className="mt-1 flex min-h-11 items-center truncate text-[13px] font-semibold leading-tight text-ink transition-colors hover:text-accent"
+        className="mt-1 flex min-h-11 items-center truncate text-body font-semibold leading-tight text-ink transition-colors hover:text-accent"
       >
         {p.teamName ?? p.displayName}
       </Link>
-      <div className="truncate text-[11px] leading-tight text-faint">
+      <div className="truncate text-meta leading-tight text-faint">
         {p.displayName}
       </div>
       {d.identity.kind === "former" && (
         <Tag className="mt-1">former {d.identity.tenureLabel}</Tag>
       )}
       {titles && (
-        <div className="mt-1 flex items-center gap-1 text-[11px] font-semibold text-accent">
+        <div className="mt-1 flex items-center gap-1 text-meta font-semibold text-accent">
           <Trophy size={11} aria-hidden="true" className="shrink-0" />
           <span className="truncate">{titles.label}</span>
         </div>
       )}
       {shown.length > 0 && (
-        <div className="mt-1 text-[11px] font-medium leading-snug text-accent">
+        <div className="mt-1 text-meta font-medium leading-snug text-accent">
           {shown.join(" · ")}
         </div>
       )}
@@ -193,7 +193,7 @@ function CompareSheet({ rows }: { rows: Row[] }) {
             key={r.label}
             className="grid grid-cols-[76px_1fr_1fr] items-start gap-2 px-2.5 py-1.5"
           >
-            <div className="text-[10px] uppercase leading-tight tracking-wide text-faint">
+            <div className="text-micro uppercase leading-tight tracking-wide text-faint">
               {r.label}
             </div>
             <Val cell={r.a} lead={r.lead === "a"} />
@@ -242,23 +242,23 @@ export default async function CompareManagersPage({
     <>
       <Link
         href="/managers"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
       >
         <ArrowLeft size={13} aria-hidden="true" />
         All dossiers
       </Link>
       <header className="mb-2.5">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
           Manager compare
         </p>
-        <h1 className="font-display text-[26px] font-semibold leading-[1.1] text-ink">
+        <h1 className="font-display text-display font-semibold leading-[1.1] text-ink">
           Side by side
         </h1>
-        <p className="mt-0.5 text-[12px] leading-snug text-muted">
+        <p className="mt-0.5 text-note leading-snug text-muted">
           The same numbers for two managers, from the same reads their own dossiers
           use.
         </p>
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 font-mono text-[11px] tnum text-faint">
+        <div className="mt-1 flex flex-wrap items-center gap-x-2 font-mono text-meta tnum text-faint">
           <span>{options.length} managers</span>
           <span aria-hidden="true">·</span>
           <span className="inline-flex items-center gap-1 text-warn">
@@ -303,7 +303,7 @@ export default async function CompareManagersPage({
       <div>
         {header}
         <Card className="mt-3">
-          <p className="text-[13px] leading-relaxed text-muted">
+          <p className="text-body leading-relaxed text-muted">
             {aD || bD
               ? "Pick a second manager to compare against."
               : "Pick two managers. Former managers are in the list too - their behaviour is scoped to the seasons they actually ran the team."}
@@ -314,7 +314,7 @@ export default async function CompareManagersPage({
                 <Link
                   key={s.href}
                   href={s.href}
-                  className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-[12px] font-semibold text-ink transition-colors hover:border-accent/40 hover:text-accent"
+                  className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-ink transition-colors hover:border-accent/40 hover:text-accent"
                 >
                   {s.label}
                 </Link>
@@ -340,23 +340,25 @@ export default async function CompareManagersPage({
   const bRoster = rosterOf(bD);
   const bothCurrent = aRoster != null && bRoster != null;
 
-  const graph = buildTradeGraph(h, principals);
-  const edge = graph.edges.find((e) => e.key === pairEdgeKey(aId!, bId!));
+  const ledger = buildTradeLedger(h, principals);
+  const edge = ledger.pairings.find((e) => e.key === pairEdgeKey(aId!, bId!));
 
   /**
-   * The number of deals that actually exist as records, NOT `edge.count`.
+   * The number of deals that actually exist as records - `dealCount`, never
+   * `dossierCount`.
    *
-   * `buildTradeGraph` sets `count` to `max(dossier-derived weight, tradeIds.length)`
-   * on purpose, so a pair is never undersold - and in this corpus the two genuinely
-   * disagree (that is what `graph.weightsAgree` exists to flag). A commissioner-
-   * executed multi-team deal arrives as several transactions that coalesce into ONE
-   * graph record, while the dossier fold still counts each encounter, so `count` can
-   * exceed what anyone could ever list. The trade web's own pair panel shows the
-   * listable figure; this page has to say the same number or the two surfaces
-   * disagree about the same two people.
+   * The two can disagree when a commissioner-executed multi-team deal arrives as
+   * several transactions that coalesce into ONE record while the dossier still counts
+   * each encounter. (They also used to disagree because the dossier fold was
+   * roster-keyed and blended two managers who had shared a seat - fixed at the source
+   * in `TradePartner`, so on this corpus all 46 pairings now agree.) `/deals?pair=`
+   * shows the listable figure; this page has to say the same number or the two
+   * surfaces disagree about the same two people. The gap itself is worth showing,
+   * which is why the footnote below exists rather than the larger number being
+   * hidden.
    */
-  const dealsListed = edge ? edge.tradeIds.length : 0;
-  const dossierCount = edge?.count ?? 0;
+  const dealsListed = edge?.dealCount ?? 0;
+  const dossierCount = edge?.dossierCount ?? 0;
 
   // Two managers who never shared a season could not have traded even in principle,
   // which is a different fact from choosing not to - worth separating, since one is a
@@ -460,8 +462,8 @@ export default async function CompareManagersPage({
           },
           {
             label: "Duration",
-            a: { main: `${aTl.rosterDuration.toFixed(1)}y`, sub: "value-weighted" },
-            b: { main: `${bTl.rosterDuration.toFixed(1)}y`, sub: "value-weighted" },
+            a: { main: `${aTl.rosterDuration.toFixed(1)}s`, sub: "value-weighted" },
+            b: { main: `${bTl.rosterDuration.toFixed(1)}s`, sub: "value-weighted" },
           },
           ...(aFr && bFr
             ? [
@@ -527,10 +529,10 @@ export default async function CompareManagersPage({
         action={
           edge && (
             <Link
-              href={pairWebHref(edge.key)}
-              className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-accent"
+              href={pairDealsHref(edge.key)}
+              className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent"
             >
-              their strand
+              their deals
               <ChevronRight size={12} aria-hidden="true" />
             </Link>
           )
@@ -539,7 +541,7 @@ export default async function CompareManagersPage({
       <Card>
         {edge ? (
           <>
-            <p className="text-[13px] leading-relaxed text-ink">
+            <p className="text-body leading-relaxed text-ink">
               <span className="font-mono font-semibold tnum text-accent">
                 {dealsListed} deal{dealsListed === 1 ? "" : "s"}
               </span>{" "}
@@ -548,15 +550,15 @@ export default async function CompareManagersPage({
               </span>
             </p>
             {dossierCount > dealsListed && (
-              <p className="mt-1 text-[11px] leading-relaxed text-faint">
+              <p className="mt-1 text-meta leading-relaxed text-faint">
                 Their dossiers count {dossierCount}. A commissioner-executed
-                multi-team deal arrives as several transactions and collapses into one
-                record here, so the listable number is the smaller one.
+                multi-team deal collapses several transactions into one record here, so
+                the listable number is the smaller one.
               </p>
             )}
           </>
         ) : (
-          <p className="text-[13px] leading-relaxed text-muted">
+          <p className="text-body leading-relaxed text-muted">
             {overlap.length === 0
               ? "They were never in the league at the same time, so no deal between them was ever possible."
               : `No deals between them, across ${overlap.length} shared season${overlap.length === 1 ? "" : "s"}.`}
@@ -577,7 +579,7 @@ export default async function CompareManagersPage({
         </>
       ) : (
         <Card className="border-warn/30 bg-warn/[0.06]">
-          <p className="text-[13px] leading-relaxed text-muted">
+          <p className="text-body leading-relaxed text-muted">
             Only shown when both managers currently hold a roster. TCI, duration and
             fragility describe a roster as it stands tonight, and a former manager
             holds none - showing these would quietly be describing whoever took their
@@ -593,10 +595,10 @@ export default async function CompareManagersPage({
             key={d.profile.userId ?? d.profile.displayName}
             className="rounded-[--radius] border border-border bg-surface/80 p-2.5"
           >
-            <div className="mb-0.5 text-[11px] font-semibold uppercase tracking-wide text-accent">
+            <div className="mb-0.5 text-meta font-semibold uppercase tracking-wide text-accent">
               {d.profile.teamName ?? d.profile.displayName}
             </div>
-            <p className="text-[12.5px] leading-[1.42] text-ink">{d.read}</p>
+            <p className="text-note leading-[1.42] text-ink">{d.read}</p>
           </div>
         ))}
       </div>
@@ -606,7 +608,7 @@ export default async function CompareManagersPage({
           <Link
             key={dossierHref(d)}
             href={dossierHref(d)}
-            className="inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-[12px] font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+            className="inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
           >
             {d.profile.teamName ?? d.profile.displayName}
             <ChevronRight size={12} aria-hidden="true" />
@@ -614,7 +616,7 @@ export default async function CompareManagersPage({
         ))}
       </div>
 
-      <p className="mt-3 text-[11px] leading-relaxed text-faint">
+      <p className="mt-3 text-meta leading-relaxed text-faint">
         Gold marks a side only where more is plainly more: pick capital, and the lower
         fragility index when both rosters are playing to win now. A low fragility score
         on a team that has already sold means it has little left to lose, so that

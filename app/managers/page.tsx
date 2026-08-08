@@ -107,7 +107,7 @@ export default async function ManagersPage() {
                       <span className="min-w-0 truncate text-[13px] font-semibold leading-tight text-ink">
                         {p.teamName ?? p.displayName}
                       </span>
-                      <span className="shrink-0 truncate text-[11px] leading-tight text-faint">
+                      <span className="min-w-0 shrink truncate text-[11px] leading-tight text-faint">
                         {p.displayName}
                       </span>
                       {isFormer && d.identity.kind === "former" && (

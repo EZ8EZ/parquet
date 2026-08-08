@@ -24,6 +24,7 @@ import type { LeagueHistory } from "../history";
 import { getLeagueProvider } from "../providers";
 import type { DraftMeta, DraftPick } from "../providers/types";
 import { ordinal, rosterName } from "../derive/describe";
+import type { PrincipalIndex } from "../principals";
 import { timed } from "../timing";
 
 // ---------------------------------------------------------------- types
@@ -256,7 +257,16 @@ export function invalidateDraftIndex(): void {
 
 // ---------------------------------------------------------------- helpers
 
-const REASON_TEXT: Record<UnresolvedReason, string> = {
+/**
+ * The reasons a pick has no player yet, in the app's own words.
+ *
+ * EXPORTED because the provenance rail (lib/provenance) ends an undrafted pick's
+ * chain on one of these sentences and prints it verbatim. Two surfaces describing
+ * the same unresolved pick in two different ways is exactly the drift this feature
+ * was rebuilt to remove: /drafts owns the pick's story, provenance owns the player's,
+ * and they must speak the same language about the one thing they share.
+ */
+export const REASON_TEXT: Record<UnresolvedReason, string> = {
   "no-draft-support": "This data source doesn't expose drafts.",
   "no-draft": "Not drafted yet - this pick is still in the future.",
   "not-yet-drafted": "The draft hasn't reached this pick yet.",
@@ -431,8 +441,22 @@ export async function resolvePickLineage(
 export async function getDraftBoard(
   h: LeagueHistory,
   season: string,
-  opts: { index?: DraftIndex } = {},
+  /**
+   * `principals` NAMES THE PERSON WHO WAS ON THE CLOCK, not whoever holds that seat
+   * today. Every row on this board is a decision made in `season`, so resolving the
+   * roster id through `ownerAt(season, rosterId)` is exactly what D22 asks for. Without
+   * it, a seat that has changed hands credited its 2022-2024 picks to the manager who
+   * arrived in 2025 - and disagreed with the report cards, the superlatives and the
+   * provenance rail, all three of which already name the right person for the same
+   * pick. Optional, so a caller without an index degrades to the seat's current name.
+   */
+  opts: { index?: DraftIndex; principals?: PrincipalIndex } = {},
 ): Promise<DraftBoard> {
+  const nameAt = (rosterId: number): string => {
+    const ownerId = opts.principals?.ownerAt(season, rosterId);
+    const pr = ownerId ? opts.principals?.byOwnerId.get(ownerId) : undefined;
+    return pr ? pr.teamName || pr.displayName : rosterName(h, rosterId);
+  };
   const index = opts.index ?? (await buildDraftIndex(h));
   const empty = (reason: UnresolvedReason, sd?: SeasonDrafts): DraftBoard => ({
     season,
@@ -459,9 +483,9 @@ export async function getDraftBoard(
       round: p.round,
       draftSlot: p.draftSlot,
       originalRoster: original,
-      originalRosterName: original != null ? rosterName(h, original) : null,
+      originalRosterName: original != null ? nameAt(original) : null,
       usedByRoster: usedBy,
-      usedByName: usedBy != null ? rosterName(h, usedBy) : null,
+      usedByName: usedBy != null ? nameAt(usedBy) : null,
       wasTraded: original != null && usedBy != null && original !== usedBy,
       isMine: h.me.rosterId != null && usedBy === h.me.rosterId,
       ...playerFields(h, p),
@@ -511,6 +535,52 @@ export async function getDraftSeasons(
     });
   }
   return out.sort((a, b) => b.season.localeCompare(a.season));
+}
+
+/** One made pick, joined to the tradeable pick identity that produced it. */
+export interface MadePick {
+  season: string;
+  round: number;
+  pickNo: number;
+  draftSlot: number;
+  /** The roster the slot ORIGINALLY belonged to - the tradeable pick's identity. */
+  originalRoster: number | null;
+  /** The roster that actually used it. Ground truth from the made pick. */
+  usedByRoster: number | null;
+  playerId: string | null;
+  /** ms epoch of the draft, or null when the provider does not date it. */
+  at: number | null;
+  /** Round count, so a caller can run D27's startup detection over these. */
+  rounds: number;
+}
+
+/**
+ * Every made pick in the chain, flattened.
+ *
+ * The reverse of `resolvePickLineage`: that answers "what did this pick become",
+ * this answers "which pick produced this player", which is the join the provenance
+ * rail walks backwards through. It lives here rather than in lib/provenance because
+ * the `(round, draftSlot) -> original roster` join is this module's own invariant
+ * and there must not be a second copy of it.
+ */
+export function madePicks(index: DraftIndex): MadePick[] {
+  const out: MadePick[] = [];
+  for (const [season, sd] of index.bySeason) {
+    for (const p of sd.picks) {
+      out.push({
+        season,
+        round: p.round,
+        pickNo: p.pickNo,
+        draftSlot: p.draftSlot,
+        originalRoster: sd.draft.slotToRosterId[p.draftSlot] ?? null,
+        usedByRoster: p.rosterId ?? null,
+        playerId: p.playerId,
+        at: sd.draft.startTime,
+        rounds: sd.draft.rounds,
+      });
+    }
+  }
+  return out;
 }
 
 /**

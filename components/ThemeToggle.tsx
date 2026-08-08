@@ -91,7 +91,7 @@ export function ThemeToggle() {
               // the root [data-theme] attribute (globals.css), NOT by these classes:
               // a React-rendered ring can trail the theme repaint by the length of
               // the full-document style recalc the switch triggers. See globals.css.
-              className="flex min-h-11 flex-col items-center justify-center gap-1 rounded-[--radius-sm] border border-border bg-surface/60 px-2 py-2 text-[11px] font-semibold text-muted transition-colors hover:border-border-strong hover:text-ink motion-reduce:transition-none"
+              className="flex min-h-11 flex-col items-center justify-center gap-1 rounded-[--radius-sm] border border-border bg-surface/60 px-2 py-2 text-meta font-semibold text-muted transition-colors hover:border-border-strong hover:text-ink motion-reduce:transition-none"
             >
               <span className="flex items-center gap-1">
                 <Icon size={14} aria-hidden="true" />
@@ -107,7 +107,7 @@ export function ThemeToggle() {
 
       <ul className="mt-2 space-y-1">
         {THEME_META.map((t) => (
-          <li key={t.id} className="text-[11px] leading-snug text-faint">
+          <li key={t.id} className="text-meta leading-snug text-faint">
             {/* Same CSS-driven highlight as the buttons, same reason. */}
             <span data-theme-choice={t.id} className="font-semibold text-muted">
               {t.label}

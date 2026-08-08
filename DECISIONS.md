@@ -699,6 +699,15 @@ front of Sleeper" and the plain-text summary was redundant with the thesis rende
 above it. `TradeEvaluation.copyable` itself is untouched in `lib/trade` - this was a
 UI-only removal, not a data-layer one.
 
+**Amendment (Round 7): the data-layer field did not survive either.** A later round
+removed the copyable-Sleeper-text feature root and branch - `TradeEvaluation.copyable`
+and `buildCopyable` out of `lib/trade`, `Move.copyable` and `copyBlock` out of
+`lib/gameplan`, and `lib/dossier/message.ts` (`generateApproachMessage`) deleted
+outright along with its test - so the "UI-only removal" framing above describes only
+this decision's own change, not where the field ended up. `components/CopyBlock.tsx`
+was not part of that feature (it renders the commissioner's seat-claim link, `app/
+commissioner/seats.tsx`) and survives untouched.
+
 Rejected: one shared "URL sync" hook parameterized by write-strategy (the two
 strategies exist for opposite reasons - one dodges an expensive render, the other
 rides an existing debounce for zero added cost - collapsing them into one knob would
@@ -745,3 +754,593 @@ object by the league size to vary two fields that cost nothing to compute); movi
 annotations out of the corpus so the cache holds only public data (turns every ledger
 and recap render into its own DB round trip, which is the read-time DB dependency D18
 exists to prevent).
+
+## D39. Player imagery re-audited for the public repo: same source, flipped default, two new placements
+The owner asked for photos in more places with transparent backgrounds, and raised two
+doubts worth checking before building on them: that the Sleeper CDN might 403 in a real
+browser, and that a `.jpg` can't carry transparency. Both were investigated rather than
+assumed.
+
+**The CDN works.** All 251 real player ids on the live NSL roster returned 200 from
+`sleepercdn.com/content/nba/players/thumb/{id}.jpg`, repeatedly, and `/values` in a real
+browser shows real faces, not monograms. The owner's independent 403 was not
+reproduced against the same real ids - almost certainly a bad/missing id or a
+one-off block, not a systemic CDN failure. The only ids that 403 are ids with no
+photo on Sleeper at all (checked against the full ~2,100-player payload, not just the
+251 rostered).
+
+**The `.jpg` claim was wrong, in a useful way.** The file at that URL, despite the
+extension and an `image/jpeg` response header, is actually a PNG with a genuine alpha
+channel - confirmed with `file`, macOS `sips -g all` (`hasAlpha: yes`,
+`samplesPerPixel: 4`), and a Pillow alpha histogram on four different players (LeBron
+James, Victor Wembanyama, Nikola Jokić, Luka Dončić): 60-70% of pixels are non-fully-
+opaque on every one of them, which is what a real cutout looks like, not a rectangle
+with alpha=255 everywhere. Browsers sniff image bytes for `<img>` rendering rather than
+trust the extension or the declared content-type, so this was already rendering as a
+transparent cutout - no source change, no new code, needed for the transparency ask
+itself. `cdn.nba.com/headshots/nba/latest/1040x760/{personId}.png` was also checked as
+an alternative source and does return a real cutout (verified: LeBron is person id
+`2544`, 200 OK, alpha 0-255) - it just isn't reachable by any id Sleeper hands us (next
+paragraph), so it was rejected, not adopted.
+
+**The id-mapping problem from D8 is confirmed, not solved.** Sleeper's NBA payload
+carries `rotowire_id`, `sportradar_id` (a UUID, not nba.com's numeric scheme),
+`swish_id`, `fantasy_data_id`, `kalshi_id`, `oddsjam_id`, `yahoo_id`, `gsis_id`
+(NFL), `pandascore_id`, `opta_id`, `stats_id` - and `espn_id`, null for every player
+checked including LeBron. None of them is an NBA.com person id; there is no field to
+bridge with. `cdn.nba.com/static/json/staticData/PlayersActive.json` 403s (Akamai) and
+`stats.nba.com/stats/playerindex` times out outright from this environment - both
+well short of "reachable enough to build a crosswalk table from," let alone to call
+per-request from a Vercel function. A name+team match against either would be exactly
+the fuzzy match the owner asked NOT to ship - a wrong face is worse than a monogram,
+and this app has no way to notice it got one wrong. Rejected for that reason, not
+attempted as a fallback.
+
+**Net effect: same source, same URLs, nothing to migrate.** What actually changed:
+1. `NEXT_PUBLIC_USE_PLAYER_PHOTOS` **flips its default from ON to OFF**
+   (`components/PlayerAvatar.tsx`). D21's "defaults ON so a forgetful Vercel deploy
+   doesn't silently downgrade" reasoning was written for a private repo; now that the
+   repo is public, a fork or a deploy that never touched the var must default to the
+   licensing-safe answer, not the convenient one. **This means Eric's own production
+   deploy needs `NEXT_PUBLIC_USE_PLAYER_PHOTOS=true` set explicitly in Vercel** - it
+   was previously covered by the implicit default and is not anymore. Not verified
+   from this environment; flagged for the owner to check.
+2. Two new placements, chosen with "fewer, larger, better-placed" in mind rather than
+   avatar-on-every-row: the trade builder's give/get columns
+   (`components/TradeBuilder.tsx` - `AssetRow` now takes an optional `player` prop,
+   set only for player rows, never pick rows) and the roster page's single
+   highest-stakes sentence, "season hinges on X" (`app/roster/page.tsx`). Both are
+   places where recognizing a specific PERSON, not reading their stat line, is the
+   point. Rejected: `/awards` (winners are managers, already carrying `TeamAvatar`;
+   a player named inside a stat line like a draft steal isn't the entrant); the
+   Analyst's cited players (would need new name-to-id citation parsing against
+   free-text model output - the wrong-face risk from the id-mapping problem above,
+   at a second location); the ledger's transaction descriptions (a single trade can
+   name several players, and this is already the app's densest list - avatars per
+   name would be per-line clutter on the one page whose job is the annotation, not
+   the roster look). Injury rows have no separate home from the roster/values list,
+   which already carries `PlayerAvatar` via `ValueAssetRow`.
+3. `components/PlayerAvatar.tsx`'s header comment and `.env.example`'s note were
+   rewritten for accuracy - both previously asserted the JPEG-can't-be-transparent
+   claim now known to be wrong for this specific source.
+
+`components/TradeWeb.tsx`, `lib/tradegraph/`, `lib/lineage/`, `app/web/`,
+`app/drafts/`, and `lib/nav.ts`/`components/BottomNav.tsx` were left alone per the
+open work already in flight on each.
+
+## D40. Density is a caveat-placement problem, not a writing problem, and /league was rendering the same fourteen rosters four times
+Round 8's density audit was aimed at D15 and did not land there. The dark editorial
+identity is working; what was not working is that its best sentences had been copied
+across surfaces until several of them were on their fourth appearance, and the app's own
+`<details>` idiom - shipped with MetricGloss, and used by the roster timeline, the
+commissioner page and the recap - was sitting unused beside them. Editorial writing that
+appears once, at the moment of confusion, IS the identity. The same sentence
+unconditionally on every revisit is unmaintained copy wearing the identity's clothes.
+
+**Cut, because a repeat visitor learns nothing from it.** The streak panel's 33-word
+explanation of how a streak differs from a Superlative (a product-design footnote, new
+exactly once - moved to /about, where the app's vocabulary is defined); Home's "Parquet
+advises; it can't act. Sleeper has no write API" (a constraint about SENDING trades,
+stated on /trade where the evaluation ends at "Open Sleeper to send", and nowhere near
+anything Home does); the awards page's `managers*` asterisk (a definition, so it moved
+onto the definition as an `<abbr title>`). The fragility board's 55-word caveat about
+what a low RFI does not mean was the fifth copy of a paragraph MetricGloss, /about and
+/methodology all carry, so it is now `<MetricGloss>` - one faint line, the same words
+inside, and `MetricGloss.test.ts` still pins the phrases.
+
+**A zero in the offseason is anti-information.** `StreakPanel` now suppresses any row
+that is BOTH idle and zero-valued ("Trades in the last 90 days - idle - 0 trades" in
+August). A non-zero idle row still says something and stays.
+
+**Collapsed into the house idiom**, which is now a shared `<Disclosure>` in
+`components/ui.tsx` rather than a fifth hand-rolled `<details>`: the digest's first-visit
+explanation, the awards page's ties-and-blanks footnote ("How these are settled"), and
+/league's axis gloss.
+
+**The award subtitle's `line-clamp-2` was the worst case of all and is gone.** It cost
+514px across twenty cards AND cut seven of them off mid-sentence, and what it was cutting
+was the D23 honesty caveats - "Hindsight pricing", "the number cannot tell them apart",
+"a torn-down roster has little to lose". Those are the point of the subtitle, not its
+overflow. The first sentence now renders unclamped, and everything after it is one tap
+away instead of deleted by CSS. Single-sentence subtitles render as a plain paragraph and
+pay no chrome at all. Page height is unchanged; readability is not.
+
+**/league rendered the same fourteen rosters FOUR times**: a duration x TCI scatter, a
+fourteen-row coherence list, a TCI x RFI scatter carrying its own grouped fourteen-row
+list, and the power ranking. Measured 3,379px of a 3,900px page at 375px. Nothing was
+wrong with any one of them; there were four. Both scatters plot TCI on y and differ only
+in what sits on x, so they are one chart with a toggle now (`components/LeagueBoard.tsx`),
+addressable as `?board=duration|fragility` through `lib/league/url.ts` -
+`history.replaceState` rather than `router.replace`, for D37's reason unchanged: this page
+is force-dynamic and its server render walks the whole season chain. The two roster lists
+collapse into the power ranking, which grew one mono line carrying `TCI n · RFI n ·
+posture`. Numbers first and the word last, deliberately: at 375px that line has no room to
+spare, so what truncation eats has to be the half the reader can recover elsewhere.
+Verified: **3,879px -> 1,905px at 375, a 51% cut**, and 3,868 -> 1,898 at 390.
+
+What was lost, stated rather than glossed: you can no longer see both axis pairings at
+once, and the fragility board's four-way grouped list (with each quadrant's gist) is gone.
+The grouped list was also the scatter's only keyboard and screen-reader path, so that part
+did NOT go - it is a rail of fourteen 44px labelled buttons, one per dot, at about a
+twelfth of the height. All three renderings used to number their rosters differently;
+both charts now key to the power ranking's numbering, which is the only way one chart plus
+one list can work at all.
+
+**One type scale, six steps.** The app had 17 distinct arbitrary sizes plus Tailwind's
+seven defaults - including a half-pixel family (12.5 / 11.5 / 10.5 / 13.5, 37 usages) and
+seven sizes used once or twice in the whole codebase. That is a fingerprint of seven
+rounds of parallel authorship, not a designed scale, and nothing in the product ever
+needed 12.5px to be distinguishable from 12px. `--text-micro/meta/note/body/lede/display`
+in `@theme`, named for the job rather than the size. Home went from nine sizes to five.
+The half-pixel steps snap DOWN to their integer neighbour and `text-sm` (14/20) lands on
+`body` (13) with an explicit `leading-*` wherever the element had none, which is why
+/methodology fell 548px and /plan 174px without a word being cut from either.
+Rejected: line-heights on the tokens themselves (that would have silently re-spaced every
+`text-[11px]` element that currently inherits, growing rows in the name of tidiness);
+migrating the sizes inside the components another agent held mid-round (listed in the
+round report instead - they are the last arbitrary sizes left in the app).
+
+## D41. THE DESK: the bottom bar became a sheet, League lost its slot, and the search box's URL write flipped because its host changed
+The six-tab bar advertised six places you were not, on every screen, and said nothing
+about the one place you were. It also had no room to grow: `/more` had already been
+bolted on as a sixth tab to hold search plus the surface index, which is how a bar of
+tabs admits it has run out of tabs. Three replacements were mocked up at 390pt against
+real league content and the owner chose the sheet.
+
+**Two rows at rest, and the top one is not navigation.** 116pt of chrome plus
+`env(safe-area-inset-bottom)` - measured at **118pt** in Chromium (116 of rows plus the
+two 1pt hairlines the mockup's arithmetic did not count), against the old bar's ~94pt.
+Bottom-up: a 53pt destination row (four links), a 44pt CONTEXT row, and a 19pt handle.
+The context row is the whole argument for spending the extra 24pt: it names the team on
+the lens and states the one thing outstanding, which no bar of tabs can do because a tab
+bar's entire vocabulary is "places". Expanded it reaches ~630pt, holding search and the
+rest of the registry, with the page still visible above it.
+
+**Expanding moves nothing you can reach, which the mockup got wrong.** In the mockup the
+drawer was the last child of the sheet, so opening it pushed the four destinations ~500pt
+up the screen and out from under the thumb. In the build the drawer is the FIRST child:
+the sheet grows upward and the handle, the context row and the destination row stay
+bolted to the bottom in both states. Verified rather than asserted - the destination
+row's `top` is byte-identical open and closed at 375, 390, 393, 430 and in landscape,
+across all three themes. Muscle memory is the entire budget of a fixed bottom bar, and an
+element that jumps when you touch the grip beside it has already spent it. The handle
+sits ~117pt above the safe-area inset for the same class of reason: at 24pt it would be
+inside the iOS home-indicator swipe.
+
+**LEAGUE LOST ITS SLOT, and so did TRADE.** The four destinations are Today (`/`), Team
+(`/roster`), Decide (`/plan`) and Record (`/ledger`). The row asks "what are you here to
+do", and standings are a thing you read rather than a thing you do - they move once a
+week, Home's Record figure has always linked straight there, and the context row's zero
+state links there too. Trade went for the same reason one step further along: it is where
+a plan gets executed, so it is reached from /plan, from Home's shortcuts and from the
+drawer. What took the fourth slot is the ledger, because capturing reasoning at the moment
+of conviction is the thing this app exists for, and it had been sitting two taps deep
+behind a curated shortcut.
+
+**The tab list and the registry were two hand-kept lists and had already diverged, so
+there is now one.** `lib/nav.ts`'s header claimed five bottom tabs; `BottomNav.tsx`
+shipped six; `/more` was a tab that the registry did not list at all, which made that
+page's own subtitle ("if it isn't listed below, it doesn't exist yet") false about the
+page printing it. The Desk renders `primarySurfaces()` - a filter over the one registry -
+and keeps no array of its own, `/more` is in `ALL_SURFACES`, and `nav.test.ts` pins three
+invariants: the primary set is exactly those four in that order, every primary entry has a
+`short` slot label, and `primary` and `group: "Primary"` are the same set. `/more` itself
+survives the tab that created it, deliberately: it is the no-JS and crawler fallback for a
+drawer that is otherwise only reachable through a client component, and the drawer's own
+"see everything" link.
+
+**`history.replaceState` for the search box, which REVERSES D37, by applying D37's
+reasoning rather than repeating its answer.** D37 chose `router.replace` for this exact
+component and gave a reason: `/more`'s server render does no real work, so there was no
+per-keystroke cost to dodge and letting Next own the URL was free. Mounting the same box
+in the Desk's drawer deleted the premise of that sentence - the page underneath is now
+whichever page you are on, and two of them (`/values`, which revalues every player in the
+league; `/trade`, which prices every roster) are precisely the cost D30 and D37 exist to
+dodge. Same reasoning, opposite answer, because the situation is not the same one.
+
+Two smaller consequences of the box becoming a guest rather than a host, both of which
+would have been silent bugs: it takes `basePath` (it hardcoded `/more`, and would have
+rewritten every other page's URL to `/more` on the first keystroke), and in the drawer it
+takes the query key `find` rather than `q`, because `/values` already uses `q` for its own
+name filter. The write MERGES into the existing query string instead of rebuilding it, so
+a reader who has set `pos`, `sort` and `focus` on the page underneath does not lose them
+to a search they typed over the top.
+
+**Lens safety on the context row (D35).** "27 to capture" is a count of one manager's
+unwritten reasoning, now rendered on every page in the app, which is exactly the shape of
+figure that leaks across identities if nobody is watching. It is gated on
+`canCapture(seat, lens)`, the same gate Home already applies to the same number, so it is
+absent both when the reader holds no seat and when the lens is on someone else. In legacy
+mode (no `AUTH_SECRET`, which is every deploy today) it is always true and nothing changes.
+
+**The zero state is the goal state, so it is not allowed to be dead chrome.** Nothing left
+to capture is the outcome the whole app pushes toward; a row that empties out on success
+would punish the reader for winning. It falls back to a durable fact about the team on the
+lens - `5-15 · 2025 final · 12th of 14`, linking to `/league` - which is also exactly what
+a reader looking at someone else's team should see instead of a capture count, so the two
+rules land on one branch rather than two. Fixed structure, changing content: deliberately
+not phase-aware and not seasonal, because a row that reshapes itself around the calendar is
+a row nobody can aim at. The record comes from `currentFormByRoster` and not `h.rosters`,
+since D29 was written about that live snapshot reading 0-0 for most of a dynasty year, and
+it is only awaited on the branch that needs it so the common case never pays for
+`loadSeasonRosters`.
+
+**Two accessibility states, not three.** Collapsed: non-modal, `<nav aria-label="Primary">`
+with the four links (the assertion every registry-driven smoke test makes), drawer
+`hidden` + `inert`. Expanded: `role="dialog"`, `aria-modal="true"`, focus trapped, Escape
+closes and returns focus to the handle, page content `inert`. Intermediate detents were
+considered and rejected rather than deferred: a third position is a state with no name to
+announce and no keyboard equivalent, so it would be a pointer-only nicety pretending to be
+part of the interface. Drag is an accelerator only - the handle is a real button with
+`aria-expanded`/`aria-controls`, a full-size chevron in the context row does the same job,
+and everything in the drawer is also on `/more`. `prefers-reduced-motion` gets an opacity
+snap, no spring and no rubber-band. It never auto-hides on scroll.
+
+**The root layout is now async, and that DID cost something - measured, not assumed.**
+The claim it was undertaken on ("33 pages already carry `force-dynamic`, so nothing
+regresses to static") is not quite right. Two production builds of the same tree, one with
+the layout awaiting `getDeskData()` and one without, differ by exactly four routes:
+`/about`, `/settings`, `/claim/invalid` and `/_not-found` were prerendered as static and
+are now server-rendered on demand. Everything else was already dynamic. The warm cost is
+unmeasurable (D38's corpus cache is keyed by nothing, so this is a Map lookup: `/about`
+came in at 1.8-3.3ms after against 2.5-3.3ms before, i.e. inside the noise), and the real
+bill is the cold one - on a fresh serverless instance `/about` now shares the corpus
+assembly D25 budgets at 1.4s, where before it was a static file. Accepted: `/about` is
+the page a reader without a lens lands on, and the alternative is a root layout that
+cannot say whose team you are looking at.
+
+**One repo-wide bug fell out of building this and is fixed at the source.**
+`tailwind-merge` resolves conflicts from a table it cannot learn our CSS from, and in that
+table `text-<word>` is a COLOUR - so the new job-named type scale (`text-body`,
+`text-meta`, `text-display`) was being silently DELETED from every `cn()` call that also
+carried a conditional colour. Found on the Desk's destination labels rendering at 16px
+instead of 11; the same silent drop was already live in `TradeBuilder`, `StreakPanel`,
+`ui.tsx` and `drafts/parts.tsx`. `lib/ui.ts` now registers the six names as font sizes via
+`extendTailwindMerge`, because the alternative is remembering forever never to put a size
+and a colour in the same `cn()`.
+
+Rejected: keeping `/league` as a fifth slot (five destinations plus a seat chip plus a
+status line does not fit 390pt without shrinking the labels below legibility, and the
+fifth was the one nobody needed daily); giving the drawer its own copy of the four
+destinations (it would be advertising links that are permanently on screen two inches
+below it); auto-hiding the Desk on scroll to buy back the 24pt (chrome that disappears
+when you move is chrome you cannot aim at); a `useEffect` on `pathname` to close the
+drawer after navigation (both open states are stored as the path they were opened on
+instead, so closing is a derivation rather than a cascading render); autofocusing the
+search field on open (it raises the keyboard over the sheet the reader just asked to see).
+
+## D42. THE LAB, and the two experiments behind it, which are graded by what they refuse to compute
+Round 8 opens a `/lab` with exactly ONE entry in the surface registry (`group: "The
+app"`, not `curated`, not `primary`), so it appears on the full index and nowhere
+else. The experiments themselves are deliberately NOT registered: a page that promises
+completeness should not be filled with things that may be wrong. Each experiment
+carries an `ExperimentBadge` and, on the index, its own biggest DOUBT next to its
+premise - an experiment whose author cannot name one is not an experiment.
+
+`ExperimentBadge` is a new component rather than `BetaBadge` from TradeWeb.tsx (its
+precedent, and on its way out): "beta" means rough, "experiment" means may be wrong and
+may vanish, and those are different promises.
+
+### The counterfactual roster: what if you had never traded?
+`lib/lab/counterfactual` rebuilds the roster a manager would hold TODAY having made
+zero trades. A roster in this league has exactly three inputs, so this is recoverable
+rather than invented: every player taken with a pick the roster was BORN with (via
+`slotToRosterId`, read from the original owner's side, which is why commissioner trades'
+missing pick data - D19, D24 - costs this derivation nothing), plus every waiver and
+free-agent add minus every drop applied in order, plus every future pick the roster was
+born with. `pickCapital` gained an `ownership: "held" | "original"` option so both
+columns are priced by ONE recipe rather than by a copy that could drift; a test pins
+`"held"` byte-identical to today. `coherenceOf` was lifted out of `getTimelineProfile`
+(unrounded, so nothing existing moves) so a hypothetical roster is scored on the same
+formula and the same SIGMA_REF as a real one.
+
+What makes it publishable is the list of things it will not compute:
+- **The pick is not the player.** A manager who traded a pick away is credited with
+  whoever was actually taken at their slot, not whoever they would have taken. Largest
+  source of error, and there is no fix: a draft board nobody used leaves no record.
+- **Waiver knock-on is invisible.** A pickup only possible because a trade opened a
+  roster spot is indistinguishable from one that would have happened anyway.
+- **Draft order was itself traded.** Rookie order comes from standings that trades
+  shaped. Not modelled, not modellable.
+- **Roster limits are real.** The trade-free roster is a hoard, not a roster (EZ8's
+  holds 37 priced players for 17 spots). Both numbers ship: trimmed by value to the
+  number of players actually fielded, and the untrimmed total stated beside it.
+- **A player with no NBA team has no honest price**, because the model is anchored on a
+  consensus rank that stops meaning anything. Those players are listed and excluded from
+  every total rather than scored zero. `corpusTracksNbaTeams` gates the check on whether
+  the corpus populates `team` for ANYBODY, because the fixture provider populates it for
+  nobody and reading its nulls as "the league has retired" would zero the whole demo.
+- **The fourteen counterfactuals do not add up to one league.** 68 players are claimed
+  by more than one, because each of those managers picked them up off waivers at some
+  point. Reported as an overlap, not resolved.
+
+Live results, which are the argument for shipping it: **Flick the Clint +14,104 and The
+Terror Twins +12,548** would be richer having never traded; **zachgoldy -9,942** is the
+largest beneficiary and his trade-free roster cannot even fill a lineup (12 priced
+players for 19 spots, from 13 non-trade adds in five seasons). The most interesting
+answers are the ones value alone misses: **6-Month Plan is -278, a wash, while his TCI
+falls 71 to 61** - no richer and less coherent. `describeCounterfactual` states all of
+this without a verdict, pinned by a test that fails on a banned grade vocabulary (D6):
+trading value for pick capital is a strategy, and the two columns are the argument.
+
+### The regret ledger: lock-in, recorded rather than judged
+This league is `game_mode: 1`. Seven slots a week, each holding one player-GAME.
+`lib/lab/regret` shows, for every past week, what each slot banked against the best
+seven distinct player-games the roster produced.
+
+**Two API facts were established live before any of it was written, because the feature
+is wrong without them.** First, `players_points` on the matchup endpoint is NOT the
+player's best game - for a slotted player it is the game that locked, for everyone else
+it tracks the latest game played (measured: 97 of 322 sampled player-weeks sat below
+that player's best). So it cannot stand in for "what was available" and the per-player
+`grouping=week` stats request is genuinely required. Second, `/v1/stats/nba/regular/
+{season}/{week}` looks like the cheap way to do this and is a trap: last game of the
+week only, ~557 players. Not used.
+
+**Position eligibility is deliberately NOT applied, and this is the entry's sharpest
+finding.** Sleeper reports only TODAY's eligibility, and **193 of the 2,244 filled slots
+this league actually played in 2025 would be illegal under it**. Applying it would grade
+real lineups against a rulebook they did not play under, so best-available is an UPPER
+BOUND and says so. IR and taxi status per week is not recoverable from any endpoint
+either, so a little of the pool was never startable.
+
+**Every banked figure is reconciled against the box scores** under the league's own
+scoring settings (never `pts_std`, which excludes this league's 40/50-point bonuses: a
+43-point game reads 33.0 there against a real 39.5). Result across all fourteen managers
+in 2025: **2,244 of 2,244 filled slots matched a real game**, and the derivation
+independently reproduces the verified league totals of 10 empty slots and 126 zero-scoring
+slots. A slot whose figure matches exactly one game names that game, because a lock-in
+slot is a player-game and that is the vocabulary managers already read a week in; a
+figure matching two games names neither.
+
+**The copy never calls a banked slot a mistake** (D6, and the same distinction D23
+protects). A manager who banked 28 on Tuesday could not know Thursday would bring 41. The
+ONE exception is named as one: an empty slot required no foresight to avoid - and even
+that carries the caveat "Left On The Bench" already carries, that a team playing for
+draft position leaves the same trace. Live: the league's most attentive manager banked
+92% of what was available; **EZ8 banked 46%, with 5 empty slots and 29 that scored zero**,
+and week 6 was 23 banked against 218 available.
+
+**Cost (D25).** `lib/lab/regret/source.ts` is reached only from `/lab/regret` and never
+from `assembleCorpus()`. `cache: "no-store"` plus an in-process single-flight memo, the
+`/players/nba` precedent, because the payloads clear Next's 2MB fetch-cache ceiling.
+Measured per manager-season: 23 lineup requests and 21 to 51 player requests, ~2s cold,
+0.1s warm, and a second manager in the same season pays only for players the first did
+not hold. Rejected: folding any of it into the corpus (a latency tax on every page for
+one Lab surface); using `players_points` as the available pool (measured wrong);
+applying today's position eligibility (grades real lineups against a rulebook they did
+not play under).
+
+## D43. THE TRADE WEB IS DELETED, and the ring is the part worth explaining
+The owner's read on the trade-trees concept was that it "needs an overhaul, having a
+really hard time understanding it intuitively, it feels like the pieces are there but
+it's not coming together well." Three separate things were wrong, and only one of them
+was a UI problem.
+
+**The ring encoded one variable in two pixels.** Edge counts in this league run 1 to 8.
+The stroke formula (`0.8 + 3.0 * (count/max)^0.65`, on a 400-unit viewBox scaled to a
+390px column) rendered a 1-deal strand at **1.41px** and an 8-deal strand at **3.40px**.
+That is the entire dynamic range of the only thing the drawing encoded, spread across
+**46 overlapping bowed curves**, with **23 of the 46 sitting at the minimum**. The page's
+own copy already conceded the point - "Everything is also listed below" - and the list
+was better than the picture, because a list can print the number. Two smaller sins rode
+along: the ring minted abbreviations (`5YP`, `6MP`, `TTT`) that appear nowhere else in
+the app, so a reader met a private vocabulary inside one drawing and never again; and it
+drew **15 nodes for a 14-team league**, which is CORRECT (D22 - one node per principal,
+and roster 11 has changed hands) and is the worst possible place to learn that fact.
+
+**The trees were fourfold redundant, by construction.** `rankTradeRoots` emitted one root
+per `(asset, seat)` pair, so **381 roots covered 91 trades** and a 15-asset blockbuster
+became fifteen near-identical "stories" of the same deal. That is the specific thing the
+owner was feeling.
+
+**And the direction was wrong.** See D44.
+
+Deleted outright: `components/TradeWeb.tsx` (1,546 lines), `app/web/` (174),
+`buildTradeTree`, `rankTradeRoots`, `countTreeNodes`, `treeDepth`, `TradeRoot`,
+`TradeTreeNode`, `TreeContext`, `ringOrder`, `abbreviate`, `RING`, `bowedPath`,
+`TradeGraphEdge`, `TradeGraph.maxEdgeCount/possiblePairs/weightsAgree`,
+`TradeGraphNode.x/y/abbr`, and the BetaBadge and beta warn card. `buildTradeGraph`
+becomes `buildTradeLedger` and loses its geometry; `TradeGraphEdge` becomes
+`TradePairing`, which is not a cosmetic rename - an edge is a thing you draw, and
+nothing in the app draws one any more. Kept and reused verbatim: `buildAssetMoves`,
+`buildHoldings`, `TradeRecord` (it WAS the receipt, it just had nowhere to print),
+`PlayerNow`, `ManagerMetric`, `ManagerLink`, `PlayerNowRow`, and all of `lib/lineage`.
+
+**`/web` 308s to `/deals`** (`next.config.ts`). Permanent rather than temporary because
+the move is permanent and a 308 is the only redirect a crawler treats as an instruction
+to update the link. It lands on the INDEX and deliberately does not try to rebuild
+`?trade=<id>` into `/deals/<id>`: a redirect that parses query strings is a route in
+disguise, every in-app caller was fixed at the source in the same change
+(`lib/tradegraph/url.ts`), and the only traffic left is the bookmark case, which wants
+the index anyway.
+
+**The two overview stats the ring displayed live on `/deals`, not `/league`.** 46 of 105
+pairs have traded; the busiest pairing is The Terror Twins and 6-Month Plan at 8 deals.
+The brief offered `/league` or deletion; both were declined for the same reason. These are facts
+about the DEAL RECORD, and the page whose entire subject is the deal record is the one
+place they cost no context to interpret - on `/league`, a "46 of 105" tile is a figure
+from another feature that would need its own sentence to explain what a pair even is.
+They were already the ring's own overview panel, i.e. this page's header, so they have
+not moved so much as stayed put while the drawing above them was removed.
+
+**The deleted `weightsAgree` flag had been reporting a real bug for rounds, and moving
+its subject into a headline is what finally caught it.** `TradePairing.count` was
+`max(dossier-derived weight, tradeIds.length)`, and the dossier fold is ROSTER-keyed, so
+for a seat that has changed hands it credits the successor with everything the seat ever
+did. Sorting `/deals` on it announced "Busiest pairing: kdewitt4 and 6-Month Plan, 8
+deals" - kdewitt4 has done **2** with them, the other **6** belong to NSLKB, who left in
+2024. Exactly the D22 failure, in a sentence. The field is now split in two:
+`dealCount` (what can be listed, and the only one anything sorts or headlines on) and
+`dossierCount` (kept, because Manager Compare deliberately shows the gap and a pair
+should never be undersold), with the roster-keyed blend named in both doc comments and
+pinned by a test. A silent boolean nobody acted on was worse than no flag at all.
+
+Rejected: fixing the ring's encoding (there is no stroke formula that makes 46
+overlapping curves legible at 390px, and the list was already winning); keeping trees
+behind a "biggest chains" filter (the redundancy is in the derivation, not the
+presentation); a 307 or a soft 404 on `/web` (four surfaces and an unknown number of
+pasted links point at it); keeping one `count` field and remembering which callers may
+use it (that is the arrangement that produced the wrong headline).
+
+## D44. PROVENANCE: the story runs BACKWARDS, which is what turns a tree into a chain
+The trade tree ran forward from a departure: you gave up one player, three things came
+back, each of those can be flipped for more things. Forward, the story BRANCHES, there
+is no natural end, and the code needed a depth cap (4), a seen-set, and a "chain
+continues" escape hatch to stop - three admissions in a row that the shape does not fit.
+
+Backwards from something you hold, **every hop has exactly one predecessor**. A thing
+arrived on your roster from precisely one place. Measured over all 418 addressable assets
+in the real league (264 that have ever moved in a trade, plus every player on a roster
+today): 151 are at their origin already, 154 are one hop from it, 73 are two, 20 are
+three, 12 are four, and 8 are five. **The longest chain in five seasons of this league is
+five hops.** The recursion, the depth cap, the seen-set and the truncation message all
+went with the direction; `buildProvenance` is a `while` loop whose only guard is a cycle
+brake set far above anything real data can produce.
+
+**Time is the y-axis, and that is the single biggest thing the old feature was missing.**
+`AssetMove.created` has existed since the first version and was used only for sorting.
+Drawing it is what turns "it sat unresolved for eighteen months" from a subtraction the
+reader performs into a gap they can see. `components/ProvenanceRail.tsx` is one SVG - a
+line, a dot per event, integer coordinates, CSS-variable colours, `role="img"` with a
+full-sentence label - beside a text column, both driven by ONE array of row heights
+(`layoutRows`), so the grid's total height is exactly the SVG's and the dots cannot drift
+out of alignment with the sentences. Heights are proportional to elapsed time, floored at
+92px so two events days apart still have room for their own words, and the proportional
+budget scales with the number of gaps so a three-node chain does not spend 900px drawing
+one empty stretch.
+
+**The pick-to-player resolution is an EVENT, not a parenthetical.** It is the only place
+a chain changes species and the most interesting thing that happens in one, so it gets
+its own node, its own shape (a diamond, not only a different hue - colour alone does not
+say "different kind of thing" to every reader), and its own link into the draft board.
+
+**Five terminal sentences and no sixth** (`ORIGIN_TEXT`): acquired in the {season} startup
+draft / signed off waivers / signed as a free agent / on this roster before the record
+begins / {who}'s own {season} {nth} pick. An undrafted pick's terminus is `REASON_TEXT`
+from `lib/lineage`, **exported for this and printed verbatim**, so /drafts and the rail
+cannot describe the same unresolved pick two different ways. A test fails on a banned
+grade vocabulary (D6) and on any em dash.
+
+**Every asset has one, so there is no empty state.** A never-traded startup pick is a real
+answer, not a failure to find something. Entry is from the PLAYER: an expandable rail
+inside the roster row on `/roster` (server-rendered, passed into the client row as a
+node), and a link to the standalone `/lineage/[assetKey]` from `/values`, global search,
+the deal receipt, and `/drafts`. `/drafts` keeps "What that pick became" UNCHANGED and
+gains one sibling link per card - a sibling, never nested, because the card is already
+one `<Link>` and an `<a>` inside an `<a>` is exactly what threw a hydration error in D30.
+
+**THREE BUGS WERE FOUND BY RENDERING THE REAL LEAGUE, not by reading the code**, and all
+three are the kind that look completely plausible on the page. Each now has a test.
+1. **A spent pick claimed it had not been drafted.** `/lineage/k:2025-1-11` said "5-Year
+   Plan holds it. Not drafted yet" about the pick that became Cooper Flagg at 1.01. A
+   spent pick's chain IS its player's chain, so it redirects - but only when the player's
+   own walk actually arrives back at that pick, because the over-eager first version
+   answered "what happened to my 2025 3rd?" by showing a chain that had deleted the
+   pick's whole history (the player had since been claimed off waivers by someone else,
+   so his chain honestly stops there). One pick lost all five of its hops that way.
+2. **A departed manager's asset was credited to their successor.** `k:2025-1-11` is
+   roster 11's own 2025 first; roster 11 changed hands between 2024 and 2025; the pick
+   was traded away in January 2024. Naming its original owner from the CURRENT holder
+   printed "kdewitt4's own 2025 1st pick" for a pick NSLKB had already sold - the exact
+   D22 failure. Fixed by carrying `AssetMove.fromOwnerId` (already resolved at the hop's
+   own season) down the walk.
+3. **Picks traded ON draft day were being dropped.** `DraftMeta.startTime` is when the
+   draft was SCHEDULED, so bounding the pick's backward walk by it silently discarded
+   hops stamped a few hours later. 11 picks gained back between one and three hops. The
+   rail's y-axis still has to be non-decreasing, so `orderInTime` raises the DRAFT node
+   to sit after the last hop and drops its `dated` flag (the rail draws it hollow) - a
+   recorded trade timestamp is never moved.
+
+Verified live, and these are the two chains the brief asked for:
+- **`k:2024-1-6`**: "5-Year Plan's own 2024 1st pick." -> 12 months later "Traded to
+  Giddler on the Roof, by 5-Year Plan" (2023-10-27) -> 2 months later "Traded to NSLKB,
+  by Giddler on the Roof" (2023-12-14) -> 23 days later "Traded to 5-Year Plan, by
+  NSLKB" (2024-01-06) -> 8 months later "The pick became Stephon Castle, 2024 1st, pick
+  #5, used by 5-Year Plan" -> 23 months later "On 5-Year Plan today." He sold his own
+  first and bought it back, and the app now says so once, in one place, instead of
+  calling it "gave up" on one page and "acquired" on another.
+- **`k:2025-1-11`**: "NSLKB's own 2025 1st pick." -> "Traded to 5-Year Plan, by NSLKB"
+  (2024-01-06) -> 20 months later "The pick became Cooper Flagg, 2025 1st, pick #1, used
+  by 5-Year Plan" -> "On 5-Year Plan today."
+
+**Cost (D25), stated rather than assumed.** `loadProvenanceSource` needs `getPrincipals`
+and `buildDraftIndex`, both already on-demand and memoized behind their own 5-minute
+TTLs. `/deals`, `/lineage` and `/drafts` were always going to pay it. Putting it on
+`/roster` too is a deliberate choice: "why is he on my team" is the question that page
+exists to answer, and answering it two taps away would have made the feature ornamental.
+Nothing is folded into `assembleCorpus()`. Rejected: rendering rails inline on `/values`
+(that list is assembled client-side from `ValueRow` data, so there is no server render to
+hang one off - those rows link out instead); keeping a forward "what did I get for him"
+view alongside this (it is the same data, and it is the shape that did not work).
+
+## D45. THE RECEIPT: one trade, one URL, and no verdict anywhere on it
+`/deals/[transactionId]`. `TradeRecord` has been the receipt since the trade graph was
+written; it had nowhere to print. Meanwhile the digest, global search, Manager Compare,
+the dossiers and the commissioner's audit log had all been linking a SPECIFIC deal for
+several rounds, and every one of them dropped its reader into a fourteen-node ring with
+one strand lit and the deal itself somewhere in a list underneath. Renaming
+`tradeWebHref` to `dealHref` in `lib/tradegraph/url.ts` fixed all five call sites in one
+file, which is the payoff for D30 having put the mapping in one place to begin with.
+
+N stacked side-blocks, one per party (`tradeParties` already computes the set, and this
+league's biggest deals are three-way), each asset a row carrying what it is worth TODAY
+and, for a pick, what it actually became, resolved inline. Parties and assets are read
+from the TRANSACTION rather than from the asset moves: a move needs a recorded `from` to
+exist at all, and a receipt that quietly omitted an asset because its counterpart drop
+was missing would be the wrong kind of tidy. Every player row links to its own provenance
+rail. Trade -> asset -> trade is the loop, and it is the whole feature.
+
+**One SVG**, `SideBars` in `components/charts.tsx`, reusing that file's existing bar
+idiom. Horizontal rather than vertical because the labels are team names: at 390px a
+vertical chart gives each side ~150px to print "The Terror Twins" under it and truncates,
+while a horizontal bar puts the name on its own full-width line. It draws two lengths and
+computes no difference, ratio or delta - **the moment it renders "+2,400" it has issued a
+verdict** (D6).
+
+**Three honesty caveats ride with the number rather than living on a methodology page.**
+D23: this is hindsight, it measures how the deal turned out and not how it was reasoned,
+and because the app holds no historical ranking snapshots a value-at-trade-time version
+is **not available** - so the copy says today, and only today. D24: players only, with
+the direction of the bias stated out loud (a side that sent picks for players looks
+better here than it was; a side that sold for picks looks worse), and the picks listed
+above unpriced. D19: a deal carrying inferred picks says so in a warn card at the top,
+before any number.
+
+Former counterparties render `former 2022-2024` with no TCI or RFI pills. `ManagerLink`'s
+existing guard was ported into `components/TradeParts.tsx` unchanged and this is not
+hypothetical: **the biggest trade in this league's history was made with a manager who
+has since left**, and both metrics describe a roster as it stands tonight, so attaching
+them to a departed principal borrows the numbers of whoever replaced them.
+
+`/deals` itself is the index, filtered through the query string (`?manager=`, `?pair=`,
+`?season=`) with plain links rather than component state, so the whole surface ships zero
+client JavaScript and `pairDealsHref` / `managerDealsHref` give Manager Compare and the
+dossiers the filtered view they were already trying to reach.
+
+One bug caught on the first live render and worth recording because of how long it hid:
+**`PlayerNowRow` never printed the player's name.** It had only ever appeared underneath
+a tree node that had already printed it, so on a receipt - where it is the whole row - it
+rendered a value with nobody attached to it. Rejected: a "winner" or a value delta (D6);
+pricing the picks to complete the total (D24 - a number that looks complete and is not);
+a redirect that reconstructs `/web?trade=<id>` into `/deals/<id>` (see D43).

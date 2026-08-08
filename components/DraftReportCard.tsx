@@ -6,6 +6,7 @@ import { ordinal, rosterName } from "@/lib/derive/describe";
 import { fmtValue, cn } from "@/lib/ui";
 import { boardHref } from "@/app/drafts/parts";
 import type { LeagueHistory } from "@/lib/history";
+import type { PrincipalIndex } from "@/lib/principals";
 import type { GradedPick } from "@/lib/metrics/skill";
 import type { SeasonDraftGrade } from "@/lib/metrics/draftGrades";
 
@@ -23,12 +24,14 @@ function playerMeta(h: LeagueHistory, p: GradedPick) {
  *  it is here. Shared by both the "best" and "miss" rows so the two read as a pair. */
 function StandoutRow({
   h,
+  principals,
   label,
   tone,
   g,
   detail,
 }: {
   h: LeagueHistory;
+  principals: PrincipalIndex;
   label: string;
   tone: "positive" | "negative";
   g: GradedPick;
@@ -60,7 +63,14 @@ function StandoutRow({
           {" · pick "}
           {g.pickNo}
           {" · "}
-          {rosterName(h, g.rosterId)}
+          {/* WHO WAS ON THE CLOCK, not who holds that seat today. `GradedPick`
+              already resolves the pick to a principal via `ownerAt`; printing
+              `rosterName(h, rosterId)` instead credited a departed manager's picks to
+              their successor, and disagreed with /lineage about the same pick. */}
+          {(() => {
+            const pr = principals.byOwnerId.get(g.ownerId);
+            return pr ? pr.teamName || pr.displayName : rosterName(h, g.rosterId);
+          })()}
         </span>
         <span className="mt-0.5 block text-[11px] leading-snug text-muted">{detail}</span>
       </span>
@@ -78,7 +88,15 @@ function pct(x: number): string {
  * lib/metrics/draftGrades.ts for why) - the headline is the actual capture rate, the
  * same number "The Scout" shows on Superlatives, just scoped to one draft class.
  */
-export function DraftReportCard({ h, grade }: { h: LeagueHistory; grade: SeasonDraftGrade }) {
+export function DraftReportCard({
+  h,
+  principals,
+  grade,
+}: {
+  h: LeagueHistory;
+  principals: PrincipalIndex;
+  grade: SeasonDraftGrade;
+}) {
   const bestDetail =
     grade.best && grade.best.regret === 0
       ? "Took the best player left on the board."
@@ -143,6 +161,7 @@ export function DraftReportCard({ h, grade }: { h: LeagueHistory; grade: SeasonD
           {grade.best && (
             <StandoutRow
               h={h}
+              principals={principals}
               label="Best value captured"
               tone="positive"
               g={grade.best}
@@ -150,7 +169,14 @@ export function DraftReportCard({ h, grade }: { h: LeagueHistory; grade: SeasonD
             />
           )}
           {miss && (
-            <StandoutRow h={h} label={missLabel} tone="negative" g={miss} detail={missDetail} />
+            <StandoutRow
+              h={h}
+              principals={principals}
+              label={missLabel}
+              tone="negative"
+              g={miss}
+              detail={missDetail}
+            />
           )}
         </div>
       )}

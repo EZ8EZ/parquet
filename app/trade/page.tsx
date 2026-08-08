@@ -91,7 +91,7 @@ export default async function TradePage() {
       <nav aria-label="Trade tools" className="mb-2 flex gap-1.5">
         <Link
           href="/trade/finder"
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+          className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface/60 px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
         >
           Find a trade for me
           <ChevronRight size={13} aria-hidden="true" />
@@ -104,7 +104,7 @@ export default async function TradePage() {
         a pasted link reproduces it on another phone. This page is force-dynamic, so
         the boundary never actually suspends in practice; it is here so that
         dependency can never turn into a render-mode surprise later (same reasoning
-        as /web - see app/web/page.tsx).
+        as /deals - see lib/tradegraph/url.ts).
       */}
       <Suspense fallback={null}>
         <TradeBuilder
@@ -143,10 +143,10 @@ export default async function TradePage() {
                       size="sm"
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+                      <span className="block truncate text-body font-semibold leading-tight text-ink">
                         {t.teamName ?? t.ownerName}
                       </span>
-                      <span className="block truncate font-mono text-[11px] tnum leading-tight text-faint">
+                      <span className="block truncate font-mono text-meta tnum leading-tight text-faint">
                         TCI {t.tci} · value ~{t.rosterDuration.toFixed(1)}s out ·{" "}
                         {Math.round(t.nowShare * 100)}% now /{" "}
                         {Math.round(t.laterShare * 100)}% later
@@ -163,7 +163,7 @@ export default async function TradePage() {
               );
             })}
           </ul>
-          <p className="mt-1.5 text-[11px] leading-snug text-faint">
+          <p className="mt-1.5 text-meta leading-snug text-faint">
             The lowest-coherence rosters in the league. Their assets disagree about
             when they win, and either fix - consolidating young or cashing out old -
             runs through a trade. Read the dossier before you call.
@@ -180,7 +180,7 @@ export default async function TradePage() {
           <Link
             key={a.href}
             href={a.href}
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-[12px] font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
           >
             {a.label}
           </Link>

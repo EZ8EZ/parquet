@@ -55,7 +55,6 @@ export interface TradeEvaluation {
   keyAssumption: string;
   historyCheck: string;
   consolidationNote: string | null;
-  copyable: string;
 }
 
 function valueSide(
@@ -165,8 +164,6 @@ export function evaluateTrade(h: LeagueHistory, input: TradeInput): TradeEvaluat
     consolidationNote = `You're breaking up a ${give.assets[0].tier} into ${getCount} lesser pieces. Quantity rarely replaces a stud - make sure the depth actually cracks your lineup.`;
   }
 
-  const copyable = buildCopyable(h, input, give, get, delta);
-
   return {
     give,
     get,
@@ -178,7 +175,6 @@ export function evaluateTrade(h: LeagueHistory, input: TradeInput): TradeEvaluat
     keyAssumption,
     historyCheck,
     consolidationNote,
-    copyable,
   };
 }
 
@@ -215,24 +211,4 @@ function buildHistoryCheck(
   return bits.length
     ? bits.join(" ")
     : `Not enough of your history yet to judge this against your patterns - annotate a few more moves.`;
-}
-
-function buildCopyable(
-  h: LeagueHistory,
-  input: TradeInput,
-  give: TradeSideValue,
-  get: TradeSideValue,
-  delta: number,
-): string {
-  const line = (a: ValuedAsset) => `  • ${a.label} (${a.value})`;
-  const dir = delta > 0 ? `+${delta}` : `${delta}`;
-  return [
-    `Trade proposal (via Parquet):`,
-    `You SEND:`,
-    ...give.assets.map(line),
-    `You GET:`,
-    ...get.assets.map(line),
-    `Net value to you: ${dir}`,
-    `- Sleeper has no trade API; paste this into the app to send.`,
-  ].join("\n");
 }

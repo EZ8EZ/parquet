@@ -32,10 +32,10 @@ export default function Error({
           aria-hidden="true"
           className="mx-auto mb-3 text-negative"
         />
-        <h1 className="font-display text-lg font-semibold text-ink">
+        <h1 className="font-display text-lede leading-tight font-semibold text-ink">
           This page hit a snag
         </h1>
-        <p className="mx-auto mt-1.5 max-w-sm text-sm text-muted">
+        <p className="mx-auto mt-1.5 max-w-sm text-body leading-relaxed text-muted">
           Something broke while pulling this together. Try again - if it keeps
           happening, the league data behind it is probably the problem, not your
           connection.
@@ -43,13 +43,13 @@ export default function Error({
         <button
           type="button"
           onClick={() => reset()}
-          className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-ink"
+          className="mt-4 inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-body leading-relaxed font-semibold text-accent-ink"
         >
           <RotateCcw size={15} aria-hidden="true" />
           Try again
         </button>
       </div>
-      <p className="mt-4 text-center text-[11px] leading-relaxed text-faint">
+      <p className="mt-4 text-center text-meta leading-relaxed text-faint">
         Still stuck?{" "}
         <Link
           href="/"

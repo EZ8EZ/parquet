@@ -31,7 +31,7 @@ export interface AnalystResult {
 
 /** Build the compact text corpus injected into the analyst prompt. */
 export function buildCorpus(h: LeagueHistory, principals: PrincipalIndex): string {
-  const report = getStrategyReport(h);
+  const report = getStrategyReport(h, principals);
   const p = report.profile;
   const rosterId = h.me.rosterId;
   const lines: string[] = [];
@@ -193,7 +193,7 @@ export function rulesFallback(
   principals: PrincipalIndex,
 ): string {
   const q = question.toLowerCase();
-  const report = getStrategyReport(h);
+  const report = getStrategyReport(h, principals);
   const dossiers = getAllDossiers(h, principals);
 
   // Ask about a specific manager?

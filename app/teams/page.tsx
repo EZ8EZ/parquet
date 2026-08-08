@@ -74,7 +74,7 @@ export default async function TeamsPage({
       />
       {/* This page is where a leaguemate first meets the "viewing as" idea, so it is
           also the natural doorway to the page that explains the rest of the app. */}
-      <p className="mt-4 text-center text-[11px] leading-relaxed text-faint">
+      <p className="mt-4 text-center text-meta leading-relaxed text-faint">
         New to Parquet?{" "}
         <Link
           href="/about"

@@ -99,14 +99,14 @@ export function LedgerItem({
           : "border-accent/30 bg-surface/80",
       )}
     >
-      <div className="mb-1 flex items-center gap-2 text-[11px] uppercase tracking-wide text-faint">
+      <div className="mb-1 flex items-center gap-2 text-meta uppercase tracking-wide text-faint">
         <span className="font-mono">{season}</span>
         <span>·</span>
         <span>wk {week}</span>
         <span>·</span>
         <span>{type.replace("_", " ")}</span>
       </div>
-      <p className="text-sm font-medium leading-snug text-ink">{description}</p>
+      <p className="text-body font-medium leading-snug text-ink">{description}</p>
 
       {editing && !readOnly ? (
         <div className="mt-3">
@@ -116,7 +116,7 @@ export function LedgerItem({
             rows={3}
             autoFocus={!alreadyAnnotated}
             placeholder="What's the reasoning? What has to be true for this to work?"
-            className="w-full resize-y rounded-[--radius-sm] border border-border bg-bg/60 p-3 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+            className="w-full resize-y rounded-[--radius-sm] border border-border bg-bg/60 p-3 text-body leading-relaxed text-ink placeholder:text-faint focus:border-accent focus:outline-none"
           />
           <div className="mt-2 flex flex-wrap gap-1.5">
             {POSTURES.map((p) => (
@@ -125,7 +125,7 @@ export function LedgerItem({
                 type="button"
                 onClick={() => setPosture(posture === p ? null : p)}
                 className={cn(
-                  "rounded-full border px-2.5 py-1 text-[11px] font-medium transition-colors",
+                  "rounded-full border px-2.5 py-1 text-meta font-medium transition-colors",
                   posture === p
                     ? "border-accent bg-accent/15 text-accent"
                     : "border-border text-muted hover:border-border-strong",
@@ -135,13 +135,13 @@ export function LedgerItem({
               </button>
             ))}
           </div>
-          {error && <p className="mt-2 text-xs text-negative">{error}</p>}
+          {error && <p className="mt-2 text-note leading-snug text-negative">{error}</p>}
           <div className="mt-3 flex items-center gap-2">
             <button
               type="button"
               onClick={save}
               disabled={saving || !reasoning.trim()}
-              className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-sm font-semibold text-accent-ink disabled:opacity-50"
+              className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-body leading-relaxed font-semibold text-accent-ink disabled:opacity-50"
             >
               {saving ? <Loader2 size={15} className="animate-spin" /> : <Check size={15} />}
               Save
@@ -154,7 +154,7 @@ export function LedgerItem({
                   setReasoning(initialReasoning ?? "");
                   setPosture(initialPosture);
                 }}
-                className="rounded-full border border-border px-4 py-2 text-sm text-muted"
+                className="rounded-full border border-border px-4 py-2 text-body leading-relaxed text-muted"
               >
                 Cancel
               </button>
@@ -164,17 +164,17 @@ export function LedgerItem({
       ) : (
         <div className={cn(reasoning || posture ? "mt-2.5" : "")}>
           {posture && (
-            <span className="mb-1.5 inline-block rounded-full border border-border px-2 py-0.5 text-[11px] text-muted">
+            <span className="mb-1.5 inline-block rounded-full border border-border px-2 py-0.5 text-meta text-muted">
               {posture}
             </span>
           )}
           {reasoning && (
-            <p className="text-sm italic leading-relaxed text-muted">
+            <p className="text-body italic leading-relaxed text-muted">
               &ldquo;{reasoning}&rdquo;
             </p>
           )}
           {notPersisted && (
-            <p className="mt-1.5 text-[11px] leading-snug text-warn">
+            <p className="mt-1.5 text-meta leading-snug text-warn">
               Held for this session only - no database is connected, so this note
               will not survive a reload.
             </p>
@@ -185,7 +185,7 @@ export function LedgerItem({
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="mt-2 inline-flex items-center gap-1 text-xs font-medium text-faint hover:text-accent"
+              className="mt-2 inline-flex items-center gap-1 text-note leading-snug font-medium text-faint hover:text-accent"
             >
               <Pencil size={12} /> edit
             </button>

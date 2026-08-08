@@ -18,7 +18,7 @@ export default async function DraftGradesPage() {
       {/* Negative margin keeps the 44px tap target from adding visual space. */}
       <Link
         href="/drafts"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
       >
         <ArrowLeft size={13} aria-hidden="true" />
         Pick lineage
@@ -39,7 +39,7 @@ export default async function DraftGradesPage() {
       ) : (
         <div className="mt-3 space-y-2.5">
           {grades.map((g) => (
-            <DraftReportCard key={g.draftId} h={h} grade={g} />
+            <DraftReportCard key={g.draftId} h={h} principals={principals} grade={g} />
           ))}
         </div>
       )}

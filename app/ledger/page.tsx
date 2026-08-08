@@ -2,6 +2,7 @@ import Link from "next/link";
 import { CheckCircle2, ChevronRight, Eye, KeyRound } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getLedgerEntries, getLedgerSummary, notableWaiverLabel } from "@/lib/ledger";
+import { getPrincipals } from "@/lib/principals";
 import { captureBlock, readSeat } from "@/lib/auth/server";
 import { LedgerItem } from "@/components/LedgerItem";
 import { PageHeader, SectionHeader, Stat, EmptyState } from "@/components/ui";
@@ -16,8 +17,10 @@ export default async function LedgerPage() {
   // at someone else's team right now". In legacy mode this is null and the page is
   // exactly what it always was.
   const blocked = captureBlock(seat, h.me.userId);
-  const entries = getLedgerEntries(h);
-  const summary = getLedgerSummary(h);
+  // Scoped to the viewer's own tenure in this seat - see `getLedgerEntries`.
+  const principals = await getPrincipals(h);
+  const entries = getLedgerEntries(h, principals);
+  const summary = getLedgerSummary(h, principals);
   const waiverLabel = notableWaiverLabel(h);
 
   const toCapture = entries.filter((e) => e.notable && !e.annotation);
@@ -38,7 +41,7 @@ export default async function LedgerPage() {
       {blocked === "other-lens" && (
         <div className="mb-3 flex items-start gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2">
           <Eye size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-faint" />
-          <p className="min-w-0 text-[11px] leading-relaxed text-muted">
+          <p className="min-w-0 text-meta leading-relaxed text-muted">
             You are viewing {h.me.teamName ?? h.me.displayName}. Captured reasoning
             belongs to whoever wrote it, so yours is hidden here too - switch back to
             your own team to see and edit it.
@@ -49,7 +52,7 @@ export default async function LedgerPage() {
       {blocked === "unclaimed" && (
         <div className="mb-3 flex items-start gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2">
           <KeyRound size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-faint" />
-          <p className="min-w-0 text-[11px] leading-relaxed text-muted">
+          <p className="min-w-0 text-meta leading-relaxed text-muted">
             This browser has not claimed a seat, so it cannot write as anyone. Ask the
             commissioner for your claim link - it takes one tap and no password.
           </p>
@@ -65,7 +68,7 @@ export default async function LedgerPage() {
         <Stat label="Captured" value={summary.annotated} tone="positive" />
         <Stat label="Notable" value={summary.notable} />
       </div>
-      <p className="-mt-1 mb-2 text-[11px] leading-snug text-muted">
+      <p className="-mt-1 mb-2 text-meta leading-snug text-muted">
         Notable means every trade, plus {waiverLabel} - the same bar the
         commissioner audit log and season recap use.
       </p>
@@ -102,7 +105,7 @@ export default async function LedgerPage() {
 
       <SectionHeader title="Captured" />
       {captured.length === 0 ? (
-        <p className="text-sm text-muted">
+        <p className="text-body leading-relaxed text-muted">
           {blocked
             ? "Nothing of yours is readable from here."
             : "Nothing captured yet. Start above."}
@@ -126,7 +129,7 @@ export default async function LedgerPage() {
       )}
 
       {blocked === "unclaimed" && (
-        <p className="mt-4 text-center text-[11px] leading-relaxed text-faint">
+        <p className="mt-4 text-center text-meta leading-relaxed text-faint">
           Everything else in Parquet is public league data.{" "}
           <Link
             href="/about"

@@ -1,3 +1,4 @@
+import { Suspense } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
@@ -5,10 +6,9 @@ import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
 import { leagueTimelines } from "@/lib/metrics/duration";
 import { leagueFragility } from "@/lib/metrics/fragility";
 import { buildQuadrantView } from "@/lib/metrics/quadrant";
-import { CoherenceFragilityQuadrant } from "@/components/CoherenceFragilityQuadrant";
-import { DeltaValue, SectionHeader, Tag } from "@/components/ui";
+import { LeagueBoard } from "@/components/LeagueBoard";
+import { DeltaValue, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
-import { TimelineQuadrant } from "@/components/TimelineChart";
 import { fmtValue } from "@/lib/ui";
 import { ordinal } from "@/lib/derive/describe";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
@@ -23,12 +23,18 @@ const WINDOW_INK = {
   balanced: "text-muted",
 } as const;
 
-const POSTURE_TONE = {
-  contending: "accent",
-  ascending: "positive",
-  rebuilding: "info",
-  straddling: "negative",
-} as const;
+/**
+ * Posture as ink on the TCI figure rather than as a `<Tag>` pill. Same four readings
+ * the deleted timelines list carried, at a fraction of the row height, and it keeps
+ * the one negative reading (straddling) legible without giving the other three the
+ * visual weight of a chip.
+ */
+const POSTURE_INK: Record<string, string> = {
+  contending: "text-accent",
+  ascending: "text-positive",
+  rebuilding: "text-info",
+  straddling: "text-negative",
+};
 
 export default async function LeaguePage() {
   const h = await getLeagueHistory();
@@ -54,7 +60,7 @@ export default async function LeaguePage() {
 
   // The two proprietary metrics on one pair of axes. Both passes are already computed
   // above / here, so the board costs a join rather than a third walk of the league.
-  const board = buildQuadrantView(
+  const built = buildQuadrantView(
     timelines,
     fragility.map((f) => ({
       rosterId: f.rosterId,
@@ -67,15 +73,34 @@ export default async function LeaguePage() {
     meId,
   );
 
+  /*
+   * ONE NUMBERING FOR THE WHOLE PAGE.
+   *
+   * The page now renders one chart and one list, so the dot labelled 7 has to be row 7
+   * or the chart is decoration. `buildQuadrantView` numbers by its own reading order
+   * (worst corner first) and the timeline chart used to number by TCI rank - three
+   * renderings, three numberings, which was survivable only because each had its own
+   * list directly under it. Both charts now key to the power ranking instead.
+   */
+  const nByRoster = new Map(ranked.map((r, i) => [r.rosterId, i + 1]));
+  const board = {
+    ...built,
+    points: built.points.map((p) => ({ ...p, n: nByRoster.get(p.rosterId) ?? p.n })),
+  };
+
+  // Same join, for the roster list: one row now carries what three lists used to.
+  const metricByRoster = new Map(board.points.map((p) => [p.rosterId, p]));
+  const durationByRoster = new Map(timelines.map((t) => [t.rosterId, t.rosterDuration]));
+
   return (
     <div>
       <header className="mb-2.5">
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0 flex-1">
-            <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+            <p className="truncate text-meta font-semibold uppercase tracking-[0.18em] text-accent">
               {h.currentLeague.name}
             </p>
-            <h1 className="font-display text-[26px] font-semibold leading-tight text-ink">
+            <h1 className="font-display text-display font-semibold leading-tight text-ink">
               The League
             </h1>
           </div>
@@ -85,7 +110,7 @@ export default async function LeaguePage() {
             className="shrink-0"
           />
         </div>
-        <p className="mt-1 font-mono text-[11px] tnum text-faint">
+        <p className="mt-1 font-mono text-meta tnum text-faint">
           {h.currentLeague.totalRosters} teams · {h.chain.length} seasons ·{" "}
           {h.currentLeague.season} · {fmtValue(h.transactions.length)} transactions
         </p>
@@ -98,7 +123,7 @@ export default async function LeaguePage() {
         <Split n={rebuilders} label="rebuilding" className="text-info" />
       </div>
 
-      <p className="mt-1.5 font-mono text-[11px] tnum text-faint">
+      <p className="mt-1.5 font-mono text-meta tnum text-faint">
         league value {fmtValue(leagueValue)} · median {fmtValue(median)}
         {myRank > 0 && (
           <>
@@ -121,100 +146,62 @@ export default async function LeaguePage() {
           <Link
             key={s.href}
             href={s.href}
-            className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border bg-surface/60 px-3 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+            className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
           >
             {s.label}
           </Link>
         ))}
         <Link
           href="/more"
-          className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-full border border-dashed border-border px-3 text-xs font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+          className="inline-flex min-h-11 shrink-0 items-center gap-0.5 rounded-full border border-dashed border-border px-3 text-note font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
         >
           All surfaces
           <ChevronRight size={12} aria-hidden="true" />
         </Link>
       </nav>
 
-      {/* Timelines: WHEN each roster's value arrives, and whether its assets agree.
-          Sorted most coherent first, so the straddlers - the league's most motivated
-          trade partners - sit at the bottom where the negative tags pool. */}
+      {/*
+        ONE CHART. It used to be two, each with its own fourteen-row list under it, and
+        then the power ranking made a fourth rendering of the same fourteen rosters.
+        Both scatters plot TCI on y and differ only in what sits on x, so they are one
+        toggled board now - see components/LeagueBoard.tsx and lib/league/url.ts.
+      */}
       <SectionHeader
-        title="Timelines - duration x coherence"
+        title="The board"
         href="/methodology"
-        cta="how TCI works"
+        cta="how TCI and RFI work"
       />
-      <div className="rounded-[--radius] border border-border bg-surface/60 p-2.5">
-        <TimelineQuadrant
-          points={timelines.map((t, i) => ({
-            n: i + 1,
-            duration: t.rosterDuration,
-            tci: t.tci,
-            isMe: t.rosterId === meId,
+      {/* Suspense because LeagueBoard reads the query string through useSearchParams,
+          the same contract /values' list is mounted under. This page is force-dynamic,
+          so the boundary never actually suspends. */}
+      <Suspense fallback={null}>
+        <LeagueBoard
+          points={board.points.map((p) => ({
+            n: p.n,
+            duration: durationByRoster.get(p.rosterId) ?? 0,
+            tci: p.tci,
+            isMe: p.isMe,
           }))}
+          view={board}
         />
-        <p className="mt-1 text-[11px] leading-snug text-faint">
-          Duration = seasons until a roster&apos;s value arrives, value-weighted. TCI =
-          do its assets agree about when. Below the dashed line a roster is straddling
-          two timelines at once - it has to pick a direction eventually, which makes it
-          the most motivated trade partner on this board.
-        </p>
-      </div>
-      <ul className="mt-1.5 divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface/60">
-        {timelines.map((t, i) => {
-          const isMe = t.rosterId === meId;
-          return (
-            <li key={t.rosterId}>
-              <Link
-                href={`/managers/${t.rosterId}`}
-                className={`flex min-h-11 items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-surface-2 ${
-                  isMe ? "bg-accent/[0.06]" : ""
-                }`}
-              >
-                <span className="w-4 shrink-0 text-center font-mono text-[11px] tnum text-faint">
-                  {i + 1}
-                </span>
-                <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
-                    {t.teamName ?? t.ownerName}
-                    {isMe && <span className="ml-1.5 font-mono text-[11px] text-accent">you</span>}
-                  </span>
-                  <span className="block truncate font-mono text-[11px] tnum text-faint">
-                    ~{t.rosterDuration.toFixed(1)}s · disp{" "}
-                    {t.dispersion.toFixed(1)}s
-                  </span>
-                </span>
-                <Tag tone={POSTURE_TONE[t.posture]}>{t.posture}</Tag>
-                <span className="w-12 shrink-0 text-right">
-                  <span className="block font-mono text-[13px] font-semibold leading-tight tnum text-ink">
-                    {t.tci}
-                  </span>
-                  <span className="block text-[11px] leading-tight text-faint">TCI</span>
-                </span>
-                <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-faint" />
-              </Link>
-            </li>
-          );
-        })}
-      </ul>
+      </Suspense>
 
-      {/* The duration board above says WHEN each roster wins. This one crosses that
-          with WHAT BREAKS FIRST, which is the pairing no surface in this app has ever
-          shown for more than two managers at a time. */}
+      {/*
+        ONE LIST, and it is the one the chart numbers key to. It carries what the two
+        deleted lists carried - TCI with its posture, RFI with its band - on a second
+        mono line, so nothing that was readable before is unreadable now; there is
+        simply one row per roster instead of three.
+      */}
       <SectionHeader
-        title="Coherence x fragility - the whole board"
-        href="/methodology"
-        cta="how RFI works"
+        title="Power ranking - by roster value"
+        action={
+          !seasonLive ? (
+            <span className="min-w-0 shrink text-right text-meta leading-tight text-faint">
+              records are last season&rsquo;s final
+            </span>
+          ) : undefined
+        }
       />
-      <CoherenceFragilityQuadrant view={board} />
-
-      <h2 className="mb-1.5 mt-4 text-[12px] font-semibold uppercase tracking-[0.16em] text-muted">
-        Power ranking - by roster value
-        {!seasonLive && (
-          <span className="ml-1.5 normal-case tracking-normal text-faint">
-            (records below are last season&rsquo;s final - {h.currentLeague.season} hasn&rsquo;t tipped off)
-          </span>
-        )}
-      </h2>
 
       <ul className="space-y-1">
         {ranked.map((r, i) => {
@@ -223,6 +210,7 @@ export default async function LeaguePage() {
           const user = ownerId ? h.usersById.get(ownerId) : undefined;
           const pct = Math.max(3, Math.round((r.totalValue / leaderValue) * 100));
           const f = form.get(r.rosterId);
+          const m = metricByRoster.get(r.rosterId);
           return (
             <li key={r.rosterId}>
               {/* The whole row is the hit area - one target, one destination. */}
@@ -234,7 +222,7 @@ export default async function LeaguePage() {
                     : "border-border bg-surface/60"
                 }`}
               >
-                <span className="w-4 shrink-0 text-center font-mono text-[11px] tnum text-faint">
+                <span className="w-4 shrink-0 text-center font-mono text-meta tnum text-faint">
                   {i + 1}
                 </span>
                 <TeamAvatar
@@ -246,16 +234,16 @@ export default async function LeaguePage() {
                 />
                 <span className="min-w-0 flex-1">
                   <span className="flex items-center gap-1.5">
-                    <span className="truncate text-[13px] font-semibold leading-tight text-ink">
+                    <span className="truncate text-body font-semibold leading-tight text-ink">
                       {r.teamName ?? r.ownerName}
                     </span>
                     {isMe && (
-                      <span className="shrink-0 rounded-full bg-accent/15 px-1.5 text-[11px] font-semibold leading-tight text-accent">
+                      <span className="shrink-0 rounded-full bg-accent/15 px-1.5 text-meta font-semibold leading-tight text-accent">
                         you
                       </span>
                     )}
                   </span>
-                  <span className="mt-px block truncate font-mono text-[11px] tnum text-faint">
+                  <span className="mt-px block truncate font-mono text-meta tnum text-faint">
                     {r.ownerName} ·{" "}
                     {f ? (
                       <>
@@ -267,6 +255,27 @@ export default async function LeaguePage() {
                     )}
                     <span className={WINDOW_INK[r.window]}>{r.window}</span>
                   </span>
+                  {/* The line that used to be two separate fourteen-row lists.
+                      NUMBERS FIRST, WORD LAST, and that ordering is the whole design of
+                      this line: at 375px it is the first thing on the row with no room
+                      to spare, so what truncation eats has to be the recoverable half.
+                      Posture is a label the board itself prints; TCI and RFI are the
+                      figures the two deleted lists existed to carry.
+
+                      Posture is ink on the row rather than the `<Tag>` pill it wore in
+                      the timelines list, and the fragility BAND is not printed here at
+                      all - "resilient" as a chip on a torn-down roster is exactly the
+                      claim D23 refuses, and the board's own panel says it properly, in
+                      percentile terms, for the roster you selected. */}
+                  {m && (
+                    <span className="block truncate font-mono text-meta tnum text-faint">
+                      TCI <span className="text-muted">{m.tci}</span> · RFI{" "}
+                      <span className="text-muted">{m.fragility}</span> ·{" "}
+                      <span className={POSTURE_INK[m.posture] ?? "text-muted"}>
+                        {m.posture}
+                      </span>
+                    </span>
+                  )}
                   <span className="mt-1 block h-[3px] w-full overflow-hidden rounded-full bg-elevated">
                     <span
                       className={`block h-full rounded-full ${
@@ -277,13 +286,13 @@ export default async function LeaguePage() {
                   </span>
                 </span>
                 <span className="shrink-0 text-right">
-                  <span className="block font-mono text-[13px] font-semibold leading-tight tnum text-ink">
+                  <span className="block font-mono text-body font-semibold leading-tight tnum text-ink">
                     {fmtValue(r.totalValue)}
                   </span>
-                  <span className="block whitespace-nowrap font-mono text-[11px] leading-tight tnum text-faint">
+                  <span className="block whitespace-nowrap font-mono text-meta leading-tight tnum text-faint">
                     1sts <DeltaValue n={r.picks.extraFirsts} />
                   </span>
-                  <span className="block whitespace-nowrap font-mono text-[11px] leading-tight tnum text-faint">
+                  <span className="block whitespace-nowrap font-mono text-meta leading-tight tnum text-faint">
                     age {r.coreAge ?? "-"}
                   </span>
                 </span>
@@ -308,10 +317,10 @@ function Split({
 }) {
   return (
     <div className="px-2.5 py-1.5 text-center">
-      <div className={`font-mono text-xl font-semibold leading-tight tnum ${className}`}>
+      <div className={`font-mono text-lede font-semibold leading-tight tnum ${className}`}>
         {n}
       </div>
-      <div className="text-[11px] uppercase tracking-wide text-faint">{label}</div>
+      <div className="text-meta uppercase tracking-wide text-faint">{label}</div>
     </div>
   );
 }

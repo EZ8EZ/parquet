@@ -224,19 +224,27 @@ function buildAward<T>(
 /**
  * Most-frequent trade pairing — a two-team award, so it is built by hand.
  *
- * Takes CURRENT managers only, because `tradePartners` is keyed by roster id: a pairing
- * is a relationship between two seats, and two principals who shared a seat cannot both
- * be indexed by it. Making pairings principal-aware means deriving partner identity per
- * season, which is a larger change than this award justifies — noted in QUESTIONS.md.
+ * KEYED BY PRINCIPAL. This used to key on roster id, and a pairing is a relationship
+ * between two PEOPLE, not two seats: with one seat in this league having changed hands,
+ * the award crowned "6-Month Plan + kdewitt4, 8 trades together" (kdewitt4 has done two
+ * with them) and "The Terror Twins + kdewitt4, 5 trades together" (they have never
+ * traded at all - all five were the departed manager's). Both numbers were the
+ * successor being handed their predecessor's record. `TradePartner` now carries the
+ * owner id, so the fold below is simply the honest one, and a departed manager can win
+ * or place on their own account.
  */
-function pairingAward(profiles: ManagerProfile[]): Award | null {
-  const byRoster = new Map(profiles.map((p) => [p.rosterId, p]));
-  const pairs = new Map<string, { a: number; b: number; count: number }>();
-  for (const p of profiles) {
+function pairingAward(
+  rows: { p: ManagerProfile; principal: Principal }[],
+): Award | null {
+  const byOwner = new Map(rows.map((r) => [r.principal.ownerId, r]));
+  const pairs = new Map<
+    string,
+    { a: string; b: string; count: number }
+  >();
+  for (const { p, principal } of rows) {
     for (const partner of p.tradePartners) {
-      if (!byRoster.has(partner.rosterId)) continue;
-      const a = Math.min(p.rosterId, partner.rosterId);
-      const b = Math.max(p.rosterId, partner.rosterId);
+      if (!partner.ownerId || !byOwner.has(partner.ownerId)) continue;
+      const [a, b] = [principal.ownerId, partner.ownerId].sort();
       const key = `${a}|${b}`;
       // Both sides report the same count; take the max rather than summing so a
       // one-sided record can't inflate the pair.
@@ -247,23 +255,24 @@ function pairingAward(profiles: ManagerProfile[]): Award | null {
   }
   const ranked = [...pairs.values()]
     .filter((x) => x.count >= 2)
-    .sort((x, y) => y.count - x.count || x.a - y.a || x.b - y.b);
+    .sort((x, y) => y.count - x.count || x.a.localeCompare(y.a) || x.b.localeCompare(y.b));
   if (ranked.length < 2) return null;
 
-  const toEntrant = (x: { a: number; b: number; count: number }): AwardEntrant => {
-    const pa = byRoster.get(x.a)!;
-    const pb = byRoster.get(x.b)!;
+  const toEntrant = (x: { a: string; b: string; count: number }): AwardEntrant => {
+    const ra = byOwner.get(x.a)!;
+    const rb = byOwner.get(x.b)!;
     return {
-      rosterId: pa.rosterId,
-      ownerId: pa.userId,
-      isFormer: false,
-      displayName: pa.displayName,
-      teamName: pa.teamName,
-      label: `${labelFor(pa)} + ${labelFor(pb)}`,
+      rosterId: ra.p.rosterId,
+      ownerId: ra.principal.ownerId,
+      isFormer: ra.principal.isFormer,
+      displayName: ra.p.displayName,
+      teamName: ra.p.teamName,
+      label: `${labelFor(ra.p)} + ${labelFor(rb.p)}`,
       stat: `${plural(x.count, "trade")} together`,
       value: x.count,
-      partnerRosterId: pb.rosterId,
-      partnerLabel: labelFor(pb),
+      tenureLabel: tenureLabel(ra.principal),
+      partnerRosterId: rb.p.rosterId,
+      partnerLabel: labelFor(rb.p),
     };
   };
 
@@ -309,7 +318,7 @@ export async function computeAwards(h: LeagueHistory): Promise<Award[]> {
         // Only scope when there is something to scope: a league with no handovers
         // must produce byte-identical numbers to the roster-keyed version.
         seasons: principals.hasSuccessions ? tenureSeasons(pr, rosterId) : undefined,
-      }),
+      }, principals),
       startRate: perf.startRate.get(pr.ownerId) ?? null,
       draft: perf.draftCapture.get(pr.ownerId) ?? null,
       trade: perf.tradeValue.get(pr.ownerId) ?? null,
@@ -324,7 +333,23 @@ export async function computeAwards(h: LeagueHistory): Promise<Award[]> {
   const profiles = rows.map((r) => r.p);
   const principalOfProfile = new Map(rows.map((r) => [r.p, r.principal]));
 
-  const perSeason = (n: number) => Math.round((n / seasons) * 10) / 10;
+  /**
+   * A RATE HAS TO BE DIVIDED BY THE MANAGER'S OWN SEASONS, not by the league's.
+   *
+   * Every other number on a row here is already confined to the principal's tenure,
+   * so dividing by the length of the whole chain mixed two scopes in one figure: the
+   * departed manager in this league made 18 trades in three seasons and their own
+   * dossier says "6/szn", while this page printed "3.6/season" for the same 18 trades.
+   * Two surfaces, one manager, one quantity, two answers.
+   */
+  const seasonsOf = (p: ManagerProfile) => {
+    if (!principals.hasSuccessions) return seasons;
+    const pr = principalOfProfile.get(p);
+    if (!pr) return seasons;
+    return Math.max(1, pr.seasons.length);
+  };
+  const perSeason = (n: number, p: ManagerProfile) =>
+    Math.round((n / seasonsOf(p)) * 10) / 10;
   const pctOf = (x: number) => `${(x * 100).toFixed(1)}%`;
   const points = (n: number) => n.toLocaleString("en-US");
 
@@ -449,7 +474,7 @@ export async function computeAwards(h: LeagueHistory): Promise<Award[]> {
       title: "The Wheeler-Dealer",
       subtitle: "Most completed trades across the league's recorded history.",
       score: (p) => p.trades,
-      stat: (p) => `${plural(p.trades, "trade")} · ${perSeason(p.trades)}/season`,
+      stat: (p) => `${plural(p.trades, "trade")} · ${perSeason(p.trades, p)}/season`,
       qualifies: (_p, s) => s > 0,
     },
     {
@@ -569,7 +594,7 @@ export async function computeAwards(h: LeagueHistory): Promise<Award[]> {
       subtitle: "Most waiver claims and free-agent pickups. Never stops tinkering.",
       score: (p) => p.waivers + p.freeAgents,
       stat: (p) =>
-        `${plural(p.waivers + p.freeAgents, "wire move")} · ${perSeason(p.waivers + p.freeAgents)}/season`,
+        `${plural(p.waivers + p.freeAgents, "wire move")} · ${perSeason(p.waivers + p.freeAgents, p)}/season`,
       qualifies: (_p, s) => s > 0,
     },
     {
@@ -625,9 +650,7 @@ export async function computeAwards(h: LeagueHistory): Promise<Award[]> {
     const a = buildAward(profiles, spec, (p) => p, principalOf);
     if (a) awards.push(a);
   }
-  const pairing = pairingAward(
-    rows.filter((r) => !r.principal.isFormer).map((r) => r.p),
-  );
+  const pairing = pairingAward(rows);
   if (pairing) awards.push(pairing);
 
   // Stable, group-ordered output.

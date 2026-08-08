@@ -7,6 +7,10 @@ import { leagueFragility, lineupSlots } from "@/lib/metrics/fragility";
 import { Card, SectionHeader, Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { ValueAssetRow } from "@/components/ValuesList";
+import { ProvenanceRail } from "@/components/ProvenanceRail";
+import { buildProvenance, type ProvenanceChain } from "@/lib/provenance";
+import { loadProvenanceSource } from "@/lib/provenance/source";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { AgeStrip, BarChart, PositionRadar } from "@/components/charts";
 import { ageMultiplier } from "@/lib/valuation";
 import { fmtValue } from "@/lib/ui";
@@ -92,6 +96,17 @@ export default async function RosterPage() {
   // otherwise the same team could read "win-now" on one page and "balanced" on another.
   const a = leagueValueRanking(h).find((r) => r.rosterId === rosterId)!;
   const win = WINDOW_COPY[a.window];
+
+  // One chain per rostered player, built from one assembly. `loadProvenanceSource`
+  // costs `getPrincipals` and `buildDraftIndex`, both already loaded on demand and
+  // memoized for five minutes by their own modules - it is the bill /drafts has always
+  // paid, and nothing here is folded into the corpus (D25).
+  const { ctx } = await loadProvenanceSource(h);
+  const provenance: Record<string, ProvenanceChain> = {};
+  for (const v of a.valued) {
+    const chain = buildProvenance(ctx, `p:${v.playerId}`);
+    if (chain) provenance[v.playerId] = chain;
+  }
   const ages = a.valued.map((v) => v.age).filter((x): x is number => x != null);
   const posData = a.byPosition.map((p) => ({ label: p.pos, value: Math.round(p.value) }));
   const posCounts = a.byPosition.map((p) => `${p.pos} ${p.count}`).join(" · ");
@@ -114,6 +129,12 @@ export default async function RosterPage() {
   // percentile. Only the SPOF and the depth are surfaced here - the 0-100 index is
   // ambiguous on its own and has its own homes.
   const fr = leagueFragility(h).find((f) => f.rosterId === rosterId);
+  // Team for the SPOF's avatar - looked up from the same `a.valued` list rather than
+  // threaded through leagueFragility(), which prices the roster and has no reason to
+  // know team colors.
+  const spofTeam = fr?.singlePointOfFailure
+    ? a.valued.find((v) => v.playerId === fr.singlePointOfFailure!.playerId)?.team ?? null
+    : null;
   const slotCount = lineupSlots(h).length;
   const tciRank = timelines.findIndex((t) => t.rosterId === rosterId) + 1;
   const longest = tl?.assets.slice(0, 3) ?? [];
@@ -136,10 +157,10 @@ export default async function RosterPage() {
               isMe
             />
             <div className="min-w-0">
-              <p className="truncate text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+              <p className="truncate text-meta font-semibold uppercase tracking-[0.18em] text-accent">
                 {a.teamName ?? "Your team"}
               </p>
-              <h1 className="truncate font-display text-[26px] font-semibold leading-tight text-ink">
+              <h1 className="truncate font-display text-display font-semibold leading-tight text-ink">
                 {a.ownerName}
               </h1>
             </div>
@@ -152,7 +173,7 @@ export default async function RosterPage() {
         </div>
         <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
           {/* One string, so a wrap never leaves a dangling separator. */}
-          <span className="font-mono text-[11px] tnum text-faint">
+          <span className="font-mono text-meta tnum text-faint">
             <span className="font-semibold text-ink">
               {form ? `${form.wins}-${form.losses}` : `${a.record.wins}-${a.record.losses}`}
             </span>{" "}
@@ -174,7 +195,7 @@ export default async function RosterPage() {
           </span>
           <Tag tone={win.tone}>{win.label}</Tag>
         </div>
-        <p className="mt-1 text-xs leading-snug text-muted">{win.note}</p>
+        <p className="mt-1 text-note leading-snug text-muted">{win.note}</p>
       </header>
 
       {/* Stat rail: one card, hairline dividers, every cell a destination. */}
@@ -217,65 +238,77 @@ export default async function RosterPage() {
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-baseline gap-3">
                 <span>
-                  <span className="font-mono text-lg font-semibold tnum text-ink">
+                  <span className="font-mono text-lede leading-tight font-semibold tnum text-ink">
                     {tl.rosterDuration.toFixed(1)}s
                   </span>
-                  <span className="ml-1 text-[11px] uppercase tracking-wide text-faint">
+                  <span className="ml-1 text-meta uppercase tracking-wide text-faint">
                     duration
                   </span>
                 </span>
                 <span>
-                  <span className="font-mono text-lg font-semibold tnum text-ink">
+                  <span className="font-mono text-lede leading-tight font-semibold tnum text-ink">
                     {tl.tci}
                   </span>
-                  <span className="ml-1 text-[11px] uppercase tracking-wide text-faint">
+                  <span className="ml-1 text-meta uppercase tracking-wide text-faint">
                     TCI · {tciRank}/{timelines.length}
                   </span>
                 </span>
               </div>
               <Tag tone={POSTURE_TONE[tl.posture]}>{tl.posture}</Tag>
             </div>
-            <p className="mt-1 font-mono text-[11px] tnum text-faint">
+            <p className="mt-1 font-mono text-meta tnum text-faint">
               {Math.round(tl.nowShare * 100)}% of value pays off inside 2 seasons ·{" "}
               {Math.round(tl.laterShare * 100)}% arrives 4+ out · dispersion{" "}
               {tl.dispersion.toFixed(2)}s
             </p>
-            <p className="mt-1.5 text-[12.5px] leading-snug text-ink/85">{tl.read}</p>
+            <p className="mt-1.5 text-note leading-snug text-ink/85">{tl.read}</p>
             {/* Fragility's actionable half, on the page that owns your roster.
                 Deliberately the two numbers and not the 0-100 index: a name and a
                 share are directional and a score is not (D23), and both of these are
                 already computed for every roster by leagueFragility(). */}
             {fr && fr.singlePointOfFailure && (
-              <p className="mt-1 text-[12px] leading-snug text-muted">
-                Season hinges on{" "}
-                <span className="font-semibold text-ink">
-                  {fr.singlePointOfFailure.name}
-                </span>{" "}
-                <span className="font-mono tnum">
-                  ({Math.round(fr.singlePointOfFailure.damageShare * 100)}% of startable
-                  value)
-                </span>{" "}
-                · {depthPhrase(fr.depthBeyondStarters, slotCount)}
-              </p>
+              <div className="mt-1 flex items-start gap-1.5">
+                {/* The single highest-stakes name on this page - a face here is
+                    worth more than anywhere else it could go, which is exactly why
+                    it's the ONE inline avatar on this page rather than one per row. */}
+                <PlayerAvatar
+                  name={fr.singlePointOfFailure.name}
+                  team={spofTeam}
+                  playerId={fr.singlePointOfFailure.playerId}
+                  size="sm"
+                  className="mt-0.5"
+                />
+                <p className="text-note leading-snug text-muted">
+                  Season hinges on{" "}
+                  <span className="font-semibold text-ink">
+                    {fr.singlePointOfFailure.name}
+                  </span>{" "}
+                  <span className="font-mono tnum">
+                    ({Math.round(fr.singlePointOfFailure.damageShare * 100)}% of startable
+                    value)
+                  </span>{" "}
+                  · {depthPhrase(fr.depthBeyondStarters, slotCount)}
+                </p>
+              </div>
             )}
             <div className="rule my-2.5" />
             <div className="grid grid-cols-2 gap-2">
               <div className="min-w-0">
-                <p className="text-[11px] uppercase tracking-wide text-info">
+                <p className="text-meta uppercase tracking-wide text-info">
                   Longest-dated
                 </p>
                 <ul className="mt-0.5 space-y-0.5">
                   {longest.map((as) => (
                     <li
                       key={as.id}
-                      className="flex items-baseline justify-between gap-1.5 text-[11.5px] leading-snug"
+                      className="flex items-baseline justify-between gap-1.5 text-meta leading-snug"
                     >
                       {/* Wraps instead of truncating: a pick label carrying an origin
                           qualifier ("2027 2nd (via 5-Year Plan)") no longer fits this
                           narrow column on one line, and clipping it loses exactly the
                           part that makes the qualifier worth having. */}
                       <span className="min-w-0 text-ink/85">{as.label}</span>
-                      <span className="shrink-0 font-mono text-[11px] tnum text-muted">
+                      <span className="shrink-0 font-mono text-meta tnum text-muted">
                         {as.duration.toFixed(1)}s
                       </span>
                     </li>
@@ -283,17 +316,17 @@ export default async function RosterPage() {
                 </ul>
               </div>
               <div className="min-w-0">
-                <p className="text-[11px] uppercase tracking-wide text-accent">
+                <p className="text-meta uppercase tracking-wide text-accent">
                   Shortest-dated
                 </p>
                 <ul className="mt-0.5 space-y-0.5">
                   {shortest.map((as) => (
                     <li
                       key={as.id}
-                      className="flex items-baseline justify-between gap-1.5 text-[11.5px] leading-snug"
+                      className="flex items-baseline justify-between gap-1.5 text-meta leading-snug"
                     >
                       <span className="min-w-0 text-ink/85">{as.label}</span>
-                      <span className="shrink-0 font-mono text-[11px] tnum text-muted">
+                      <span className="shrink-0 font-mono text-meta tnum text-muted">
                         {as.duration.toFixed(1)}s
                       </span>
                     </li>
@@ -302,7 +335,7 @@ export default async function RosterPage() {
               </div>
             </div>
             <details className="group mt-1.5">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-accent">
+              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-meta font-semibold uppercase tracking-wide text-accent">
                 <ChevronRight
                   size={13}
                   aria-hidden="true"
@@ -314,10 +347,10 @@ export default async function RosterPage() {
                 {tl.assets.map((as) => (
                   <li
                     key={as.id}
-                    className="flex items-baseline justify-between gap-2 text-[11.5px] leading-snug"
+                    className="flex items-baseline justify-between gap-2 text-meta leading-snug"
                   >
                     <span className="min-w-0 truncate text-ink/85">{as.label}</span>
-                    <span className="shrink-0 font-mono text-[11px] tnum text-muted">
+                    <span className="shrink-0 font-mono text-meta tnum text-muted">
                       {as.duration.toFixed(1)}s · {fmtValue(as.value)}
                     </span>
                   </li>
@@ -337,7 +370,7 @@ export default async function RosterPage() {
       />
       {a.picks.picks.length === 0 ? (
         <Card className="p-3">
-          <p className="text-sm text-muted">
+          <p className="text-body leading-relaxed text-muted">
             No draft picks owned. Every future pick has been traded away - that
             caps how much this roster can change.
           </p>
@@ -357,10 +390,10 @@ export default async function RosterPage() {
                   className="block min-h-11 px-2.5 py-2 transition-colors hover:bg-surface-2"
                 >
                   <span className="flex items-baseline justify-between gap-2">
-                    <span className="font-mono text-[13px] font-semibold tnum text-ink">
+                    <span className="font-mono text-body font-semibold tnum text-ink">
                       {season}
                     </span>
-                    <span className="flex items-center gap-1 font-mono text-[11px] tnum text-muted">
+                    <span className="flex items-center gap-1 font-mono text-meta tnum text-muted">
                       {forSeason.length} picks ·{" "}
                       {fmtValue(forSeason.reduce((s, p) => s + p.value, 0))}
                       <ChevronRight size={13} aria-hidden="true" className="text-faint" />
@@ -389,23 +422,23 @@ export default async function RosterPage() {
       <SectionHeader title="Roster shape" />
       <Card className="p-3">
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-faint">
+          <span className="text-meta font-semibold uppercase tracking-wide text-faint">
             Age curve
           </span>
-          <span className="font-mono text-[11px] tnum text-muted">
+          <span className="font-mono text-meta tnum text-muted">
             {ages.length} ages · core {a.coreAge ?? "-"}
           </span>
         </div>
         <AgeStrip ages={ages} height={58} />
-        <p className="text-center text-[11px] text-faint">
+        <p className="text-center text-meta text-faint">
           Each dot is a rostered player. The dashed line is your average.
         </p>
         <div className="rule my-2.5" />
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-faint">
+          <span className="text-meta font-semibold uppercase tracking-wide text-faint">
             Positional value
           </span>
-          <span className="truncate font-mono text-[11px] tnum text-muted">
+          <span className="truncate font-mono text-meta tnum text-muted">
             {posCounts}
           </span>
         </div>
@@ -424,13 +457,24 @@ export default async function RosterPage() {
         href="/values"
         cta="all values"
       />
-      <p className="-mt-1 mb-1.5 font-mono text-[11px] tnum text-faint">
+      <p className="-mt-1 mb-1.5 font-mono text-meta tnum text-faint">
         {a.valued.length} players · bar = share of {fmtValue(a.playerValue)} player
         value · line = {TRAJECTORY_SEASONS}-season age-curve trajectory
       </p>
       <ul className="space-y-1">
         {a.valued.map((v) => (
           <ValueAssetRow
+            // WHY HE IS HERE, in place. This is the page that asks the question, so
+            // this is the page that answers it without a navigation: expanding a row
+            // shows the whole chain back to whichever of the five origins it ends on.
+            // Seventeen rails is seventeen array walks over data already in hand -
+            // the only real cost is `loadProvenanceSource` above, which is two
+            // memoized on-demand loaders and not a corpus change (D25).
+            provenance={
+              provenance[v.playerId] && (
+                <ProvenanceRail chain={provenance[v.playerId]} showTitle />
+              )
+            }
             key={v.playerId}
             name={v.name}
             team={v.team}
@@ -479,15 +523,15 @@ function StatCell({
       href={href}
       className="flex min-h-11 min-w-0 flex-col justify-center px-2.5 py-2 transition-colors hover:bg-surface-2"
     >
-      <span className="truncate text-[11px] uppercase tracking-wide text-faint">
+      <span className="truncate text-meta uppercase tracking-wide text-faint">
         {label}
       </span>
       <span
-        className={`truncate font-mono text-lg font-semibold leading-tight tnum ${color}`}
+        className={`truncate font-mono text-lede font-semibold leading-tight tnum ${color}`}
       >
         {value}
       </span>
-      <span className="truncate text-[11px] leading-tight text-muted">{sub}</span>
+      <span className="truncate text-meta leading-tight text-muted">{sub}</span>
     </Link>
   );
 }

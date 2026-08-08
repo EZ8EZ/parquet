@@ -4,11 +4,30 @@
  * PlayerAvatar — the single abstraction for player imagery.
  *
  * Default: generated monogram avatars in team colors (no licensing concern, looks
- * intentional). Real photos are gated behind NEXT_PUBLIC_USE_PLAYER_PHOTOS (default
- * false) and served from Sleeper's own CDN by player_id — Sleeper's NBA payload
- * returns null espn_id for every player, so ESPN headshots aren't usable (see
- * DECISIONS.md D8). Not every player has a photo (some 404/403), so we fall back to
- * the monogram on load error — hence this is a client component.
+ * intentional). Real photos are gated behind NEXT_PUBLIC_USE_PLAYER_PHOTOS, which
+ * defaults OFF now that this repo is public (see D39) — a fork or a Vercel deploy
+ * that never set the var must not silently ship real, unlicensed headshots. Set it
+ * to "true" to opt in.
+ *
+ * Source: Sleeper's own CDN by player_id
+ * (`sleepercdn.com/content/nba/players/thumb/{id}.jpg`). Sleeper's NBA payload
+ * returns null `espn_id` for every player and no field that is an NBA.com person id
+ * (checked every id Sleeper does send — rotowire_id, sportradar_id, swish_id,
+ * fantasy_data_id, kalshi_id, oddsjam_id — none of them is it), so a third-party
+ * headshot CDN keyed by a real id isn't reachable (D8, re-verified D39). Not every
+ * player has a Sleeper image (some 403/404 — genuinely missing, not blocked; see
+ * D39), so `<PlayerAvatar>` is a client component that falls back to the monogram
+ * on load error.
+ *
+ * Despite the `.jpg` in the URL and an `image/jpeg` response header, the bytes
+ * Sleeper actually sends are a PNG with a real alpha channel — a proper cutout, not
+ * a flat rectangle (confirmed with `file`/`sips` and an alpha histogram in D39: ~65%
+ * of pixels are non-opaque on every player checked). Browsers sniff image bytes
+ * rather than trust the extension or header, so this already renders as a
+ * transparent cutout with NO extra work. The `background` below is not a fallback
+ * hack for that — it's the intentional backdrop the cutout sits on, in the same team
+ * colors as the monogram, so a floating head never looks accidental on any of the
+ * three themes and there's no risk of a dark hairline vanishing against a dark page.
  */
 import { useState } from "react";
 import { cn } from "@/lib/ui";
@@ -61,14 +80,16 @@ export function PlayerAvatar({
   const [failed, setFailed] = useState(false);
   const px = SIZES[size];
   const [c1, c2] = colorsFor(team ?? null, name);
-  // Defaults to ON. This is a private-use app and the owner asked for real photos;
-  // NEXT_PUBLIC_* is inlined at BUILD time, so a Vercel deploy that forgot the var
-  // would otherwise silently ship monograms with no way to tell why.
-  // Set NEXT_PUBLIC_USE_PLAYER_PHOTOS=false to force monograms everywhere.
-  const usePhotos = process.env.NEXT_PUBLIC_USE_PLAYER_PHOTOS !== "false";
+  // Defaults to OFF (D39). NEXT_PUBLIC_* is inlined at BUILD time, so this deploy's
+  // own env needs NEXT_PUBLIC_USE_PLAYER_PHOTOS=true set explicitly — the unset case
+  // now means "forked or configured without thinking about licensing," which must
+  // read as monograms, not real headshots.
+  const usePhotos = process.env.NEXT_PUBLIC_USE_PLAYER_PHOTOS === "true";
 
   if (usePhotos && playerId && !failed) {
-    // Sleeper CDN thumbnail (personal/local use). Falls back to monogram on error.
+    // Sleeper CDN thumbnail (personal/local use per .env.example). Actually a
+    // transparent-cutout PNG despite the .jpg extension — see the file header.
+    // Falls back to the monogram on load error (missing photo, not a licensing gate).
     const src = `https://sleepercdn.com/content/nba/players/thumb/${playerId}.jpg`;
     return (
       // eslint-disable-next-line @next/next/no-img-element
@@ -77,6 +98,7 @@ export function PlayerAvatar({
         alt={name}
         width={px}
         height={px}
+        decoding="async"
         onError={() => setFailed(true)}
         className={cn("shrink-0 rounded-full object-cover object-top ring-1 ring-ink/10", className)}
         style={{ width: px, height: px, background: `linear-gradient(135deg, ${c1}, ${c2})` }}

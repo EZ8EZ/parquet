@@ -6,7 +6,7 @@
  * Holds NO state of its own. Both selects render from the URL the server already
  * parsed, and changing one navigates - so a comparison is always exactly what its
  * address says, and the back button walks your previous comparisons. That is the same
- * rule the trade web now follows (lib/tradegraph/url.ts); the difference is `push`
+ * rule /deals follows (lib/tradegraph/url.ts); the difference is `push`
  * rather than `replaceState`, because picking a different manager is a deliberate
  * move worth going back from, not an incidental gesture like tapping a strand.
  *
@@ -53,7 +53,7 @@ function SideSelect({
       value={value ?? ""}
       onChange={(e) => onPick(e.target.value || null)}
       aria-label={label}
-      className="min-h-11 w-full min-w-0 rounded-[--radius-sm] border border-border bg-surface px-2 text-[12.5px] font-semibold text-ink focus:border-accent focus:outline-none"
+      className="min-h-11 w-full min-w-0 rounded-[--radius-sm] border border-border bg-surface px-2 text-note font-semibold text-ink focus:border-accent focus:outline-none"
     >
       <option value="">Pick a manager…</option>
       <optgroup label="In the league">

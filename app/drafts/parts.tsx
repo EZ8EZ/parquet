@@ -3,6 +3,8 @@ import { ChevronRight, Hourglass, MoveRight } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { Tag } from "@/components/ui";
 import { cn } from "@/lib/ui";
+import { pickKey } from "@/lib/tradegraph";
+import { lineageHref } from "@/lib/tradegraph/url";
 import type { BoardPick, TradedPickLineage } from "@/lib/lineage";
 
 /** Deep link straight to a pick on its season board. */
@@ -13,7 +15,7 @@ export function boardHref(season: string, pickNo?: number | null): string {
 /** "Team A -> Team B" with the arrow as the visual spine of the trade. */
 function Hop({ from, to }: { from: string; to: string }) {
   return (
-    <span className="flex min-w-0 items-center gap-1 text-[11px] text-faint">
+    <span className="flex min-w-0 items-center gap-1 text-meta text-faint">
       <span className="truncate">{from}</span>
       <MoveRight size={11} className="shrink-0 text-accent" aria-hidden="true" />
       <span className="truncate font-medium text-muted">{to}</span>
@@ -70,6 +72,34 @@ export function LineageCard({
 }) {
   const p = perspective ? PERSPECTIVE[perspective] : null;
   return (
+    <div>
+      <LineageCardBody l={l} p={p} />
+      {/* THE PICK-SHAPED DOOR into provenance. A SIBLING of the card, never nested
+          inside it: the card is already one `<Link>`, and an `<a>` inside an `<a>`
+          is the exact invalid markup that threw a hydration error the last time this
+          feature grew a second tap target (D30).
+
+          /drafts owns the pick's story and provenance owns the player's - one
+          derivation, two doors. The card above is unchanged. */}
+      <Link
+        href={lineageHref(pickKey(l.season, l.round, l.originalRoster))}
+        className="flex min-h-11 items-center gap-1 px-2.5 text-meta font-semibold text-faint transition-colors hover:text-accent"
+      >
+        How this pick got where it went
+        <ChevronRight size={12} aria-hidden="true" />
+      </Link>
+    </div>
+  );
+}
+
+function LineageCardBody({
+  l,
+  p,
+}: {
+  l: TradedPickLineage;
+  p: (typeof PERSPECTIVE)[keyof typeof PERSPECTIVE] | null;
+}) {
+  return (
     <Link
       href={boardHref(l.season, l.pickNo)}
       aria-label={
@@ -83,11 +113,11 @@ export function LineageCard({
       )}
     >
       <div className="flex items-baseline gap-2">
-        <span className="shrink-0 font-mono text-[12px] font-semibold tnum text-ink">
+        <span className="shrink-0 font-mono text-note font-semibold tnum text-ink">
           {l.season} {roundLabel(l.round)}
         </span>
         {p && (
-          <span className={cn("shrink-0 text-[11px] font-semibold", p.rail)}>
+          <span className={cn("shrink-0 text-meta font-semibold", p.rail)}>
             {p.label}
           </span>
         )}
@@ -105,10 +135,10 @@ export function LineageCard({
             size="sm"
           />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+            <span className="block truncate text-body font-semibold leading-tight text-ink">
               {l.playerName}
             </span>
-            <span className="block truncate text-[11px] leading-tight text-faint">
+            <span className="block truncate text-meta leading-tight text-faint">
               {l.position ?? "-"}
               {l.team ? ` · ${l.team}` : ""}
               {l.age != null ? ` · ${l.age}y` : ""}
@@ -121,7 +151,7 @@ export function LineageCard({
                 : ""}
             </span>
           </span>
-          <span className="shrink-0 font-mono text-[13px] font-semibold tnum text-accent">
+          <span className="shrink-0 font-mono text-body font-semibold tnum text-accent">
             #{l.pickNo}
           </span>
           <ChevronRight size={13} className="shrink-0 text-faint" aria-hidden="true" />
@@ -133,7 +163,7 @@ export function LineageCard({
             className="mt-0.5 shrink-0 text-warn"
             aria-hidden="true"
           />
-          <span className="min-w-0 flex-1 text-[11.5px] leading-snug text-muted">
+          <span className="min-w-0 flex-1 text-meta leading-snug text-muted">
             {l.reasonText}{" "}
             <span className="text-faint">orig. {l.originalRosterName}</span>
           </span>
@@ -162,13 +192,13 @@ export function BoardPickRow({
       <span className="w-8 shrink-0 text-center">
         <span
           className={cn(
-            "block font-mono text-[13px] font-semibold leading-tight tnum",
+            "block font-mono text-body font-semibold leading-tight tnum",
             p.isMine || highlighted ? "text-accent" : "text-muted",
           )}
         >
           {p.pickNo}
         </span>
-        <span className="block font-mono text-[11px] leading-tight tnum text-faint">
+        <span className="block font-mono text-meta leading-tight tnum text-faint">
           {p.round}.{String(p.draftSlot).padStart(2, "0")}
         </span>
       </span>
@@ -181,10 +211,10 @@ export function BoardPickRow({
       />
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+        <span className="block truncate text-body font-semibold leading-tight text-ink">
           {p.playerName ?? "-"}
         </span>
-        <span className="block truncate text-[11px] leading-tight text-faint">
+        <span className="block truncate text-meta leading-tight text-faint">
           {p.position ?? "-"}
           {p.team ? ` · ${p.team}` : ""}
           {p.age != null ? ` · ${p.age}y` : ""}
@@ -194,14 +224,14 @@ export function BoardPickRow({
       <span className="max-w-[34%] shrink-0 text-right">
         <span
           className={cn(
-            "block truncate text-[11px] leading-tight",
+            "block truncate text-meta leading-tight",
             p.isMine ? "font-semibold text-accent" : "text-muted",
           )}
         >
           {p.usedByName ?? "-"}
         </span>
         {p.wasTraded && (
-          <span className="block truncate text-[11px] leading-tight text-info">
+          <span className="block truncate text-meta leading-tight text-info">
             via {p.originalRosterName}
           </span>
         )}
@@ -258,13 +288,13 @@ export function SeasonTile({
       className="flex min-h-11 flex-col justify-center rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
     >
       <span className="flex items-baseline gap-1.5">
-        <span className="font-display text-[17px] font-semibold leading-none text-ink">
+        <span className="font-display text-lede font-semibold leading-none text-ink">
           {season}
         </span>
         {pickCount === 0 ? (
           <Tag tone="warn">upcoming</Tag>
         ) : (
-          <span className="font-mono text-[11px] tnum text-muted">
+          <span className="font-mono text-meta tnum text-muted">
             {pickCount} picks
           </span>
         )}
@@ -274,7 +304,7 @@ export function SeasonTile({
           className="ml-auto shrink-0 text-faint"
         />
       </span>
-      <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 font-mono text-[11px] tnum text-faint">
+      <span className="mt-0.5 flex flex-wrap items-center gap-x-1.5 font-mono text-meta tnum text-faint">
         <span>
           {rounds} rd · {teams} tm
         </span>

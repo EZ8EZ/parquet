@@ -21,13 +21,13 @@ export default async function RankPage() {
   return (
     <div>
       <header className="mb-2">
-        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
           Your ranking
         </p>
-        <h1 className="font-display text-[26px] font-semibold leading-tight text-ink">
+        <h1 className="font-display text-display font-semibold leading-tight text-ink">
           Rank the board
         </h1>
-        <p className="mt-0.5 text-xs leading-snug text-muted">
+        <p className="mt-0.5 text-note leading-snug text-muted">
           Drag players into your own order, blend it against consensus at
           whatever weight you trust today, and see exactly where the two
           disagree.

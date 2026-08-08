@@ -1,7 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
-import { BottomNav } from "@/components/BottomNav";
+import { APP_CONTENT_ID, Desk } from "@/components/Desk";
+import { getDeskData } from "@/lib/desk";
 import { DEFAULT_THEME, THEME_CHROME, themeBootScript } from "@/lib/theme";
 
 const inter = Inter({
@@ -46,9 +47,22 @@ export const viewport: Viewport = {
   viewportFit: "cover",
 };
 
-export default function RootLayout({
+/**
+ * ASYNC, because the Desk's context row is about the league rather than about the
+ * route - "5-Year Plan · 27 to capture" is the same answer on every page, so it is
+ * assembled once here rather than threaded through twenty-seven pages.
+ *
+ * This costs less than it looks like it should. D38's corpus cache is keyed by
+ * nothing at all (one entry for the whole league, 5 minute TTL, per-viewer identity
+ * resolved after the await from cookies), so on any page that already reads the
+ * corpus - 24 of the app's 27 - this is a warm Map lookup and not a second assembly.
+ * The three that do not (/about, /settings, /claim/invalid) are the real bill: they
+ * were statically rendered and are now dynamic. Measured rather than assumed; see D39.
+ */
+export default async function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
+  const desk = await getDeskData();
   return (
     <html
       lang="en"
@@ -71,19 +85,27 @@ export default function RootLayout({
         />
       </head>
       <body className="min-h-full">
-        {/* Mobile-first shell: single centered column, content padded above the
-            fixed bottom tab bar. Widens gracefully on larger screens.
+        {/* Mobile-first shell: single centered column, content padded above the Desk.
+            Widens gracefully on larger screens.
 
-            Round 6 retired the floating search button (see components/SearchPanel.tsx):
-            it collided with real content on every content-heavy page added since round
-            1, flagged twice. Search now lives at the top of /more, the sixth tab, so
-            this padding only has to clear the tab bar itself - one fixed layer, not two. */}
-        <div className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col">
-          <main className="flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+6rem)] pt-5 sm:px-6">
+            8.5rem = the Desk's 116pt of resting chrome plus 20pt of air, so the last
+            line of any page clears the handle rather than tucking under it. It was
+            6rem for the old 94pt tab bar. Still ONE fixed layer to clear, not two:
+            round 6 retired the floating search button (it collided with real content
+            on every content-heavy page added since round 1, flagged twice) and search
+            now lives inside the Desk's drawer, which occupies no resting height.
+
+            The id is how the expanded drawer makes this subtree `inert` - the
+            background half of the modal contract lives in components/Desk.tsx. */}
+        <div
+          id={APP_CONTENT_ID}
+          className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col"
+        >
+          <main className="flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+8.5rem)] pt-5 sm:px-6">
             {children}
           </main>
         </div>
-        <BottomNav />
+        <Desk data={desk} />
       </body>
     </html>
   );

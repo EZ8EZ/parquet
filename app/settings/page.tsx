@@ -23,7 +23,7 @@ export default function SettingsPage() {
     <div>
       <Link
         href="/"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
       >
         <ArrowLeft size={13} aria-hidden="true" />
         Home
@@ -44,17 +44,17 @@ export default function SettingsPage() {
         className="flex min-h-11 items-center gap-2.5 rounded-[--radius] border border-border bg-surface/60 px-3 py-2.5 transition-colors hover:border-border-strong hover:bg-surface-2"
       >
         <span className="min-w-0 flex-1">
-          <span className="block text-[13px] font-semibold leading-tight text-ink">
+          <span className="block text-body font-semibold leading-tight text-ink">
             Switch team
           </span>
-          <span className="block text-[11px] leading-tight text-faint">
+          <span className="block text-meta leading-tight text-faint">
             Run the whole app as a different manager
           </span>
         </span>
         <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-faint" />
       </Link>
 
-      <p className="mt-4 flex items-start gap-1.5 text-[11px] leading-relaxed text-faint">
+      <p className="mt-4 flex items-start gap-1.5 text-meta leading-relaxed text-faint">
         <Lock size={11} aria-hidden="true" className="mt-0.5 shrink-0 text-warn" />
         <span>
           Your theme lives in this browser&apos;s local storage. It is never sent

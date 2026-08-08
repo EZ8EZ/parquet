@@ -114,7 +114,7 @@ export default async function MethodologyPage() {
         action={
           <Link
             href="/about"
-            className="inline-flex min-h-11 items-center gap-0.5 rounded-full border border-border px-3 text-[11px] font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+            className="inline-flex min-h-11 items-center gap-0.5 rounded-full border border-border px-3 text-meta font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
           >
             What this is
             <ChevronRight size={12} aria-hidden="true" />
@@ -123,18 +123,18 @@ export default async function MethodologyPage() {
       />
 
       <Card className="mb-4">
-        <p className="text-sm leading-relaxed text-ink">
+        <p className="text-body leading-relaxed text-ink">
           A player&apos;s dynasty value is a base value from consensus rank, bent by
           four multipliers:
         </p>
-        <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-[13px] text-accent">
+        <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-body text-accent">
           value = base(rank) × age × injury × role × position
         </p>
       </Card>
 
       <SectionHeader title="1 · Base value from consensus rank" />
       <Card>
-        <p className="mb-3 text-sm text-muted">
+        <p className="mb-3 text-body leading-relaxed text-muted">
           Value decays exponentially with rank (studs are scarce):
           <span className="font-mono text-ink"> base = {cfg.maxValue.toLocaleString()} · e^(−{cfg.rankDecay} · (rank−1))</span>
         </p>
@@ -148,7 +148,7 @@ export default async function MethodologyPage() {
           yLabel="age multiplier (%)"
           format={(n) => `${n}%`}
         />
-        <p className="mt-2 text-center text-[11px] text-faint">
+        <p className="mt-2 text-center text-meta text-faint">
           Anchors (linearly interpolated):{" "}
           {cfg.ageAnchors.map(([a, m]) => `${a}→${m}`).join("  ")}
         </p>
@@ -156,7 +156,7 @@ export default async function MethodologyPage() {
 
       <SectionHeader title="3 · Positional value - from YOUR scoring" />
       <Card>
-        <p className="mb-3 text-sm text-muted">
+        <p className="mb-3 text-body leading-relaxed text-muted">
           Each position&apos;s canonical stat line is scored under this league&apos;s
           actual settings, then normalized. Steals &amp; blocks are weighted
           {" "}{scoring.stl ?? 0}× / {scoring.blk ?? 0}× here, which lifts the
@@ -165,8 +165,8 @@ export default async function MethodologyPage() {
         <div className="grid grid-cols-5 gap-1.5">
           {Object.entries(posMults).map(([pos, m]) => (
             <div key={pos} className="rounded-[--radius-sm] border border-border bg-surface/60 p-2 text-center">
-              <div className="text-[11px] text-faint">{pos}</div>
-              <div className="font-mono text-sm font-semibold text-ink">{m.toFixed(2)}×</div>
+              <div className="text-meta text-faint">{pos}</div>
+              <div className="font-mono text-body leading-relaxed font-semibold text-ink">{m.toFixed(2)}×</div>
             </div>
           ))}
         </div>
@@ -174,15 +174,15 @@ export default async function MethodologyPage() {
 
       <SectionHeader title="4 · Injury - by body part, note and age" />
       <Card>
-        <p className="text-sm leading-relaxed text-muted">
+        <p className="text-body leading-relaxed text-muted">
           An injury is not one number. The same word means different things to
           different bodies at different ages, so this term reads what actually
           happened and how old the player was when it did.
         </p>
-        <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-[12px] text-accent">
+        <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-note text-accent">
           injury = 1 − class × note × status × age
         </p>
-        <p className="mt-3 text-sm leading-relaxed text-muted">
+        <p className="mt-3 text-body leading-relaxed text-muted">
           Each class penalty below is the share of dynasty value a{" "}
           <span className="text-ink">surgical</span> event in that class costs a{" "}
           {cfg.injury.ageReference}-year-old. The age column is how much that grows
@@ -190,7 +190,7 @@ export default async function MethodologyPage() {
           often career-altering, at 23 it is a lost season.
         </p>
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[290px] font-mono text-[11px]">
+          <table className="w-full min-w-[290px] font-mono text-meta">
             <thead>
               <tr className="border-b border-border text-left text-faint">
                 <th className="py-1 pr-2 font-normal">Class</th>
@@ -204,7 +204,7 @@ export default async function MethodologyPage() {
                   <td className="py-1 pr-2 text-ink">
                     {c.label}
                     {c.parts && (
-                      <span className="block text-[10px] text-faint">{c.parts}</span>
+                      <span className="block text-micro text-faint">{c.parts}</span>
                     )}
                   </td>
                   <td className="py-1 pr-2 text-right text-muted">
@@ -221,12 +221,12 @@ export default async function MethodologyPage() {
       </Card>
 
       <Card className="mt-2">
-        <div className="grid grid-cols-2 gap-4 text-sm">
+        <div className="grid grid-cols-2 gap-4 text-body leading-relaxed">
           <div>
-            <div className="mb-1 text-[11px] uppercase tracking-wide text-faint">
+            <div className="mb-1 text-meta uppercase tracking-wide text-faint">
               Note (vs surgery)
             </div>
-            <ul className="space-y-0.5 font-mono text-xs text-muted">
+            <ul className="space-y-0.5 font-mono text-note leading-snug text-muted">
               {Object.entries(cfg.injury.noteScale).map(([k, v]) => (
                 <li key={k}>
                   {k}: {v.toFixed(2)}×
@@ -238,10 +238,10 @@ export default async function MethodologyPage() {
             </ul>
           </div>
           <div>
-            <div className="mb-1 text-[11px] uppercase tracking-wide text-faint">
+            <div className="mb-1 text-meta uppercase tracking-wide text-faint">
               Status
             </div>
-            <ul className="space-y-0.5 font-mono text-xs text-muted">
+            <ul className="space-y-0.5 font-mono text-note leading-snug text-muted">
               {Object.entries(cfg.injury.statusScale).map(([k, v]) => (
                 <li key={k}>
                   {k}: {v.toFixed(2)}×
@@ -251,7 +251,7 @@ export default async function MethodologyPage() {
             </ul>
           </div>
         </div>
-        <p className="mt-3 text-xs leading-relaxed text-faint">
+        <p className="mt-3 text-note leading-relaxed text-faint">
           Status barely moves anything, on purpose. Sleeper marks {liveDtdShare}
           {" "}of all flagged NBA players &quot;DTD&quot;, and that bucket holds both a
           bruised quad and a ruptured Achilles. A field that calls a season-ending
@@ -260,17 +260,17 @@ export default async function MethodologyPage() {
       </Card>
 
       <Card className="mt-2">
-        <p className="text-sm font-semibold text-ink">
+        <p className="text-body leading-relaxed font-semibold text-ink">
           What this cannot see
         </p>
-        <p className="mt-1.5 text-sm leading-relaxed text-muted">
+        <p className="mt-1.5 text-body leading-relaxed text-muted">
           Only the injury a player is carrying <span className="text-ink">today</span>.
           Sleeper publishes no injury history at all: no past injuries, no dates, no
           games missed. So a 28-year-old with three back surgeries behind him and no
           current flag prices at a clean 1.00×, exactly like a 22-year-old who has
           never been hurt.
         </p>
-        <p className="mt-2 text-sm leading-relaxed text-muted">
+        <p className="mt-2 text-body leading-relaxed text-muted">
           That is a real hole and it is left open on purpose. Filling it would mean
           inventing a history the data does not contain, or hardcoding a list of
           players we happen to think are fragile. An acknowledged gap beats a
@@ -280,7 +280,7 @@ export default async function MethodologyPage() {
 
       <SectionHeader title="5 · Role" />
       <Card>
-        <ul className="space-y-0.5 font-mono text-xs text-muted">
+        <ul className="space-y-0.5 font-mono text-note leading-snug text-muted">
           <li>starter: {cfg.role.starter}×</li>
           <li>2nd unit: {cfg.role.secondary}×</li>
           <li>bench: {cfg.role.bench}×</li>
@@ -289,24 +289,24 @@ export default async function MethodologyPage() {
 
       <SectionHeader title="6 · Draft picks - slot-aware, lottery-aware" />
       <Card>
-        <p className="text-sm leading-relaxed text-muted">
+        <p className="text-body leading-relaxed text-muted">
           Picks are NOT priced by round. The 1.01 and the 1.{String(teams).padStart(2, "0")}{" "}
           are wildly different assets, so value decays exponentially over the OVERALL
           pick number, toward a floor:
         </p>
-        <p className="mt-2 rounded-[--radius-sm] bg-bg/60 p-2.5 text-center font-mono text-[12px] text-accent">
+        <p className="mt-2 rounded-[--radius-sm] bg-bg/60 p-2.5 text-center font-mono text-note text-accent">
           value = {cfg.pick.floor} + ({cfg.pick.topPickValue.toLocaleString()} − {cfg.pick.floor}) · e^(−{cfg.pick.slotDecay} · (overall − 1))
         </p>
         <LineChart data={slotSamples} format={(n) => n.toLocaleString()} />
-        <p className="mt-1 text-center text-[11px] text-faint">
+        <p className="mt-1 text-center text-meta text-faint">
           The raw slot curve across all {rounds} rounds ({teams * rounds} picks), before
           time and class adjustments.
         </p>
       </Card>
 
       <Card className="mt-2">
-        <p className="text-sm font-semibold text-ink">Which slot? A distribution, not a guess.</p>
-        <ul className="mt-1.5 space-y-1.5 text-sm leading-relaxed text-muted">
+        <p className="text-body leading-relaxed font-semibold text-ink">Which slot? A distribution, not a guess.</p>
+        <ul className="mt-1.5 space-y-1.5 text-body leading-relaxed text-muted">
           <li>
             <span className="font-semibold text-ink">Known slot</span> (draft order set):
             priced exactly.
@@ -348,8 +348,8 @@ export default async function MethodologyPage() {
               key={e.label}
               className="flex items-baseline justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5"
             >
-              <span className="min-w-0 truncate text-[12px] text-ink">{e.label}</span>
-              <span className="shrink-0 font-mono text-[12px] tnum text-muted">
+              <span className="min-w-0 truncate text-note text-ink">{e.label}</span>
+              <span className="shrink-0 font-mono text-note tnum text-muted">
                 <span className="font-semibold text-ink">{e.now.toLocaleString()}</span> now
                 · {e.later.toLocaleString()} in 2yr
               </span>
@@ -359,8 +359,8 @@ export default async function MethodologyPage() {
       </Card>
 
       <Card className="mt-2">
-        <p className="text-sm font-semibold text-ink">Class strength - subjective, on purpose.</p>
-        <p className="mt-1 text-sm leading-relaxed text-muted">
+        <p className="text-body leading-relaxed font-semibold text-ink">Class strength - subjective, on purpose.</p>
+        <p className="mt-1 text-body leading-relaxed text-muted">
           A class can be strong at the very top (a generational talent lifts the 1.01 and
           almost nothing else) or deep (the middle and late picks lift while the top is
           ordinary). Each season carries a <span className="font-mono">top</span> and{" "}
@@ -368,7 +368,7 @@ export default async function MethodologyPage() {
           pick sits. Converting consensus opinion about a class into value is a real part
           of pick trading; these are exposed so they can be argued with rather than buried.
         </p>
-        <ul className="mt-2 space-y-0.5 font-mono text-xs text-muted">
+        <ul className="mt-2 space-y-0.5 font-mono text-note leading-snug text-muted">
           {classEntries.length === 0 && <li>all classes currently neutral (1.0 / 1.0)</li>}
           {classEntries.map(([season, s]) => (
             <li key={season}>
@@ -381,7 +381,7 @@ export default async function MethodologyPage() {
 
       <SectionHeader title="7 · Timelines - Dynasty Duration & TCI" />
       <Card>
-        <p className="text-sm leading-relaxed text-muted">
+        <p className="text-body leading-relaxed text-muted">
           Every asset is a claim on production at some point in TIME. Borrowing Macaulay
           duration from fixed income, each asset&apos;s{" "}
           <span className="font-semibold text-ink">duration</span> is the value-weighted
@@ -392,23 +392,23 @@ export default async function MethodologyPage() {
         <div className="mt-2 grid grid-cols-4 gap-1.5 text-center">
           {durationExamples.map((e) => (
             <div key={e.label} className="rounded-[--radius-sm] border border-border bg-surface/60 p-2">
-              <div className="text-[11px] leading-tight text-faint">{e.label}</div>
-              <div className="mt-0.5 font-mono text-sm font-semibold tnum text-ink">
+              <div className="text-meta leading-tight text-faint">{e.label}</div>
+              <div className="mt-0.5 font-mono text-body leading-relaxed font-semibold tnum text-ink">
                 {e.d.toFixed(1)}s
               </div>
             </div>
           ))}
         </div>
-        <p className="mt-3 text-sm leading-relaxed text-muted">
+        <p className="mt-3 text-body leading-relaxed text-muted">
           A roster&apos;s duration says WHEN its value arrives. The{" "}
           <span className="font-semibold text-ink">Timeline Coherence Index</span> says
           whether its assets AGREE: it is the value-weighted dispersion of duration,
           inverted onto 0-100.
         </p>
-        <p className="mt-2 rounded-[--radius-sm] bg-bg/60 p-2.5 text-center font-mono text-[12px] text-accent">
+        <p className="mt-2 rounded-[--radius-sm] bg-bg/60 p-2.5 text-center font-mono text-note text-accent">
           TCI = 100 · (1 − min(1, dispersion / 3))
         </p>
-        <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-muted">
+        <ul className="mt-2 space-y-1.5 text-body leading-relaxed text-muted">
           <li>
             <span className="font-semibold text-ink">Coherence is direction-free.</span>{" "}
             A great rebuild and a great contender both score high - the index measures
@@ -447,7 +447,7 @@ export default async function MethodologyPage() {
             a league of a different size or shape is not something we have established.
           </li>
         </ul>
-        <p className="mt-2 text-[11px] leading-relaxed text-faint">
+        <p className="mt-2 text-meta leading-relaxed text-faint">
           This is only computable because players and picks are valued on one common
           scale (sections 1-5). See the league quadrant on the League page.
         </p>
@@ -455,7 +455,7 @@ export default async function MethodologyPage() {
 
       <SectionHeader title="8 · Fragility - the RFI" />
       <Card>
-        <p className="text-sm leading-relaxed text-muted">
+        <p className="text-body leading-relaxed text-muted">
           Duration says WHEN a roster&apos;s value arrives; the{" "}
           <span className="font-semibold text-ink">Roster Fragility Index</span> asks
           what breaks first. Two rosters can hold the same value on the same timeline
@@ -463,11 +463,11 @@ export default async function MethodologyPage() {
           goes, the other re-solves around the loss. RFI is three measurements of that
           difference, weighted and combined onto 0-100, higher = more fragile:
         </p>
-        <p className="mt-2 rounded-[--radius-sm] bg-bg/60 p-2.5 text-center font-mono text-[12px] text-accent">
+        <p className="mt-2 rounded-[--radius-sm] bg-bg/60 p-2.5 text-center font-mono text-note text-accent">
           RFI = 100 · ({W_LOO} · damage + {W_CONCENTRATION} · concentration +{" "}
           {W_EXPOSURE} · exposure)
         </p>
-        <ul className="mt-2 space-y-1.5 text-sm leading-relaxed text-muted">
+        <ul className="mt-2 space-y-1.5 text-body leading-relaxed text-muted">
           <li>
             <span className="font-semibold text-ink">Leave-one-out damage
             ({W_LOO}).</span> Delete each player, RE-SOLVE the best legal lineup out
@@ -493,7 +493,7 @@ export default async function MethodologyPage() {
             adjusts the index rather than driving it.
           </li>
         </ul>
-        <p className="mt-3 text-sm leading-relaxed text-muted">
+        <p className="mt-3 text-body leading-relaxed text-muted">
           <span className="font-semibold text-ink">What it refuses to count.</span>{" "}
           Picks are excluded: a future first cannot fill a lineup slot tonight, and
           folding pick capital in would make the most extreme teardown in the league
@@ -501,7 +501,7 @@ export default async function MethodologyPage() {
           score - low fragility is not the same as good. A torn-down roster with
           nothing to lose scores mid-pack, because there is nothing left to fail.
         </p>
-        <p className="mt-2 text-[11px] leading-relaxed text-faint">
+        <p className="mt-2 text-meta leading-relaxed text-faint">
           Bands (resilient / balanced / brittle) are league-relative quartiles, for
           the same reason posture is: brittle only means something next to the
           rosters you actually have to beat. Each reference constant was calibrated
@@ -510,7 +510,7 @@ export default async function MethodologyPage() {
         </p>
       </Card>
 
-      <p className="mt-6 text-center text-[11px] leading-relaxed text-faint">
+      <p className="mt-6 text-center text-meta leading-relaxed text-faint">
         Player and pick constants live in <span className="font-mono">lib/valuation/config.ts</span>;
         the timeline math in <span className="font-mono">lib/metrics/duration.ts</span>;
         fragility in <span className="font-mono">lib/metrics/fragility.ts</span>.

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { ALL_SURFACES, curatedSurfaces, groupedSurfaces } from "./nav";
+import { ALL_SURFACES, curatedSurfaces, groupedSurfaces, primarySurfaces } from "./nav";
 
 describe("the surface registry", () => {
   it("has no duplicate hrefs - the exact bug this file exists to prevent", () => {
@@ -23,9 +23,33 @@ describe("the surface registry", () => {
     expect(ALL_SURFACES.map((s) => s.href)).toContain("/teams");
   });
 
-  it("flags every bottom-nav tab as primary, and nothing else", () => {
-    const primaryHrefs = ALL_SURFACES.filter((s) => s.primary).map((s) => s.href);
-    expect(new Set(primaryHrefs)).toEqual(new Set(["/", "/roster", "/plan", "/trade", "/league"]));
+  it("includes /more - the page that promises to list everything, itself included", () => {
+    // The registry omitting /more is what made that page's own subtitle false. It
+    // survives the Desk as the no-JS fallback and the drawer's "see everything".
+    expect(ALL_SURFACES.map((s) => s.href)).toContain("/more");
+  });
+
+  it("flags exactly the Desk's four destination slots as primary", () => {
+    const primaryHrefs = primarySurfaces().map((s) => s.href);
+    // Order matters: this IS the left-to-right order of the destination row.
+    expect(primaryHrefs).toEqual(["/", "/roster", "/plan", "/ledger"]);
+  });
+
+  it("gives every destination slot a short label", () => {
+    // A slot is a quarter of a 390pt row. `label` is the index's full name and is
+    // too long for one; without this a promoted surface would render "undefined".
+    for (const s of primarySurfaces()) {
+      expect(s.short, `${s.href} is primary but has no short label`).toBeTruthy();
+      expect(s.short!.length).toBeLessThanOrEqual(8);
+    }
+  });
+
+  it("keeps `primary` and the Primary group as the same set", () => {
+    // Two ways of saying "this has a permanent slot" that could drift apart is the
+    // exact failure this registry exists to prevent, so they are pinned to each other.
+    for (const s of ALL_SURFACES) {
+      expect(s.primary === true, `${s.href}`).toBe(s.group === "Primary");
+    }
   });
 });
 

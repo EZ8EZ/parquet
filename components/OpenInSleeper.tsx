@@ -60,7 +60,7 @@ export function OpenInSleeper({
       rel="noopener noreferrer"
       className={cn(
         "inline-flex min-h-11 items-center justify-center gap-1.5 rounded-full",
-        "border border-border px-3.5 text-xs font-semibold",
+        "border border-border px-3.5 text-note leading-snug font-semibold",
         "hover:border-border-strong hover:bg-surface-2",
         common,
         className,

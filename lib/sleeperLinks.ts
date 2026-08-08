@@ -3,8 +3,8 @@
  *
  * Parquet is a *companion* to the Sleeper app: every insight we surface should
  * have a one-tap path back into Sleeper to actually execute it. Sleeper has no
- * write API, so we can only (a) deep-link to the right screen and (b) hand the
- * user copyable text to paste once they get there.
+ * write API, so the best we can do is deep-link to the right screen and let the
+ * user carry the thesis over in their head from there.
  *
  * ── How these URLs were verified ──────────────────────────────────────────────
  *

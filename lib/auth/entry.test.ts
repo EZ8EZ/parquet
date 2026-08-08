@@ -17,7 +17,7 @@ describe("needsEntryPick - who meets the picker", () => {
   });
 
   it("never touches a RETURNING reader", () => {
-    for (const path of ["/", "/roster", "/ledger", "/teams", "/web"]) {
+    for (const path of ["/", "/roster", "/ledger", "/teams", "/deals"]) {
       expect(needsEntryPick(path, true)).toBe(false);
     }
   });
@@ -44,7 +44,7 @@ describe("needsEntryPick - who meets the picker", () => {
 describe("safeNextPath - an attacker-controlled redirect target", () => {
   it("accepts a plain same-origin path", () => {
     expect(safeNextPath("/roster")).toBe("/roster");
-    expect(safeNextPath("/web?trade=abc")).toBe("/web?trade=abc");
+    expect(safeNextPath("/deals?pair=u1-u2")).toBe("/deals?pair=u1-u2");
   });
 
   it("REJECTS protocol-relative and absolute URLs - the open redirect", () => {
@@ -76,8 +76,8 @@ describe("safeNextPath - an attacker-controlled redirect target", () => {
 
 describe("entryRedirectTarget - the deep link survives the detour", () => {
   it("carries the page they actually opened", () => {
-    expect(entryRedirectTarget("/web", "?trade=abc")).toBe(
-      `${ENTRY_PATH}?next=${encodeURIComponent("/web?trade=abc")}`,
+    expect(entryRedirectTarget("/deals", "?pair=u1-u2")).toBe(
+      `${ENTRY_PATH}?next=${encodeURIComponent("/deals?pair=u1-u2")}`,
     );
   });
 

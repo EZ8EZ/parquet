@@ -2,6 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, CheckCircle2, ChevronRight, Repeat, ScrollText, Settings } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getStrategyReport } from "@/lib/strategy";
+import { getPrincipals } from "@/lib/principals";
 import { getLedgerSummary } from "@/lib/ledger";
 import { loadDigest } from "@/lib/digest";
 import { currentFormByRoster } from "@/lib/roster";
@@ -19,8 +20,10 @@ export const dynamic = "force-dynamic";
 
 export default async function HomePage() {
   const h = await getLeagueHistory();
-  const report = getStrategyReport(h);
-  const ledger = getLedgerSummary(h);
+  // Scoped to the PERSON in the seat, not the seat: see `getStrategyReport`.
+  const principals = await getPrincipals(h);
+  const report = getStrategyReport(h, principals);
+  const ledger = getLedgerSummary(h, principals);
   // "27 decisions to capture" is a to-do list, and a to-do list addressed to someone
   // who is not allowed to do any of it is just an accusation. In legacy mode this is
   // always true and the badge behaves exactly as it always has.
@@ -46,7 +49,7 @@ export default async function HomePage() {
           {/* Who am I? - switch teams / enter a username. */}
           <Link
             href="/teams"
-            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+            className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full border border-border px-3 text-note font-medium text-muted transition-colors hover:border-accent hover:text-accent"
           >
             <Repeat size={13} aria-hidden="true" />
             <span className="max-w-[7rem] truncate">
@@ -72,10 +75,10 @@ export default async function HomePage() {
           <div className="flex items-start gap-2.5">
             <AlertTriangle size={16} className="mt-0.5 shrink-0 text-warn" />
             <div>
-              <div className="text-sm font-semibold text-warn">
+              <div className="text-body font-semibold text-warn">
                 Synthetic demo data, not your league
               </div>
-              <p className="mt-0.5 text-xs leading-relaxed text-muted">
+              <p className="mt-0.5 text-note leading-relaxed text-muted">
                 Every name, trade and value below is invented. Remove{" "}
                 <span className="font-mono">LEAGUE_PROVIDER=fixture</span> to load the
                 real league.
@@ -93,11 +96,11 @@ export default async function HomePage() {
         >
           <ScrollText size={15} aria-hidden="true" className="shrink-0 text-accent" />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+            <span className="block truncate text-body font-semibold leading-tight text-ink">
               {ledger.unannotatedNotable} decision
               {ledger.unannotatedNotable > 1 ? "s" : ""} to capture
             </span>
-            <span className="block truncate text-[11px] leading-tight text-muted">
+            <span className="block truncate text-meta leading-tight text-muted">
               Log why you made them - while you still remember.
             </span>
           </span>
@@ -109,10 +112,10 @@ export default async function HomePage() {
           names WHOSE strategy, because "You said win-now. You sold." only lands when
           the reader knows who "you" is - obvious to the manager in their own seat,
           not to a leaguemate seeing this app (or this seat) for the first time. */}
-      <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+      <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
         Revealed strategy · {p.teamName ?? p.displayName}
       </p>
-      <h1 className="mt-0.5 font-display text-[25px] font-semibold leading-[1.12] text-ink">
+      <h1 className="mt-0.5 font-display text-display font-semibold leading-[1.12] text-ink">
         {report.headline}
       </h1>
 
@@ -122,17 +125,17 @@ export default async function HomePage() {
             <Card key={c.id} className="border-negative/30 bg-negative/[0.06] p-3">
               <div className="mb-1.5 flex items-center gap-2">
                 <AlertTriangle size={15} className="text-negative" />
-                <span className="text-[11px] font-semibold uppercase tracking-wide text-negative">
+                <span className="text-meta font-semibold uppercase tracking-wide text-negative">
                   Stated vs revealed
                 </span>
               </div>
-              <p className="text-sm leading-relaxed text-ink">{c.narrative}</p>
+              <p className="text-body leading-relaxed text-ink">{c.narrative}</p>
               <div className="mt-2 flex flex-wrap items-center gap-2">
                 <Tag tone="neutral">said: {c.statedSeason}</Tag>
                 <Tag tone="neutral">did: {c.revealedSeason}</Tag>
                 <Link
                   href="/ledger"
-                  className="inline-flex min-h-11 items-center text-xs font-semibold text-accent underline-offset-2 hover:underline"
+                  className="inline-flex min-h-11 items-center text-note font-semibold text-accent underline-offset-2 hover:underline"
                 >
                   see the moves
                   <ChevronRight size={13} aria-hidden="true" />
@@ -151,11 +154,11 @@ export default async function HomePage() {
         <div className="mt-3 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2">
           <div className="flex items-center gap-2">
             <CheckCircle2 size={14} aria-hidden="true" className="shrink-0 text-positive" />
-            <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+            <span className="text-meta font-semibold uppercase tracking-wide text-muted">
               Stated vs revealed
             </span>
           </div>
-          <p className="mt-1 text-[13px] leading-relaxed text-ink/90">
+          <p className="mt-1 text-body leading-relaxed text-ink/90">
             You&apos;ve captured reasoning on {report.statedPostures.length} decision
             {report.statedPostures.length > 1 ? "s" : ""}, and nothing in your record
             contradicts it yet.{" "}
@@ -203,7 +206,20 @@ export default async function HomePage() {
           href={`/managers/${p.rosterId}`}
           label="Avg acq. age"
           value={`${p.acquisitions.avgAge ?? "-"}`}
-          sub={p.overpaysForAge ? "leans veteran" : "leans young"}
+          /* The caption has to describe the number above it. It used to read off
+             `overpaysForAge` - a count of 30+ acquisitions, not an average - so a
+             manager whose average acquisition age is 23.5 was captioned "leans
+             veteran" here while their own dossier said "Skews young - average
+             acquisition age 23.5" from the same figure. */
+          sub={
+            p.acquisitions.avgAge == null
+              ? `${p.acquisitions.count} added`
+              : p.acquisitions.avgAge < 25
+                ? "leans young"
+                : p.acquisitions.avgAge >= 27
+                  ? "leans veteran"
+                  : "no age lean"
+          }
         />
       </div>
 
@@ -228,7 +244,7 @@ export default async function HomePage() {
             "3y+ still running" reads as a contradiction unless this says which
             population it measures. The metric itself is untouched - it feeds The
             Tortoise/Hot Potato and the dossiers, which have their own context. */}
-        <p className="mt-1 font-mono text-[11px] leading-snug tnum text-faint">
+        <p className="mt-1 font-mono text-meta leading-snug tnum text-faint">
           {holdYears ? `avg completed hold ${holdYears}y · ` : ""}
           {p.acquisitions.count} in / {p.disposals.count} out ·{" "}
           {ledger.annotated}/{ledger.notable} annotated
@@ -252,7 +268,7 @@ export default async function HomePage() {
           <SectionHeader title="What your record shows" />
           <ul className="space-y-1.5">
             {report.findings.map((f, i) => (
-              <li key={i} className="flex gap-2 text-[13px] leading-snug">
+              <li key={i} className="flex gap-2 text-body leading-snug">
                 <span
                   aria-hidden="true"
                   className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
@@ -271,14 +287,20 @@ export default async function HomePage() {
           <div className="scroll-x flex gap-1.5">
             {partners.map((tp) => (
               <Link
-                key={tp.rosterId}
-                href={`/managers/${tp.rosterId}`}
+                key={tp.ownerId ?? `r${tp.rosterId}`}
+                // A departed partner's file lives at their owner id - the seat they
+                // used to hold now routes to whoever took it over.
+                href={
+                  tp.isFormer && tp.ownerId
+                    ? `/managers/former/${tp.ownerId}`
+                    : `/managers/${tp.rosterId}`
+                }
                 className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-border bg-surface/60 px-3 transition-colors hover:border-accent"
               >
-                <span className="max-w-[8rem] truncate text-xs font-semibold text-ink">
+                <span className="max-w-[8rem] truncate text-note font-semibold text-ink">
                   {tp.displayName}
                 </span>
-                <span className="font-mono text-[11px] tnum text-accent">
+                <span className="font-mono text-meta tnum text-accent">
                   {tp.count}
                 </span>
               </Link>
@@ -303,25 +325,24 @@ export default async function HomePage() {
               href={s.href}
               icon={<Icon size={15} />}
               title={s.label}
-              sub={s.href === "/ledger" ? `${ledger.annotated}/${ledger.notable} annotated` : s.sub}
+              sub={s.sub}
             />
           );
         })}
       </div>
       <Link
         href="/more"
-        className="mt-1.5 flex min-h-11 items-center justify-center gap-1 rounded-[--radius-sm] border border-dashed border-border text-[12px] font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
+        className="mt-1.5 flex min-h-11 items-center justify-center gap-1 rounded-[--radius-sm] border border-dashed border-border text-note font-semibold text-muted transition-colors hover:border-accent hover:text-accent"
       >
         See everything
         <ChevronRight size={13} aria-hidden="true" />
       </Link>
 
-      <p className="mt-5 text-center text-[11px] leading-relaxed text-faint">
-        Parquet advises; it can&apos;t act. Sleeper has no write API - a trade ends
-        at a one-tap link to your league&apos;s trade centre, and a pitch ends at
-        text you send yourself.
-      </p>
-      <p className="text-center text-[11px] leading-relaxed text-faint">
+      {/* The "Parquet advises; it can't act / Sleeper has no write API" note used to
+          sit here. It is a constraint about sending trades, and /trade states it at the
+          point where it actually bites (the evaluation ends at "Open Sleeper to send").
+          Home is not where anyone is trying to send anything. */}
+      <p className="mt-5 text-center text-meta leading-relaxed text-faint">
         First time here?{" "}
         <Link
           href="/about"
@@ -353,13 +374,13 @@ function Figure({
       href={href}
       className={`flex min-h-11 min-w-0 flex-col justify-center px-2.5 py-2 transition-colors hover:bg-surface-2 ${className ?? ""}`}
     >
-      <span className="truncate text-[11px] uppercase tracking-wide text-faint">
+      <span className="truncate text-meta uppercase tracking-wide text-faint">
         {label}
       </span>
-      <span className="truncate font-mono text-xl font-semibold leading-tight tnum text-ink">
+      <span className="truncate font-mono text-lede font-semibold leading-tight tnum text-ink">
         {value}
       </span>
-      <span className="truncate text-[11px] leading-tight text-muted">{sub}</span>
+      <span className="truncate text-meta leading-tight text-muted">{sub}</span>
     </Link>
   );
 }
@@ -367,10 +388,10 @@ function Figure({
 function Micro({ label, value }: { label: string; value: string }) {
   return (
     <div className="min-w-0">
-      <div className="truncate text-[11px] uppercase tracking-wide text-faint">
+      <div className="truncate text-meta uppercase tracking-wide text-faint">
         {label}
       </div>
-      <div className="truncate font-mono text-[13px] font-semibold tnum text-ink">
+      <div className="truncate font-mono text-body font-semibold tnum text-ink">
         {value}
       </div>
     </div>
@@ -397,11 +418,11 @@ function HomeLink({
         <span aria-hidden="true" className="shrink-0 text-accent">
           {icon}
         </span>
-        <span className="truncate text-[13px] font-semibold leading-tight text-ink">
+        <span className="truncate text-body font-semibold leading-tight text-ink">
           {title}
         </span>
       </span>
-      <span className="mt-0.5 truncate text-[11px] leading-tight text-faint">
+      <span className="mt-0.5 truncate text-meta leading-tight text-faint">
         {sub}
       </span>
     </Link>

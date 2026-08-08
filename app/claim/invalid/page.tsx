@@ -27,10 +27,10 @@ export default function ClaimInvalidPage() {
         <div className="flex items-start gap-2.5">
           <KeyRound size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-faint" />
           <div className="min-w-0">
-            <p className="text-[13px] font-semibold leading-tight text-ink">
+            <p className="text-body font-semibold leading-tight text-ink">
               Ask the commissioner for a fresh link
             </p>
-            <p className="mt-1 text-[11px] leading-relaxed text-muted">
+            <p className="mt-1 text-meta leading-relaxed text-muted">
               Claim links are generated per manager and handed out once. Copying one
               out of a chat window sometimes drops the tail of it, so paste the whole
               thing rather than clicking a wrapped line.
@@ -39,14 +39,14 @@ export default function ClaimInvalidPage() {
         </div>
       </div>
 
-      <p className="mt-4 text-[11px] leading-relaxed text-muted">
+      <p className="mt-4 text-meta leading-relaxed text-muted">
         You do not need a link to look around. Everything Parquet shows about the
         league is public league data, and you can read all of it as any team.
       </p>
 
       <Link
         href="/teams"
-        className="mt-2 inline-flex min-h-11 items-center gap-1 text-[13px] font-semibold text-accent"
+        className="mt-2 inline-flex min-h-11 items-center gap-1 text-body font-semibold text-accent"
       >
         Pick a team and carry on
         <ChevronRight size={14} aria-hidden="true" />

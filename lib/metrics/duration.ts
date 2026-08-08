@@ -189,6 +189,51 @@ export function pickDuration(
   return Math.max(0, seasonsOut) + playerDuration(ROOKIE_AGE, cfg);
 }
 
+/** The three numbers a set of dated assets produces. See `coherenceOf`. */
+export interface Coherence {
+  /** Value-weighted mean duration, in seasons. UNROUNDED - see below. */
+  rosterDuration: number;
+  /** Value-weighted dispersion of duration, in seasons. UNROUNDED. */
+  dispersion: number;
+  /** 0-100, from SIGMA_REF. High = the assets agree about when they pay off. */
+  tci: number;
+  totalValue: number;
+}
+
+/**
+ * TCI over an arbitrary bag of dated assets, not necessarily a real roster.
+ *
+ * Pulled out of `getTimelineProfile` (which now calls it) so a HYPOTHETICAL set of
+ * assets can be scored on the identical formula and the identical SIGMA_REF - which is
+ * the whole point: a counterfactual roster's coherence is only worth reading next to a
+ * real one if neither was computed with its own constants.
+ *
+ * Returns duration and dispersion UNROUNDED, deliberately. `getTimelineProfile`
+ * publishes them at 2dp but also feeds the raw duration to `classify` and to a
+ * `toFixed(1)` in its own copy, and rounding twice can cross a boundary the single
+ * rounding never would. Callers round for display; nothing here rounds for them.
+ */
+export function coherenceOf(
+  assets: ReadonlyArray<{ value: number; duration: number }>,
+): Coherence {
+  const totalValue = assets.reduce((s, a) => s + a.value, 0);
+  if (totalValue === 0) {
+    return { rosterDuration: 0, dispersion: 0, tci: 0, totalValue: 0 };
+  }
+  const rosterDuration =
+    assets.reduce((s, a) => s + a.value * a.duration, 0) / totalValue;
+  const variance =
+    assets.reduce((s, a) => s + a.value * Math.pow(a.duration - rosterDuration, 2), 0) /
+    totalValue;
+  const dispersion = Math.sqrt(variance);
+  return {
+    rosterDuration,
+    dispersion,
+    tci: Math.round(100 * (1 - Math.min(1, dispersion / SIGMA_REF))),
+    totalValue,
+  };
+}
+
 export interface TimelineOptions {
   cfg?: ValuationConfig;
   /**
@@ -239,7 +284,7 @@ export function getTimelineProfile(
     });
   }
 
-  const totalValue = assets.reduce((s, a) => s + a.value, 0);
+  const { rosterDuration, dispersion, tci, totalValue } = coherenceOf(assets);
   if (totalValue === 0) {
     return {
       rosterId,
@@ -256,16 +301,6 @@ export function getTimelineProfile(
       assets: [],
     };
   }
-
-  const rosterDuration =
-    assets.reduce((s, a) => s + a.value * a.duration, 0) / totalValue;
-  const variance =
-    assets.reduce(
-      (s, a) => s + a.value * Math.pow(a.duration - rosterDuration, 2),
-      0,
-    ) / totalValue;
-  const dispersion = Math.sqrt(variance);
-  const tci = Math.round(100 * (1 - Math.min(1, dispersion / SIGMA_REF)));
 
   const nowShare =
     assets.filter((a) => a.duration < 2).reduce((s, a) => s + a.value, 0) / totalValue;

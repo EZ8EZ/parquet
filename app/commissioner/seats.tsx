@@ -42,10 +42,10 @@ export async function SeatLinks({ h }: { h: LeagueHistory }) {
           <div className="flex items-start gap-2.5">
             <KeyRound size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-faint" />
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold leading-tight text-ink">
+              <p className="text-body font-semibold leading-tight text-ink">
                 Everyone who opens this app can write as whoever they are viewing
               </p>
-              <p className="mt-1 text-[11px] leading-relaxed text-muted">
+              <p className="mt-1 text-meta leading-relaxed text-muted">
                 That is the right default for one person running Parquet on their own
                 machine. To hand the app to the league, set an{" "}
                 <span className="font-mono">AUTH_SECRET</span> environment variable to
@@ -108,10 +108,10 @@ export async function SeatLinks({ h }: { h: LeagueHistory }) {
           <div className="flex items-start gap-2.5">
             <AlertTriangle size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-warn" />
             <div className="min-w-0">
-              <p className="text-[13px] font-semibold leading-tight text-ink">
+              <p className="text-body font-semibold leading-tight text-ink">
                 Claim links cannot be built on this request
               </p>
-              <p className="mt-1 text-[11px] leading-relaxed text-muted">
+              <p className="mt-1 text-meta leading-relaxed text-muted">
                 A claim link needs to know where this deployment lives, and this request
                 arrived with no <span className="font-mono">Host</span> header to read it
                 from. Rather than hand you links missing their front half - which copy and
@@ -136,7 +136,7 @@ export async function SeatLinks({ h }: { h: LeagueHistory }) {
       />
       <div className="mb-2 flex items-start gap-2.5 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-2">
         <ShieldCheck size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-positive" />
-        <p className="min-w-0 text-[11px] leading-relaxed text-muted">
+        <p className="min-w-0 text-meta leading-relaxed text-muted">
           Send each manager their own link, once. Opening it in the browser they use
           claims that seat and lets them capture reasoning as themselves. Treat a link
           like a key: whoever holds it holds that seat. Rotating{" "}
@@ -151,11 +151,11 @@ export async function SeatLinks({ h }: { h: LeagueHistory }) {
             className="rounded-[--radius] border border-border bg-surface/60 p-2.5"
           >
             <div className="mb-1.5 flex items-baseline gap-2">
-              <span className="min-w-0 truncate text-[13px] font-semibold text-ink">
+              <span className="min-w-0 truncate text-body font-semibold text-ink">
                 {m.displayName}
               </span>
               {m.teamName && (
-                <span className="min-w-0 truncate text-[11px] text-faint">
+                <span className="min-w-0 truncate text-meta text-faint">
                   {m.teamName}
                 </span>
               )}
@@ -176,12 +176,12 @@ export async function SeatLinks({ h }: { h: LeagueHistory }) {
                 className="mt-0.5 shrink-0 text-warn"
               />
               <div className="min-w-0">
-                <p className="text-[13px] font-semibold leading-tight text-ink">
+                <p className="text-body font-semibold leading-tight text-ink">
                   {unsignable.length === 1
                     ? "One manager has no link"
                     : `${unsignable.length} managers have no link`}
                 </p>
-                <p className="mt-1 text-[11px] leading-relaxed text-muted">
+                <p className="mt-1 text-meta leading-relaxed text-muted">
                   A seat token is separator-delimited, so an owner id containing a{" "}
                   <span className="font-mono">.</span> (or anything outside letters,
                   digits, <span className="font-mono">_</span> and{" "}
@@ -190,7 +190,7 @@ export async function SeatLinks({ h }: { h: LeagueHistory }) {
                 </p>
                 <ul className="mt-1.5 space-y-0.5">
                   {unsignable.map((m) => (
-                    <li key={m.ownerId} className="text-[11px] leading-snug text-muted">
+                    <li key={m.ownerId} className="text-meta leading-snug text-muted">
                       <span className="font-semibold text-ink">{m.displayName}</span>{" "}
                       <span className="font-mono text-faint">
                         (id {JSON.stringify(m.ownerId)})

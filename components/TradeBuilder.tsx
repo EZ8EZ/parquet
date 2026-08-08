@@ -11,9 +11,9 @@
  * sides' pools, so a pasted `/trade?give=...&get=...` link reproduces the same
  * package for whoever opens it, on their own phone, regardless of whose roster
  * the ids nominally sit on for them. Same pattern DECISIONS D30 shipped for the
- * trade web.
+ * deal receipt.
  *
- * `history.replaceState` rather than `router.replace`, same reasoning as /web and
+ * `history.replaceState` rather than `router.replace`, same reasoning the deleted /web carried, and
  * /values (see lib/tradegraph/url.ts and lib/values/url.ts): /trade is
  * force-dynamic and its server render prices every player on every roster in the
  * league, so routing on every add/remove tap would pay for that whole render
@@ -27,6 +27,7 @@ import { parseTradeParams, tradeQueryString, type TradePackageIds } from "@/lib/
 import { cn, fmtValue, fold } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTradeUrl } from "@/lib/sleeperLinks";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 
 export interface PlayerOption {
   id: string;
@@ -107,7 +108,7 @@ function PickerModal({
     >
       <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-4 pb-4 pt-3">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h3 className="min-w-0 truncate font-display text-lg font-semibold text-ink">
+          <h3 className="min-w-0 truncate font-display text-lede leading-tight font-semibold text-ink">
             {title}
           </h3>
           <button
@@ -124,14 +125,14 @@ function PickerModal({
           onChange={(e) => setQ(e.target.value)}
           placeholder={searchLabel}
           aria-label={searchLabel}
-          className="mb-2 h-11 w-full rounded-full border border-border bg-surface px-4 text-sm text-ink placeholder:text-faint focus:border-accent focus:outline-none"
+          className="mb-2 h-11 w-full rounded-full border border-border bg-surface px-4 text-body leading-relaxed text-ink placeholder:text-faint focus:border-accent focus:outline-none"
         />
-        <p className="mb-1 font-mono text-[11px] tnum text-faint">
+        <p className="mb-1 font-mono text-meta tnum text-faint">
           {filtered.length} shown · esc to close
         </p>
         <div className="flex-1 space-y-1 overflow-y-auto pb-4">
           {filtered.length === 0 && (
-            <p className="py-6 text-center text-sm text-muted">{emptyText}</p>
+            <p className="py-6 text-center text-body leading-relaxed text-muted">{emptyText}</p>
           )}
           {filtered.map((o) => (
             <button
@@ -140,14 +141,14 @@ function PickerModal({
               className="flex min-h-11 w-full items-center justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface/60 px-2.5 py-1.5 text-left transition-colors hover:border-border-strong hover:bg-surface-2"
             >
               <span className="min-w-0">
-                <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+                <span className="block truncate text-body font-semibold leading-tight text-ink">
                   {o.name}
                 </span>
-                <span className="block truncate font-mono text-[11px] tnum leading-tight text-faint">
+                <span className="block truncate font-mono text-meta tnum leading-tight text-faint">
                   {o.meta}
                 </span>
               </span>
-              <span className="shrink-0 font-mono text-[13px] font-semibold tnum text-muted">
+              <span className="shrink-0 font-mono text-body font-semibold tnum text-muted">
                 {fmtValue(o.value)}
               </span>
             </button>
@@ -163,19 +164,39 @@ function AssetRow({
   meta,
   value,
   onRemove,
+  player,
 }: {
   label: string;
   meta?: string;
   value: number;
   onRemove: () => void;
+  /**
+   * Set for a player row, omitted for a pick row - a pick has no face to show, and a
+   * monogram for "2027 1st" would just be noise. When set, the avatar replaces
+   * nothing in `meta`: position and age aren't visible in a face, they still earn
+   * their line. What the avatar actually buys here is the two columns reading as
+   * PEOPLE at a glance - a lopsided offer shows up as a wall of strangers on one
+   * side and one face on the other, before you've read a word.
+   */
+  player?: { name: string; team: string | null; playerId: string };
 }) {
   return (
     <div className="flex min-h-11 items-center justify-between gap-1.5 rounded-[--radius-sm] bg-elevated px-2 py-1">
-      <span className="min-w-0">
-        <span className="block truncate text-[13px] leading-tight text-ink">{label}</span>
-        <span className="block truncate font-mono text-[11px] tnum leading-tight text-faint">
-          {meta ? `${meta} · ` : ""}
-          {fmtValue(value)}
+      <span className="flex min-w-0 items-center gap-1.5">
+        {player && (
+          <PlayerAvatar
+            name={player.name}
+            team={player.team}
+            playerId={player.playerId}
+            size="sm"
+          />
+        )}
+        <span className="min-w-0">
+          <span className="block truncate text-body leading-tight text-ink">{label}</span>
+          <span className="block truncate font-mono text-meta tnum leading-tight text-faint">
+            {meta ? `${meta} · ` : ""}
+            {fmtValue(value)}
+          </span>
         </span>
       </span>
       <button
@@ -211,10 +232,10 @@ function SideColumn({
   return (
     <div className="rounded-[--radius] border border-border bg-surface/60 p-2">
       <div className="mb-1.5 flex items-center justify-between px-0.5">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted">
+        <span className="text-meta font-semibold uppercase tracking-wide text-muted">
           {label}
         </span>
-        <span className="font-mono text-[13px] font-semibold tnum text-ink">
+        <span className="font-mono text-body font-semibold tnum text-ink">
           {fmtValue(total)}
         </span>
       </div>
@@ -228,6 +249,7 @@ function SideColumn({
               .join(" · ")}
             value={p.value}
             onRemove={() => onRemovePlayer(p.id)}
+            player={{ name: p.name, team: p.team, playerId: p.id }}
           />
         ))}
         {picks.map((pk) => (
@@ -239,7 +261,7 @@ function SideColumn({
           />
         ))}
         {players.length + picks.length === 0 && (
-          <p className="px-0.5 py-2 text-[11px] leading-snug text-faint">
+          <p className="px-0.5 py-2 text-meta leading-snug text-faint">
             Nothing yet - add a player or a pick.
           </p>
         )}
@@ -247,13 +269,13 @@ function SideColumn({
       <div className="mt-1.5 flex gap-1.5">
         <button
           onClick={onAddPlayer}
-          className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-full border border-border text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+          className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-full border border-border text-note leading-snug font-medium text-muted transition-colors hover:border-accent hover:text-accent"
         >
           <Plus size={14} aria-hidden="true" /> player
         </button>
         <button
           onClick={onAddPick}
-          className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-full border border-border text-xs font-medium text-muted transition-colors hover:border-accent hover:text-accent"
+          className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-full border border-border text-note leading-snug font-medium text-muted transition-colors hover:border-accent hover:text-accent"
         >
           <Plus size={14} aria-hidden="true" /> pick
         </button>
@@ -464,7 +486,7 @@ export function TradeBuilder({
       <button
         onClick={evaluate}
         disabled={!hasSomething || loading}
-        className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-accent py-3 text-sm font-semibold text-accent-ink transition-opacity disabled:opacity-40"
+        className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-accent py-3 text-body leading-relaxed font-semibold text-accent-ink transition-opacity disabled:opacity-40"
       >
         {loading ? (
           <Loader2 size={16} aria-hidden="true" className="animate-spin" />
@@ -475,7 +497,7 @@ export function TradeBuilder({
       </button>
 
       {error && (
-        <p role="alert" className="mt-2 text-center text-[12px] text-negative">
+        <p role="alert" className="mt-2 text-center text-note text-negative">
           Couldn&apos;t evaluate: {error}. Try again.
         </p>
       )}
@@ -510,11 +532,11 @@ function TradeResult({
   return (
     <div className="mt-4 space-y-2">
       <div className="rounded-[--radius] border border-border bg-surface/60 p-3 text-center">
-        <div className="text-[11px] uppercase tracking-wide text-faint">Value to you</div>
-        <div className={cn("font-mono text-3xl font-semibold tnum", r.delta >= 0 ? "text-positive" : "text-negative")}>
+        <div className="text-meta uppercase tracking-wide text-faint">Value to you</div>
+        <div className={cn("font-mono text-display leading-tight font-semibold tnum", r.delta >= 0 ? "text-positive" : "text-negative")}>
           {r.delta >= 0 ? "+" : ""}{fmtValue(r.delta)}
         </div>
-        <div className="mt-0.5 text-xs text-muted">
+        <div className="mt-0.5 text-note leading-snug text-muted">
           You&apos;re <span className={cn("font-semibold", dirTone)}>{r.direction}</span>. Value is a guide, not the verdict - read below.
         </div>
         {/* Both sides as the evaluator priced them - picks labelled by who owes them. */}
@@ -522,18 +544,18 @@ function TradeResult({
           {([["send", r.give] as const, ["get", r.get] as const]).map(([k, side]) => (
             <div key={k} className="rounded-[--radius-sm] border border-border bg-bg/40 px-2 py-1.5">
               <div className="flex items-baseline justify-between gap-1">
-                <span className={cn("text-[11px] uppercase tracking-wide", k === "send" ? "text-negative" : "text-positive")}>
+                <span className={cn("text-meta uppercase tracking-wide", k === "send" ? "text-negative" : "text-positive")}>
                   you {k}
                 </span>
-                <span className="font-mono text-[11px] font-semibold tnum text-ink">
+                <span className="font-mono text-meta font-semibold tnum text-ink">
                   {fmtValue(side.total)}
                 </span>
               </div>
               <ul className="mt-0.5 space-y-0.5">
                 {side.assets.map((a) => (
-                  <li key={a.id} className="flex items-baseline justify-between gap-1 text-[11.5px] leading-snug">
+                  <li key={a.id} className="flex items-baseline justify-between gap-1 text-meta leading-snug">
                     <span className="min-w-0 truncate text-ink/85">{a.label}</span>
-                    <span className="shrink-0 font-mono text-[11px] tnum text-faint">
+                    <span className="shrink-0 font-mono text-meta tnum text-faint">
                       {fmtValue(a.value)}
                     </span>
                   </li>
@@ -578,8 +600,8 @@ function Block({
     tone === "accent" ? "text-accent" : tone === "warn" ? "text-warn" : "text-muted";
   return (
     <div className={cn("rounded-[--radius] border bg-surface/60 p-3", border)}>
-      <div className={cn("mb-1 text-[11px] font-semibold uppercase tracking-wide", head)}>{title}</div>
-      <p className="text-[13px] leading-relaxed text-ink/90">{children}</p>
+      <div className={cn("mb-1 text-meta font-semibold uppercase tracking-wide", head)}>{title}</div>
+      <p className="text-body leading-relaxed text-ink/90">{children}</p>
     </div>
   );
 }

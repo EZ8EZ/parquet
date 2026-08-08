@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, Hourglass } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildDraftIndex, getDraftBoard, getDraftSeasons } from "@/lib/lineage";
+import { getPrincipals } from "@/lib/principals";
 import { EmptyState } from "@/components/ui";
 import { cn } from "@/lib/ui";
 import { BoardPickRow } from "../parts";
@@ -21,9 +22,13 @@ export default async function DraftBoardPage({
   const highlight = pick ? parseInt(pick, 10) : NaN;
 
   const h = await getLeagueHistory();
-  const index = await buildDraftIndex(h);
+  const [index, principals] = await Promise.all([
+    buildDraftIndex(h),
+    getPrincipals(h),
+  ]);
   const [board, seasons] = await Promise.all([
-    getDraftBoard(h, season, { index }),
+    // Names the manager who was on the clock that season - see `getDraftBoard`.
+    getDraftBoard(h, season, { index, principals }),
     getDraftSeasons(h, { index }),
   ]);
 
@@ -52,7 +57,7 @@ export default async function DraftBoardPage({
       {/* Negative margin keeps the 44px tap target from adding visual space. */}
       <Link
         href="/drafts"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
       >
         <ArrowLeft size={13} aria-hidden="true" />
         Pick lineage
@@ -60,21 +65,21 @@ export default async function DraftBoardPage({
 
       <header className="mb-2">
         <div className="flex items-center justify-between gap-3">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
             Draft board
           </p>
           <Link
             href="/values"
-            className="-my-2 inline-flex min-h-11 items-center gap-1 text-[11px] font-semibold text-muted transition-colors hover:text-accent"
+            className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent"
           >
             pick values
             <ChevronRight size={12} aria-hidden="true" />
           </Link>
         </div>
-        <h1 className="font-display text-[26px] font-semibold leading-[1.1] text-ink">
+        <h1 className="font-display text-display font-semibold leading-[1.1] text-ink">
           {season} draft
         </h1>
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-[11px] tnum text-faint">
+        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 font-mono text-meta tnum text-faint">
           {board.draftId ? (
             <>
               <span className="uppercase tracking-wide">{board.type}</span>
@@ -115,7 +120,7 @@ export default async function DraftBoardPage({
                     href={`/drafts/${s.season}`}
                     aria-current={active ? "page" : undefined}
                     className={cn(
-                      "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 font-mono text-[13px] font-semibold tnum transition-colors",
+                      "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 font-mono text-body font-semibold tnum transition-colors",
                       active
                         ? "border-accent bg-accent/12 text-accent"
                         : "border-border text-muted hover:bg-surface-2",
@@ -124,7 +129,7 @@ export default async function DraftBoardPage({
                     {s.season}
                     <span
                       className={cn(
-                        "text-[11px] font-normal",
+                        "text-meta font-normal",
                         active ? "text-accent" : "text-faint",
                       )}
                     >
@@ -139,7 +144,7 @@ export default async function DraftBoardPage({
       )}
 
       {highlighted && (
-        <p className="mb-2 rounded-[--radius-sm] border border-accent/40 bg-accent/[0.07] px-2.5 py-1.5 text-[11.5px] leading-snug text-muted">
+        <p className="mb-2 rounded-[--radius-sm] border border-accent/40 bg-accent/[0.07] px-2.5 py-1.5 text-meta leading-snug text-muted">
           <span className="font-semibold text-ink">
             Pick #{highlighted.pickNo}
           </span>{" "}
@@ -173,10 +178,10 @@ export default async function DraftBoardPage({
             return (
               <section key={round}>
                 <div className="mb-1 mt-2.5 flex items-baseline justify-between gap-3">
-                  <h2 className="text-[11px] font-semibold uppercase tracking-[0.16em] text-muted">
+                  <h2 className="text-meta font-semibold uppercase tracking-[0.16em] text-muted">
                     Round {round}
                   </h2>
-                  <span className="font-mono text-[11px] tnum text-faint">
+                  <span className="font-mono text-meta tnum text-faint">
                     {picks.length} picks
                     {yours > 0 && (
                       <span className="text-accent"> · {yours} yours</span>
@@ -195,7 +200,7 @@ export default async function DraftBoardPage({
               </section>
             );
           })}
-          <p className="mt-3 text-[11px] leading-relaxed text-faint">
+          <p className="mt-3 text-meta leading-relaxed text-faint">
             Rows link to the dossier of the manager who made the pick.
             &ldquo;via&rdquo; names the roster the slot originally belonged to.
           </p>

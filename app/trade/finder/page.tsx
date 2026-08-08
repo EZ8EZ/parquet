@@ -99,7 +99,7 @@ export default async function TradeFinderPage({
                   />
                   <span className="min-w-0 flex-1">
                     <span className="flex items-center gap-1.5">
-                      <span className="min-w-0 truncate text-[13px] font-semibold leading-tight text-ink">
+                      <span className="min-w-0 truncate text-body font-semibold leading-tight text-ink">
                         {r.name}
                       </span>
                       <Tag tone={stance.tone}>{stance.label}</Tag>
@@ -107,20 +107,20 @@ export default async function TradeFinderPage({
                     {/* Two lines rather than one: a package name is the whole point of
                         the row, and truncating it to "Stephon Castle + Onyeka Ok..."
                         tells the reader nothing. */}
-                    <span className="mt-0.5 block text-[11px] leading-snug text-muted line-clamp-2">
+                    <span className="mt-0.5 block text-meta leading-snug text-muted line-clamp-2">
                       {r.bestIdea ?? "Nothing clears the bar right now."}
                     </span>
                     {r.tags.length > 0 && (
-                      <span className="mt-0.5 block truncate font-mono text-[10px] leading-tight text-faint">
+                      <span className="mt-0.5 block truncate font-mono text-micro leading-tight text-faint">
                         {r.tags.join(" · ")} · {r.trades} trades
                       </span>
                     )}
                   </span>
                   <span className="shrink-0 text-right">
-                    <span className="block font-mono text-[13px] font-semibold tnum text-accent">
+                    <span className="block font-mono text-body font-semibold tnum text-accent">
                       {r.mutual > 0 ? fmtValue(r.mutual) : "-"}
                     </span>
-                    <span className="block text-[10px] uppercase tracking-wide text-faint">
+                    <span className="block text-micro uppercase tracking-wide text-faint">
                       room
                     </span>
                   </span>
@@ -130,7 +130,7 @@ export default async function TradeFinderPage({
             );
           })}
         </ul>
-        <p className="mt-1.5 text-[11px] leading-snug text-faint">
+        <p className="mt-1.5 text-meta leading-snug text-faint">
           Room is the smaller of the two sides&apos; fit gain on the best package found.
           Scoring it on the smaller side is deliberate: if only one team gains, it is not
           a trade idea, it is a wish.
@@ -144,7 +144,7 @@ export default async function TradeFinderPage({
             <Link
               key={a.href}
               href={a.href}
-              className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-[12px] font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+              className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface/60 px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
             >
               {a.label}
             </Link>
@@ -179,7 +179,7 @@ export default async function TradeFinderPage({
     <div>
       <Link
         href={selected ? `/trade/finder?with=${partnerId}` : "/trade/finder"}
-        className="mb-1 -ml-2 inline-flex min-h-11 items-center gap-1 px-2 text-[12px] font-semibold text-muted transition-colors hover:text-accent"
+        className="mb-1 -ml-2 inline-flex min-h-11 items-center gap-1 px-2 text-note font-semibold text-muted transition-colors hover:text-accent"
       >
         <ArrowLeft size={13} aria-hidden="true" />
         {selected ? "All ideas" : "All partners"}
@@ -192,10 +192,10 @@ export default async function TradeFinderPage({
           teamLogoUrl={user?.teamLogoUrl}
         />
         <div className="min-w-0">
-          <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-accent">
+          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent">
             Trade finder
           </p>
-          <h1 className="min-w-0 font-display text-[24px] font-semibold leading-tight text-ink">
+          <h1 className="min-w-0 font-display text-display font-semibold leading-tight text-ink">
             {result.partner.name}
           </h1>
           <div className="mt-1 flex flex-wrap items-center gap-1">
@@ -210,21 +210,21 @@ export default async function TradeFinderPage({
       {/* The dossier's own words, not a paraphrase: this is the read the finder
           searched against, so the user can judge the premise before the packages. */}
       <div className="rounded-[--radius-sm] border border-border bg-surface/60 p-2.5">
-        <div className="flex items-center gap-1.5 text-[11px] font-semibold uppercase tracking-wide text-accent">
+        <div className="flex items-center gap-1.5 text-meta font-semibold uppercase tracking-wide text-accent">
           <Lightbulb size={12} aria-hidden="true" />
           How to approach them
         </div>
-        <p className="mt-1 text-[12px] leading-snug text-muted">
+        <p className="mt-1 text-note leading-snug text-muted">
           {result.dossier.approachTips[0]}
         </p>
-        <p className="mt-1 font-mono text-[11px] leading-snug text-faint">
+        <p className="mt-1 font-mono text-meta leading-snug text-faint">
           Their holes: {result.partner.weakPositions.join(", ") || "none obvious"} · Their
           surplus: {result.partner.strongPositions.join(", ") || "none obvious"} · Your
           holes: {result.you.weakPositions.join(", ") || "none obvious"}
         </p>
         <Link
           href={`/managers/${partnerId}`}
-          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-[12px] font-semibold text-accent"
+          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent"
         >
           Full dossier
           <ChevronRight size={13} aria-hidden="true" />
@@ -250,7 +250,7 @@ export default async function TradeFinderPage({
                   className="block min-h-11 rounded-[--radius] border border-border bg-surface/80 p-3 transition-colors hover:border-accent/40 hover:bg-surface-2"
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <h3 className="min-w-0 font-display text-[15px] font-semibold leading-tight text-ink">
+                    <h3 className="min-w-0 font-display text-lede font-semibold leading-tight text-ink">
                       {p.headline}
                     </h3>
                     <ChevronRight
@@ -263,7 +263,7 @@ export default async function TradeFinderPage({
                     <AssetLine label="You send" assets={p.give} />
                     <AssetLine label="You get" assets={p.get} />
                   </div>
-                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 font-mono text-[11px] tnum text-faint">
+                  <div className="mt-2 flex flex-wrap items-center gap-x-3 gap-y-1 border-t border-border pt-2 font-mono text-meta tnum text-faint">
                     <span>
                       value <DeltaValue n={p.evaluation.delta} /> (
                       {p.evaluation.deltaPct > 0 ? "+" : ""}
@@ -273,7 +273,7 @@ export default async function TradeFinderPage({
                     <span className="text-accent">room {fmtValue(p.fit.mutual)}</span>
                   </div>
                   {p.theirCase[0] && (
-                    <p className="mt-1.5 text-[12px] leading-snug text-muted">
+                    <p className="mt-1.5 text-note leading-snug text-muted">
                       <span className="font-semibold text-ink">Why they say yes: </span>
                       {p.theirCase[0]}
                     </p>
@@ -289,7 +289,7 @@ export default async function TradeFinderPage({
 
       <ul className="mt-3 space-y-1">
         {result.caveats.map((c) => (
-          <li key={c} className="text-[11px] leading-snug text-faint">
+          <li key={c} className="text-meta leading-snug text-faint">
             {c}
           </li>
         ))}
@@ -301,15 +301,15 @@ export default async function TradeFinderPage({
 function AssetLine({ label, assets }: { label: string; assets: FinderAsset[] }) {
   return (
     <div className="flex items-baseline gap-2">
-      <span className="w-[62px] shrink-0 text-[10px] uppercase tracking-wide text-faint">
+      <span className="w-[62px] shrink-0 text-micro uppercase tracking-wide text-faint">
         {label}
       </span>
-      <span className="min-w-0 flex-1 text-[12px] leading-snug text-ink">
+      <span className="min-w-0 flex-1 text-note leading-snug text-ink">
         {assets.map((a, i) => (
           <span key={a.id}>
             {i > 0 && <span className="text-faint"> + </span>}
             {a.label}
-            <span className="font-mono text-[11px] tnum text-faint"> {fmtValue(a.value)}</span>
+            <span className="font-mono text-meta tnum text-faint"> {fmtValue(a.value)}</span>
           </span>
         ))}
       </span>
@@ -327,7 +327,7 @@ function ConvictionLine({ notes }: { notes: ConvictionNote[] }) {
   if (!summary) return null;
   return (
     <p
-      className={`mt-1.5 text-[12px] leading-snug ${
+      className={`mt-1.5 text-note leading-snug ${
         summary.verdict === "supports" ? "text-accent" : "text-warn"
       }`}
     >
@@ -349,7 +349,7 @@ function FragilityLine({ note }: { note: FragilityNote | null }) {
   if (!note) return null;
   const share = Math.round(note.after.damageShare * 100);
   return (
-    <p className="mt-1.5 text-[12px] leading-snug text-muted">
+    <p className="mt-1.5 text-note leading-snug text-muted">
       <span className="font-semibold text-ink">
         {note.direction === "relieves" ? "Leans less on one man: " : "Leans more on one man: "}
       </span>
@@ -381,14 +381,14 @@ function ConvictionBlock({
       <>
         <SectionHeader title="Against your own ranking" />
         <div className="rounded-[--radius-sm] border border-border bg-surface/60 p-2.5">
-          <p className="text-[12px] leading-snug text-muted">
+          <p className="text-note leading-snug text-muted">
             You have not ranked anyone yet, so every value here is consensus only.
             Rank a board and this package will show you where you and consensus
             disagree about the players in it.
           </p>
           <Link
             href="/rank"
-            className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-[12px] font-semibold text-accent"
+            className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent"
           >
             Rank the board
             <ChevronRight size={13} aria-hidden="true" />
@@ -401,7 +401,7 @@ function ConvictionBlock({
     return (
       <>
         <SectionHeader title="Against your own ranking" />
-        <p className="text-[12px] leading-snug text-muted">
+        <p className="text-note leading-snug text-muted">
           Your board and consensus agree closely on everyone in this package, so
           there is no edge here either way.
         </p>
@@ -415,7 +415,7 @@ function ConvictionBlock({
         {notes.map((n) => (
           <li
             key={`${n.side}-${n.playerId}`}
-            className={`flex gap-1.5 rounded-[--radius-sm] border px-2.5 py-1.5 text-[12px] leading-snug text-muted ${
+            className={`flex gap-1.5 rounded-[--radius-sm] border px-2.5 py-1.5 text-note leading-snug text-muted ${
               n.verdict === "supports"
                 ? "border-accent/25 bg-accent/10"
                 : "border-warn/25 bg-warn/10"
@@ -432,7 +432,7 @@ function ConvictionBlock({
           </li>
         ))}
       </ul>
-      <p className="mt-1 text-[11px] leading-snug text-faint">
+      <p className="mt-1 text-meta leading-snug text-faint">
         Every value on this page is built from consensus ranks, which is what makes
         the comparison meaningful. Your ranking annotates the packages here; it does
         not reprice them, so a package this page suggests still prices identically on{" "}
@@ -455,7 +455,7 @@ function PackageDetail({
   const e = pkg.evaluation;
   return (
     <>
-      <h2 className="mt-4 font-display text-[19px] font-semibold leading-tight text-ink">
+      <h2 className="mt-4 font-display text-lede font-semibold leading-tight text-ink">
         {pkg.headline}
       </h2>
 
@@ -490,7 +490,7 @@ function PackageDetail({
             {pkg.pushback.map((l) => (
               <li
                 key={l}
-                className="flex gap-1.5 rounded-[--radius-sm] border border-warn/25 bg-warn/10 px-2.5 py-1.5 text-[12px] leading-snug text-muted"
+                className="flex gap-1.5 rounded-[--radius-sm] border border-warn/25 bg-warn/10 px-2.5 py-1.5 text-note leading-snug text-muted"
               >
                 <ThumbsDown size={12} aria-hidden="true" className="mt-0.5 shrink-0 text-warn" />
                 {l}
@@ -528,7 +528,7 @@ function Bullets({ lines }: { lines: string[] }) {
   return (
     <ul className="space-y-1">
       {lines.map((l) => (
-        <li key={l} className="flex gap-1.5 text-[12px] leading-snug text-muted">
+        <li key={l} className="flex gap-1.5 text-note leading-snug text-muted">
           <span aria-hidden="true" className="mt-1.5 size-1 shrink-0 rounded-full bg-accent" />
           {l}
         </li>
@@ -555,11 +555,11 @@ function Read({
       }
     >
       <div
-        className={`text-[10px] font-semibold uppercase tracking-wide ${accent ? "text-accent" : "text-faint"}`}
+        className={`text-micro font-semibold uppercase tracking-wide ${accent ? "text-accent" : "text-faint"}`}
       >
         {label}
       </div>
-      <p className="mt-0.5 text-[12px] leading-snug text-muted">{text}</p>
+      <p className="mt-0.5 text-note leading-snug text-muted">{text}</p>
     </div>
   );
 }
@@ -574,8 +574,8 @@ function AssetTable({
   return (
     <div className="rounded-[--radius-sm] border border-border bg-surface/60">
       <div className="flex items-center justify-between border-b border-border px-2.5 py-1.5">
-        <span className="text-[10px] uppercase tracking-wide text-faint">{title}</span>
-        <span className="font-mono text-[11px] tnum text-muted">
+        <span className="text-micro uppercase tracking-wide text-faint">{title}</span>
+        <span className="font-mono text-meta tnum text-muted">
           {fmtValue(side.total)}
           {side.avgAge != null && ` · avg ${side.avgAge}`}
         </span>
@@ -583,12 +583,12 @@ function AssetTable({
       <ul className="divide-y divide-border">
         {side.assets.map((a) => (
           <li key={a.id} className="flex items-center gap-2 px-2.5 py-1.5">
-            <span className="min-w-0 flex-1 truncate text-[12px] text-ink">{a.label}</span>
-            {a.tier && <span className="shrink-0 text-[10px] text-faint">{a.tier}</span>}
+            <span className="min-w-0 flex-1 truncate text-note text-ink">{a.label}</span>
+            {a.tier && <span className="shrink-0 text-micro text-faint">{a.tier}</span>}
             {a.age != null && (
-              <span className="shrink-0 font-mono text-[10px] tnum text-faint">{a.age}</span>
+              <span className="shrink-0 font-mono text-micro tnum text-faint">{a.age}</span>
             )}
-            <span className="shrink-0 font-mono text-[12px] tnum font-semibold text-ink">
+            <span className="shrink-0 font-mono text-note tnum font-semibold text-ink">
               {fmtValue(a.value)}
             </span>
           </li>
