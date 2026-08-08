@@ -23,6 +23,33 @@ function utcYmd(ts: number): string {
   return new Date(ts).toISOString().slice(0, 10);
 }
 
+/**
+ * The same trick, to the minute, for the one surface that goes stale while you read
+ * it. Everything else in Parquet is stable between visits; /lab/startline is about
+ * tonight, so it has to say when "tonight" was read. The instant is still decided on
+ * the server - only its rendering is local.
+ */
+export function LocalTime({ ts, className }: { ts: number; className?: string }) {
+  const text = useSyncExternalStore(
+    subscribe,
+    () =>
+      new Date(ts).toLocaleTimeString(undefined, {
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
+    () => `${new Date(ts).toISOString().slice(11, 16)} UTC`,
+  );
+  return (
+    <time
+      dateTime={new Date(ts).toISOString()}
+      className={className}
+      suppressHydrationWarning
+    >
+      {text}
+    </time>
+  );
+}
+
 export function LocalDate({ ts, className }: { ts: number; className?: string }) {
   const text = useSyncExternalStore(
     subscribe,

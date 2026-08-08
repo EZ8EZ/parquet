@@ -1,11 +1,17 @@
 /**
- * LOCK-IN SOURCE DATA - the two Sleeper endpoints the regret ledger needs, and
- * nothing else in the app touches.
+ * LOCK-IN SOURCE DATA - the three Sleeper endpoints the Lab's lock-in surfaces need,
+ * and nothing else in the app touches.
+ *
+ * Two readers now: /lab/regret (the season, in hindsight) and /lab/startline (the
+ * week in front of you). They share this file rather than each growing a loader,
+ * because the expensive half is the MEMO, not the parsing - a manager who reads the
+ * ledger and then the start line should pay once for the lineups they have in common.
  *
  * ---------------------------------------------------------------------------------
  * Cost discipline (D25)
  * ---------------------------------------------------------------------------------
- * This module is loaded ON DEMAND by /lab/regret and is NEVER reachable from
+ * This module is loaded ON DEMAND by /lab/regret and /lab/startline and is NEVER
+ * reachable from
  * `assembleCorpus()`. The corpus cold path is a 1.4s budget to protect, and a full
  * season here is ~23 matchup requests plus one per player who spent a week on the
  * roster (30-60), which would triple it for two pages' benefit. Everything is
@@ -24,6 +30,24 @@
  *  - `GET /stats/nba/player/{id}?season_type=regular&season={s}&grouping=week` returns
  *    week -> array of per-GAME box scores. This is the only source for "what else was
  *    available", and it is on a different host path than /v1 entirely.
+ *  - `GET /schedule/nba/regular/{season}` returns every game of the season (1,235 rows,
+ *    ~1.05MB, ~174ms measured), each carrying `date`, `week`, `game_id`, `status` and,
+ *    per side, `team`, `points`, per-quarter `scoring` and `starters` - the actual
+ *    starting five, by player id. This is what lets the start line say which nights a
+ *    rostered player still has left, and whether a past line was posted from the five
+ *    or from the bench.
+ *
+ *    TWO CAUTIONS, both load-bearing:
+ *     1. UNPLAYED games are present with `starters` ALREADY POPULATED. That array is a
+ *        projection until `status` says the game finished, and it must never be
+ *        presented as fact. Callers get `status` and are expected to gate on it.
+ *     2. `starters` proves who STARTED. It does not prove who was OUT. Sleeper carries
+ *        only a player's CURRENT `injury_status` and no historical inactive list
+ *        anywhere, so "not in the five" is the strongest claim this data supports.
+ *        "Was out injured" is not available at any price and is not said.
+ *
+ *    Measured on the real endpoint: a season that has not tipped off returns `[]`
+ *    (2026 does today), so an empty season is a normal reply, not a failure.
  *
  * VERIFIED HERE, NOT ASSUMED. Two facts were established against the real league
  * before any of this was written, because the whole feature is wrong without them:
@@ -60,11 +84,66 @@ export interface PlayerGame {
   /** ISO date, e.g. "2025-11-17". */
   date: string | null;
   opponent: string | null;
+  /** Joins this line to `ScheduleGame.gameId`, which is where the quarters live. */
+  gameId: string | null;
+  /** True when the player's team was the road side. */
+  isAway: boolean | null;
   /** Seconds played. 0 for a DNP that still appears in the feed. */
   secondsPlayed: number;
   /** The raw stat line. Scored by the LEAGUE's own settings, never by `pts_std`. */
   stats: Record<string, number>;
 }
+
+/** One side of a scheduled NBA game. */
+export interface ScheduleSide {
+  team: string | null;
+  points: number | null;
+  /**
+   * The starting five, by Sleeper player id. PRE-POPULATED on games that have not
+   * been played - see the header. Only trustworthy once `status` is "complete".
+   */
+  starters: string[];
+  /** Points scored in each regulation quarter, in order. Overtime is excluded. */
+  quarters: number[];
+}
+
+/** One NBA game as the league schedule reports it. */
+export interface ScheduleGame {
+  gameId: string;
+  /** ISO date, e.g. "2025-11-18". */
+  date: string | null;
+  /** The FANTASY week this game falls in, straight from Sleeper. Never derived. */
+  week: number | null;
+  /** "complete", "postponed", "canceled", or a pre-game value. */
+  status: string | null;
+  home: ScheduleSide;
+  away: ScheduleSide;
+}
+
+const RawSide = z.object({
+  team: z.string().nullish(),
+  points: z.number().nullish(),
+  starters: z.array(z.string()).nullish(),
+  scoring: z
+    .array(
+      z.object({
+        number: z.number().nullish(),
+        points: z.number().nullish(),
+        type: z.string().nullish(),
+      }),
+    )
+    .nullish(),
+});
+const RawSchedule = z.array(
+  z.object({
+    game_id: z.string(),
+    date: z.string().nullish(),
+    week: z.number().nullish(),
+    status: z.string().nullish(),
+    home: RawSide,
+    away: RawSide,
+  }),
+);
 
 const RawMatchup = z.object({
   roster_id: z.number(),
@@ -80,6 +159,8 @@ const RawGame = z.object({
   date: z.string().nullish(),
   opponent: z.string().nullish(),
   week: z.number().nullish(),
+  game_id: z.string().nullish(),
+  is_away_team: z.boolean().nullish(),
   stats: z.record(z.string(), z.number()).nullish(),
 });
 /** Keyed by week number as a string. `[]` for a season with no data at all. */
@@ -107,6 +188,7 @@ interface Slot<T> {
 const TTL_MS = 30 * 60 * 1000;
 const matchupCache = new Map<string, Slot<LockInMatchup[]>>();
 const statsCache = new Map<string, Slot<Map<number, PlayerGame[]>>>();
+const scheduleCache = new Map<string, Slot<ScheduleGame[]>>();
 
 async function memo<T>(
   cache: Map<string, Slot<T>>,
@@ -136,6 +218,7 @@ async function memo<T>(
 export function invalidateLockInCache(): void {
   matchupCache.clear();
   statsCache.clear();
+  scheduleCache.clear();
 }
 
 // ---------------------------------------------------------------- loaders
@@ -154,6 +237,37 @@ export async function loadLockInWeek(
       startersPoints: m.starters_points ?? [],
       players: m.players ?? [],
       points: m.points ?? 0,
+    }));
+  });
+}
+
+/**
+ * Every NBA game of a season, with its fantasy week, its quarters and its starting
+ * fives. ONE request for the whole season - and an empty array for a season that has
+ * not tipped off, which is a fact to report rather than an error to swallow.
+ */
+export async function loadSeasonSchedule(season: string): Promise<ScheduleGame[]> {
+  return memo(scheduleCache, season, async () => {
+    const raw = await getJson(`${STATS}/schedule/nba/regular/${season}`, RawSchedule);
+    const side = (s: z.infer<typeof RawSide>): ScheduleSide => ({
+      team: s.team ?? null,
+      points: s.points ?? null,
+      starters: s.starters ?? [],
+      // Regulation only. Overtime periods ride in the same array under a different
+      // `type`, and a "margin after three quarters" reading that silently absorbed
+      // them would not be the reading it claims to be.
+      quarters: (s.scoring ?? [])
+        .filter((q) => q.type === "quarter")
+        .sort((a, b) => (a.number ?? 0) - (b.number ?? 0))
+        .map((q) => q.points ?? 0),
+    });
+    return raw.map((g) => ({
+      gameId: g.game_id,
+      date: g.date ?? null,
+      week: g.week ?? null,
+      status: g.status ?? null,
+      home: side(g.home),
+      away: side(g.away),
     }));
   });
 }
@@ -178,6 +292,8 @@ export async function loadPlayerSeason(
         games.map((g) => ({
           date: g.date ?? null,
           opponent: g.opponent ?? null,
+          gameId: g.game_id ?? null,
+          isAway: g.is_away_team ?? null,
           secondsPlayed: g.stats?.sp ?? 0,
           stats: g.stats ?? {},
         })),
