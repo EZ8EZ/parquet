@@ -616,6 +616,18 @@ function TradeResult({
       <Block title="The assumption that has to be true" tone="accent">{r.keyAssumption}</Block>
       <Block title="What your history says" tone="warn">{r.historyCheck}</Block>
       {r.consolidationNote && <Block title="Consolidation">{r.consolidationNote}</Block>}
+      {/* One line per pick in the deal. A list rather than a paragraph because each
+          note is about a DIFFERENT pick, and running them together would read as one
+          claim about the trade rather than several about its parts. */}
+      {r.agencyNotes.length > 0 && (
+        <Block title="Whose season decides the picks" block>
+          <ul className="space-y-1.5">
+            {r.agencyNotes.map((n, i) => (
+              <li key={i}>{n}</li>
+            ))}
+          </ul>
+        </Block>
+      )}
 
       {counterparty && (
         <div className="rounded-[--radius] border border-border bg-surface p-3">
@@ -653,10 +665,18 @@ function Block({
   title,
   children,
   tone = "neutral",
+  /**
+   * Skip the wrapping `<p>`. Every other block here is one paragraph, but the pick
+   * agency block is a LIST (one note per pick), and a `<ul>` inside a `<p>` is
+   * invalid HTML that React fixes up at hydration time and not before - which this
+   * codebase has already paid for once (D30's nested-anchor bug).
+   */
+  block = false,
 }: {
   title: string;
   children: React.ReactNode;
   tone?: "neutral" | "accent" | "warn";
+  block?: boolean;
 }) {
   const border =
     tone === "accent" ? "border-accent-edge" : tone === "warn" ? "border-warn/30" : "border-border";
@@ -665,7 +685,11 @@ function Block({
   return (
     <div className={cn("rounded-[--radius] border bg-surface p-3", border)}>
       <div className={cn("mb-1 text-meta font-semibold uppercase tracking-wide", head)}>{title}</div>
-      <p className="text-body leading-relaxed text-ink/90">{children}</p>
+      {block ? (
+        <div className="text-body leading-relaxed text-ink/90">{children}</div>
+      ) : (
+        <p className="text-body leading-relaxed text-ink/90">{children}</p>
+      )}
     </div>
   );
 }
