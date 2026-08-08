@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { buildFixtureHistory } from "../testing/fixtureHistory";
 import { MANAGERS } from "../providers/fixture/data";
+import { deriveManagerProfile } from "../derive/manager";
+import { draftCaptureProfiles } from "../metrics/skill";
+import { getPrincipals, tenureSeasons } from "../principals";
 import { AWARD_GROUPS, awardsSummary, computeAwards, type Award } from "./index";
 
 const rosterFor = (archetype: string) =>
@@ -137,7 +140,12 @@ describe("league awards", () => {
   it("names an initiator and a responder, and they are not the same manager", () => {
     const init = byId(awards, "initiator")!;
     const resp = byId(awards, "responder")!;
-    expect(init.winner.rosterId).not.toBe(resp.winner.rosterId);
+    // KEYED BY OWNER, NOT ROSTER: the fixture's roster 9 succession means a departed
+    // principal and their successor share a rosterId (the departed manager's
+    // `lastRosterId` is the same seat as the successor's `currentRosterId`), so
+    // comparing `rosterId` alone can no longer tell two different managers apart.
+    // Comparing `ownerId` is the only identity check D22 sanctions.
+    expect(init.winner.ownerId).not.toBe(resp.winner.ownerId);
     expect(init.winner.value).toBeGreaterThan(0.5);
     expect(resp.winner.value).toBeGreaterThan(0.5);
   });
@@ -177,5 +185,123 @@ describe("league awards on an empty corpus", () => {
     const h = buildFixtureHistory();
     const bare = { ...h, rosters: [], rostersById: new Map() };
     expect(await computeAwards(bare)).toEqual([]);
+  });
+});
+
+/**
+ * REGRESSION: /awards crowned a partnership with ZERO real deals in it, and a
+ * separate "busiest pairing" headline blended two different people's trade counts
+ * into one number. Both trace to the same seat-keyed lookup this session's D22 fixed:
+ * `TradePartner` used to be counted by roster id, so every deal a departed manager
+ * ever made was folded into whoever holds that seat NOW.
+ *
+ * Roster 9 is the fixture's real succession: "BigTrades" (u9, 2022-2024) traded with
+ * "yagevlevi" (u2) 5 times and with "WaiverWade" (u7) once; "kdewitt4" (u15,
+ * 2025-2026, the successor) traded with yagevlevi 3 times and has NEVER dealt with
+ * WaiverWade at all. A seat-keyed read of "roster 9's trade partners" cannot tell
+ * these apart - it would report roster 9 as having 8 deals with yagevlevi (5+3,
+ * blended) and at least one with WaiverWade attributed to whoever is asking, even
+ * though kdewitt4 personally has zero.
+ */
+describe("trade partners are keyed by principal, not by seat, across a real succession", () => {
+  const h = buildFixtureHistory();
+
+  it("the successor's own trade partners never include a manager who only ever dealt with their predecessor", async () => {
+    const principals = await getPrincipals(h);
+    const successor = principals.principals.find((p) => p.ownerId === "u15")!;
+    const scoped = deriveManagerProfile(
+      h,
+      9,
+      {
+        ownerId: successor.ownerId,
+        displayName: successor.displayName,
+        teamName: successor.teamName,
+        seasons: tenureSeasons(successor, 9),
+      },
+      principals,
+    );
+    // WaiverWade (u7) has zero real deals with kdewitt4 - all of that relationship is
+    // the predecessor's. A principal-scoped read must not manufacture one.
+    expect(scoped.tradePartners.some((p) => p.ownerId === "u7")).toBe(false);
+    // yagevlevi is a real, distinct 3-deal relationship - not the blended 8.
+    const yagevlevi = scoped.tradePartners.find((p) => p.ownerId === "u2");
+    expect(yagevlevi?.count).toBe(3);
+  });
+
+  it("an unscoped read of the same seat DOES blend both eras - proving the fixture can reproduce the bug", async () => {
+    const principals = await getPrincipals(h);
+    // No scope at all: the exact seat-keyed shape every reader used before D22.
+    const unscoped = deriveManagerProfile(h, 9, undefined, principals);
+    expect(unscoped.trades).toBe(33); // 18 (BigTrades) + 15 (kdewitt4), blended
+    const yagevlevi = unscoped.tradePartners.find((p) => p.ownerId === "u2");
+    expect(yagevlevi?.count).toBe(8); // 5 + 3 - the exact "zero deals"-adjacent bug
+    // WaiverWade DOES show up once the two eras are blended - this is what
+    // manufactures a relationship kdewitt4 never actually had.
+    expect(unscoped.tradePartners.some((p) => p.ownerId === "u7")).toBe(true);
+  });
+
+  it("the departed predecessor keeps their own 5-deal yagevlevi relationship, untouched by the handover", async () => {
+    const principals = await getPrincipals(h);
+    const predecessor = principals.principals.find((p) => p.ownerId === "u9")!;
+    const scoped = deriveManagerProfile(
+      h,
+      9,
+      {
+        ownerId: predecessor.ownerId,
+        displayName: predecessor.displayName,
+        teamName: predecessor.teamName,
+        seasons: tenureSeasons(predecessor, 9),
+      },
+      principals,
+    );
+    expect(scoped.tradePartners.find((p) => p.ownerId === "u2")?.count).toBe(5);
+    expect(scoped.tradePartners.some((p) => p.ownerId === "u7")).toBe(true);
+  });
+
+  it("the league-wide 'Best Friends Forever' pairing never reports roster 9's blended total", async () => {
+    // Whatever pairing wins or places, none of it may credit a 9-vs-someone
+    // relationship with 8 trades (5+3 blended) - only the real, era-scoped counts.
+    const awards = await computeAwards(h);
+    const pairing = byId(awards, "trade-pairing");
+    expect(pairing).toBeDefined();
+    const entries = [pairing!.winner, ...pairing!.runnersUp];
+    const roster9Pairs = entries.filter(
+      (e) => e.rosterId === 9 || e.partnerRosterId === 9,
+    );
+    for (const e of roster9Pairs) {
+      expect(e.value).not.toBe(8);
+    }
+  });
+});
+
+/**
+ * REGRESSION: draft picks credited to the successor. `draftCaptureProfiles` resolves
+ * each made pick to `ownerAt(season, rosterId)`, not to whoever holds the seat today
+ * - roster 9's 2023-2024 rookie picks belong to "BigTrades" (u9), and its 2025 pick
+ * belongs to "kdewitt4" (u15), even though both eras drafted from the same slot.
+ */
+describe("draft capture is credited to whoever actually made the pick, across a real succession", () => {
+  const h = buildFixtureHistory();
+
+  it("splits roster 9's draft picks across the two principals by season, not by seat", async () => {
+    const principals = await getPrincipals(h);
+    const capture = await draftCaptureProfiles(h, principals);
+
+    const predecessor = capture.get("u9");
+    expect(predecessor).toBeDefined();
+    expect(predecessor!.seasons).toEqual(["2023", "2024"]);
+    expect(predecessor!.picks).toBe(6); // 3 rounds x 2 draft seasons
+
+    const successor = capture.get("u15");
+    expect(successor).toBeDefined();
+    expect(successor!.seasons).toEqual(["2025"]);
+    expect(successor!.picks).toBe(3); // 3 rounds x 1 draft season (2026 is pre_draft)
+
+    // Neither principal's graded picks leak into the other's season list - the
+    // seat-keyed bug would put all nine of roster 9's rookie-draft picks on whoever
+    // holds the seat today (kdewitt4), rather than splitting 6/3 by who actually made
+    // each one.
+    expect(predecessor!.picks + successor!.picks).toBe(9);
+    expect(successor!.picks).not.toBe(9);
   });
 });

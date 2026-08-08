@@ -115,11 +115,12 @@ export interface TradeRecord {
   summary: string;
   sides: TradeSideText[];
   /**
-   * True when at least one pick on this trade was inferred rather than recorded
-   * (commissioner-executed deals lose their pick data - D19). The "(inferred)" marker
-   * is already inside the pick labels; this flag lets the receipt say so up front.
+   * True when this deal was reconstructed from commissioner rows (D19). Those rows
+   * carry `draft_picks: []`, so the deal's pick component - if it had one - is not in
+   * the record and cannot be recovered. This is a CHECKED fact about the source rows,
+   * not an inference about the deal's contents; the receipt says so up front.
    */
-  hasInferredPicks: boolean;
+  commissionerExecuted: boolean;
 }
 
 /**
@@ -214,11 +215,10 @@ export interface AssetMove {
   /** `p:<playerId>` or `k:<season>-<round>-<originalRoster>`. */
   assetKey: string;
   kind: AssetKind;
-  /** Player name, or a pick label that already carries any "(inferred)" marker. */
+  /** Player name, or a pick label. */
   label: string;
   /** For a pick that has since been used: the player it became. */
   became: string | null;
-  inferred: boolean;
   tradeId: string;
   season: string;
   week: number;
@@ -322,6 +322,7 @@ export function buildTradeLedger(
       parties,
       ownerParties,
       multiTeam,
+      commissionerExecuted: t.transactionId.startsWith("coalesced-"),
       summary: describeTransaction(h, t),
       sides: parties.map((rid) => {
         const ownerId = principals.ownerAt(t.season, rid);
@@ -335,7 +336,6 @@ export function buildTradeLedger(
           text: describeTradeForRoster(h, t, rid),
         };
       }),
-      hasInferredPicks: t.draftPicks.some((dp) => dp.inferred === true),
     });
 
     for (let i = 0; i < ownerParties.length; i++) {
@@ -441,7 +441,6 @@ export function buildAssetMoves(
         kind: "player",
         label: h.players.get(pid)?.fullName ?? `Player ${pid}`,
         became: null,
-        inferred: false,
         tradeId: t.transactionId,
         season: t.season,
         week: t.week,
@@ -460,7 +459,6 @@ export function buildAssetMoves(
         id: `${t.transactionId}|${key}`,
         assetKey: key,
         kind: "pick",
-        // pickLabel already carries "(inferred)" when the pick was inferred.
         // Origin qualifier per the /drafts lineage convention: a pick moving on
         // from someone other than its original roster names where it came from,
         // so two same-round pick nodes in one chain stay distinguishable.
@@ -469,7 +467,6 @@ export function buildAssetMoves(
           dp.rosterId !== dp.previousOwnerId ? rosterName(h, dp.rosterId) : null,
         ),
         became: pickPlayers[key] ?? null,
-        inferred: dp.inferred === true,
         tradeId: t.transactionId,
         season: t.season,
         week: t.week,

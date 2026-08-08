@@ -19,6 +19,9 @@ import { fmtValue } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTeamUrl } from "@/lib/sleeperLinks";
 import { ordinal } from "@/lib/derive/describe";
+import { posturesByRoster, readPickAgency, summarizeAgency } from "@/lib/agency";
+import { loadDraftOrderFidelity } from "@/lib/agency/source";
+import { PickAgencyPanel } from "@/components/PickAgencyPanel";
 
 export const dynamic = "force-dynamic";
 
@@ -156,7 +159,29 @@ export default async function RosterPage() {
   };
   const longest = tl?.assets.slice(0, 3) ?? [];
   const shortest = tl ? [...tl.assets].slice(-3).reverse() : [];
-  const form = (await currentFormByRoster(h)).get(rosterId);
+  const forms = await currentFormByRoster(h);
+  const form = forms.get(rosterId);
+
+  /*
+   * PICK AGENCY. The join nobody had made: a pick's outcome is decided by whoever's
+   * season orders the draft it sits in, which the corpus has always known as the
+   * pick's ORIGINAL roster. Both inputs are already in hand - `timelines` is the same
+   * league-wide pass the timeline card uses, and `forms` is the map the header
+   * already awaited - so the whole read costs one array walk (lib/agency).
+   *
+   * `loadDraftOrderFidelity` adds NO requests either: it reads the draft index and
+   * the per-season rosters, both memoized on-demand loaders this page already pays
+   * for through `loadProvenanceSource` and `currentFormByRoster`. It is here because
+   * the premise "your own pick is an instrument" assumes a mapping from record to
+   * slot, and in this league that mapping is loose. Printing the measurement beside
+   * the claim is the honest version of making the claim at all.
+   */
+  const agencyInputs = { postures: posturesByRoster(timelines), forms };
+  const agencyReads = a.picks.picks.map((p) =>
+    readPickAgency(h, rosterId, p, agencyInputs),
+  );
+  const agency = summarizeAgency(agencyReads);
+  const orderFidelity = await loadDraftOrderFidelity(h);
 
   return (
     <div>
@@ -327,6 +352,9 @@ export default async function RosterPage() {
                   playerId={fr.singlePointOfFailure.playerId}
                   size="sm"
                   className="mt-0.5"
+                  // The sentence beside this never names his NBA team, so the crest
+                  // is new information here rather than a second copy of one.
+                  teamBadge
                 />
                 <p className="text-note leading-snug text-muted">
                   Season hinges on{" "}
@@ -465,6 +493,26 @@ export default async function RosterPage() {
             );
           })}
         </ul>
+      )}
+
+      {/* WHOSE SEASON DECIDES THEM. The list above says what you hold; this says
+          whether the outcome is yours. A pick set by your own season is an
+          instrument you act on, and a pick set by somebody else's is a claim on
+          their intentions - the same asset on the balance sheet, two different
+          things to own. */}
+      {agencyReads.length > 0 && (
+        <>
+          <SectionHeader
+            title="Whose season decides them"
+            href="/league"
+            cta="every posture"
+          />
+          <PickAgencyPanel
+            reads={agencyReads}
+            summary={agency}
+            orderNote={orderFidelity.note}
+          />
+        </>
       )}
 
       {/* Both shape charts in one card - two section headers and two card

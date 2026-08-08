@@ -160,7 +160,54 @@ unrelated pick hops spanning three seasons to a single 2023 deal, because the on
 available signal ("both parties are in this trade") is far too weak. Fabricating trade
 contents is worse than an acknowledged gap, especially for a product whose entire
 premise is an honest record. Unattributable hops surface separately via
-`unrecordedPickMoves()`, and anything inferred is labelled "(inferred)" in the UI.
+`unrecordedPickMoves()`.
+
+**Second pass: the inference engine came back, uncalled, and was deleted again - and
+the "(inferred)" caveat went with it.** A hardened `attachInferredPicks` survived in
+`lib/derive/coalesce.ts` with **zero callers**, so `inferred: true` was set nowhere in
+the running app. Every piece of UX built on it - the "(inferred)" suffix in
+`pickLabel`, the `inferred` pill on the receipt, the `pick inferred` note on the
+provenance rail, the `hasInferredPicks` warn card - was honesty machinery for a
+condition that **had never once occurred on real data**, which reads as a disclosure
+and is really just decoration.
+
+Re-measured against NSL Fantasy Hoops before deciding, and the hardening changed
+nothing. The league contains exactly **one** coalesced commissioner trade
+(2023-07-03, EZ8 / aidsnuge / kdewitt4 - Booker, Poole, Klay, Ayton, players only),
+so the function's ambiguity guard (`matches.length !== 1`) can never fire: with one
+candidate, "ambiguous" is unreachable by construction. Its season floor
+(`pick.season >= trade.season`) excludes nothing either, because a 2023 trade admits
+2023, 2024 and 2025 picks alike. The result was the original six wrong hops, verbatim:
+
+    2024 1st (orig. vood12)     EZ8      -> kdewitt4
+    2023 1st (orig. EZ8)        EZ8      -> aidsnuge
+    2023 1st (orig. aidsnuge)   aidsnuge -> EZ8
+    2025 1st (orig. aidsnuge)   aidsnuge -> kdewitt4
+    2024 1st (orig. nathang21)  aidsnuge -> kdewitt4
+    2023 2nd (orig. kdewitt4)   kdewitt4 -> aidsnuge
+
+Six first-rounders across three draft classes, hung on a four-player deal that moved
+no picks. And each has a **better** explanation the algorithm is structurally blind
+to, because it only ever considers coalesced trades as candidates: EZ8 and kdewitt4
+made a recorded seven-pick blockbuster on 2024-01-07, and aidsnuge and kdewitt4 a
+recorded two-pick deal on 2023-12-15 - both inside the same league year as the July
+row, both at least as plausible, neither ever weighed. The signal is not merely weak;
+the candidate set is wrong.
+
+So: `attachInferredPicks` is deleted, `DraftPickRef.inferred` and
+`TradeRecord.hasInferredPicks` are deleted, and the four UI markers are deleted.
+`lib/derive/coalesce.test.ts` now pins the reconstruction AND pins that a coalesced
+trade comes out with `draftPicks: []`, so a third attempt fails a test rather than
+sitting dormant.
+
+**What replaced the caveat is a caveat that is actually true.** `commissionerExecuted`
+is a *checked property of the source rows* (the transaction id is `coalesced-`), not a
+claim about contents, and it fires on that real 2023 deal: the receipt says "Pick
+record missing - if picks changed hands here, they are not below, and the app will not
+guess which ones," and the deals list tags it `no pick record`. Rejected: wiring the
+function in as-is (it fabricates); keeping the "(inferred)" vocabulary against a
+condition that cannot occur (a disclosure that never fires is worse than none, because
+its silence reads as "nothing to disclose").
 
 ## D20. Tilt signal (trades after a loss) left fixture-only
 Deriving it live requires ~110 matchup requests and measured ~15s of cold start.
@@ -272,6 +319,12 @@ for players looks better than they were, and a manager who traded players for pi
 worse.** Pick capital is reported separately and honestly by `lib/picks.ts`. Rejected:
 folding in the picks we do have (produces a confidently wrong total); dropping the metric
 (the player side is real and complete).
+
+Note on D19's second pass: nothing here changes. The pick side of commissioner trades
+was never actually present - the `inferred` flag that once implied it might be turned
+out to be dead code that never set itself on real data - so this bias was always the
+whole truth about picks, not a partial one. The trades it applies to are now visibly
+marked `no pick record` rather than potentially "(inferred)".
 
 ## D25. Per-season rosters, per-season users and the draft index load OUTSIDE the corpus
 `getPrincipals()` costs two requests per season and `loadSeasonRosters()` one, and only
@@ -1324,8 +1377,12 @@ and because the app holds no historical ranking snapshots a value-at-trade-time 
 is **not available** - so the copy says today, and only today. D24: players only, with
 the direction of the bias stated out loud (a side that sent picks for players looks
 better here than it was; a side that sold for picks looks worse), and the picks listed
-above unpriced. D19: a deal carrying inferred picks says so in a warn card at the top,
-before any number.
+above unpriced. D19: a commissioner-executed deal says so in a warn card at the top,
+before any number - and since D19's second pass that card says the pick record is
+**missing**, not inferred. The earlier wording described an inference the app never
+made: it was gated on `hasInferredPicks`, which was computed from a flag no live code
+path ever set, so on this league the card had never rendered. The replacement is gated
+on a property of the source rows and does render, on the 2023 three-team deal.
 
 Former counterparties render `former 2022-2024` with no TCI or RFI pills. `ManagerLink`'s
 existing guard was ported into `components/TradeParts.tsx` unchanged and this is not
@@ -1527,87 +1584,75 @@ the half-measure `.figure` replaced, deleted at its final call site; a duplicate
 `globals.css` and `interaction.css` - two agents independently fixing the same
 missing-declaration bug, which is precisely how the declaration went missing.
 
-## D49. THE AGE CURVE IS MEASURED NOW, and the half that could not be measured says so
-The ten `ageAnchors` in `lib/valuation/config.ts` were hand-tuned. Every price in the
-app was bent by them, and nothing anywhere justified a single one of the numbers. The
-question they answer - "when does a dynasty asset stop being worth what it costs" - is
-also the question this product is best placed in the world to answer, because it holds
-five seasons of one league's real transactions.
+## D49. PICK AGENCY: the pick's value is a function of WHOSE SEASON sets it, and this league's draft order is not reverse standings
 
-**That framing was wrong, and finding out why is the decision.** The question splits in
-two, and only one half is answerable.
+Two numbers already described every future pick in this app - what it is worth
+(`lib/picks.ts`, priced by the strength of the team that owes it) and when it pays
+off (`lib/metrics/duration.ts`). Neither answered the question an experienced dynasty
+manager asks first: **is the outcome of this pick mine to move, or am I a passenger
+on somebody else's season?** Those are categorically different assets. A pick set by
+your own season is an instrument; a pick set by somebody else's is a claim on a
+stranger's intentions, and it is worth what THEY decide to do next.
 
-**A. When does PRODUCTION decline?** Fully reconstructable, and the sample is as large
-as you want it. This league is five seasons old; the NBA is not. The scoring settings
-are known (and, checked rather than assumed, byte-identical across all five seasons in
-the chain), the box scores are public back to 2013-14, so any historical player-season
-can be scored under this league's own formula. That is arithmetic on games that were
-actually played, not inference. `scripts/derive-age-curve.ts` does it over **4,587
-qualified player-seasons**, and `lib/valuation/ageCurve.ts` is the committed result.
+The join was small and had been sitting in plain sight for eight rounds. Every pick
+already carries its ORIGINAL roster, straight off Sleeper's traded-pick records, and
+the original roster is exactly the roster whose season orders the draft the pick sits
+in. Posture per roster (`leagueTimelines`) and current form (`currentFormByRoster`)
+both already existed. `lib/agency` puts them beside each other and costs one array
+walk over data every calling page already holds - no new requests anywhere.
 
-Three biases had to be survived, and the middle one is the whole game:
- - **Era.** Production per 36 minutes, then divided by that season's own league mean.
-   A role change is not decline and a scoring boom is not improvement.
- - **Survivorship.** The curve never compares different players. It follows the same
-   player forward five seasons, and a player who stopped clearing the bar contributes a
-   **zero, not a missing value**. This is the difference between this curve and every
-   curve that concludes 36-year-olds are fine: the 36-year-olds still playing are fine,
-   and 49% of them are not still playing. That column is published.
- - **Horizon.** A dynasty multiplier is what is left, not what is happening, so the
-   value at each age is the discounted sum of the next five seasons at 0.9 a year - the
-   same constant the pick model already uses, so the two agree what a year costs.
+**THE DRAFT ORDER HERE IS NOT REVERSE STANDINGS, AND THAT IS A MEASUREMENT, NOT A
+HEDGE.** The premise "your own pick is an instrument" quietly assumes a mapping from
+your record to your slot, and it would have been very easy to assume that mapping is
+the identity and then build lottery odds on top of it. Sleeper's league settings
+carry no draft-order rule of any kind (checked: `playoff_seed_type`, `playoff_type`,
+`playoff_teams`, and nothing else touches the draft), so the only way to know is to
+compare the ASSIGNED slot order against the previous season's final standings.
+`draftOrderFidelity` does exactly that, and on the live league **all four completed
+rookie drafts deviate from strict reverse standings, by up to four places**: in the
+2026 draft a 10-10 roster took slot 2 while a 4-16 roster took slot 5, and in 2025
+the roster that finished 11th of 14 took slot 1. So the app states the relationship
+as a tendency, models no slot, computes no odds, and prints the measurement next to
+the claim on /roster. Rejected: assuming reverse standings (contradicted by all four
+drafts on record); building a lottery simulator (the mechanism is not in the data,
+and inventing one is the D19 failure with better graphics).
 
-The hand-set curve turned out to be **too harsh on age and too generous to the early
-twenties**: 33 moves 0.62 -> 0.671, 35 moves 0.45 -> 0.570, the asserted 38 anchor of
-0.30 is gone, and 21 falls 1.14 -> 1.071. 1,479 of 1,750 priced players moved.
+Two smaller consequences worth stating. A pick is marked **settled** once the season
+that orders its draft is over, because agency is a live quantity and nobody's
+decisions move a 2026 pick any more - EZ8's own 2026 first is already spent in that
+sense, whoever holds it. And the read is deliberately available for a pick the OTHER
+side is sending, which is what lets the trade evaluator print "you are acquiring a
+pick whose value depends on a team that is contending" rather than only pricing it.
 
-**The peak stayed at exactly 1.16, and that is D28.** `theoreticalMaxMultiplier()`
-folds the largest age anchor into the constant every value is divided by, so a moved
-peak silently rescales the whole product and changes what `tierOf()`'s thresholds mean.
-The derivation scales its curve to the peak the hand-set anchors already had. Only the
-SHAPE is recalibrated, which is the entire content of an age curve - the level divides
-out. Verified bit-for-bit: the ceiling is 1.2170096908167976 before and after.
+## D50. THE BUYBACK IS A FACT WITH TWO PROVENANCES, AND NEVER AN INTENT
 
-**B. When does THIS LEAGUE stop paying?** Not reconstructable, and `lib/valuation/
-exitWindow.ts` exists to say so with numbers. A price is what fourteen specific people
-believed on a specific day; no box-score arithmetic recovers it for seasons the league
-did not exist for. So this half gets the five seasons it has: 91 trades, and after
-setting aside 46 pick-only sides, 42 with no priced player cost and 22 where picks
-outweighed players (D24), **110 usable acquisitions spread over eight age buckets**.
+`pickBuybacks` detects a manager reacquiring a pick they originally owned. It is a
+genuine behavioural tell - it is the one transaction that converts a manager's own
+season from a result into an asset they control - and the live league contains
+**fifteen recorded instances and two more the snapshot alone evidences**, including
+the one the owner described from memory: 6-Month Plan reacquiring their own 2026
+first from kdewitt4 on 2025-11-13, after 449 days away.
 
-It refuses, and the refusal is arithmetic rather than a feeling. The effect under test
-is the curve's slope, about 5% across a two-year bucket, so a bucket can only speak to
-it if no single deal carries more than 5% of the bucket. Measured concentrations run
-16% to 64%. **Every bucket fails, by a factor of three or more.** The bar is
-falsifiable, not decorative: `SUFFICIENCY` is a threshold on real quantities and a test
-pins that a thick, evenly spread bucket passes it. Nothing in the model is calibrated
-against this table, and the table is published anyway, because looking and finding
-nothing is a result.
+**IT SAYS WHAT HAPPENED AND REFUSES TO SAY WHY (D19).** Intent is not in this corpus.
+A pick can come home as a throw-in, as the cheapest matching value in somebody else's
+deal, or entirely on purpose, and nothing in the transaction log distinguishes them.
+Naming a manager a tanker from a round trip and a losing streak is precisely the
+inference D19 exists to refuse, and the copy on every surface stops at the round trip.
 
-**The gap between A and B is the actual finding, and it is a gap in what is knowable,
-not a gap in two measurements.** 32% of a player's dynasty value goes between 29 and
-34, measured. Whether this league discounts it is unanswerable here - the correlation
-between age at a trade and how the deal turned out is reported and its sign is
-explicitly worth nothing, because every bucket behind it fails the bar. One half rests
-on 4,587 player-seasons and the other on 110. Only the first is allowed to move a price.
+**TWO SOURCES, LABELLED DIFFERENTLY, because the record is honestly uneven.**
+RECORDED round trips come from a trade transaction that names the pick, so they carry
+a date, a deal to link to, and a count of the hops the pick made while away.
+SNAPSHOT-ONLY round trips are visible in Sleeper's traded-picks snapshot - the pick is
+back with its original roster, having arrived from somebody else - with no transaction
+explaining the move, which is the D19 gap: a commissioner-executed trade always
+carries `draft_picks: []`. Those are reported (the fact is real) and carry **no date
+at all** rather than a guessed one, and the UI says "no transaction records this move"
+in its own copy. Rejected: reporting only the recorded ones (silently drops real
+history); dating the snapshot-only ones from the surrounding trades (a guess about
+WHICH deal, which is exactly what D19 deleted a working engine over).
 
-**Surfacing.** `firstCliffAge()` derives, rather than hardcodes, the first age past the
-reference where the measured curve steps down harder than a typical year - 30 on this
-table, at 10.6% against a 3.6% median. A one-word marker on /values and /roster says an
-asset is past it. It is a coordinate on a published curve, never a verdict (D6): the
-model already charged him for his age, the marker only says which part of the curve did
-the charging. It is plain text in the meta line rather than a chip, because a `shrink-0`
-chip overran the sparkline and ate the position code on the tightest real row.
-
-**Cost (D25).** The derivation is offline (14 requests, ~2.5MB) and its output is a
-committed constant - a calibration does not need recomputing per request. The market
-half touches no network at all: it reads transactions already on the corpus. Nothing was
-added to `assembleCorpus()`.
-
-Rejected: tuning the anchors to the league's own trades (the D19 error, on a sample
-three times too thin); grading trades with the ordinary valuation (circular - today's
-price of a 35-year-old already carries the multiplier under test, so everything is
-priced age-blind here); extending the curve past 36 (at 37 the thinnest cell holds 15
-careers, so it holds flat and says so); keeping the old 0.30 anchor at 38 (asserted, and
-the thin cells at 37-38 sit near 0.53, not near 0.30); shipping the market half silently
-(the count of trades at each age is the thing worth knowing).
+Detection reads one hop - `previousOwner !== original && newOwner === original` - and
+never assumes the pick came straight back, which matters: EZ8's own 2024 first left
+on 2023-10-27, moved on once more while it was away, and came home 71 days later
+having changed hands three times. It also reports the same pick twice when it
+genuinely came home twice, because those are two separate decisions.

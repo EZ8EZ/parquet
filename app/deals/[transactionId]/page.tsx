@@ -22,7 +22,8 @@
  *   - D24: players only. Commissioner-executed trades arrive with `draft_picks: []`,
  *     so including the picks we happen to have would produce a total that looks
  *     complete and is not.
- *   - D19: a deal carrying inferred picks says so, out loud, at the top.
+ *   - D19: a commissioner-executed deal says so at the top - not that its picks were
+ *     inferred (they never are), but that its pick record is simply gone.
  */
 import { notFound } from "next/navigation";
 import Link from "next/link";
@@ -37,7 +38,7 @@ import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
 import { leagueTimelines, playerDuration } from "@/lib/metrics/duration";
 import { leagueFragility } from "@/lib/metrics/fragility";
 import { ordinal } from "@/lib/derive/describe";
-import { Card, Disclosure, SectionHeader, Tag } from "@/components/ui";
+import { Card, Disclosure, SectionHeader } from "@/components/ui";
 import { LocalDate } from "@/components/LocalDate";
 import { ManagerLink, PlayerNowRow } from "@/components/TradeParts";
 import { SideBars } from "@/components/charts";
@@ -157,13 +158,13 @@ export default async function DealPage({
         <p className="mt-1 text-note leading-snug text-muted">{record.summary}</p>
       </header>
 
-      {record.hasInferredPicks && (
+      {record.commissionerExecuted && (
         <Card className="mb-3 border-warn/30 bg-warn/[0.06]">
           <p className="text-note leading-snug text-muted">
-            <span className="font-semibold text-warn">Picks inferred.</span> This deal
-            was executed by the commissioner, and Sleeper records no picks against
-            those. The pick side below is reconstructed from the traded-pick snapshot
-            and is a guess about which deal moved it, not a recorded fact.
+            <span className="font-semibold text-warn">Pick record missing.</span> The
+            commissioner executed this deal by hand, and Sleeper records no picks
+            against commissioner moves. If picks changed hands here, they are not
+            below - and the app will not guess which ones.
           </p>
         </Card>
       )}
@@ -270,7 +271,6 @@ export default async function DealPage({
                         </span>
                       )}
                     </span>
-                    {dp.inferred && <Tag tone="warn">inferred</Tag>}
                   </Link>
                 </li>
               );
