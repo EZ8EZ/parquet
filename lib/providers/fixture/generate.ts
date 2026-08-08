@@ -103,6 +103,33 @@ function buildPlayers(): { players: Player[]; rankOf: Map<string, number> } {
   return { players, rankOf };
 }
 
+/**
+ * ROSTER SUCCESSION — the fixture's one team that changes hands.
+ *
+ * Mirrors the real league's own handover exactly (NSL roster 11: NSLKB 2022-2024,
+ * kdewitt4 2025-, see lib/principals.ts's header): one seat, one cutover season,
+ * everything before it belongs to the departing manager and everything from it on
+ * belongs to the successor. Roster 9 was picked because its archetype ("churner",
+ * `archetypeConfig`) already generates several trades a season with rotating
+ * counterparties — exactly the shape needed to make "zero real deals", "22 trades for
+ * someone who made 4" and "a busiest pairing blending two people" all reproducible
+ * without any bespoke scripting, the same way the rest of this generator earns its
+ * corpus from the archetype loop rather than hand-writing every transaction.
+ *
+ * `u15` is deliberately NOT one of the fourteen `MANAGERS` entries: that array is
+ * walked 1:1 against `N_TEAMS` rosters everywhere else in this file (archetype,
+ * waiver/trade volume, draft slot). Keeping the successor out of it means every one
+ * of those loops is completely undisturbed by the handover — the only thing that
+ * changes is WHO owns roster 9's seat once `SUCCESSION.cutoverSeason` arrives.
+ */
+export const SUCCESSION = {
+  rosterId: 9,
+  predecessorUserId: "u9",
+  successorUserId: "u15",
+  /** First season the successor holds the roster; the last the predecessor does. */
+  cutoverSeason: "2025",
+} as const;
+
 // ---------- Users ----------
 function buildUsers(): { users: LeagueUser[]; archetypeOf: Archetype[] } {
   const users: LeagueUser[] = MANAGERS.map((m, i) => ({
@@ -113,7 +140,29 @@ function buildUsers(): { users: LeagueUser[]; archetypeOf: Archetype[] } {
     isOwner: i === 0,
     isBot: false,
   }));
+  // The successor. Same seat (roster 9, "Blockbuster"), new person, new team name —
+  // a real handover usually comes with a rebrand, and a fixture that kept the old
+  // team name on the new owner would let a display-name bug hide behind an
+  // unchanged label.
+  users.push({
+    userId: SUCCESSION.successorUserId,
+    displayName: "kdewitt4",
+    avatar: null,
+    teamName: "Second Wave",
+    isOwner: false,
+    isBot: false,
+  });
   return { users, archetypeOf: MANAGERS.map((m) => m.archetype) };
+}
+
+/** Owner of `rosterId` as of `season` — the one seat where this can differ from the
+ *  static `users[rosterId - 1]` mapping. Every roster snapshot and every draft-pick
+ *  attribution goes through this so the succession is expressed exactly once. */
+function ownerIdForSeason(rosterId: number, season: string, users: LeagueUser[]): string {
+  if (rosterId === SUCCESSION.rosterId && season >= SUCCESSION.cutoverSeason) {
+    return SUCCESSION.successorUserId;
+  }
+  return users[rosterId - 1].userId;
 }
 
 // ---------- Corpus types ----------
@@ -669,7 +718,10 @@ export function generateCorpus(): FixtureCorpus {
   // traded away resolves to the player the ACQUIRING roster actually drafted.
   const draftsOut: Record<string, DraftMeta[]> = {};
   const draftPicksOut: Record<string, DraftPick[]> = {};
-  const ownerUserId = (rosterId: number) => users[rosterId - 1]?.userId ?? null;
+  // Season-aware: a draft held in 2025 or 2026 is roster 9's successor's draft, not
+  // the departed manager's, and `draftOrder`/`pickedBy` have to say so.
+  const ownerUserId = (rosterId: number, season: string) =>
+    ownerIdForSeason(rosterId, season, users) ?? null;
 
   // The 126 lowest-ranked players stand in for three rookie classes. Some are on
   // rosters today and some have washed out to free agency — realistic hit rate.
@@ -694,7 +746,7 @@ export function generateCorpus(): FixtureCorpus {
     order.forEach((rosterId, i) => {
       const slot = i + 1;
       slotToRosterId[slot] = rosterId;
-      const uid = ownerUserId(rosterId);
+      const uid = ownerUserId(rosterId, season);
       if (uid) draftOrder[uid] = slot;
     });
 
@@ -737,7 +789,7 @@ export function generateCorpus(): FixtureCorpus {
           round,
           draftSlot: slot,
           rosterId: madeBy,
-          pickedBy: ownerUserId(madeBy),
+          pickedBy: ownerUserId(madeBy, season),
           playerId: player?.playerId ?? null,
           isKeeper: false,
           playerName: player?.fullName ?? null,
@@ -849,7 +901,7 @@ function toDomainRoster(
   const fp = Math.round((fpts[season][r.rosterId] ?? 0) * 10) / 10;
   return {
     rosterId: r.rosterId,
-    ownerId: users[r.rosterId - 1].userId,
+    ownerId: ownerIdForSeason(r.rosterId, season, users),
     coOwners: [],
     players,
     starters: players.slice(0, 7),

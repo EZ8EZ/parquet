@@ -146,3 +146,39 @@ test("ledger annotate affordance, then the audit-log deep link into the deal rec
 
   expectNoConsoleErrors(guard);
 });
+
+/**
+ * ROSTER 9's SUCCESSION, end to end. Roster 9 is the fixture's one seat that has
+ * changed hands (lib/providers/fixture/generate.ts's `SUCCESSION`): "BigTrades" (u9)
+ * ran it 2022-2024, "kdewitt4" (u15) has run it since 2025 - the same shape as the
+ * real league's roster 11 (NSLKB -> kdewitt4, lib/principals.ts). Setting the lens to
+ * roster 9 resolves to the CURRENT occupant, kdewitt4, exactly the way
+ * `lib/history.ts`'s `getLeagueHistory` reads `r.ownerId` off today's roster snapshot.
+ *
+ * This is the one cheap, page-level check that a seat-keyed regression in the
+ * Decision Ledger would actually surface to a real user, not just to a unit test:
+ * kdewitt4's ledger must show only their own 2025-2026 decisions, never a season from
+ * BigTrades' 2022-2024 tenure on the same seat. Deliberately narrow - the unit
+ * suites in lib/ledger.test.ts, lib/strategy/strategy.test.ts, lib/dossier/ and
+ * lib/superlatives/ already pin the underlying mechanism in detail; this only checks
+ * that it actually reaches the page.
+ */
+test("viewing as the successor on a succeeded seat shows only their own tenure", async ({
+  page,
+}) => {
+  const guard = watchConsole(page);
+  await primeLens(page, 9);
+
+  await page.goto("/ledger");
+  await expectStableChrome(page);
+
+  // Every ledger entry prints its own season as a standalone four-digit label
+  // (components/LedgerItem.tsx). None of kdewitt4's should read as a season from
+  // before the 2025 handover - if one does, the predecessor's history has leaked
+  // onto the successor's page.
+  for (const season of ["2022", "2023", "2024"]) {
+    await expect(page.getByText(season, { exact: true })).toHaveCount(0);
+  }
+
+  expectNoConsoleErrors(guard);
+});
