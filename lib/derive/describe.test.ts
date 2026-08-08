@@ -44,12 +44,6 @@ describe("pickLabel", () => {
     expect(pickLabel(pick({}))).toBe("2027 3rd");
     expect(pickLabel(pick({}), "Team X")).toBe("2027 3rd (via Team X)");
   });
-
-  it("keeps the inferred flag after the origin", () => {
-    expect(pickLabel(pick({ inferred: true }), "Team X")).toBe(
-      "2027 3rd (via Team X) (inferred)",
-    );
-  });
 });
 
 describe("pick disambiguation in trade summaries", () => {

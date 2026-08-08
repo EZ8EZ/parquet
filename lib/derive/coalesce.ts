@@ -19,8 +19,16 @@
  * directions (i.e. it's an exchange, not a one-way admin fix) becomes a synthetic
  * `trade` with all adds/drops/rosters merged. One-way moves are left alone — those
  * really are admin corrections, not trades.
+ *
+ * WHAT THIS DELIBERATELY DOES NOT DO: reattach the pick component. Commissioner rows
+ * carry `draft_picks: []`, so a hand-executed trade's picks survive only in the
+ * timestamp-less traded_picks snapshot. An `attachInferredPicks` that matched orphan
+ * hops to coalesced trades by "both parties are in this deal" lived here unused and
+ * was deleted — measured against NSL Fantasy Hoops it hung six first-round picks
+ * across three draft classes on the one player-for-player deal above, every one of
+ * which a recorded trade between the same pair explains at least as well. See D19.
  */
-import type { TradedPick, Transaction } from "../providers/types";
+import type { Transaction } from "../providers/types";
 
 /** Commissioner moves this far apart still count as the same deal. */
 const WINDOW_MS = 6 * 60 * 60 * 1000; // 6 hours
@@ -150,79 +158,4 @@ export function coalesceCommissionerTrades(
 
   out.sort((a, b) => a.created - b.created);
   return { transactions: out, reconstructed };
-}
-
-/**
- * Re-attach pick movements that commissioner rows dropped.
- *
- * Because commissioner transactions always carry `draft_picks: []`, a hand-executed
- * trade's pick component exists only in the traded_picks snapshot. For every pick
- * whose ownership changed but which NO transaction records, we attach it to a
- * coalesced commissioner trade whose participating rosters match the pick's
- * from→to pair. In dynasty, picks are as important as players — losing them makes
- * the trade record wrong, not merely incomplete.
- */
-export function attachInferredPicks(
-  transactions: Transaction[],
-  tradedPicks: TradedPick[],
-): { transactions: Transaction[]; attached: number } {
-  // Key by the SPECIFIC HOP (which pick, from whom, to whom) — not just the pick's
-  // identity. Keying only on (season, round, originalRoster) was a real bug: a pick
-  // that later moved in a properly-recorded trade marked every OTHER hop of that
-  // same pick "explained", so genuinely unrecorded transfers were skipped while
-  // unrelated ones got attached.
-  const explained = new Set<string>();
-  for (const t of transactions) {
-    for (const dp of t.draftPicks) {
-      explained.add(
-        `${dp.season}|${dp.round}|${dp.rosterId}|${dp.previousOwnerId}|${dp.ownerId}`,
-      );
-    }
-  }
-  const orphans = tradedPicks.filter(
-    (tp) =>
-      tp.ownerId !== tp.rosterId &&
-      tp.previousOwnerId !== tp.ownerId &&
-      !explained.has(
-        `${tp.season}|${tp.round}|${tp.rosterId}|${tp.previousOwnerId}|${tp.ownerId}`,
-      ),
-  );
-  if (!orphans.length) return { transactions, attached: 0 };
-
-  // Only coalesced commissioner trades are candidates — those are the ones known
-  // to have lost their pick component.
-  const candidates = transactions.filter(
-    (t) => t.type === "trade" && t.transactionId.startsWith("coalesced-"),
-  );
-  if (!candidates.length) return { transactions, attached: 0 };
-
-  let attached = 0;
-  const byId = new Map(transactions.map((t) => [t.transactionId, t]));
-  for (const tp of orphans) {
-    // Both parties to the hop must be in the deal, AND the deal must be a plausible
-    // cause: only picks for the trade's season or later can have moved in it.
-    const matches = candidates.filter(
-      (t) =>
-        t.rosterIds.includes(tp.previousOwnerId) &&
-        t.rosterIds.includes(tp.ownerId) &&
-        parseInt(tp.season, 10) >= parseInt(t.season, 10),
-    );
-    // Ambiguous attribution is worse than none: if several deals could explain the
-    // hop we cannot know which, so we leave it off rather than invent a trade.
-    if (matches.length !== 1) continue;
-    const target = byId.get(matches[0].transactionId)!;
-    target.draftPicks = [
-      ...target.draftPicks,
-      {
-        round: tp.round,
-        season: tp.season,
-        rosterId: tp.rosterId,
-        ownerId: tp.ownerId,
-        previousOwnerId: tp.previousOwnerId,
-        inferred: true,
-      },
-    ];
-    attached++;
-  }
-  return { transactions: [...byId.values()], attached };
 }

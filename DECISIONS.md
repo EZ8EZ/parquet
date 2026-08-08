@@ -160,7 +160,54 @@ unrelated pick hops spanning three seasons to a single 2023 deal, because the on
 available signal ("both parties are in this trade") is far too weak. Fabricating trade
 contents is worse than an acknowledged gap, especially for a product whose entire
 premise is an honest record. Unattributable hops surface separately via
-`unrecordedPickMoves()`, and anything inferred is labelled "(inferred)" in the UI.
+`unrecordedPickMoves()`.
+
+**Second pass: the inference engine came back, uncalled, and was deleted again - and
+the "(inferred)" caveat went with it.** A hardened `attachInferredPicks` survived in
+`lib/derive/coalesce.ts` with **zero callers**, so `inferred: true` was set nowhere in
+the running app. Every piece of UX built on it - the "(inferred)" suffix in
+`pickLabel`, the `inferred` pill on the receipt, the `pick inferred` note on the
+provenance rail, the `hasInferredPicks` warn card - was honesty machinery for a
+condition that **had never once occurred on real data**, which reads as a disclosure
+and is really just decoration.
+
+Re-measured against NSL Fantasy Hoops before deciding, and the hardening changed
+nothing. The league contains exactly **one** coalesced commissioner trade
+(2023-07-03, EZ8 / aidsnuge / kdewitt4 - Booker, Poole, Klay, Ayton, players only),
+so the function's ambiguity guard (`matches.length !== 1`) can never fire: with one
+candidate, "ambiguous" is unreachable by construction. Its season floor
+(`pick.season >= trade.season`) excludes nothing either, because a 2023 trade admits
+2023, 2024 and 2025 picks alike. The result was the original six wrong hops, verbatim:
+
+    2024 1st (orig. vood12)     EZ8      -> kdewitt4
+    2023 1st (orig. EZ8)        EZ8      -> aidsnuge
+    2023 1st (orig. aidsnuge)   aidsnuge -> EZ8
+    2025 1st (orig. aidsnuge)   aidsnuge -> kdewitt4
+    2024 1st (orig. nathang21)  aidsnuge -> kdewitt4
+    2023 2nd (orig. kdewitt4)   kdewitt4 -> aidsnuge
+
+Six first-rounders across three draft classes, hung on a four-player deal that moved
+no picks. And each has a **better** explanation the algorithm is structurally blind
+to, because it only ever considers coalesced trades as candidates: EZ8 and kdewitt4
+made a recorded seven-pick blockbuster on 2024-01-07, and aidsnuge and kdewitt4 a
+recorded two-pick deal on 2023-12-15 - both inside the same league year as the July
+row, both at least as plausible, neither ever weighed. The signal is not merely weak;
+the candidate set is wrong.
+
+So: `attachInferredPicks` is deleted, `DraftPickRef.inferred` and
+`TradeRecord.hasInferredPicks` are deleted, and the four UI markers are deleted.
+`lib/derive/coalesce.test.ts` now pins the reconstruction AND pins that a coalesced
+trade comes out with `draftPicks: []`, so a third attempt fails a test rather than
+sitting dormant.
+
+**What replaced the caveat is a caveat that is actually true.** `commissionerExecuted`
+is a *checked property of the source rows* (the transaction id is `coalesced-`), not a
+claim about contents, and it fires on that real 2023 deal: the receipt says "Pick
+record missing - if picks changed hands here, they are not below, and the app will not
+guess which ones," and the deals list tags it `no pick record`. Rejected: wiring the
+function in as-is (it fabricates); keeping the "(inferred)" vocabulary against a
+condition that cannot occur (a disclosure that never fires is worse than none, because
+its silence reads as "nothing to disclose").
 
 ## D20. Tilt signal (trades after a loss) left fixture-only
 Deriving it live requires ~110 matchup requests and measured ~15s of cold start.
@@ -272,6 +319,12 @@ for players looks better than they were, and a manager who traded players for pi
 worse.** Pick capital is reported separately and honestly by `lib/picks.ts`. Rejected:
 folding in the picks we do have (produces a confidently wrong total); dropping the metric
 (the player side is real and complete).
+
+Note on D19's second pass: nothing here changes. The pick side of commissioner trades
+was never actually present - the `inferred` flag that once implied it might be turned
+out to be dead code that never set itself on real data - so this bias was always the
+whole truth about picks, not a partial one. The trades it applies to are now visibly
+marked `no pick record` rather than potentially "(inferred)".
 
 ## D25. Per-season rosters, per-season users and the draft index load OUTSIDE the corpus
 `getPrincipals()` costs two requests per season and `loadSeasonRosters()` one, and only
@@ -1324,8 +1377,12 @@ and because the app holds no historical ranking snapshots a value-at-trade-time 
 is **not available** - so the copy says today, and only today. D24: players only, with
 the direction of the bias stated out loud (a side that sent picks for players looks
 better here than it was; a side that sold for picks looks worse), and the picks listed
-above unpriced. D19: a deal carrying inferred picks says so in a warn card at the top,
-before any number.
+above unpriced. D19: a commissioner-executed deal says so in a warn card at the top,
+before any number - and since D19's second pass that card says the pick record is
+**missing**, not inferred. The earlier wording described an inference the app never
+made: it was gated on `hasInferredPicks`, which was computed from a flag no live code
+path ever set, so on this league the card had never rendered. The replacement is gated
+on a property of the source rows and does render, on the 2023 three-team deal.
 
 Former counterparties render `former 2022-2024` with no TCI or RFI pills. `ManagerLink`'s
 existing guard was ported into `components/TradeParts.tsx` unchanged and this is not
@@ -1527,69 +1584,75 @@ the half-measure `.figure` replaced, deleted at its final call site; a duplicate
 `globals.css` and `interaction.css` - two agents independently fixing the same
 missing-declaration bug, which is precisely how the declaration went missing.
 
-## D49. NBA team crests, hotlinked from the SAME CDN as everything else, and gated on nothing
-The owner asked for "player images and any other images or logos that would make things
-look even better." The player-photo half was already done (D39); this is the logo half,
-plus a robustness re-check of D39's work now that the owner is about to flip
-`NEXT_PUBLIC_USE_PLAYER_PHOTOS` on for real.
+## D49. PICK AGENCY: the pick's value is a function of WHOSE SEASON sets it, and this league's draft order is not reverse standings
 
-**The photo path checked out clean.** All three concerns the owner raised were verified
-rather than assumed: the thumb endpoint's real pixel size is 250x167-350x254 (checked
-across all 60 rendered rows on a live `/values`), which is 4-6x the 40-56px this app
-ever displays it at, so nothing is upscaled and nothing needs a bigger variant. The
-themed-disc backing D39 already put under the cutout (never a flat rectangle behind it)
-reads clean on all three themes on a real render - dark, paper, contrast - so no extra
-ring was added on top of it. The monogram fallback (photos off, or a 404) already reads
-as deliberate: initials, themed disc, the 2px team-hue edge. Nothing here needed to move.
+Two numbers already described every future pick in this app - what it is worth
+(`lib/picks.ts`, priced by the strength of the team that owes it) and when it pays
+off (`lib/metrics/duration.ts`). Neither answered the question an experienced dynasty
+manager asks first: **is the outcome of this pick mine to move, or am I a passenger
+on somebody else's season?** Those are categorically different assets. A pick set by
+your own season is an instrument; a pick set by somebody else's is a claim on a
+stranger's intentions, and it is worth what THEY decide to do next.
 
-**`sleepercdn.com/images/team_logos/nba/{abbr}.png` is a real, reliable source.** Checked
-by loading all 30 current teams' lowercase-abbreviation URLs in a real browser and eyeballing
-several of them side by side (Celtics, Lakers, Warriors, Heat, Mavericks, Bulls, Nets, Jazz,
-Clippers) - each one is that team's actual crest, 150-300px square, not a shared placeholder.
-Same host `PlayerAvatar` and `TeamAvatar` already hotlink, so this is one more path on a CDN
-already in use, not a new dependency or a new domain to trust.
+The join was small and had been sitting in plain sight for eight rounds. Every pick
+already carries its ORIGINAL roster, straight off Sleeper's traded-pick records, and
+the original roster is exactly the roster whose season orders the draft the pick sits
+in. Posture per roster (`leagueTimelines`) and current form (`currentFormByRoster`)
+both already existed. `lib/agency` puts them beside each other and costs one array
+walk over data every calling page already holds - no new requests anywhere.
 
-**Not gated behind `NEXT_PUBLIC_USE_PLAYER_PHOTOS`, and that is a considered choice, not an
-oversight.** That flag exists for one specific reason: a real person's headshot is a
-licensing question a fork's owner has to have actually thought about (D39). A team crest is
-a trademark, not anyone's likeness, hotlinked the way every fantasy product on the web
-already displays one - and `TeamAvatar` next door already hotlinks Sleeper-hosted manager
-avatars (real people's own uploaded photos) with no gate at all. Holding a brand mark to a
-stricter bar than a person's photo would be backwards, not careful. New component:
-`components/TeamLogo.tsx`, `"use client"`, same fail-silent pattern as its neighbours -
-404 or network error renders nothing, never a broken-image glyph.
+**THE DRAFT ORDER HERE IS NOT REVERSE STANDINGS, AND THAT IS A MEASUREMENT, NOT A
+HEDGE.** The premise "your own pick is an instrument" quietly assumes a mapping from
+your record to your slot, and it would have been very easy to assume that mapping is
+the identity and then build lottery odds on top of it. Sleeper's league settings
+carry no draft-order rule of any kind (checked: `playoff_seed_type`, `playoff_type`,
+`playoff_teams`, and nothing else touches the draft), so the only way to know is to
+compare the ASSIGNED slot order against the previous season's final standings.
+`draftOrderFidelity` does exactly that, and on the live league **all four completed
+rookie drafts deviate from strict reverse standings, by up to four places**: in the
+2026 draft a 10-10 roster took slot 2 while a 4-16 roster took slot 5, and in 2025
+the roster that finished 11th of 14 took slot 1. So the app states the relationship
+as a tendency, models no slot, computes no odds, and prints the measurement next to
+the claim on /roster. Rejected: assuming reverse standings (contradicted by all four
+drafts on record); building a lottery simulator (the mechanism is not in the data,
+and inventing one is the D19 failure with better graphics).
 
-**Placement: a corner badge on `PlayerAvatar`, opt-in per call site (`teamBadge` prop), and
-only where the team is not already printed as text nearby.** This app's densest lists -
-`/values`, the roster's own player rows, `PlayerRow`, `SearchPanel`, `DraftReportCard`,
-`RankingBoard`, the draft board - all already print the team abbreviation as text next to
-position and age. A crest there would be a second, louder copy of a datum the reader
-already has, which is the exact mistake D39 undid when it stripped the full-saturation
-team-colour fill off the disc itself. Rejected there for the same reason, not overlooked.
+Two smaller consequences worth stating. A pick is marked **settled** once the season
+that orders its draft is over, because agency is a live quantity and nobody's
+decisions move a 2026 pick any more - EZ8's own 2026 first is already spent in that
+sense, whoever holds it. And the read is deliberately available for a pick the OTHER
+side is sending, which is what lets the trade evaluator print "you are acquiring a
+pick whose value depends on a team that is contending" rather than only pricing it.
 
-Turned on in the four spots that do NOT print the team as text: `TradeBuilder`'s give/get
-rows (`meta` there is position and age only - team was never visible at all); the deal
-receipt's `PlayerNowRow` (value, tier and duration are this app's own numbers, no team
-anywhere in the row); the roster's one single-point-of-failure sentence ("Season hinges on
-X") which never names his team either; and the `/lineage` header, where the crest actually
-**replaces** text - the meta line under the player's name used to read "PG · LAL · 27y"
-and now reads "PG · 27y", the crest doing the team's job. That fourth one is the only
-placement that deletes a word instead of only adding a picture.
+## D50. THE BUYBACK IS A FACT WITH TWO PROVENANCES, AND NEVER AN INTENT
 
-**The provenance rail gets exactly one face, not five.** `ProvenanceHop` (the trade-by-trade
-nodes) has no manager avatar data reachable without threading `ManagerRef` fields through
-three separate call sites (`/roster`, `/lineage/[assetKey]`, `ValuesList`) for a rail whose
-own docstring says its job is a TIME axis, not a cast of characters - and the hop's own link
-already lands on the deal receipt one tap away, where the faces already live (`TradeParts`).
-Rejected on cost against a rail that is not the receipt. `ProvenanceResolution` ("the pick
-became {playerName}") is different: it already carries `playerId` on the node itself, so a
-`PlayerAvatar` there costs nothing to plumb and is the one moment on the rail an
-abstraction (a pick) turns into an actual person - the single face this component gets, at
-the one node built for it.
+`pickBuybacks` detects a manager reacquiring a pick they originally owned. It is a
+genuine behavioural tell - it is the one transaction that converts a manager's own
+season from a result into an asset they control - and the live league contains
+**fifteen recorded instances and two more the snapshot alone evidences**, including
+the one the owner described from memory: 6-Month Plan reacquiring their own 2026
+first from kdewitt4 on 2025-11-13, after 449 days away.
 
-**Rejected outright, not attempted.** Team logos on `/awards` (its winners are managers,
-already carrying `TeamAvatar`, not NBA teams) and on `/lineage`'s draft-pick pages (a pick
-has no NBA team until it resolves, and the resolution node already gets the treatment
-above). A per-row crest on the draft board (`app/drafts/parts.tsx`) - same redundant-with-
-text objection as the other dense lists, and 15+ picks per round is exactly the kind of
-list D39 already decided avatars don't belong on.
+**IT SAYS WHAT HAPPENED AND REFUSES TO SAY WHY (D19).** Intent is not in this corpus.
+A pick can come home as a throw-in, as the cheapest matching value in somebody else's
+deal, or entirely on purpose, and nothing in the transaction log distinguishes them.
+Naming a manager a tanker from a round trip and a losing streak is precisely the
+inference D19 exists to refuse, and the copy on every surface stops at the round trip.
+
+**TWO SOURCES, LABELLED DIFFERENTLY, because the record is honestly uneven.**
+RECORDED round trips come from a trade transaction that names the pick, so they carry
+a date, a deal to link to, and a count of the hops the pick made while away.
+SNAPSHOT-ONLY round trips are visible in Sleeper's traded-picks snapshot - the pick is
+back with its original roster, having arrived from somebody else - with no transaction
+explaining the move, which is the D19 gap: a commissioner-executed trade always
+carries `draft_picks: []`. Those are reported (the fact is real) and carry **no date
+at all** rather than a guessed one, and the UI says "no transaction records this move"
+in its own copy. Rejected: reporting only the recorded ones (silently drops real
+history); dating the snapshot-only ones from the surrounding trades (a guess about
+WHICH deal, which is exactly what D19 deleted a working engine over).
+
+Detection reads one hop - `previousOwner !== original && newOwner === original` - and
+never assumes the pick came straight back, which matters: EZ8's own 2024 first left
+on 2023-10-27, moved on once more while it was away, and came home 71 days later
+having changed hands three times. It also reports the same pick twice when it
+genuinely came home twice, because those are two separate decisions.

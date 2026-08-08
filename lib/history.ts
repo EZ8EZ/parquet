@@ -321,9 +321,14 @@ async function assembleCorpus(): Promise<Corpus> {
   // drop (their `draft_picks` is always empty - see API_NOTES). The traded-picks
   // snapshot has no timestamps, so the only available signal is "both parties to
   // this pick hop are also in this trade" - which, tested against the real league,
-  // blamed six unrelated hops spanning three seasons on a single 2023 deal. Guessing
-  // trade contents is worse than admitting the data is gone, so unattributable hops
-  // are surfaced separately via `unrecordedPickMoves()` in lib/picks.ts instead.
+  // blamed six unrelated hops spanning three seasons on a single 2023 deal. An
+  // `attachInferredPicks` that tried to harden that signal (hop-level keys, a season
+  // floor, an "ambiguous means skip" guard) sat here uncalled and was DELETED in
+  // D19's second pass: re-measured, it reproduced the same six wrong hops, because
+  // NSL Fantasy Hoops has exactly one coalesced trade and so the ambiguity guard can
+  // never fire. Guessing trade contents is worse than admitting the data is gone, so
+  // unattributable hops are surfaced separately via `unrecordedPickMoves()` in
+  // lib/picks.ts instead.
   const { transactions } = coalesceCommissionerTrades(rawTransactions);
   const annotations = await loadAnnotations(provider.name);
   const matchups = await loadMatchups(chain);

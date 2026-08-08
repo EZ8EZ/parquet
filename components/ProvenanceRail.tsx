@@ -27,6 +27,7 @@ import { LocalDate } from "@/components/LocalDate";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { ordinal } from "@/lib/derive/describe";
 import { dealHref } from "@/lib/tradegraph/url";
+import { parsePickKey } from "@/lib/provenance";
 import type {
   ProvenanceChain,
   ProvenanceEvent,
@@ -41,6 +42,16 @@ import type {
  * the live render at 375px showed one row's date sitting on the next row's caption.
  */
 const MIN_ROW = 92;
+/**
+ * Extra floor for a hop that brings a pick home, in px.
+ *
+ * The homecoming line is one more sentence inside a row whose floor was measured
+ * against a row WITHOUT it, and at 390px the live render put that row's date on top
+ * of the next row's gap caption. The floor is per-row rather than raised globally
+ * because every other row is correctly sized at 92 and paying 40px on all of them to
+ * fix the rare one would stretch every rail in the app.
+ */
+const HOMECOMING_ROW = 40;
 /**
  * Ceiling on the proportional part of the axis, in px. Comfortably above `MIN_ROW` x
  * the longest chain in this league (5 hops, so 7 nodes and 6 gaps), which is what
@@ -87,21 +98,22 @@ export function formatGap(ms: number): string {
  * ordering is preserved and the largest gaps stay the largest gaps - the floor
  * compresses the relative difference between two close events, it never inverts it.
  */
-export function layoutRows(times: number[]): number[] {
+export function layoutRows(times: number[], floors?: number[]): number[] {
   const n = times.length;
-  if (n <= 1) return [MIN_ROW];
+  const floorAt = (i: number) => Math.max(MIN_ROW, floors?.[i] ?? MIN_ROW);
+  if (n <= 1) return [floorAt(0)];
   const first = times[0];
   const span = times[n - 1] - first;
   const budget = Math.min(SPAN_PX, PER_GAP_PX * (n - 1));
   const y: number[] = [];
   for (let i = 0; i < n; i++) {
-    const raw = span > 0 ? Math.round((budget * (times[i] - first)) / span) : i * MIN_ROW;
-    y.push(i === 0 ? 0 : Math.max(raw, y[i - 1] + MIN_ROW));
+    const raw = span > 0 ? Math.round((budget * (times[i] - first)) / span) : i * floorAt(i - 1);
+    y.push(i === 0 ? 0 : Math.max(raw, y[i - 1] + floorAt(i - 1)));
   }
   // The last row still needs height of its own - it holds the terminus.
   const rows: number[] = [];
   for (let i = 0; i < n - 1; i++) rows.push(y[i + 1] - y[i]);
-  rows.push(MIN_ROW);
+  rows.push(floorAt(n - 1));
   return rows;
 }
 
@@ -118,7 +130,12 @@ export function ProvenanceRail({ chain, showTitle, className }: ProvenanceRailPr
     chain.today,
   ];
   const times = nodes.map((n) => n.at);
-  const rows = layoutRows(times);
+  const rows = layoutRows(
+    times,
+    nodes.map((n) =>
+      n.node === "hop" && isHomecoming(n) ? MIN_ROW + HOMECOMING_ROW : MIN_ROW,
+    ),
+  );
   // Integer offsets, shared by both columns. Every SVG coordinate below derives from
   // this array and nothing else, which is what keeps them all integers.
   const tops: number[] = [];
@@ -259,13 +276,34 @@ function OriginBody({ o }: { o: ProvenanceOrigin }) {
   );
 }
 
+/**
+ * Did this hop bring a pick back to the roster that originally owned it?
+ *
+ * The rail already draws the round trip - the asset leaves and it returns - but a
+ * reader has to hold the original owner in their head across two or three nodes to
+ * see it. The asset key carries the original roster (`k:<season>-<round>-<orig>`), so
+ * naming it costs a parse and no new data.
+ *
+ * Says WHAT happened, never why (D19). "Back to its original owner" is a fact about
+ * where the pick went; anything about the intent behind it is not in this corpus.
+ */
+function isHomecoming(h: ProvenanceHop): boolean {
+  const pick = parsePickKey(h.assetKey);
+  return pick != null && pick.originalRoster === h.to && pick.originalRoster !== h.from;
+}
+
 function HopBody({ h }: { h: ProvenanceHop }) {
+  const homecoming = isHomecoming(h);
   return (
     <div className="min-w-0">
       <Link
         href={dealHref(h.tradeId)}
         className="group inline-flex min-h-11 max-w-full items-start gap-1 text-left"
-        aria-label={`Traded to ${h.toName} in ${h.season}. Open the deal.`}
+        aria-label={
+          homecoming
+            ? `Traded back to ${h.toName}, who originally owned this pick, in ${h.season}. Open the deal.`
+            : `Traded to ${h.toName} in ${h.season}. Open the deal.`
+        }
       >
         <span className="min-w-0">
           <span className="block truncate text-body font-semibold leading-snug text-ink group-hover:text-accent-text">
@@ -281,9 +319,13 @@ function HopBody({ h }: { h: ProvenanceHop }) {
           className="mt-0.5 shrink-0 text-faint group-hover:text-accent-text"
         />
       </Link>
+      {homecoming && (
+        <p className="text-meta leading-snug text-accent-text">
+          Back to {h.toName}, who originally owned this pick.
+        </p>
+      )}
       <p className="figure text-micro leading-normal text-faint">
         <LocalDate ts={h.at} /> · {h.season} wk {h.week}
-        {h.inferred && <span className="ml-1 text-warn">pick inferred</span>}
       </p>
     </div>
   );
