@@ -1,10 +1,14 @@
 /**
  * Ranking TIERS derived from natural cliffs in the value distribution.
  *
- * Why this exists: the old `tierOf()` mapped value to a tier name with hardcoded
- * thresholds (7000 = Franchise, 4500 = Cornerstone, ...). That is arbitrary. It says
- * two players 10 points apart are in different tiers if they happen to straddle 4500,
- * while two players 1500 apart share a tier if they sit inside a band.
+ * Why this exists: `tierOf()` in lib/valuation used to map value to a tier name with
+ * hardcoded thresholds (7000 = Franchise, 4500 = Cornerstone, ...). That is arbitrary. It
+ * says two players 10 points apart are in different tiers if they happen to straddle
+ * 4500, while two players 1500 apart share a tier if they sit inside a band. It is also
+ * perishable, which is how it eventually failed: the literals had been fitted to where
+ * the distribution cliffed, the age-curve recalibration moved the cliffs, and the two
+ * systems began printing different labels for the same player without erroring. `tierOf`
+ * is deleted; `lib/rankings/leagueTiers.ts` is the one way a surface asks for a label.
  *
  * Good dynasty rankings tier at the CLIFFS: the point of a tier is "everyone in here
  * is close enough that you should not agonise over the ordering, and the gap to the
@@ -56,6 +60,29 @@ export const TIER_LABELS = [
 
 function labelFor(tier: number): string {
   return TIER_LABELS[tier - 1] ?? `Tier ${tier}`;
+}
+
+/**
+ * The floor, as a fraction of the top asset, that bounds the cliff search.
+ *
+ * Named rather than repeated, because six surfaces used to spell out
+ * `computeTiers(desc, { floor: (desc[0] ?? 0) * 0.1 })` by hand and a seventh
+ * (`tierOf`) used a different scheme entirely. See `leagueTiers` below.
+ */
+export const TIER_FLOOR_FRACTION = 0.1;
+
+/**
+ * THE league tiering, and the only one any surface should call.
+ *
+ * A "Cornerstone" has to mean the same thing on /values, on a roster page, on a deal
+ * receipt, in a provenance rail and in search - so the recipe lives in exactly one
+ * function rather than being copied into each of them. Pure and dependency-free, so a
+ * client component can call it with the values it already holds.
+ */
+export function leagueTiers(valuesDesc: number[]): Tier[] {
+  return computeTiers(valuesDesc, {
+    floor: (valuesDesc[0] ?? 0) * TIER_FLOOR_FRACTION,
+  });
 }
 
 /**

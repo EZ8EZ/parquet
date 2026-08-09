@@ -3,7 +3,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { cachedValuePlayers, injuryLabel } from "@/lib/valuation";
-import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
+import { leagueTiers, tierResolver } from "@/lib/rankings/tiers";
 import { ValuesList, type ValueRow } from "@/components/ValuesList";
 import { fmtValue } from "@/lib/ui";
 import { Onward } from "@/components/Onward";
@@ -29,7 +29,7 @@ export default async function ValuesPage({
     .map((v) => v.value)
     .filter((v) => v > 0)
     .sort((a, b) => b - a);
-  const tiers = computeTiers(valuesDesc, { floor: (valuesDesc[0] ?? 0) * 0.1 });
+  const tiers = leagueTiers(valuesDesc);
   const tierFor = tierResolver(tiers);
 
   const sortedRows: ValueRow[] = [...h.players.values()]

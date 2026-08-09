@@ -14,7 +14,6 @@ import { analyzeRoster, leagueValueRanking, type RosterAnalysis } from "../roste
 import { buildDossier, type Dossier } from "../dossier";
 import type { PrincipalIndex } from "../principals";
 import { getStrategyReport } from "../strategy";
-import { tierOf } from "../valuation";
 
 export type Direction = "contend" | "ascend" | "retool" | "rebuild";
 
@@ -59,8 +58,28 @@ export interface GamePlan {
   caveats: string[];
 }
 
-const STAR_THRESHOLD = 4500; // "Cornerstone" and up
-const DEAD_THRESHOLD = 250; // "Fringe"
+/**
+ * WHAT COUNTS AS A STAR. Cornerstone-or-better, and the number is checked against the
+ * league's own tier breaks rather than asserted.
+ *
+ * Re-measured after the age-curve recalibration: the data-driven Cornerstone break
+ * moved from 6,576 to 4,685, but no player in the league prices between 4,500 and
+ * 4,685, so this literal still selects exactly the cornerstone-or-better set (23 of
+ * 1,745 priced assets, down from 24 of 1,749). It survives the recalibration by luck of
+ * where the gap fell, not by design, so it is worth re-running that check whenever the
+ * distribution moves again.
+ */
+const STAR_THRESHOLD = 4500;
+/**
+ * WHAT COUNTS AS DEAD WEIGHT ON A ROSTER SPOT. Deliberately NOT the Fringe tier: the
+ * tier system's last break sits an order of magnitude higher (around 900 in the current
+ * distribution, because the cliff search is floored at a tenth of the top asset), and
+ * calling 900-value players roster clogs would be advice to cut most of a bench. This
+ * is a separate, much harsher claim - "this body is worth less than the roster spot" -
+ * and the copy that renders it must not borrow the word "Fringe", which means something
+ * else everywhere else in the app.
+ */
+const DEAD_THRESHOLD = 250;
 
 function positionGaps(a: RosterAnalysis) {
   const all = ["PG", "SG", "SF", "PF", "C"];
@@ -115,7 +134,7 @@ export function diagnose(
     because.push(`Your core (top 8 by value) averages ${a.coreAge} years old.`);
   because.push(
     stars > 0
-      ? `${stars} cornerstone-or-better asset${stars > 1 ? "s" : ""}, ${dead} fringe piece${dead === 1 ? "" : "s"}.`
+      ? `${stars} cornerstone-or-better asset${stars > 1 ? "s" : ""}, ${dead} body${dead === 1 ? "" : "s"} worth less than the roster spot.`
       : `No cornerstone-tier player yet - that's the ceiling problem.`,
   );
   if (a.picks.extraFirsts !== 0)
@@ -199,7 +218,7 @@ export function buildGamePlan(
   const caveats: string[] = [];
 
   const vets = a.valued.filter((v) => (v.age ?? 0) >= 29 && v.value >= 400);
-  const fringe = a.valued.filter((v) => v.value < DEAD_THRESHOLD);
+  const deadWeight = a.valued.filter((v) => v.value < DEAD_THRESHOLD);
   const midTier = a.valued.filter((v) => v.value >= 700 && v.value < STAR_THRESHOLD);
   const topPicks = a.picks.picks.filter((p) => p.round === 1).slice(0, 3);
 
@@ -350,16 +369,16 @@ export function buildGamePlan(
       cost: "Thinning a strength can backfire if injuries hit there.",
     });
   }
-  if (fringe.length >= 3) {
+  if (deadWeight.length >= 3) {
     moves.push({
       id: "streamline",
       kind: "streamline",
-      title: `Cut the ${fringe.length} fringe pieces loose`,
-      detail: `${fringe.length} players are Fringe-tier (under ${DEAD_THRESHOLD} value) and are occupying roster spots. Stream that space for upside or open a taxi/bench slot instead of holding dead weight.`,
+      title: `Cut the ${deadWeight.length} dead-weight bodies loose`,
+      detail: `${deadWeight.length} players are worth under ${DEAD_THRESHOLD} and are occupying roster spots. Stream that space for upside or open a taxi/bench slot instead of holding dead weight.`,
       partnerRosterId: null,
       partnerName: null,
       partnerRationale: null,
-      give: fringe.slice(0, 3).map((f) => f.name),
+      give: deadWeight.slice(0, 3).map((f) => f.name),
       get: ["waiver upside / roster flexibility"],
       cost: "Low risk - but don't drop someone whose role is about to change.",
     });
@@ -386,4 +405,3 @@ export function buildGamePlan(
 }
 
 export { STAR_THRESHOLD, DEAD_THRESHOLD };
-export { tierOf };

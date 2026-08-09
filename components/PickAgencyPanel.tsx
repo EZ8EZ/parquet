@@ -13,6 +13,16 @@
  *
  * The per-pick rows are native `<details>` so the summary line stays scannable at
  * 375px and the full read is one tap away without any client JavaScript.
+ *
+ * ONLY THE PICKS STILL IN PLAY GET A ROW. The panel's question is "whose season decides
+ * this", and for a pick whose determining season is already over that question has an
+ * answer and no consequence: the slot is settled and nobody's posture can move it. Those
+ * rows were repeating, in a second flat list, the twelve assets the draft-capital list
+ * directly above had already enumerated - the same duplication D40 found on /league,
+ * costing about 250px at 390px wide on a page that was 4,446px tall. They are still
+ * counted in the split bar and in both value totals, because holding them is a fact
+ * about the balance sheet; what is withheld is a live read that is not live. The count
+ * is stated rather than silently dropped (D46: no dead ends).
  */
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
@@ -63,6 +73,9 @@ export interface PickAgencyPanelProps {
 export function PickAgencyPanel({ reads, summary, orderNote }: PickAgencyPanelProps) {
   if (!reads.length) return null;
 
+  const live = reads.filter((r) => !r.settled);
+  const settledCount = reads.length - live.length;
+
   return (
     <>
       <Card className="p-3">
@@ -102,6 +115,21 @@ export function PickAgencyPanel({ reads, summary, orderNote }: PickAgencyPanelPr
           </>
         )}
 
+        {settledCount > 0 && (
+          <>
+            <div className="rule my-2.5" />
+            <p className="text-meta leading-snug text-secondary">
+              {settledCount} of these {reads.length}{" "}
+              {settledCount === 1 ? "was" : "were"} set by a season that is already
+              over, so {settledCount === 1 ? "its slot is" : "their slots are"} no
+              longer anybody&apos;s to move.{" "}
+              {live.length > 0
+                ? `The ${live.length} still in play are listed below.`
+                : "Nothing you hold is still in play."}
+            </p>
+          </>
+        )}
+
         {orderNote && (
           <>
             <div className="rule my-2.5" />
@@ -110,8 +138,8 @@ export function PickAgencyPanel({ reads, summary, orderNote }: PickAgencyPanelPr
         )}
       </Card>
 
-      <ul className="mt-1.5 divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
-        {reads.map((r) => (
+      <ul className="mt-1.5 divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface empty:hidden">
+        {live.map((r) => (
           <li key={r.key}>
             <details className="group">
               <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-2.5 py-1.5">

@@ -34,7 +34,7 @@ import { buildTradeLedger, tradeParties, pickKey } from "@/lib/tradegraph";
 import { loadProvenanceSource } from "@/lib/provenance/source";
 import { lineageHref, playerLineageHref } from "@/lib/tradegraph/url";
 import { cachedValuePlayers } from "@/lib/valuation";
-import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
+import { leagueTiers, tierResolver } from "@/lib/rankings/tiers";
 import { leagueTimelines, playerDuration } from "@/lib/metrics/duration";
 import { leagueFragility } from "@/lib/metrics/fragility";
 import { ordinal } from "@/lib/derive/describe";
@@ -73,7 +73,7 @@ export default async function DealPage({
     .filter((v) => v > 0)
     .sort((a, b) => b - a);
   const tierFor = tierResolver(
-    computeTiers(valuesDesc, { floor: (valuesDesc[0] ?? 0) * 0.1 }),
+    leagueTiers(valuesDesc),
   );
   const holdings: Record<string, number> = {};
   for (const r of h.rosters) for (const pid of r.players) holdings[pid] = r.rosterId;

@@ -84,7 +84,12 @@ Driven by owner feedback in session:
 - **Draft picks are first-class assets.** `lib/picks.ts` reconstructs each team's full
   holdings (own picks + trades) and values them; roster value is now players + picks.
   Previously a rebuild stockpile was invisible: EZ8 went 36,835 -> 63,169 total and
-  from 3rd to 1st in the league once 12 picks worth 26,334 were counted.
+  from 3rd to 1st in the league once 12 picks worth 26,334 were counted. *(Those three
+  figures are of the league as it stood when this was written. Measured again today the
+  same roster reads 29,002 in players plus 20,912 in twelve picks for 49,914, still 1st
+  of 14. Both the age-curve recalibration and four seasons of roster churn sit between
+  the two readings and this entry does not try to split them; what it claims - that
+  counting picks moved this roster from 3rd to 1st - is unchanged.)*
   `collectTradedPicks()` reads every league in the chain, since the current league
   only knows about future picks.
 - **Commissioner trades reconstructed.** `lib/derive/coalesce.ts` rebuilds
@@ -165,7 +170,9 @@ Three workstreams, all landed in the same session:
   exposure** reusing the valuation injury map plus `availability(age)` from `duration.ts`.
   Weighted `W_LOO` 0.45 / `W_CONCENTRATION` 0.35 / `W_EXPOSURE` 0.20 into a 0-100 index where
   higher means more fragile, plus a league-relative percentile and a `band`. Live league
-  spread is **38 to 73 with no component clipped**. Picks are excluded on purpose: a 2028
+  spread is **36 to 74 with no component clipped** (was 38 to 73 before the age-curve
+  recalibration; the exposure component briefly DID clip afterwards, which is why
+  `EXPOSURE_REF` moved from 0.12 to 0.14 - see the note on it in `lib/metrics/fragility.ts`). Picks are excluded on purpose: a 2028
   first cannot fill a lineup slot tonight. Surfaced as the **House of Cards** award, so it is
   not dead code.
 - **Two RFI calibration bugs were caught and fixed before shipping**, both by property tests

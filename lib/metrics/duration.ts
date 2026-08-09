@@ -241,8 +241,11 @@ export interface TimelineOptions {
    *
    * Contending is inherently competitive: a 3.8-season roster is a win-now team in a
    * league of rebuilders and a rebuilder in a league of veterans. Absolute thresholds
-   * failed visibly on real data - with durations clustered 3.6-5.5, a fixed 2.6 cutoff
-   * classified NOBODY as contending, which cannot be right for 14 teams. Pass this and
+   * failed visibly on real data - with durations clustered 3.8-5.6 (3.6-5.5 before the
+   * age-curve recalibration, which moved every roster's value-weighted arrival about a
+   * year later), a fixed 2.6 cutoff classified NOBODY as contending, which cannot be
+   * right for 14 teams. The recalibration moved the cluster and left the cutoff where it
+   * was, so the absolute rule is now MORE wrong than when it was replaced, not less. Pass this and
    * posture is assigned by within-league percentile instead; omit it and the absolute
    * thresholds are used as a fallback.
    */

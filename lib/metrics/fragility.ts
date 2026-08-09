@@ -145,35 +145,46 @@ export const LOO_TOP_K = 3;
 /**
  * Reference top-K damage share.
  *
- * Measured across this league's 14 rosters, the top three LOO damages account for 0.33
- * to 0.80 of startable value (median 0.56). An earlier value of 0.6 came from a
+ * Measured across this league's 14 rosters, the top three LOO damages account for 0.29
+ * to 0.82 of startable value (median 0.55). An earlier value of 0.6 came from a
  * back-of-envelope guess rather than the data and clipped EIGHT of the fourteen teams at
  * exactly 100, which destroyed the component: the difference between a top-heavy roster
  * and a catastrophically top-heavy one disappeared. At 0.9 the observed range spans
- * roughly 37 to 89 and nothing saturates. Read 0.9 as its literal claim: if your three
+ * roughly 32 to 91 and nothing saturates. Read 0.9 as its literal claim: if your three
  * most load-bearing players are ninety percent of your startable value, they are not
  * part of your season, they ARE your season.
  */
 export const LOO_REF = 0.9;
 /**
  * Reference normalized HHI. Normalized HHI is already 0..1 by construction, but real
- * rosters live in the bottom fifth of that range (observed 0.074 to 0.209 here), because
+ * rosters live in the bottom fifth of that range (observed 0.062 to 0.207 here), because
  * the theoretical 1.0 requires literally one asset. Mapping the raw value straight to
  * 0..100 would report every team in the league as robust. 0.25 sits just above the most
  * concentrated roster observed, so the top of the scale stays reachable but is not
- * reached in a normal season; the observed range spreads across 30 to 84.
+ * reached in a normal season; the observed range spreads across 25 to 83.
  */
 export const CONCENTRATION_REF = 0.25;
 /**
- * Reference availability exposure. Observed 0.008 (a young, healthy, mostly
- * unremarkable-status roster) to 0.075 (one carrying real value in post-35 bodies).
- * The theoretical maximum is far higher - a roster of 38-year-olds would score about
- * 0.63 - but normalising against that would flatten every real team to single digits,
- * which is the same mistake as calibrating to an unreachable extreme. 0.12 is set a
- * little above the worst roster in the league, which is what makes the component
- * discriminate: it spreads the observed range over 7 to 63 rather than 5 to 50.
+ * Reference availability exposure. Observed 0.0015 (a young, healthy, mostly
+ * unremarkable-status roster) to 0.122 (one carrying real value in ageing bodies),
+ * median 0.024. The theoretical maximum is far higher - a roster of 38-year-olds would
+ * score about 0.63 - but normalising against that would flatten every real team to
+ * single digits, which is the same mistake as calibrating to an unreachable extreme.
+ * The reference sits a little above the worst roster in the league, which is what makes
+ * the component discriminate: it spreads the observed range over 1 to 87.
+ *
+ * RAISED FROM 0.12 TO 0.14 AFTER THE AGE-CURVE RECALIBRATION, and this is the clearest
+ * case in the app of a constant that was correct at one distribution and silently wrong
+ * at the next. Exposure is value-weighted, so it moves whenever the value of ageing
+ * bodies moves, and the recalibration raised 32-and-over sharply (LeBron James 826 ->
+ * 1,468). The worst roster in the league went from 0.0873 - comfortably inside a 0.12
+ * reference - to 0.1220, PAST it, and clipped at exactly 100. Nothing threw and no test
+ * failed: the component simply stopped being able to tell that roster apart from any
+ * worse one, which is the identical failure the LOO_REF note above describes at 0.6.
+ * 0.14 restores the stated relationship and un-saturates the component. The fix belongs
+ * here rather than in the curve, which is measured rather than tuned (D28).
  */
-export const EXPOSURE_REF = 0.12;
+export const EXPOSURE_REF = 0.14;
 /**
  * What a bench asset contributes to the starter-weighted value used for concentration.
  *

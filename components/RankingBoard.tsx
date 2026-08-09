@@ -37,7 +37,7 @@ import {
   customSource,
   disagreements as computeDisagreements,
 } from "@/lib/rankings";
-import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
+import { leagueTiers, tierResolver } from "@/lib/rankings/tiers";
 import { withViewTransition } from "@/lib/view-transition";
 import { injuryLabel, valuePlayers } from "@/lib/valuation";
 import {
@@ -307,7 +307,7 @@ export function RankingBoard({
   // Same floor recipe as /values, so a tier label means the same thing on both
   // pages - a "Cornerstone" here is a "Cornerstone" there.
   const tiers = useMemo(
-    () => computeTiers(valuesDesc, { floor: (valuesDesc[0] ?? 0) * 0.1 }),
+    () => leagueTiers(valuesDesc),
     [valuesDesc],
   );
   const tierFor = useMemo(() => tierResolver(tiers), [tiers]);

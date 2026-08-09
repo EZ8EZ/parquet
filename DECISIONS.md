@@ -456,6 +456,19 @@ rescale constant as a literal number (goes stale the moment `ageAnchors` or a ca
 line changes, silently reopening the exact bug this fixes); lowering `ageAnchors`' peak to 1.0
 (defeats the purpose of an age curve, which is supposed to reward youth beyond rank parity).
 
+**AMENDMENT (post age-curve recalibration).** Two figures above have moved and one has
+not, and the split is the point of the entry rather than an erratum against it. The
+rescale constant `1.2170096908167976` is UNCHANGED and still pinned by test, because the
+derivation deliberately scales the measured curve to the peak the hand-set anchors
+already had (`1.16`), so `theoreticalMaxMultiplier()` sees the same `ageMax`. What moved
+is the SHAPE of the curve below the peak, and with it every individual price: Wembanyama
+now prices at **9,009** rather than the **9,569** quoted above, and the pre-rescale
+**11,646** is likewise a figure of the old anchors. Neither restatement touches the
+decision. The claims this entry actually makes - that the ceiling is derived and never
+hand-typed, that a rescale preserves ordering where a clamp would not, and that no real
+player reaches 10,000 - all still hold at the new numbers, which is the property that
+made the fix worth making rather than the specific value it produced on one afternoon.
+
 ## D29. Two independent bugs were hiding every "win-now" team in the league
 
 The owner reported that real win-now teams were invisible in the app, and it turned out
@@ -476,7 +489,7 @@ standings, topped by an 18-2 record that was previously invisible everywhere in 
 
 **Second: the separate age-based `window` field used ABSOLUTE thresholds that this
 league's core ages never cleared.** `RosterAnalysis.window` classifies a roster as
-"win-now" at `coreAge >= 28.5`, but this league's oldest core tops out at 28.2 - so the
+"win-now" at `coreAge >= 28.5`, but this league's oldest core topped out at 28.2 - so the
 league-wide count read "0 WIN-NOW" directly beside a team that had just gone 18-2. This is
 the same failure mode the Timeline Coherence Index's posture classification hit earlier
 (`lib/metrics/duration.ts` - absolute duration thresholds once classified nobody in this
@@ -494,6 +507,15 @@ standalone `analyzeRoster()` call to reading the ranked entry from `leagueValueR
 so the same team cannot read "win-now" on one page and "balanced" on another. Verified
 live: the league-wide count moved from 0/7/7 (win-now/balanced/rebuilding) to 4/7/3, and
 the two teams with the best actual recent records are both now correctly flagged win-now.
+
+**Amendment (post age-curve recalibration).** `coreAge` is a value-weighted mean, so the
+recalibration moved it: the oldest core in the league now reads **29.2** rather than 28.2,
+and two rosters sit at or above the absolute 28.5 cutoff instead of none. The 0/7/7 figure
+above is therefore a reading of the old distribution. What the entry argues survives
+intact and is worth restating precisely because the numbers moved: the absolute cutoff was
+never wrong by a fixed amount, it was wrong by an amount that depends on a distribution
+nobody controls, which is exactly why it had to be replaced by a relative one. The
+relative rule still reads **4/7/3** live, unchanged.
 
 ## D30. The trade web gets clickability and both proprietary metrics
 
@@ -723,7 +745,9 @@ their OWN roster as "mine", which is not the roster the ids were built against, 
 resolving only against "my" pool would silently drop the sender's own assets on
 arrival. Verified live: a package built from Victor Wembanyama (give) and Jabari
 Smith (get) round-trips through the URL with both names and Wembanyama's value
-(9,569) intact.
+(9,569) intact. *(That figure is now 9,009 - the age-curve recalibration moved every
+price; see the amendment on D28. The round-trip property being verified here is
+unaffected, because the URL carries ids and never values.)*
 
 **Search's player results finally link somewhere real.** They were the only one of
 the four result kinds pointing at a page with nothing selected (`/values`, the full
@@ -736,7 +760,9 @@ other params, so the defaults (`All`, no query) already make the row visible, an
 for the rare case a searched player's value ranks outside the page's normal 260-row
 cap, `app/values/page.tsx` appends that one row rather than silently showing
 nothing. Verified live via SSR: searching a deep-bench name (value 37, rank 261)
-still renders `aria-expanded="true"` and the highlight ring at row 261.
+still renders `aria-expanded="true"` and the highlight ring at row 261. *(The value
+quoted there is of the old age curve; the same rank now prices at 53. The behaviour under
+test does not depend on it.)*
 
 Both new URL modules ship the same untrusted-input posture D30 set for
 `lib/tradegraph/url.ts`: nothing throws, a hand-edited or stale param degrades to
@@ -1132,7 +1158,12 @@ Terror Twins +12,548** would be richer having never traded; **zachgoldy -9,942**
 largest beneficiary and his trade-free roster cannot even fill a lineup (12 priced
 players for 19 spots, from 13 non-trade adds in five seasons). The most interesting
 answers are the ones value alone misses: **6-Month Plan is -278, a wash, while his TCI
-falls 71 to 61** - no richer and less coherent. `describeCounterfactual` states all of
+falls 71 to 61** - no richer and less coherent. *(Every figure in this paragraph is a sum
+of player values and so moved with the age-curve recalibration. Re-measured: Flick the
+Clint **+12,165**, The Terror Twins **+11,173**, zachgoldy **-9,382**, 6-Month Plan
+**-716** on a 31,995 roster, still a wash. The three named managers, the sign of every
+delta and the ordering are all unchanged, which is the more interesting result: what the
+experiment reports is robust to a repricing that moved 1,479 of 1,750 players.)* `describeCounterfactual` states all of
 this without a verdict, pinned by a test that fails on a banned grade vocabulary (D6):
 trading value for pick capital is a strategy, and the two columns are the argument.
 

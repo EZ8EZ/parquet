@@ -6,7 +6,8 @@
  * A letter grade is what competitors ship (DECISIONS.md D6). We do better.
  */
 import type { LeagueHistory } from "../history";
-import { pickValue, tierOf, valuePlayer } from "../valuation";
+import { pickValue, valuePlayer } from "../valuation";
+import { leagueTierLabel } from "../rankings/leagueTiers";
 import { strengthRanks } from "../picks";
 import { ordinal, rosterName } from "../derive/describe";
 import { getStrategyReport } from "../strategy";
@@ -76,6 +77,10 @@ export interface TradeEvaluation {
 function valueSide(
   h: LeagueHistory,
   side: { playerIds: string[]; picks: PickInput[] },
+  // Tier labels come from the LEAGUE'S OWN distribution, the same recipe /values and
+  // every roster page use. A receipt that called a player "Franchise" while /values
+  // called him "Cornerstone" is a receipt the reader cannot trust about anything else.
+  tierFor: (value: number) => string,
 ): TradeSideValue {
   const scoring = h.currentLeague.scoringSettings;
   const assets: ValuedAsset[] = [];
@@ -90,7 +95,7 @@ function valueSide(
       id: pid,
       label: p.fullName,
       value: v.value,
-      tier: tierOf(v.value),
+      tier: tierFor(v.value),
       age: p.age,
     });
   }
@@ -127,8 +132,9 @@ function valueSide(
 }
 
 export function evaluateTrade(h: LeagueHistory, input: TradeInput): TradeEvaluation {
-  const give = valueSide(h, input.give);
-  const get = valueSide(h, input.get);
+  const tierFor = leagueTierLabel(h);
+  const give = valueSide(h, input.give, tierFor);
+  const get = valueSide(h, input.get, tierFor);
   const delta = get.total - give.total;
   const deltaPct = give.total > 0 ? Math.round((delta / give.total) * 100) : 0;
 

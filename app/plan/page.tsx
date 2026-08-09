@@ -155,7 +155,7 @@ export default async function PlanPage() {
             s: dx.extraFirsts >= 0 ? `+${dx.extraFirsts} extra 1sts` : `${dx.extraFirsts} 1sts`,
             tone: dx.extraFirsts >= 0 ? "text-positive" : "text-negative",
           },
-          { v: dx.deadWeight, l: "fringe", s: "roster clogs", tone: "text-ink" },
+          { v: dx.deadWeight, l: "dead weight", s: "roster clogs", tone: "text-ink" },
         ].map((s) => (
           <div key={s.l} className="flex-1 px-1.5 py-1.5 text-center">
             <div

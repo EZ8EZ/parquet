@@ -60,8 +60,9 @@ That should change valuation, and currently does not:
   matter more than in a weekly-total format.
 - Roster DEPTH is worth more, because you need bodies playing on any given night. The
   current rank decay (`rankDecay: 0.021`) is arguably too steep in the tail for a
-  lock-in league: it prices the ~200th-ranked player at roughly 150 against 10,000 for
-  the top asset.
+  lock-in league: it prices the ~200th-ranked player at roughly 120 against a top asset of 9,009 and a
+  configured ceiling of 10,000. (Was "roughly 150 against 10,000" before the age-curve
+  recalibration; the tail decay itself is unchanged, the population around it moved.)
 
 This is deliberately NOT tuned by guesswork. Doing it properly needs per-player
 games-played and minutes data, which is exactly the gap the `StatsProvider` interface

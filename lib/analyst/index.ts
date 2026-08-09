@@ -15,7 +15,8 @@ import { getStrategyReport } from "../strategy";
 import { getAllDossiers } from "../dossier";
 import { getPrincipals, type PrincipalIndex } from "../principals";
 import { describeTransaction, describeTradeForRoster } from "../derive/describe";
-import { valuePlayer, tierOf } from "../valuation";
+import { valuePlayer } from "../valuation";
+import { leagueTierLabel } from "../rankings/leagueTiers";
 import { ADVERSARIAL_REMINDER, ANALYST_SYSTEM_PROMPT } from "./system-prompt";
 import { traceLLMRun } from "../observability/trace";
 
@@ -96,12 +97,15 @@ export function buildCorpus(h: LeagueHistory, principals: PrincipalIndex): strin
     const roster = h.rostersById.get(rosterId);
     if (roster) {
       const scoring = h.currentLeague.scoringSettings;
+      // Same league-derived tiers every surface shows, so an export never disagrees
+      // with the page it was exported from.
+      const tierFor = leagueTierLabel(h);
       const valued = roster.players
         .map((pid) => {
           const pl = h.players.get(pid);
           if (!pl) return null;
           const v = valuePlayer(pl, scoring);
-          return { name: pl.fullName, age: pl.age, value: v.value, tier: tierOf(v.value) };
+          return { name: pl.fullName, age: pl.age, value: v.value, tier: tierFor(v.value) };
         })
         .filter(Boolean)
         .sort((a, b) => b!.value - a!.value) as { name: string; age: number | null; value: number; tier: string }[];

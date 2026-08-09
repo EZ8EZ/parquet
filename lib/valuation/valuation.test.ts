@@ -14,7 +14,6 @@ import {
   slotDistribution,
   positionMultipliers,
   theoreticalMaxMultiplier,
-  tierOf,
   valuePlayer,
   valuePlayers,
 } from "./index";
@@ -430,13 +429,6 @@ describe("estimateOverallPick", () => {
   it("clamps an out-of-range slot into the round", () => {
     expect(estimateOverallPick(1, 0, { slot: 99, teams: 14 })).toBe(14);
     expect(estimateOverallPick(1, 0, { slot: -5, teams: 14 })).toBe(1);
-  });
-});
-
-describe("tierOf", () => {
-  it("labels descending tiers", () => {
-    expect(tierOf(8000)).toBe("Franchise");
-    expect(tierOf(100)).toBe("Fringe");
   });
 });
 
