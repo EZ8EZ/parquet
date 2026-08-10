@@ -24,8 +24,16 @@
  * arbitrary page is 2 taps now where it was 1. So: (a) the four former slots are the
  * FIRST thing in the drawer and are PINNED to its bottom edge, a thumb's width above
  * the button that just opened them - the second tap is the shortest travel on screen,
- * not a hunt through a list; and (b) Home is a real hub again (app/page.tsx), so the
- * page every session starts on lists every surface itself.
+ * not a hunt through a list; and (b) Home carries a compact four-link shortcut row
+ * near the top (app/page.tsx), so the page every session starts on still shows the
+ * four things you can do without anyone opening anything.
+ *
+ * (b) IS LOAD-BEARING FOR (a)'s ARGUMENT AND WAS BRIEFLY MISSING. The commit that
+ * deleted the row paid for it with a full surface index on Home; the next commit
+ * removed that index, on its own good grounds, and the two composed into an app that
+ * advertised one destination anywhere. The replacement is a shortcut row and NOT a
+ * second index - the drawer and /more remain the only two places the whole registry
+ * is printed. See DECISIONS.md D52.
  *
  * WHAT MOVES WHEN IT OPENS: nothing you can reach. The drawer is the FIRST child of
  * the sheet, above the handle, so it grows upward into the page and the three rows
@@ -250,6 +258,41 @@ export function Desk({ data }: { data: DeskData | null }) {
     setExpanded(!expanded);
   };
 
+  // ------------------------------------------------- the "more below" cue
+  /*
+   * The registry list is taller than any phone, and a scroll region with no edge is
+   * a scroll region nobody knows is there: the review that produced this measured
+   * 846pt of list in a 416pt window, with The Lab, Methodology, Settings and Switch
+   * team all under the fold and nothing on screen saying so. Half the fix is the
+   * window itself (see the `max-h` below, now the whole viewport minus the resting
+   * sheet rather than a flat 26rem cap). The other half is this: the drawer says
+   * out loud when there is more, and stops saying it the moment there is not.
+   *
+   * Derived from the element rather than from the item count - the list is
+   * registry-driven and its height depends on the viewport, the theme's type size
+   * and whether the search panel has results, none of which this component can
+   * predict.
+   *
+   * Driven by EVENTS, never by an effect keyed on `expanded`: a `useEffect` whose
+   * body is `setMoreBelow(...)` is the cascading-render pattern this repo's lint
+   * rule rejects, and the same one the open-state comment above explains away for
+   * the drawer itself. The two events that can change the answer are the only two
+   * hooks it needs - a scroll, and the drawer's own open animation finishing, at
+   * which point the element has a real height for the first time (it is `hidden`
+   * until then, so every measurement before it is zero). `.desk-drawer:not([hidden])`
+   * in globals.css always sets an animation, including the reduced-motion branch,
+   * so this fires in both.
+   */
+  const scrollerRef = useRef<HTMLDivElement>(null);
+  const [moreBelow, setMoreBelow] = useState(false);
+  const syncMoreBelow = useCallback(() => {
+    const el = scrollerRef.current;
+    if (!el) return;
+    // A whole line of slack, so a sub-pixel rounding remainder at the true bottom
+    // does not leave the cue permanently lit on a list you have fully read.
+    setMoreBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 12);
+  }, []);
+
   const destinations = primarySurfaces();
 
   return (
@@ -291,13 +334,30 @@ export function Desk({ data }: { data: DeskData | null }) {
             tabIndex={-1}
             hidden={!expanded}
             inert={!expanded}
+            onAnimationEnd={syncMoreBelow}
             // The display utility is applied ONLY when open. Tailwind's preflight
             // hides `[hidden]` with a plain `display: none` rule, and a `flex`
             // utility in the same class list wins on order - so a permanent `flex`
             // here would render the whole drawer on every page, closed or not.
             className={cn("desk-drawer outline-none", expanded && "flex flex-col")}
           >
-          <div className="max-h-[min(26rem,calc(100dvh-16rem))] overflow-y-auto overscroll-contain px-3.5 pt-3">
+          <div className="relative">
+          {/*
+            The window used to be `min(26rem, 100dvh-16rem)`, and on every phone in
+            the design range the flat 26rem arm won - so the drawer showed 416pt of
+            an 846pt list on a screen with 588pt to spare. The cap bought nothing
+            the viewport arm was not already buying, and cost the bottom half of the
+            registry. What is left is the honest arithmetic: the whole screen, minus
+            the 116pt resting sheet, minus the pinned "Go to" block, minus the home
+            indicator, minus a gap wide enough that the page behind is still visibly
+            a page. On a tall screen the whole registry now fits with no scroll at
+            all; on a phone it is two thirds of it with the cue below saying so.
+          */}
+          <div
+            ref={scrollerRef}
+            onScroll={syncMoreBelow}
+            className="max-h-[calc(100dvh-16rem-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain px-3.5 pt-3"
+          >
             <Suspense fallback={null}>
               <SearchPanel basePath={pathname} param={DESK_SEARCH_PARAM} />
             </Suspense>
@@ -363,6 +423,33 @@ export function Desk({ data }: { data: DeskData | null }) {
               See everything on one page
               <ChevronRight size={13} aria-hidden="true" />
             </Link>
+          </div>
+
+          {/* `aria-hidden` and `pointer-events-none`: a screen reader already knows
+              the list continues, and a keyboard user already reaches the rest by
+              tabbing, which scrolls it into view. This is for the one reader those
+              two affordances do not serve - the one looking at a phone. */}
+          <div
+            aria-hidden="true"
+            // The cue fades rather than unmounting, so "is it showing" is opacity,
+            // which no browser automation can read as visibility. Stated as data so
+            // e2e/nav.spec.ts can assert the honest half of this - that it goes away
+            // at the bottom - instead of only that it appears.
+            data-more-below={moreBelow ? "true" : "false"}
+            className={cn(
+              "pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-bg via-bg/80 to-transparent pb-1 pt-6 transition-opacity",
+              moreBelow ? "opacity-100" : "opacity-0",
+            )}
+            style={{
+              transitionDuration: "var(--motion-fast)",
+              transitionTimingFunction: "var(--ease-out)",
+            }}
+          >
+            <span className="inline-flex items-center gap-1 rounded-full border border-border bg-elevated px-2 py-0.5 text-micro font-semibold uppercase tracking-[0.14em] text-muted">
+              More below
+              <ChevronDown size={11} />
+            </span>
+          </div>
           </div>
 
           {/* ------------------------------------------- the pinned destinations

@@ -17,6 +17,23 @@
  *    which is every deploy today) it is always true and this behaves exactly as the
  *    app always has.
  *
+ * 1b. IT COUNTS THE RECENT ONES, NOT THE WHOLE BACKLOG. This row used to read
+ *    "29 to capture · 0/29 annotated" and it read that on every screen, in the
+ *    accent colour, on every visit, forever - because the denominator is every
+ *    notable decision the seat has ever made and the numerator only moves when the
+ *    reader does homework. A figure that cannot reach zero through ordinary use is
+ *    not a status, it is a standing accusation, and this app has an explicit rule
+ *    (D40) against printing an anti-informative number just because it is true.
+ *    So the line counts `recentUnannotated` - the last 30 days, see
+ *    RECENT_CAPTURE_DAYS in lib/ledger.ts - which is the same set the phrase "at
+ *    the moment of conviction" actually describes, and which reaches zero the week
+ *    you catch up and stays there until you trade again. The full backlog did not
+ *    go anywhere: /ledger leads with it, and Home's badge still offers it. It is
+ *    simply no longer the thing that follows the reader around.
+ *
+ *    The ratio came out with it. "0/29 annotated" beside "29 to capture" was the
+ *    same fact twice in one 44pt row, and the half of it that was a score.
+ *
  * 2. THE ZERO STATE IS THE GOAL STATE, so it cannot be dead chrome. Nothing left to
  *    capture is the outcome the whole app is pushing toward; a row that empties out
  *    on success would punish the reader for winning. The fallback is a DURABLE FACT
@@ -54,7 +71,7 @@ export interface DeskStatus {
   href: string;
   /** The figure that leads the line ("27", "5-15"). */
   lead: string;
-  /** What the figure means ("to capture", "12th of 14"). */
+  /** What the figure means ("new decisions to capture", "12th of 14"). */
   rest: string;
   /**
    * `todo` is an outstanding action and is drawn in the accent; `fact` is a standing
@@ -98,13 +115,16 @@ export async function getDeskData(): Promise<DeskData | null> {
     const mayCapture = canCapture(await readSeat(), h.me.userId);
     if (mayCapture) {
       const ledger = getLedgerSummary(h, await getPrincipals(h));
-      if (ledger.unannotatedNotable > 0) {
+      if (ledger.recentUnannotated > 0) {
         return {
           seat,
           status: {
             href: "/ledger",
-            lead: String(ledger.unannotatedNotable),
-            rest: `to capture · ${ledger.annotated}/${ledger.notable} annotated`,
+            lead: String(ledger.recentUnannotated),
+            rest:
+              ledger.recentUnannotated === 1
+                ? "new decision to capture"
+                : "new decisions to capture",
             tone: "todo",
           },
         };
