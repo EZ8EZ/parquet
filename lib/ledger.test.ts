@@ -5,7 +5,9 @@ import {
   getLedgerEntries,
   getLedgerSummary,
   isFaabLeague,
+  newestToCapture,
   notableWaiverLabel,
+  type LedgerEntry,
 } from "./ledger";
 import { annotationKey, type Annotation, type LeagueHistory } from "./history";
 import { getPrincipals } from "./principals";
@@ -343,5 +345,94 @@ describe("getLedgerSummary — recentUnannotated, the figure chrome is allowed t
       now,
     );
     expect(after.recentUnannotated).toBe(0);
+  });
+});
+
+/**
+ * THE PINNED CARD. `/ledger` opens exactly one editor now - the newest notable
+ * decision with no reasoning on it - and everything else is a shut summary row. Which
+ * one gets pinned is therefore the page's whole first impression, and it is the one
+ * piece of that redesign that can be wrong without looking wrong.
+ */
+describe("newestToCapture", () => {
+  const base = buildFixtureHistory();
+
+  const entry = (over: Partial<LedgerEntry>): LedgerEntry => ({
+    transactionId: "x",
+    season: "2025",
+    week: 1,
+    created: 1_000,
+    type: "trade",
+    notable: true,
+    description: "You did a thing",
+    annotation: null,
+    ...over,
+  });
+
+  const note = (reasoning: string): Annotation => ({
+    transactionId: "x",
+    ownerId: "u1",
+    reasoning,
+    posture: null,
+    createdAt: new Date(0),
+    updatedAt: new Date(0),
+  });
+
+  it("picks the most recent notable entry with nothing captured on it", () => {
+    const picked = newestToCapture([
+      entry({ transactionId: "old", created: 100 }),
+      entry({ transactionId: "new", created: 900 }),
+      entry({ transactionId: "middle", created: 500 }),
+    ]);
+    expect(picked?.transactionId).toBe("new");
+  });
+
+  it("skips an entry that already has reasoning, however recent it is", () => {
+    const picked = newestToCapture([
+      entry({ transactionId: "newest", created: 900, annotation: note("said already") }),
+      entry({ transactionId: "next", created: 800 }),
+    ]);
+    expect(picked?.transactionId).toBe("next");
+  });
+
+  it("skips an unremarkable move - the ledger only ever asks about notable ones", () => {
+    const picked = newestToCapture([
+      entry({ transactionId: "routine", created: 900, notable: false }),
+      entry({ transactionId: "trade", created: 800 }),
+    ]);
+    expect(picked?.transactionId).toBe("trade");
+  });
+
+  it("returns null when there is nothing left to ask for", () => {
+    expect(newestToCapture([])).toBeNull();
+    expect(
+      newestToCapture([entry({ created: 900, annotation: note("done") })]),
+    ).toBeNull();
+    expect(newestToCapture([entry({ created: 900, notable: false })])).toBeNull();
+  });
+
+  it("does not depend on the array arriving sorted", () => {
+    const picked = newestToCapture([
+      entry({ transactionId: "a", created: 10 }),
+      entry({ transactionId: "z", created: 999 }),
+      entry({ transactionId: "m", created: 400 }),
+    ]);
+    expect(picked?.transactionId).toBe("z");
+  });
+
+  it("agrees with the page's own count: pinning one leaves the summary's total minus one", () => {
+    const entries = getLedgerEntries(base);
+    const summary = getLedgerSummary(base);
+    const picked = newestToCapture(entries);
+    expect(picked).not.toBeNull();
+    expect(picked!.notable).toBe(true);
+    expect(picked!.annotation).toBeNull();
+    // Every other entry the ledger would print as "to capture" is a row below it.
+    const rest = entries.filter(
+      (e) => e.notable && !e.annotation && e.transactionId !== picked!.transactionId,
+    );
+    expect(rest.length).toBe(summary.unannotatedNotable - 1);
+    // And it really is the newest of them, against real corpus timestamps.
+    for (const e of rest) expect(e.created).toBeLessThanOrEqual(picked!.created);
   });
 });

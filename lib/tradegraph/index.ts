@@ -94,6 +94,31 @@ export interface TradeSideText {
   text: string;
 }
 
+/** What moved in a deal, by kind. See `TradeRecord.assets`. */
+export interface DealAssetCounts {
+  players: number;
+  picks: number;
+}
+
+/**
+ * The index row's second line: "3 players, 2 picks".
+ *
+ * Deliberately a count and never a name. Naming the "headline" asset would mean
+ * ranking the pieces, and ranking the pieces of a trade is one short step from
+ * scoring it - which is the thing this app refuses to do (D6). A count says how much
+ * weight a deal carried without saying who won it.
+ *
+ * A commissioner-executed deal has no pick record at all (D19), so it reports only
+ * its players here and the row tags the gap rather than letting the number imply the
+ * deal was players-only.
+ */
+export function dealPieces(a: DealAssetCounts): string {
+  const parts: string[] = [];
+  if (a.players) parts.push(`${a.players} ${a.players === 1 ? "player" : "players"}`);
+  if (a.picks) parts.push(`${a.picks} ${a.picks === 1 ? "pick" : "picks"}`);
+  return parts.length ? parts.join(", ") : "nothing on record";
+}
+
 /**
  * ONE DEAL. This type was always the receipt; it just had nowhere to be printed.
  * `/deals/[transactionId]` is now that page.
@@ -114,6 +139,16 @@ export interface TradeRecord {
   /** Neutral, perspective-free summary. */
   summary: string;
   sides: TradeSideText[];
+  /**
+   * How much changed hands, counted rather than narrated.
+   *
+   * The index prints this instead of the two-sided prose: a list you scan needs to say
+   * how big a deal was, and what was actually in it is the whole job of the receipt one
+   * tap away. Players come from `adds`, where every traded player lands exactly once;
+   * picks from the recorded `draftPicks` rows, which is why a commissioner-executed
+   * deal reports zero of them and carries the tag that says why.
+   */
+  assets: DealAssetCounts;
   /**
    * True when this deal was reconstructed from commissioner rows (D19). Those rows
    * carry `draft_picks: []`, so the deal's pick component - if it had one - is not in
@@ -323,6 +358,10 @@ export function buildTradeLedger(
       ownerParties,
       multiTeam,
       commissionerExecuted: t.transactionId.startsWith("coalesced-"),
+      assets: {
+        players: Object.keys(t.adds).length,
+        picks: t.draftPicks.length,
+      },
       summary: describeTransaction(h, t),
       sides: parties.map((rid) => {
         const ownerId = principals.ownerAt(t.season, rid);

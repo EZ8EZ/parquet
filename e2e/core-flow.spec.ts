@@ -60,22 +60,35 @@ test("ledger annotate affordance, then the audit-log deep link into the deal rec
   await expect(page).toHaveURL(/\/ledger$/);
   await expectStableChrome(page);
 
-  // The seeded reasoning is fixture DATA (lib/history.ts), not UI copy that
-  // shifts under a copy pass - safe to assert on directly.
-  await expect(page.getByText(/Full rebuild\./)).toBeVisible();
+  // THE LEDGER IS ROW-FOLDED NOW, and as with the audit log below, the path grew one
+  // step rather than losing one. Every entry but the pinned newest one lives inside a
+  // shut `<details>`, which is most of why this page dropped from 10,047px to ~2,270px
+  // at 390px. The seeded reasoning is fixture DATA (lib/history.ts), not UI copy that
+  // shifts under a copy pass - safe to assert on directly, in both states.
+  //
+  // Both halves asserted deliberately, for exactly the reason the audit-log half does
+  // it: a disclosure hides content, it must never drop it. Captured reasoning is the
+  // one genuinely irreplaceable thing in this app, and it silently ceasing to render
+  // would be data loss wearing a layout change's clothes.
+  const seeded = page.getByText(/Full rebuild\./);
+  await expect(seeded).toBeAttached();
+  const capturedRow = page.locator("details", { has: seeded });
+  await expect(capturedRow).not.toHaveAttribute("open", /.*/);
+  await capturedRow.locator("summary").first().click();
+  await expect(seeded).toBeVisible();
 
   // Exactly one annotation exists in fresh fixture state, so exactly one "edit"
-  // affordance exists on first load (components/LedgerItem.tsx). Every OTHER
-  // (unannotated) entry on this page renders its textarea open by default
-  // (LedgerItem defaults `editing` to true when there is no existing
-  // annotation), so there are already many textareas on screen before this
-  // click - `.last()` below is what picks out the one this click just opened,
-  // not a generic "the only textbox" assumption.
+  // affordance exists (components/LedgerItem.tsx). Every OTHER (unannotated) entry on
+  // this page still renders its textarea in edit mode inside its own row (LedgerItem
+  // defaults `editing` to true when there is no existing annotation), so there are
+  // many textareas in the DOM before this click - `.last()` below is what picks out
+  // the one this click just opened, not a generic "the only textbox" assumption.
   await page.getByRole("button", { name: "edit" }).click();
 
-  // `.last()`, not "the only one": app/ledger/page.tsx renders "To capture"
-  // before "Captured", and the fixture seeds exactly one captured entry, so
-  // once this entry is in edit mode its textarea is the last one in DOM order.
+  // `.last()`, not "the only one": app/ledger/page.tsx renders the pinned newest card,
+  // then "The rest", then "Captured", and the fixture seeds exactly one captured
+  // entry, so once this entry is in edit mode its textarea is the last one in DOM
+  // order.
   const reasoningBox = page.getByRole("textbox").last();
   await expect(reasoningBox).toBeVisible();
   await expect(reasoningBox).toHaveValue(/Full rebuild\./);

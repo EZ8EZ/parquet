@@ -143,6 +143,47 @@
 }
 
 /*
+ * ======================= DISCLOSURE REVEAL =======================
+ *
+ * The app's answer to a summary row opening. Two lists lean on it hard - the deal
+ * index's directories and the decision ledger's rows - and a native `<details>` has no
+ * transition of its own: the body simply appears, which inside a long list reads as
+ * the page jumping rather than as something opening.
+ *
+ * Same shape as the Desk drawer, and for the same reason: the box cannot be animated
+ * (a closed `<details>` is `display: none`, and no height transition escapes that), so
+ * the motion goes on the content ARRIVING. Transform and opacity only, on the app's
+ * one curve, `--motion-base` for the body and `--motion-fast` for the chevron that
+ * answers the finger.
+ *
+ * Under `prefers-reduced-motion` the chevron snaps and the body fades - reduced, not
+ * removed, exactly as the block above argues.
+ */
+@keyframes disclosure-in {
+  from { opacity: 0; transform: translateY(-4px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes disclosure-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+.disclosure-chevron {
+  transition: transform var(--motion-fast) var(--ease-out);
+}
+details[open] .disclosure-body {
+  animation: disclosure-in var(--motion-base) var(--ease-out);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .disclosure-chevron {
+    transition: none;
+  }
+  details[open] .disclosure-body {
+    animation: disclosure-fade var(--motion-fast) linear;
+  }
+}
+
+/*
  * FOCUS. The ring is defined in globals.css (`outline: 2px solid var(--color-accent)`,
  * offset 2) and this is the note on why it survives everywhere rather than a second
  * definition of it: the 2px gap lands on the PARENT's ground rather than on the

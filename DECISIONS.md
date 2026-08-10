@@ -2038,3 +2038,80 @@ lumps into a false middle. And it now declines to imply that a named season is a
 prediction. The version that would make the overlap count discriminate - anchoring the
 axis to startable value now versus startable value in season n, which RFI's lineup
 re-solve already knows how to compute - is a real build and is not attempted here.
+## D58. THE TWO PROUDEST PAGES WERE THE TWO LONGEST: an index that printed its receipts, and a form that asked twenty-nine questions at once
+
+Measured at 390px against the live league, before: **`/deals` 17,499px, `/ledger`
+10,047px**. The app's median page is around 2,100px. Nothing was broken on either one -
+they are two of the best-built features here - and that is exactly what made this the
+largest usability win available rather than a bug.
+
+**`/deals` was printing every deal TWICE.** A trade has two sides and the index gave
+each side its own full prose sentence, mirrored: "The Terror Twins acquired ... for Nic
+Claxton and the 2026 2nd", then the same deal again from the other chair. Ninety-one
+deals, 182 paragraphs. The sentences were not wrong; they were in the wrong place.
+`/deals/[transactionId]` already prints them - with what each side is worth today, the
+D19 caveats, and every asset linked into its provenance rail - and it does it better
+than a list can. So a row is now one tap target carrying the three things you scan an
+index for: who traded with whom, when, and how big (`dealPieces`, a count of players
+and picks). The two directories underneath, pairings and managers, are `<details>`:
+they are doors INTO a filtered index, not reading matter, and expanded they were
+another ~3,000px sitting under a list you had already finished with.
+
+**A count and never a name, for the piece summary.** Naming a deal's "headline asset"
+means ranking its pieces, and ranking the pieces of a trade is one short step from
+scoring it, which D6 refuses. "3 players, 2 picks" says how much weight a deal carried
+without saying who won it. A commissioner-executed deal reports zero picks and keeps
+its existing "no pick record" tag, so the number never implies the deal was
+players-only (D19).
+
+**`/ledger` opened all twenty-nine of its textareas simultaneously.** Every notable
+decision rendered as a ~340px card with the editor already expanded, the same
+placeholder in each, five posture chips and a Save button. The Desk badge and the Home
+banner both promise a single next action; the page they lead to was a twenty-nine
+question exam that opened on question one. Worse, every one of those cards set
+`autoFocus`, so the browser silently handed the caret to whichever mounted last - the
+OLDEST decision on the page, and the one whose reasoning nobody can still reconstruct.
+
+Now: ONE pinned card for the newest uncaptured decision (`newestToCapture`), and
+everything else - uncaptured and captured alike - is a tappable summary row that
+expands into the identical editor. Newest rather than oldest is the whole argument of
+the feature: reasoning decays from the moment the trade clears, so the freshest
+uncaptured decision is the one whose why is still recoverable. Capturing your latest
+undocumented decision is now zero taps, where it used to be a scroll past twenty-eight
+open forms.
+
+**Why the receipt and the pinned card rather than the alternatives.** Paginating
+`/deals` was rejected: the index's job is to let you see the shape of a league's trading
+history, and "91 deals over five seasons" is most of that shape. Defaulting the season
+filter to the current season was rejected for the same reason and a worse one - it
+hides rows without saying so. On the ledger, a "dismiss" or "not notable" control was
+rejected as out of scope for a density pass; it is a real gap (a leaguemate genuinely
+has waiver claims with no reasoning worth recording) and it is a feature decision, not
+a layout one.
+
+**Reused, not invented.** The row-that-expands is `PickAgencyPanel`'s pattern verbatim:
+native `<details>`, no client JavaScript to open one, find-in-page still reaches the
+text inside a shut row, and a `<summary>` that states its own count so nothing hides
+behind a label that will not admit what is in it (D46). The one new thing is the shared
+`.disclosure-*` reveal in app/interaction.css, which is the Desk drawer's argument
+again: a closed `<details>` is `display: none` and no height transition escapes that,
+so the motion goes on the content arriving - `--motion-base` for the body,
+`--motion-fast` for the chevron, transform and opacity only, and under
+`prefers-reduced-motion` reduced to a fade rather than removed.
+
+**NOTHING WAS DROPPED TO GET SHORT, and that is the part with tests on it.** A collapse
+and a deletion look identical in a screenshot and identical in a height measurement, so
+`e2e/density.spec.ts` asserts counts and reachability instead: the deal index renders
+exactly as many rows as the page's own "Deals on record" figure claims, every one with
+a distinct `/deals/...` href, and one of them really lands on a receipt; the ledger
+opens exactly one editor, the pinned one is genuinely the newest by (season, week)
+against the top folded row, and a folded row still opens into a textarea and a Save
+button. `core-flow.spec.ts` grew the same pair of assertions the audit-log half already
+had - the seeded reasoning is ATTACHED while its row is shut, then VISIBLE once it is
+opened - because captured reasoning is the one genuinely irreplaceable thing in this
+app and it quietly ceasing to render would be data loss wearing a layout change's
+clothes.
+
+After, same viewport and same league: **`/deals` 4,849px (a 72% cut), `/ledger` 2,270px
+(a 77% cut)**. Both are now under the app's own median. Checked at 375, 390 and 430 with
+no horizontal overflow, in all three themes.

@@ -1,11 +1,36 @@
+/**
+ * THE DECISION LEDGER - one question at a time.
+ *
+ * This page used to open every textarea it had, all at once: twenty-nine capture cards
+ * of ~340px each, 10,047px at 390px wide, every one of them pre-expanded with the same
+ * placeholder waiting for an answer. The Desk badge and the Home banner both promise a
+ * single next action, and the page they lead to was a twenty-nine question exam that
+ * opened on question one.
+ *
+ * So: ONE pinned card for the newest uncaptured decision (`newestToCapture`, and see
+ * its note for why newest rather than oldest), and everything else - uncaptured and
+ * captured alike - as a tappable summary row that expands into the identical editor.
+ * Nothing is dropped and nothing is read-only that was not read-only before; the same
+ * `LedgerItem` is inside every row, minus the chrome the row itself already prints.
+ *
+ * The pattern is `PickAgencyPanel`'s, deliberately rather than a new one: native
+ * `<details>`, no client JavaScript to open a row, find-in-page still reaches the text
+ * inside a shut one, and the only motion is the shared `.disclosure-*` reveal.
+ */
 import Link from "next/link";
 import { CheckCircle2, ChevronRight, Eye, KeyRound } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
-import { getLedgerEntries, getLedgerSummary, notableWaiverLabel } from "@/lib/ledger";
+import {
+  getLedgerEntries,
+  getLedgerSummary,
+  newestToCapture,
+  notableWaiverLabel,
+  type LedgerEntry,
+} from "@/lib/ledger";
 import { getPrincipals } from "@/lib/principals";
 import { captureBlock, readSeat } from "@/lib/auth/server";
 import { LedgerItem } from "@/components/LedgerItem";
-import { PageHeader, SectionHeader, Stat, EmptyState } from "@/components/ui";
+import { PageHeader, SectionHeader, Stat, EmptyState, Tag } from "@/components/ui";
 import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
@@ -26,6 +51,10 @@ export default async function LedgerPage() {
 
   const toCapture = entries.filter((e) => e.notable && !e.annotation);
   const captured = entries.filter((e) => e.annotation);
+  // The one the page asks for. A reader who cannot write here is not asked anything,
+  // so there is nothing to pin for them - the list below is the whole page.
+  const newest = blocked ? null : newestToCapture(entries);
+  const rest = toCapture.filter((e) => e.transactionId !== newest?.transactionId);
 
   return (
     <div>
@@ -74,8 +103,35 @@ export default async function LedgerPage() {
         commissioner audit log and season recap use.
       </p>
 
+      {/* THE PINNED ONE. It is the only editor open on arrival, it is the freshest
+          decision with no why on it, and it is above everything else on the page
+          because it is the answer to the badge that sent you here. */}
+      {newest && (
+        <>
+          <SectionHeader title="Newest to capture" />
+          <div data-testid="ledger-pinned">
+          <LedgerItem
+            transactionId={newest.transactionId}
+            description={newest.description}
+            season={newest.season}
+            week={newest.week}
+            type={newest.type}
+            initialReasoning={null}
+            initialPosture={null}
+            autoFocus
+          />
+          </div>
+        </>
+      )}
+
       <SectionHeader
-        title={blocked ? "Uncaptured - newest first" : "To capture - newest first"}
+        title={
+          blocked
+            ? "Uncaptured - newest first"
+            : newest
+              ? "The rest, newest first"
+              : "To capture - newest first"
+        }
       />
       {toCapture.length === 0 ? (
         <EmptyState
@@ -86,22 +142,16 @@ export default async function LedgerPage() {
             ? "This team has made no trades or notable waiver claims."
             : "Every notable decision has your reasoning attached. Come back after your next trade."}
         </EmptyState>
+      ) : rest.length === 0 ? (
+        <p className="text-body leading-relaxed text-muted">
+          That was the last one without a why on it.
+        </p>
       ) : (
-        <div className="space-y-3">
-          {toCapture.map((e) => (
-            <LedgerItem
-              key={e.transactionId}
-              transactionId={e.transactionId}
-              description={e.description}
-              season={e.season}
-              week={e.week}
-              type={e.type}
-              initialReasoning={null}
-              initialPosture={null}
-              readOnly={blocked != null}
-            />
+        <RowList>
+          {rest.map((e) => (
+            <LedgerRow key={e.transactionId} entry={e} readOnly={blocked != null} />
           ))}
-        </div>
+        </RowList>
       )}
 
       <SectionHeader title="Captured" />
@@ -112,21 +162,11 @@ export default async function LedgerPage() {
             : "Nothing captured yet. Start above."}
         </p>
       ) : (
-        <div className="space-y-3">
+        <RowList>
           {captured.map((e) => (
-            <LedgerItem
-              key={e.transactionId}
-              transactionId={e.transactionId}
-              description={e.description}
-              season={e.season}
-              week={e.week}
-              type={e.type}
-              initialReasoning={e.annotation!.reasoning}
-              initialPosture={e.annotation!.posture}
-              readOnly={blocked != null}
-            />
+            <LedgerRow key={e.transactionId} entry={e} readOnly={blocked != null} />
           ))}
-        </div>
+        </RowList>
       )}
 
       {blocked === "unclaimed" && (
@@ -143,5 +183,66 @@ export default async function LedgerPage() {
       )}
       <Onward from="/ledger" />
     </div>
+  );
+}
+
+function RowList({ children }: { children: React.ReactNode }) {
+  return (
+    <ul
+      data-testid="ledger-rows"
+      className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface"
+    >
+      {children}
+    </ul>
+  );
+}
+
+/**
+ * ONE DECISION, SHUT. The summary line carries everything you need to decide whether
+ * this is the one you want to write about - what you did, when, and whether a why is
+ * already on it - and the tap opens the same editor that used to be permanently open.
+ *
+ * The description is truncated to a single line here and printed in full inside, which
+ * is not a duplication so much as a preview: the row has to stay one line to be
+ * scannable, and you cannot write reasoning about a sentence you can only see half of.
+ */
+function LedgerRow({ entry, readOnly }: { entry: LedgerEntry; readOnly: boolean }) {
+  const annotated = entry.annotation != null;
+  return (
+    <li>
+      <details className="group">
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-2.5 py-1.5">
+          <ChevronRight
+            size={13}
+            aria-hidden="true"
+            className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
+          />
+          <span className="min-w-0 flex-1">
+            <span className="block truncate text-body leading-tight text-ink">
+              {entry.description}
+            </span>
+            <span className="block figure text-meta leading-tight text-secondary">
+              {entry.season} · wk {entry.week} · {entry.type.replace("_", " ")}
+            </span>
+          </span>
+          <Tag tone={annotated ? "positive" : "accent"}>
+            {annotated ? "captured" : readOnly ? "no why" : "add why"}
+          </Tag>
+        </summary>
+        <div className="disclosure-body">
+          <LedgerItem
+            transactionId={entry.transactionId}
+            description={entry.description}
+            season={entry.season}
+            week={entry.week}
+            type={entry.type}
+            initialReasoning={entry.annotation?.reasoning ?? null}
+            initialPosture={entry.annotation?.posture ?? null}
+            readOnly={readOnly}
+            showChrome={false}
+          />
+        </div>
+      </details>
+    </li>
   );
 }
