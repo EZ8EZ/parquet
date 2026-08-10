@@ -666,7 +666,14 @@ describe("draft order fidelity", () => {
     expect(cmp.maxShift).toBe(3);
   });
 
-  it("says so plainly when the order does not follow standings, and claims no odds", () => {
+  it("says so plainly when the order does not follow standings, and owns the lottery", () => {
+    // THIS TEST USED TO PIN THE DEFECT. It required the note to say "we do not model"
+    // and to NOT contain the word "lottery" - while `slotDistribution()` in
+    // lib/valuation builds a lottery over reverse standings and `pickValue()` takes the
+    // expectation over it, on the same screen, in the list directly above this
+    // sentence. The old copy ended "and no odds are computed anywhere", which was
+    // false about the page printing it. What the note must do is decline to name a
+    // SLOT while owning the odds the pricing does use.
     const rosters = [1, 2, 3, 4].map((id) => rosterWith(id, 20 - id * 4));
     const f = draftOrderFidelity(
       h,
@@ -674,8 +681,11 @@ describe("draft order fidelity", () => {
       new Map([["2029", rosters]]),
     );
     expect(f.followsReverseStandings).toBe(false);
-    expect(f.note).toMatch(/do not model/i);
-    expect(f.note).not.toMatch(/lottery/i);
+    expect(f.note).toMatch(/nothing here names the slot/i);
+    expect(f.note).toMatch(/lottery over reverse standings/i);
+    expect(f.note).toMatch(/tendency, not a projection/i);
+    // The claim that must never come back, in any of its phrasings.
+    expect(f.note).not.toMatch(/no odds are computed/i);
     expect(f.note).not.toMatch(EM_DASH);
   });
 

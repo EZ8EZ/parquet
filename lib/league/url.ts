@@ -39,7 +39,10 @@ export const DEFAULT_BOARD: BoardAxes = "windows";
 export const BOARD_PARAM = "board";
 
 export const BOARD_TABS: { id: BoardAxes; label: string; axes: string }[] = [
-  { id: "windows", label: "Windows", axes: "when everyone pays off" },
+  // "who pays off before you" rather than "when everyone pays off": the axis orders
+  // rosters against each other inside a narrow band, and a caption promising "when"
+  // was the strongest calendar claim on the page. See components/WindowMap.tsx.
+  { id: "windows", label: "Windows", axes: "who pays off before you" },
   { id: "fragility", label: "Fragility", axes: "TCI x RFI" },
 ];
 

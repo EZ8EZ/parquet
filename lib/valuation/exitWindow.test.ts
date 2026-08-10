@@ -208,6 +208,18 @@ describe("deriveExitWindow: the refusal", () => {
     expect(w.refusal).toBeTruthy();
   });
 
+  it("keeps the two halves of the bar arithmetically compatible", () => {
+    // Concentration is max/sum, so it cannot fall below 1/n however evenly a bucket is
+    // spread. A `minAcquisitions` under ceil(1 / maxConcentration) therefore makes the
+    // pair unsatisfiable by construction across the whole range where the count binds -
+    // which is what shipped (12 against 0.05, unreachable for every n from 12 to 19)
+    // and what made this module's "nothing here is hardcoded to no" claim false. This
+    // pins the RELATIONSHIP rather than either literal, so retuning one moves the other.
+    expect(SUFFICIENCY.minAcquisitions).toBeGreaterThanOrEqual(
+      Math.ceil(1 / SUFFICIENCY.maxConcentration),
+    );
+  });
+
   it("is not hardcoded to refuse: a thick, evenly spread bucket clears the bar", () => {
     // The refusal has to be falsifiable, or it is decoration. Forty acquisitions of
     // equal weight across forty separate trades pass both halves of SUFFICIENCY.

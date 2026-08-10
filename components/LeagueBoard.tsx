@@ -136,9 +136,24 @@ export function LeagueBoard({
                 <line x1="1" y1="1" x2="1" y2="6" stroke="var(--color-border-strong)" strokeWidth="2" />
                 <line x1="25" y1="1" x2="25" y2="6" stroke="var(--color-border-strong)" strokeWidth="2" />
               </svg>
-              assets disagree, so no single window
+              assets disagree, so no single span
             </span>
           </div>
+
+          {/* WHAT THE AXIS IS. This sits above the counts on purpose: the counts read
+              as a calendar claim without it, and on this league they are weak by
+              construction rather than by accident - duration compresses fourteen
+              dynasty rosters into a band a few seasons wide, so most rosters overlap
+              most rosters. Saying that first is cheaper than letting a reader infer a
+              projection and then hedging it. The arithmetic is unchanged; this is the
+              framing catching up to it. See components/WindowMap.tsx. */}
+          <p className="mt-1.5 text-meta leading-snug text-secondary">
+            The seasons are an ordering, not a forecast. Every roster in a dynasty
+            league holds players in the same narrow age range, so all fourteen spans
+            land within a few seasons of each other and most of them overlap. Read
+            this as who is dated earlier and who is dated later than you, not as a
+            claim about a named year.
+          </p>
 
           {/* The reading the chart cannot print inside itself: the counts. */}
           {windows.synthesis && (
@@ -152,15 +167,15 @@ export function LeagueBoard({
             <p className="mt-1 text-meta leading-snug text-secondary">
               {splits > 0 && (
                 <>
-                  A roster drawn as two ends holds assets that disagree about when it
-                  wins, which is what makes it the most motivated trade partner on this
-                  board.
+                  A roster drawn as two ends holds assets that disagree about when its
+                  value arrives, which is what makes it the most motivated trade
+                  partner on this board.
                 </>
               )}
               {unreadable > 0 && (
                 <>
                   {" "}
-                  {unreadable} hold too few valued assets to read any window from.
+                  {unreadable} hold too few valued assets to place at all.
                 </>
               )}
             </p>

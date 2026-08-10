@@ -62,12 +62,21 @@ const POS_ORDER = ["PG", "SG", "SF", "PF", "C"];
 
 /**
  * Window is inherently a relative read, and the absolute thresholds below failed the
- * same way posture's did before it was fixed: with this league's core ages topping out
- * at 28.2, a fixed >=28.5 cutoff crowned zero win-now teams out of 14, even with a team
- * that had just gone 18-2 sitting right there. Classify against the league's own
- * core-age distribution instead - top quartile oldest core = win-now, bottom quartile
- * youngest = rebuilding - and only fall back to the absolute cutoffs when there is no
- * league context to compare against (a standalone `analyzeRoster` call).
+ * same way posture's did before it was fixed. When this was written the league's core
+ * ages topped out at 28.2, so a fixed >=28.5 cutoff crowned zero win-now teams out of
+ * 14, even with a team that had just gone 18-2 sitting right there.
+ *
+ * THAT FIGURE HAS MOVED, AND THE ARGUMENT IS WHY IT DOESN'T MATTER. The derived age
+ * curve repriced the league and the core-age distribution now runs 23.3 to 29.2, with
+ * two rosters clearing 28.5 - so the absolute cutoff no longer crowns nobody. It is
+ * still the wrong instrument, and for the reason that survives a recalibration: an
+ * absolute cutoff on a distribution that moves whenever the model moves will crown
+ * zero teams, two teams, or nine teams for reasons that have nothing to do with any
+ * roster getting older. Classify against the league's own core-age distribution
+ * instead - top quartile oldest core = win-now, bottom quartile youngest = rebuilding
+ * - and only fall back to the absolute cutoffs when there is no league context to
+ * compare against (a standalone `analyzeRoster` call). Any figure quoted above is a
+ * dated observation, not an invariant; D29 in DECISIONS.md carries the same amendment.
  */
 function relativeWindow(
   coreAge: number | null,

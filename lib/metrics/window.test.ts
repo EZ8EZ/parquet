@@ -6,7 +6,6 @@ import {
   leagueWindows,
   overlapFor,
   weightedQuantile,
-  windowForRoster,
   windowLabel,
   windowOf,
   windowSynthesis,
@@ -228,13 +227,13 @@ describe("windowThesis", () => {
 
   it("says so when both peak in the same season", () => {
     const twin = win({ rosterId: 2, open: NOW + 1, peak: NOW + 3, close: NOW + 5 });
-    expect(windowThesis(me, twin)).toContain("the same season yours does");
+    expect(windowThesis(me, twin)).toContain("the same season yours is");
   });
 
   it("states an earlier roster as arithmetic, never as intent", () => {
     const early = win({ rosterId: 2, open: NOW, peak: NOW, close: NOW + 1 });
     const t = windowThesis(me, early)!;
-    expect(t).toContain("before your window opens");
+    expect(t).toContain("entirely before yours begins");
     // D19: the app cannot see intent, so it does not claim any.
     expect(t).not.toMatch(/will (sell|be selling|trade)/i);
     expect(t).not.toMatch(/should/i);
@@ -266,11 +265,15 @@ describe("windowSynthesis", () => {
       me,
       overlap: overlapFor(me, rows),
     })!;
-    expect(s).toContain(`Your window is ${NOW + 2}-${NOW + 4}`);
-    expect(s).toContain("1 roster shares it");
-    expect(s).toContain(`1 of them peaking in ${NOW + 3}`);
-    expect(s).toContain("1 roster's value pays off before yours opens");
-    expect(s).toContain("1 roster has no single window");
+    expect(s).toContain(`middle half of your value is dated ${NOW + 2}-${NOW + 4}`);
+    expect(s).toContain("1 roster overlaps that");
+    expect(s).toContain(`1 of them heaviest in ${NOW + 3}`);
+    expect(s).toContain("1 roster is dated entirely before you");
+    expect(s).toContain("1 roster has no single span");
+    // The axis is an ordering inside a compressed band, and the copy has to say so
+    // rather than leaving a count that fires on most of the league reading as a
+    // finding about a named season. See components/WindowMap.tsx.
+    expect(s).toContain("overlapping is the ordinary case");
   });
 
   it("says the spread is a spread when the viewer straddles", () => {
@@ -283,8 +286,8 @@ describe("windowSynthesis", () => {
       me,
       overlap: null,
     })!;
-    expect(s).toContain("do not agree about when you win");
-    expect(s).toContain("rather than a window");
+    expect(s).toContain("do not agree about when your value arrives");
+    expect(s).toContain("rather than a single span");
   });
 
   it("says there is nothing to line up when the viewer has too few assets", () => {
@@ -372,11 +375,13 @@ describe("leagueWindows on the real league", () => {
     for (const r of map.rows) expect(byRoster.get(r.rosterId)).toEqual(r);
   });
 
-  it("single-roster lookup agrees on the span, whatever posture it lands on", () => {
+  it("has exactly one single-roster entry point, and it is the agreeing one", () => {
+    // `windowForRoster` was deleted (SHELVED S6): zero production callers, and its one
+    // distinguishing behaviour was carrying the ABSOLUTE posture fallback, so it
+    // disagreed with the function every page uses on 6 of 14 live rosters. This pins
+    // the replacement contract - a caller holding one roster goes through
+    // `windowsByRoster`, which is the same derivation and therefore cannot diverge.
     const r = map.rows[0];
-    const solo = windowForRoster(h, r.rosterId);
-    expect(solo.openOffset).toBe(r.openOffset);
-    expect(solo.peakOffset).toBe(r.peakOffset);
-    expect(solo.closeOffset).toBe(r.closeOffset);
+    expect(windowsByRoster(h).get(r.rosterId)).toEqual(r);
   });
 });

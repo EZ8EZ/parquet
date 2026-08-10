@@ -1857,3 +1857,184 @@ following the reader around. Rejected: a fixed count threshold (this league is a
 so any threshold small enough to be meaningful is one the app is permanently above);
 a dismissable state (a to-do you can silence is a to-do the app has stopped believing
 in).
+## D53. THE DESK DROPS ITS DESTINATION ROW, and the compensation it was traded for was deleted twenty-six minutes later
+
+Round 8b replaced the Desk's four fixed destination links with one full-bleed button
+reading "Menu / Every page in Parquet, and search." The resting sheet is now a 19pt
+handle, a 44pt context row, and that 53pt button. **The four destinations were not
+deleted**: they are pinned as the FIRST thing inside the drawer under a "Go to"
+heading, a thumb's width above the button that opens them, rendered off the same
+`primary` flag in `lib/nav.ts` that used to draw the row. The brief was to find out
+whether the app can live on summoned menus alone, and the argument for it is real - a
+button that says a word teaches more than six 6pt icon captions, and it spends one row
+instead of one row per destination.
+
+**THE PART THAT WAS NOT DECIDED IS THE PART WORTH RECORDING.** `32d86d6` deleted the
+row and named its compensation explicitly: "Home is a hub again: the landing page now
+lists EVERY surface." **Twenty-six minutes later `746698b` deleted that hub** ("Home
+is a landing page again, not a third copy of the index"). Two locally-defensible
+changes, each assuming the other's output would survive, which composed into removing
+both halves - the same coordination failure D41 and D43 record, arriving this time at
+the navigation. Nobody chose the end state; it fell out of the order the commits
+landed in.
+
+**WHAT THIS ENTRY DOES NOT CLAIM.** It does not claim the end state is wrong. A
+reviewer who walked the app cold at 375px never got lost and rated the drawer the
+highest-confidence keep in their review; one tap to a grouped index of everything, on
+every screen, is a defensible discoverability story and arguably a better one than
+four tabs that show four options and hide twenty. It also does not claim the end state
+was approved. **The owner has not said which reading of "easy to see the options and
+choose" he meant** - can a user find them, or are they visible without an action - and
+until he does, this entry records a shipped change with an open question attached
+rather than a settled decision. Cheapest middle path if the answer is the second one:
+put the four primaries back on Home as a compact row, restoring one of the two halves
+without undoing the Desk work.
+
+Consequence already fixed: `lib/nav.ts` and `lib/nav.test.ts` spent a round describing
+`primary` as "THE DESTINATION ROW" and pinning "the left-to-right order of the
+destination row" - a test whose data was right and whose stated reason named deleted
+UI. Both now describe the drawer's pinned "Go to" row, which is what renders.
+
+## D54. THE START LINE ships unregistered, because a surface about tonight is wrong for most of the calendar
+
+`/lab/startline` is an in-season lineup surface: a seven-day nightly board with
+back-to-backs marked, a pick-one-player ten-game log, the week's slot state, and a
+framing card explaining that the page will not recommend anybody. It is deliberately
+**not** in `ALL_SURFACES` (D42), so it is reachable only from `/lab`, and its own copy
+opens by conceding the thing that makes it different: "the rows are in name order
+inside each night, because any other order would be a ranking and this page does not
+rank."
+
+**IT REFUSES TO PROJECT AND IT REFUSES TO RANK, which leaves it thin.** No projection,
+no ranking, no live scores - so the board is strictly less useful than the Sleeper tab
+the manager already has open, and the honest reading is that the correct conclusion
+from "any order would be a ranking" was not to render an unranked list but to not
+render the list. The page is ~1,786 lines, 5,080px at 375px, and roughly 73% caveat by
+prose word count. **Out of season - which this league is for most of the year - it is
+structurally wrong**: it promises "every other page in Parquet is the same when you
+come back, this one is not" and then reports 0 slots left, 0 player-games left, and
+about seventy rows reading "played".
+
+**THE ONE THING ON IT THAT IS NOT REPLACEABLE IS SLOT PAR** - the distribution of
+every lineup slot every manager in this league has ever banked, 2,124 scoring slots
+across 322 team-weeks. It tells a manager what a slot has been WORTH here, from data
+no public source holds, projecting nothing, and it works year-round because it is
+history.
+
+**KNOWN RISK, STATED RATHER THAN DISCOVERED LATER.** This is the only feature in the
+app depending on undocumented Sleeper endpoints, across two different hosts; `load.ts`,
+which orchestrates the fetches, the week clamping and the live/not-live branch, has no
+tests; it has no e2e coverage by construction, because unregistered surfaces are not
+in the generated smoke suite; and it fails soft in three empty catch blocks, so a
+Sleeper shape change presents as a quietly emptier page rather than an error. Anyone
+reviving or extending this should fix that before adding to it.
+
+## D55. THE AGE CURVE STOPS BEING TYPED AND STARTS BEING MEASURED
+
+`DERIVED_AGE_CURVE` (`lib/valuation/ageCurve.ts`) is fitted over **4,587 reconstructed
+player-seasons scored under this league's own settings**, and it feeds
+`lib/valuation/config.ts` - therefore every number the app prints. It replaced
+hand-typed anchors and repriced **1,479 of 1,750 assets**. It is the most consequential
+change of the wave, and until this entry it was the least documented.
+
+**WHAT MAKES IT A MEASUREMENT AND NOT A BETTER GUESS.** `theoreticalMaxMultiplier`
+derives its own ceiling from the fitted curve rather than carrying a hardcoded cap;
+`firstCliffAge` is read off the curve rather than typed; and `AGE_CURVE_PROVENANCE` is
+a first-class exported object, so a surface that prints an age-adjusted number can say
+where the adjustment came from instead of asserting it.
+
+**RECALIBRATION IS A HAZARD CLASS, NOT AN EVENT, and this is where that was learned.**
+Moving the curve moved the whole value distribution, which broke every absolute literal
+sitting on that scale - the clearest casualty being `tierOf`'s six hardcoded thresholds,
+which put Sengun and Doncic in one tier on a trade receipt and another on `/values` on
+the same afternoon, with 126 of 1,745 players disagreeing and nothing throwing (deleted;
+see SHELVED S5). Two more stale literals survived that sweep and are fixed alongside
+this entry: `lib/roster.ts` still asserted core ages top out at 28.2 when the live
+distribution now runs to 29.2 with two rosters clearing the 28.5 cutoff, and
+`lib/tradefinder`'s `STAR_VALUE` still claimed alignment with a trade-evaluator
+threshold that had become `leagueTierLabel`, with 3,000 now falling in a gap between
+two tiers. **The standing rule this produces: an absolute threshold on a rescalable
+scale is a defect on sight, and any that must exist carries a re-check against the
+distribution, not a comment asserting it is fine.**
+
+What the curve refuses to claim: that it says anything about how THIS league prices
+age. It measures production decline across 4,587 player-seasons. Whether this league's
+market charges the same is a separate question, and it is D56's.
+
+## D56. THE EXIT WINDOW: the app measures what it cannot answer, and publishes the refusal
+
+`lib/valuation/exitWindow.ts` asks whether this league's own market prices age the way
+the measured production curve says it should. It compares the derived curve against
+what the league actually paid, using 110 usable in-league acquisitions drawn from 91
+trades, bucketed by the player's age at the time of the trade.
+
+**THE MARKET SIDE IS PRICED AGE-BLIND, WHICH IS THE WHOLE DESIGN.** Pricing the
+acquisitions with the ordinary config would have made the answer an echo of the model
+under test. `ageBlindConfig` flattens `VALUATION_CONFIG.ageAnchors` - which really are
+`DERIVED_AGE_CURVE.map(...)`, so flattening genuinely removes the age term rather than
+silently doing nothing - and the comparison is only meaningful because of it.
+
+**THE ANSWER IS THAT THERE IS NO ANSWER, AND THAT IS THE FEATURE.** Every age bucket
+fails the sufficiency bar. Nothing in the model is calibrated against this table, and
+`/methodology` says so in as many words: one half of the section rests on 4,587
+player-seasons and the other on 110, and only the first half is allowed to move a
+price. A competitor would not publish a negative result; the negative result is the
+only thing here that needs both halves and is the reason the module survives despite
+feeding nothing.
+
+**THE BAR THE REFUSAL RESTS ON WAS ARITHMETICALLY UNREACHABLE, AND THIS IS THE
+AMENDMENT.** It shipped as `minAcquisitions: 12` with `maxConcentration: 0.05`, and
+concentration is `max(returned) / sum(returned)`, which has a hard floor of `1/n`. At
+n = 12 the best achievable concentration is 0.0833, so the pair was unsatisfiable for
+every n from 12 to 19 regardless of what the league did - while the docstring claimed
+"this is a deliberately falsifiable bar" and "nothing here is hardcoded to no". The
+conclusion was right and the stated reason for confidence in it was false, which on
+this app's premise is the worse of the two failures. `minAcquisitions` is now
+`20 = ceil(1 / maxConcentration)`, so `maxConcentration` binds everywhere and the claim
+is true, and a test pins the relationship between the two constants rather than either
+literal so retuning one moves the other. **A refusal that is really unconditional has
+to say so; this one is now conditional in fact and not only in wording.**
+
+## D57. THE WINDOW MAP: an ordering that was drawn on a calendar, and the labels that now say so
+
+`lib/metrics/window.ts` reads each roster's **value-weighted quartiles** off asset
+durations the app already publishes - open at the 25th percentile of value arrived,
+peak at the 50th, close at the 75th - and `components/WindowMap.tsx` draws all fourteen
+on one axis with the viewer's own marked. Nothing new is modelled and no growth is
+assumed. Quartiles rather than mean plus sigma, deliberately: a straddled roster's
+value sits in two lumps, and centre-plus-spread would print a confident window centred
+on the hole between them. A roster below the coherence floor gets `state: "split"` and
+is drawn as two ends with no filled span, because the claim being withheld is that any
+season in between is theirs.
+
+**THE ARITHMETIC IS SOUND AND THE CALENDAR AXIS WAS THE UNEARNED PART.** Duration is
+Macaulay duration over the age curve's payout profile, and every rostered player in a
+dynasty league is between about 19 and 32 - so all fourteen rosters' quartiles land
+inside a band a few seasons wide, and picks push the whole distribution rightward
+together. Live, today: **no roster's span opens before 2029, twelve of fourteen close
+in 2031, nine of fourteen peak in 2031, and "shares your window" fires on nine of
+thirteen counterparties.** A signal that fires on 69% of the league is not singling
+anybody out. Worse, the calendar framing invited a claim the derivation never made:
+duration says when an asset pays out over its remaining career, a competitive window is
+when a roster is good enough to win now, and the chart was silently equating them - so
+a roster was being told its value arrives in 2029 and 2030 in a way a manager could
+falsify by glancing at the standings.
+
+**THE FIX IS THE LABELS, NOT THE MATH, and that boundary is deliberate.** The seasons
+are now framed as a relative ordering inside a compressed band: the board caption reads
+"who pays off before you" rather than "when everyone pays off", the chart's own
+framing sentence states that the spans sit close together and that overlapping is the
+ordinary case, `windowSynthesis` leads with the ordering and says plainly that the
+useful reading is who is dated before you and who after rather than the season itself,
+and `windowThesis` says "dated together" and "dated entirely before yours" instead of
+"competing for the same seasons". No constant, quantile or threshold in
+`lib/metrics/window.ts` moved. **What was wrong was never the number; it was a frame
+that made the number sound like a forecast.**
+
+**WHAT IT STILL REFUSES.** It infers no intent - a roster whose value peaked before
+yours opens is a roster whose value peaked earlier, not a seller (D19). It grades
+nobody (D6). It declines to place a split roster at all rather than averaging two
+lumps into a false middle. And it now declines to imply that a named season is a
+prediction. The version that would make the overlap count discriminate - anchoring the
+axis to startable value now versus startable value in season n, which RFI's lineup
+re-solve already knows how to compute - is a real build and is not attempted here.

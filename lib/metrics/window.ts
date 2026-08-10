@@ -63,7 +63,6 @@
 import type { LeagueHistory } from "../history";
 import { VALUATION_CONFIG, type ValuationConfig } from "../valuation";
 import {
-  getTimelineProfile,
   leagueTimelines,
   type AssetDuration,
   type TimelineProfile,
@@ -337,30 +336,39 @@ export function windowThesis(me: ValueWindow, them: ValueWindow): string | null 
   if (intersects(me, them)) {
     const same = me.peak === them.peak;
     return same
-      ? `Their value peaks in ${them.peak}, the same season yours does. You are bidding for the same seasons, which is what makes a piece cost more here than its price elsewhere.`
-      : `Their window (${windowLabel(them)}) overlaps yours (${windowLabel(me)}). You are competing for the same seasons, so anything that helps them now is being priced against you later.`;
+      ? `Their value is heaviest in ${them.peak}, the same season yours is. Rosters dated together want the same pieces at the same time, which is what makes one cost more here than its price elsewhere. Overlap is the common case in this league, so read it as the absence of a timing edge rather than as a finding.`
+      : `Their span (${windowLabel(them)}) overlaps yours (${windowLabel(me)}). Neither of you is dated ahead of the other, so anything that helps them is being priced against you rather than traded past you. Overlap is the common case in this league, so read it as the absence of a timing edge rather than as a finding.`;
   }
   if (them.close != null && them.close < me.open) {
-    return `Their value pays off in ${windowLabel(them)}, before your window opens in ${me.open}. Two rosters dated apart are the pairing where a piece is worth more to one side than the other, which is the only reason a trade clears at all.`;
+    return `Their value is dated ${windowLabel(them)}, entirely before yours begins in ${me.open}. Two rosters dated apart are the pairing where a piece is worth more to one side than the other, which is the only reason a trade clears at all - and on this league, being dated clear of somebody is rarer than overlapping them.`;
   }
-  return `Their value pays off in ${windowLabel(them)}, after your window closes in ${me.close}. Their surplus is dated away from yours, so what is spare to them is not spare to you.`;
+  return `Their value is dated ${windowLabel(them)}, entirely after yours ends in ${me.close}. Their surplus is dated away from yours, so what is spare to them is not spare to you - and on this league, being dated clear of somebody is rarer than overlapping them.`;
 }
 
 /**
  * The viewer's own situation in two or three sentences, for /plan.
  *
  * Counts only. The synthesis is the joining of derivations the app already has - the
- * viewer's window, everyone else's, and the arithmetic of which ones intersect - and
- * it stops at the count. What to DO about a shared window is /plan's own moves engine,
- * not this module's opinion.
+ * viewer's span, everyone else's, and the arithmetic of which ones intersect - and it
+ * stops at the count. What to DO about an overlap is /plan's own moves engine, not
+ * this module's opinion.
+ *
+ * THE COUNTS ARE ORDERING, NOT A CALENDAR. Duration compresses every dynasty roster
+ * into a band a few seasons wide (see components/WindowMap.tsx), so on this league
+ * most rosters overlap most rosters and the shared count runs high by construction.
+ * The wording therefore leads with the ordering - who is dated before you and who
+ * after - and says plainly that overlap is the expected case, so a reader does not
+ * take a count that fires on two thirds of the league as though it had named
+ * somebody. Nothing about the arithmetic changed to make this true; the arithmetic
+ * was always saying this and the sentence was not.
  */
 export function windowSynthesis(map: WindowMap): string | null {
   const me = map.me;
   if (!me) return null;
   if (me.state === "unreadable")
-    return `Too few valued assets on your roster to read a window from, so there is nothing to line up against the league yet.`;
+    return `Too few valued assets on your roster to place it against the others, so there is nothing to line up against the league yet.`;
   if (me.state === "split")
-    return `Your assets do not agree about when you win - the middle half of your value is spread from ${me.open} to ${me.close}, which is a spread rather than a window. Until it narrows there is no season to check the rest of the league against.`;
+    return `Your assets do not agree about when your value arrives - the middle half of it is spread from ${me.open} to ${me.close}, which is a spread rather than a single span. Until it narrows there is nothing to line the rest of the league up against.`;
 
   const o = map.overlap;
   if (!o) return null;
@@ -368,23 +376,26 @@ export function windowSynthesis(map: WindowMap): string | null {
     `${count} ${count === 1 ? one : many}`;
 
   const parts = [
-    `Your window is ${windowLabel(me)}, peaking in ${me.peak}.`,
+    `The middle half of your value is dated ${windowLabel(me)}, heaviest in ${me.peak}.`,
     o.shared.length
-      ? `${n(o.shared.length, "roster shares", "rosters share")} it${o.samePeak.length ? `, ${o.samePeak.length} of them peaking in ${me.peak} exactly as you do` : ""}.`
-      : `No other roster's window overlaps it.`,
+      ? `${n(o.shared.length, "roster overlaps", "rosters overlap")} that${o.samePeak.length ? `, ${o.samePeak.length} of them heaviest in ${me.peak} exactly as you are` : ""}.`
+      : `No other roster overlaps it.`,
   ];
   if (o.earlier.length)
     parts.push(
-      `${n(o.earlier.length, "roster's value pays", "rosters' value pays")} off before yours opens.`,
+      `${n(o.earlier.length, "roster is", "rosters are")} dated entirely before you.`,
     );
   if (o.later.length)
     parts.push(
-      `${n(o.later.length, "pays", "pay")} off after it closes.`,
+      `${n(o.later.length, "is", "are")} dated entirely after you.`,
     );
   if (o.unresolved.length)
     parts.push(
-      `${n(o.unresolved.length, "roster has", "rosters have")} no single window to place at all.`,
+      `${n(o.unresolved.length, "roster has", "rosters have")} no single span to place at all.`,
     );
+  parts.push(
+    `Every roster in a dynasty league holds players in the same narrow age range, so the spans sit close together and overlapping is the ordinary case - the useful reading is who is dated before you and who after, not the season itself.`,
+  );
   return parts.join(" ");
 }
 
@@ -399,19 +410,17 @@ export function windowsByRoster(
   return new Map(leagueWindows(h, cfg).rows.map((r) => [r.rosterId, r]));
 }
 
-/**
- * One roster's window without walking the league.
+/*
+ * `windowForRoster(h, rosterId, cfg)` USED TO LIVE HERE AND WAS DELETED. It read one
+ * roster's window off a single `getTimelineProfile` without walking the league, which
+ * meant it carried the ABSOLUTE posture fallback rather than the league-relative one -
+ * so its only distinguishing behaviour was DISAGREEING with `leagueWindows`, on 6 of 14
+ * rosters on the live league. It had zero production callers; its own docstring warned
+ * about the disagreement, which is exactly the warning the next person in a hurry does
+ * not read before reaching for the obvious-sounding single-roster function.
  *
- * Costs a single `getTimelineProfile`, and therefore carries the ABSOLUTE posture
- * fallback rather than the league-relative one - which is exactly why it is not the
- * default entry point and why /league, /plan and the finder all use `leagueWindows`.
- * Present for the case where one roster is genuinely all a caller has.
+ * A caller with one roster in hand wants `windowsByRoster(h, cfg).get(rosterId)`, which
+ * is the same derivation the pages use and therefore cannot disagree with them. See
+ * SHELVED S6: if a genuine single-roster need appears, it comes back taking
+ * `leagueDurations` as a REQUIRED argument, so disagreement is not expressible.
  */
-export function windowForRoster(
-  h: LeagueHistory,
-  rosterId: number,
-  cfg: ValuationConfig = VALUATION_CONFIG,
-): ValueWindow {
-  const p = getTimelineProfile(h, rosterId, { cfg });
-  return windowOf(p, p.assets, h.currentSeasonYear, h.me.rosterId === rosterId);
-}

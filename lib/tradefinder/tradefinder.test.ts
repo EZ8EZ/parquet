@@ -484,6 +484,25 @@ describe("findTrades against the fixture league", () => {
   const me = h.rosters[0].rosterId;
   const them = h.rosters[1].rosterId;
 
+  /**
+   * STAR_VALUE is a literal on a rescalable scale, which is the shape of defect the
+   * `tierOf` deletion exists to prevent (SHELVED S5): the number does not move when the
+   * valuation model does, so a recalibration can leave it selecting everybody or nobody
+   * without anything throwing. Its docstring promises it is re-checked against the
+   * distribution rather than against a tier boundary; this is that check, stated as a
+   * band rather than a count so it fails on a real shift and not on noise.
+   */
+  it("selects a headline band rather than everybody or nobody", () => {
+    const values = h.rosters
+      .flatMap((r) => assetsOf(analyzeRoster(h, r.rosterId)))
+      .map((a) => a.value)
+      .filter((v) => v > 0);
+    expect(values.length).toBeGreaterThan(50);
+    const stars = values.filter((v) => v >= STAR_VALUE).length;
+    expect(stars).toBeGreaterThan(0);
+    expect(stars / values.length).toBeLessThan(0.15);
+  });
+
   it("returns nothing for a trade with yourself", async () => {
     const principals = await getPrincipals(h);
     expect(findTrades(h, principals, { rosterId: me, partnerRosterId: me })).toBeNull();
