@@ -131,10 +131,16 @@ export function PickAgencyPanel({ reads, summary, orderNote }: PickAgencyPanelPr
           <>
             <div className="rule my-2.5" />
             <p className="text-meta leading-snug text-secondary">
+              {/* Every gap that touches an expression is an explicit {" "}, and the
+                  following text starts on its own line. JSX only strips whitespace
+                  that contains a newline, so `{expr} no` on one wrapped line happens
+                  to survive - but it survives by where Prettier chose to break, which
+                  is not a thing to leave a sentence's readability resting on. */}
               {settledCount} of these {reads.length}{" "}
-              {settledCount === 1 ? "was" : "were"} set by a season that is already
-              over, so {settledCount === 1 ? "its slot is" : "their slots are"} no
-              longer anybody&apos;s to move.{" "}
+              {settledCount === 1 ? "was" : "were"}{" "}
+              set by a season that is already over, so{" "}
+              {settledCount === 1 ? "its slot is" : "their slots are"}{" "}
+              no longer anybody&apos;s to move.{" "}
               {live.length > 0
                 ? `The ${live.length} still in play are listed below.`
                 : "Nothing you hold is still in play."}

@@ -1,11 +1,39 @@
 /**
- * THE WINDOW MAP - every roster's value window on one time axis.
+ * THE WINDOW MAP - every roster's value delivery, ordered against everyone else's.
  *
  * The chart /league needed and never had. Timeline Coherence tells a manager when
  * THEIR OWN value pays off; it cannot tell them who else pays off then, and that is
- * the number that decides a trade. Fourteen rosters, fourteen spans, one axis of
- * calendar seasons, and the viewer's own marked - see lib/metrics/window.ts for the
- * derivation and why it refuses to draw a window for a straddled roster.
+ * the number that decides a trade. Fourteen rosters, fourteen spans, one shared axis,
+ * and the viewer's own marked - see lib/metrics/window.ts for the derivation and why
+ * it refuses to draw a window for a straddled roster.
+ *
+ * ---------------------------------------------------------------------------------
+ * WHAT THE AXIS IS, AND WHAT IT IS NOT
+ * ---------------------------------------------------------------------------------
+ * READ THIS BEFORE ADDING COPY TO THIS CHART. The seasons on the axis are labels on a
+ * RELATIVE ORDERING. They are not a forecast that a roster is good in a named year.
+ *
+ * The span is quartiles of `AssetDuration`, which is Macaulay duration over the age
+ * curve's payout profile. Every rostered player in a dynasty league is between about
+ * 19 and 32, so every roster's value-weighted quartiles land inside a band a few
+ * seasons wide, and picks push all fourteen distributions rightward together. On the
+ * live league today no roster's span opens before 2029, twelve of fourteen close in
+ * 2031, and nine of fourteen peak in 2031. Drawing that on a calendar makes it read
+ * like a year-by-year projection. It is not one. It is fourteen rosters sorted from
+ * soonest-paying to latest-paying, with the gaps between them genuinely small.
+ *
+ * THE ARITHMETIC IS SOUND; THE CALENDAR IS THE UNEARNED PART. Duration says when an
+ * asset pays out over its remaining career. A competitive window is when a roster is
+ * good enough to win now. Those are different questions, and this chart answers only
+ * the first - so the copy around it says "dated earlier" and "dated later" and never
+ * "contending in 2029". Anything on this surface implying a manager can plan a named
+ * season off these bars is claiming more than the derivation supports.
+ *
+ * It follows that "N rosters overlap yours" is weak on this league BY CONSTRUCTION
+ * rather than as a discovery, and the copy says so instead of printing a count that
+ * fires on most of the league as though it had singled somebody out. The underlying
+ * arithmetic is untouched by any of this (lib/metrics/window.ts); what changed is the
+ * framing, which was making a claim the numbers were never making.
  *
  * Hand-rolled inline SVG, no chart library (DECISIONS D3), sized for 375px. Server
  * component: nothing here is tappable, the same contract the duration scatter it
@@ -61,10 +89,10 @@ const r1 = (v: number) => Math.round(v * 10) / 10;
 
 /** What a row says out loud, since a span in an SVG says nothing to a screen reader. */
 function rowSentence(r: WindowMapRow): string {
-  if (r.state === "unreadable") return `${r.name}: too few valued assets to read a window.`;
+  if (r.state === "unreadable") return `${r.name}: too few valued assets to place at all.`;
   if (r.state === "split")
-    return `${r.name}: value spread from ${r.open} to ${r.close}, with the assets disagreeing, so no single window.`;
-  return `${r.name}: window ${r.open} to ${r.close}, peaking ${r.peak}.`;
+    return `${r.name}: value spread across ${r.open} to ${r.close}, with the assets disagreeing, so no single span.`;
+  return `${r.name}: middle half of their value dated ${r.open} to ${r.close}, heaviest ${r.peak}.`;
 }
 
 export function WindowMap({
@@ -100,7 +128,9 @@ export function WindowMap({
       className="w-full select-none"
       role="img"
       aria-label={
-        `Every roster's value window on one axis of seasons, ${first} to ${last}. ` +
+        `Every roster ordered by when its value is dated, ${first} to ${last}. The ` +
+        `seasons label a relative ordering inside a narrow band, not a forecast for a ` +
+        `named year. ` +
         rows.map(rowSentence).join(" ")
       }
     >

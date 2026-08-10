@@ -824,7 +824,9 @@ export function draftOrderFidelity(
       : `Draft order here follows the previous season's standings loosely, not exactly: ` +
         `it has differed from strict reverse standings in ${seasons.filter((s) => !s.exact).length} of ` +
         `${seasons.length} rookie drafts on record, by up to ${Math.max(...seasons.map((s) => s.maxShift))} places. ` +
-        `The league carries no draft-order rule we can read, so we do not model the slot, and no odds are computed anywhere.`;
+        `The league carries no draft-order rule we can read, so nothing here names the slot a pick will land on. ` +
+        `Pricing does assume a lottery over reverse standings (lib/valuation slotDistribution), which is why a future ` +
+        `pick's price moves with the owing team's rank - treat that price as a tendency, not a projection.`;
 
   return { seasons, followsReverseStandings, note };
 }

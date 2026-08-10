@@ -20,9 +20,15 @@
  * `components/nav-icons.tsx` for the href -> icon side of this, kept separate on
  * purpose - lib/ never imports a UI library anywhere else in this app either).
  *
- * `primary` IS THE DESTINATION ROW. The Desk (components/Desk.tsx) renders its four
- * destination slots by filtering this array on that flag - it does not keep a list of
- * its own. It used to: `BottomNav.tsx` hand-maintained a `TABS` array, and by the time
+ * `primary` IS THE DRAWER'S PINNED "GO TO" ROW. It used to be the Desk's always-visible
+ * destination row; round 8b deleted that row (see components/Desk.tsx's own header) and
+ * the four surfaces moved one tap deeper, pinned as the FIRST thing inside the drawer
+ * under a "Go to" heading. The flag did not change meaning - these are still the four
+ * surfaces with a permanent slot, still ordered, still rendered by filtering this array
+ * on this flag rather than from a list of the Desk's own - but nothing on this registry
+ * renders at rest any more, and this header said otherwise for a round. What survives
+ * unchanged is the reason the flag exists: the Desk does not keep a list of its own.
+ * It used to: `BottomNav.tsx` hand-maintained a `TABS` array, and by the time
  * the Desk replaced it that array had already drifted from this file in two directions
  * at once. This header claimed "five bottom-nav tabs" while the bar shipped six, and
  * the sixth (`/more`) was a tab that the registry did not list at all - which made
@@ -39,16 +45,16 @@ export interface NavSurface {
   label: string;
   sub: string;
   group: "Primary" | "Your team" | "The league" | "Trading" | "Drafts & values" | "The app";
-  /** Has a permanent destination slot on the Desk. Equivalent to `group: "Primary"`. */
+  /** Has a pinned slot in the Desk drawer's "Go to" row. Equivalent to `group: "Primary"`. */
   primary?: true;
-  /** The Desk's destination row is 1/4 of a 390pt screen wide, so a slot label has
-   *  to be one short word. Only `primary` surfaces need one. */
+  /** The "Go to" row is four across a 390pt screen, so a slot label has to be one
+   *  short word. Only `primary` surfaces need one. */
   short?: string;
 }
 
 export const ALL_SURFACES: NavSurface[] = [
-  // ------------------------------------------------------- the destination slots
-  // Four, and the fourth is the ledger rather than the league. The Desk's row asks
+  // -------------------------------------------------- the pinned "Go to" slots
+  // Four, and the fourth is the ledger rather than the league. The "Go to" row asks
   // "what are you here to do" - look at today, at the team, at the decision in front
   // of you, or at the record of decisions already made - and capturing reasoning is
   // the one of those the app exists for. The league standings are a thing you read,
@@ -377,7 +383,7 @@ export function managerLinks(m: {
 }
 
 /**
- * The Desk's four destination slots, in registry order.
+ * The four pinned slots of the Desk drawer's "Go to" row, in registry order.
  *
  * The ONE list. `components/Desk.tsx` renders exactly what this returns, in exactly
  * this order, and has no array of its own - which is the whole repair described in

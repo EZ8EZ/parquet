@@ -122,12 +122,27 @@ export interface ExitWindow {
  * `minAcquisitions` is the floor underneath that, because a concentration ratio
  * computed from four deals is not a measurement either.
  *
+ * THE TWO HALVES HAVE TO BE ARITHMETICALLY COMPATIBLE, and they were not. Concentration
+ * is `max(returned) / sum(returned)`, which has a hard floor of `1/n`: a bucket of n
+ * equal acquisitions still scores `1/n`. So any `minAcquisitions` below `ceil(1 /
+ * maxConcentration)` makes the pair unsatisfiable by construction rather than by data -
+ * at n = 12 the best achievable concentration is 0.0833, which fails a 0.05 bar however
+ * the league trades. The floor shipped at 12 against a 0.05 bar, which made this bar
+ * unreachable for every n from 12 to 19 and made the sentence below false over exactly
+ * the range where the floor bound. It is now 20 = ceil(1 / 0.05), so `maxConcentration`
+ * is the binding constraint everywhere and the floor never decides the answer alone.
+ *
  * This is a deliberately falsifiable bar. If the league trades for another five
  * seasons and the buckets thicken, buckets start passing it and the refusal lifts on
- * its own. Nothing here is hardcoded to "no".
+ * its own. Nothing here is hardcoded to "no" - and, since the fix above, nothing here
+ * is hardcoded to "no" by arithmetic either.
  */
 export const SUFFICIENCY = {
-  minAcquisitions: 12,
+  /**
+   * `ceil(1 / maxConcentration)`. Below this the concentration floor of `1/n` decides
+   * the answer before the data does - see the header. Keep the two in step.
+   */
+  minAcquisitions: 20,
   /** Twice the per-year slope of the measured curve: the effect a bucket must resolve. */
   maxConcentration: 0.05,
 } as const;
@@ -293,10 +308,13 @@ export function deriveExitWindow(
     refusal:
       sufficientBuckets > 0
         ? null
-        : `No age bucket clears the bar: every one is thin enough that a single ` +
-          `deal moves its ratio further than the age effect being tested. This ` +
-          `league's market cannot calibrate an age curve, and the curve in the ` +
-          `model is not calibrated against it.`,
+        : `No age bucket clears the bar: it wants ${SUFFICIENCY.minAcquisitions} usable ` +
+          `acquisitions with no single deal carrying more than ` +
+          `${Math.round(SUFFICIENCY.maxConcentration * 100)}% of the bucket's returned ` +
+          `value, and every bucket here is thin enough that one deal moves its ratio ` +
+          `further than the age effect being tested. This league's market cannot ` +
+          `calibrate an age curve, and the curve in the model is not calibrated ` +
+          `against it.`,
   };
 }
 

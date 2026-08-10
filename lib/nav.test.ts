@@ -37,15 +37,19 @@ describe("the surface registry", () => {
     expect(ALL_SURFACES.map((s) => s.href)).toContain("/more");
   });
 
-  it("flags exactly the Desk's four destination slots as primary", () => {
+  it("flags exactly the four pinned slots of the drawer's `Go to` row as primary", () => {
     const primaryHrefs = primarySurfaces().map((s) => s.href);
-    // Order matters: this IS the left-to-right order of the destination row.
+    // Order matters: this IS the left-to-right order the four render in. They are
+    // pinned inside the Desk drawer under "Go to" (components/Desk.tsx), NOT a
+    // resting row - round 8b deleted the always-visible destination row, and this
+    // test spent a round citing it as its reason while asserting something still
+    // true. The data was right; the stated reason named deleted UI.
     expect(primaryHrefs).toEqual(["/", "/roster", "/plan", "/ledger"]);
   });
 
-  it("gives every destination slot a short label", () => {
-    // A slot is a quarter of a 390pt row. `label` is the index's full name and is
-    // too long for one; without this a promoted surface would render "undefined".
+  it("gives every pinned slot a short label", () => {
+    // A slot is a quarter of a four-across row. `label` is the index's full name and
+    // is too long for one; without this a promoted surface would render "undefined".
     for (const s of primarySurfaces()) {
       expect(s.short, `${s.href} is primary but has no short label`).toBeTruthy();
       expect(s.short!.length).toBeLessThanOrEqual(8);

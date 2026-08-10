@@ -81,15 +81,24 @@ jobs:
   e2e:
     name: e2e (Playwright smoke)
     runs-on: ubuntu-latest
-    # NON-BLOCKING FOR NOW. This job is new and hasn't yet proven itself stable
-    # under CI's own timing and concurrency (as opposed to a developer's machine),
-    # so a flake here must not be able to block a merge. `continue-on-error: true`
-    # keeps the check visible on the PR without gating it. Branch protection on
-    # main currently requires exactly "typecheck / lint / test" and "build" (the
-    # `gate` and `build` jobs above) - this job is deliberately NOT added to that
-    # required list. Once it has run green across a normal week of real PRs with
-    # no flakes, promote it to required the same way those two were.
-    continue-on-error: true
+    # BLOCKING AS OF THIS COMMIT. This job shipped with `continue-on-error: true`
+    # and an explicit condition for lifting it: "once it has run green across a
+    # normal week of real PRs with no flakes, promote it to required the same way
+    # those two were." That condition is met - it has run green on every run of
+    # this wave, across every feature branch and every merge to main, with no
+    # flakes and no reruns. `continue-on-error` is therefore gone: a Playwright
+    # failure now fails the job, which is the whole point of running it.
+    #
+    # ONE HALF OF THE PROMOTION IS NOT IN THIS FILE. Branch protection on main
+    # lives in GitHub repo settings, not in the repo, and still requires exactly
+    # "typecheck / lint / test" and "build" (the `gate` and `build` jobs above).
+    # Until "e2e (Playwright smoke)" is added to that required-checks list, this
+    # job goes red on a PR but does not yet block the merge button. Adding it is
+    # a one-click owner action: Settings -> Branches -> main -> Require status
+    # checks -> add "e2e (Playwright smoke)". This is worth doing, because the
+    # Playwright smoke suite is the ONLY coverage the rendering layer has - 29 of
+    # 32 components carry no unit test - so it is the one check that can catch a
+    # page that throws on load, and 949 green unit tests cannot.
     env:
       DATABASE_URL: postgresql://ci:ci@localhost:5432/ci
       # Same reason the `build` job uses it: no network, no league credentials,

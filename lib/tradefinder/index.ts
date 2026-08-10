@@ -200,10 +200,33 @@ export const FIT = {
 export const FIT_CLAMP = 0.4;
 
 /**
- * The headline-asset threshold, aligned with the trade evaluator's own consolidation
- * note so both surfaces call the same player a star. Distinct from /plan's
- * `STAR_THRESHOLD` (cornerstone-or-better), which counts a roster's difference-makers
- * and is imported rather than restated.
+ * The headline-asset threshold: what this module treats as the piece a package is
+ * really about, used to decide whether a package is a consolidation and whether a
+ * "wants stars" appetite is being served.
+ *
+ * DELIBERATELY NOT A TIER BOUNDARY, and this docstring used to claim the opposite. It
+ * said the threshold was "aligned with the trade evaluator's own consolidation note so
+ * both surfaces call the same player a star" - which stopped being true when the
+ * evaluator moved to `leagueTierLabel` (lib/trade/index.ts) and started reading tier
+ * names off the live distribution instead of a shared literal. There is no shared 3000
+ * anywhere any more, and 3,000 does not even land inside a tier on the current
+ * distribution: it falls in the gap between High-End Rotation and Starter. A docstring
+ * asserting an alignment that no longer exists is worse than no docstring, because the
+ * next person tunes the wrong end.
+ *
+ * WHY IT STAYS AN ABSOLUTE ANYWAY. A tier boundary moves every time the model is
+ * recalibrated, and this constant is not naming a rank - it is naming "big enough that
+ * a package is about this asset", which is a property of the package's shape. Tying it
+ * to a boundary would make the finder's notion of a headline asset lurch whenever the
+ * distribution shifted, for no gain. What it IS is a literal on a rescalable scale
+ * (see SHELVED S5, `tierOf`), so it carries the same expiry risk and the same duty:
+ * RE-CHECK IT AT EVERY RECALIBRATION by counting how many assets clear it. On the
+ * current distribution 40 do, which is roughly the top 2% of the priced pool and the
+ * band this was tuned for. If a recalibration leaves single digits or several hundred
+ * clearing it, this number is wrong and the finder is quietly mis-shaping packages.
+ *
+ * Distinct from /plan's `STAR_THRESHOLD` (cornerstone-or-better), which counts a
+ * roster's difference-makers and is imported rather than restated.
  */
 export const STAR_VALUE = 3000;
 

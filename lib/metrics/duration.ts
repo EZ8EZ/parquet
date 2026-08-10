@@ -338,10 +338,23 @@ export function getTimelineProfile(
 /** Incoherence threshold. Below this TCI the roster is straddling regardless of duration. */
 const COHERENCE_FLOOR = 55;
 
-/** Fraction of the league this roster is shorter-dated than. 1 = shortest in league. */
-function shortnessPercentile(duration: number, leagueDurations?: number[]): number | null {
+/**
+ * Fraction of the league this roster is shorter-dated than. 1 = shortest in league.
+ *
+ * THE DENOMINATOR EXCLUDES SELF, SO THE NUMERATOR HAS TO AS WELL. `leagueDurations` is
+ * built in `leagueTimelines`' first pass from `rosterDuration`, which is ROUNDED to 2dp,
+ * while `classify` is called with the unrounded value - so a roster whose duration
+ * rounded UP counted itself as longer-dated than itself, and every one of those was
+ * inflated by exactly 1/(n-1), 7.7pp on this fourteen-roster league, on 9 of 14 rosters.
+ * Rounding the incoming value the same way makes self compare EQUAL rather than greater,
+ * which the strict `>` then drops, matching the denominator. Ties between two genuinely
+ * equal rosters are excluded from each other's numerator too, which is the ordinary
+ * handling for a percentile and is the same answer either way.
+ */
+export function shortnessPercentile(duration: number, leagueDurations?: number[]): number | null {
   if (!leagueDurations || leagueDurations.length < 4) return null;
-  const shorter = leagueDurations.filter((d) => d > duration).length;
+  const self = Math.round(duration * 100) / 100;
+  const shorter = leagueDurations.filter((d) => d > self).length;
   return shorter / (leagueDurations.length - 1);
 }
 

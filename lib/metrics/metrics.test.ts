@@ -7,6 +7,7 @@ import {
   leagueTimelines,
   pickDuration,
   playerDuration,
+  shortnessPercentile,
 } from "./duration";
 
 const h = buildFixtureHistory();
@@ -136,6 +137,38 @@ describe("Timeline Coherence Index", () => {
     expect(all).toHaveLength(h.rosters.length);
     for (let i = 1; i < all.length; i++) {
       expect(all[i].tci).toBeLessThanOrEqual(all[i - 1].tci);
+    }
+  });
+
+  it("never counts a roster as shorter-dated than itself", () => {
+    // `leagueDurations` is built from the ROUNDED `rosterDuration` while `classify` is
+    // called with the unrounded one, so a roster whose duration rounded up used to land
+    // in its own numerator while the denominator excluded it - inflating it by exactly
+    // 1/(n-1). Pinned on the shape that reproduces it: a value that rounds up sitting in
+    // a league that contains its own rounded self.
+    const league = [4.09, 4.13, 4.54, 5.07, 5.26];
+    // 4.538767 rounds to 4.54, which is its own entry. Two rosters are longer-dated,
+    // out of the four that are not it: 0.5, not the 0.75 self-counting produced.
+    expect(shortnessPercentile(4.538767, league)).toBeCloseTo(2 / 4, 10);
+    // The longest-dated roster in the league is shorter-dated than nobody.
+    expect(shortnessPercentile(5.257667, league)).toBe(0);
+    // And the shortest is shorter-dated than all four of the others.
+    expect(shortnessPercentile(4.086926, league)).toBeCloseTo(1, 10);
+  });
+
+  it("orders the whole live league without any roster inflating itself", () => {
+    // The cross-roster form of the same invariant: shortness must fall monotonically as
+    // duration rises, which a self-counting numerator breaks for exactly the rosters
+    // that round up.
+    const all = leagueTimelines(h);
+    const durations = all.map((p) => p.rosterDuration);
+    const sorted = [...all].sort((a, b) => a.rosterDuration - b.rosterDuration);
+    let prev = Infinity;
+    for (const p of sorted) {
+      const pct = shortnessPercentile(p.rosterDuration, durations)!;
+      expect(pct).toBeLessThanOrEqual(prev);
+      expect(pct).toBeLessThanOrEqual(1);
+      prev = pct;
     }
   });
 
