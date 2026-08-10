@@ -1,7 +1,9 @@
 import Link from "next/link";
 import { getLeagueHistory } from "@/lib/history";
 import { loadRegretLedger, regretSeasons } from "@/lib/lab/regret/load";
+import { parPercentile, quantile, type SlotPar } from "@/lib/lab/regret/slotPar";
 import type { RegretLedger, WeekRow } from "@/lib/lab/regret";
+import { CHART_ACCENT, CHART_GRID, CHART_NEUTRAL } from "@/lib/chart-colors";
 import {
   Card,
   Disclosure,
@@ -82,6 +84,95 @@ function WeeklyBars({ weeks }: { weeks: WeekRow[] }) {
           </g>
         );
       })}
+    </svg>
+  );
+}
+
+/**
+ * THE PAR STRIP. What a lock-in slot has been worth in this league, drawn as the
+ * distribution it is rather than as the single number it is usually reduced to.
+ *
+ * Arrived here with `lib/lab/regret/slotPar.ts` when /lab/startline was shelved
+ * (SHELVED.md, S1). It is the one part of that page that did not need a live week.
+ *
+ * Hand-rolled inline SVG (D3), integer coordinates only - unrounded floats serialize
+ * differently on the server and the client and have broken hydration on this project.
+ * The two reference marks are median and p90 and they are LABELLED AS QUANTILES, not
+ * as thresholds: half the league's slots are under the median by construction, so
+ * calling it a pass mark would be a grade, and D6 forbids grades.
+ */
+function ParStrip({ par, marks }: { par: SlotPar; marks: number[] }) {
+  const W = 320;
+  const H = 62;
+  const PAD = 6;
+  const BASE = 46;
+  const TOP = 14;
+  const hi = Math.max(par.max, ...marks, 1);
+  const x = (v: number) => Math.round(PAD + (v / hi) * (W - PAD * 2));
+  const tallest = Math.max(1, ...par.bins.map((b) => b.count));
+
+  return (
+    <svg
+      viewBox={`0 0 ${W} ${H}`}
+      className="w-full"
+      role="img"
+      aria-label={
+        `Every scoring lock-in slot this league banked: ${par.n} of them, ` +
+        `median ${fmt(par.median)}, ninetieth percentile ${fmt(par.p90)}, highest ${fmt(par.max)}.` +
+        (marks.length
+          ? ` Marked on it: ${marks.map((m) => fmt(m)).join(", ")}.`
+          : "")
+      }
+    >
+      {par.bins.map((b) => {
+        const x0 = x(b.from);
+        const x1 = x(b.to);
+        const h = Math.round(((BASE - TOP) * b.count) / tallest);
+        return (
+          <rect
+            key={b.from}
+            x={x0}
+            y={BASE - Math.max(1, h)}
+            width={Math.max(1, x1 - x0 - 1)}
+            height={Math.max(1, h)}
+            fill={CHART_NEUTRAL}
+            // Flat, one hue at one strength. A bar's height already states its count.
+            opacity={0.7}
+          />
+        );
+      })}
+      <line x1={PAD} y1={BASE} x2={W - PAD} y2={BASE} stroke={CHART_GRID} strokeWidth={1} />
+      {[par.median, par.p90].map((q) => (
+        <line
+          key={q}
+          x1={x(q)}
+          y1={TOP - 4}
+          x2={x(q)}
+          y2={BASE + 3}
+          stroke={CHART_NEUTRAL}
+          strokeWidth={1}
+          strokeDasharray="2 2"
+        />
+      ))}
+      {marks.map((m, i) => (
+        <g key={`${m}-${i}`}>
+          <rect
+            x={x(m) - 1}
+            y={TOP - 8}
+            width={2}
+            height={BASE - TOP + 8}
+            rx={1}
+            fill={CHART_ACCENT}
+          />
+          {/* A shape as well as a colour: the reading never rests on the accent. */}
+          <polygon
+            points={`${x(m) - 4},${TOP - 14} ${x(m) + 4},${TOP - 14} ${x(m)},${TOP - 8}`}
+            fill={CHART_ACCENT}
+          />
+        </g>
+      ))}
+      {/* Quantile labels are HTML below, not SVG text: this viewBox renders at up to
+          2x on a wide phone, and a caption should stay on the type scale. */}
     </svg>
   );
 }
@@ -308,10 +399,28 @@ export default async function RegretPage({
     );
   }
 
-  const { ledger, playersFetched, weeksRead } = await loadRegretLedger(h, rosterId, chosen);
+  const { ledger, par, playersFetched, weeksRead } = await loadRegretLedger(
+    h,
+    rosterId,
+    chosen,
+  );
   const emptyRate = ledger.slotsTotal
     ? (ledger.emptySlots / ledger.slotsTotal) * 100
     : 0;
+
+  // ONE mark on the strip, not 161. Marking every slot this manager banked would
+  // redraw the league's distribution in gold on top of itself and say nothing; the
+  // median is the single figure that answers "where do I sit in this".
+  const myScoring = ledger.weeks
+    .flatMap((w) => w.slots)
+    .filter((s) => !s.empty && s.banked > 0)
+    .map((s) => s.banked)
+    .sort((a, b) => a - b);
+  const myMedian = myScoring.length ? quantile(myScoring, 0.5) : null;
+  const parTeamWeeks = Math.round(
+    par.totalSlots / Math.max(1, chosen.slotLabels.length),
+  );
+  const parDeadRate = par.totalSlots ? (par.deadSlots / par.totalSlots) * 100 : 0;
 
   return (
     <div>
@@ -347,6 +456,66 @@ export default async function RegretPage({
             same trace.
           </p>
         </Card>
+      )}
+
+      {/* SLOT PAR. Rescued from /lab/startline when that surface was shelved
+          (SHELVED.md, S1): it is the one thing on that page that did not need a live
+          week, and it costs nothing here because the ledger already reads every
+          roster's lineup for every week and used to throw thirteen of fourteen away. */}
+      <SectionHeader title="Slot par" />
+      <p className="mb-1.5 text-note leading-snug text-muted">
+        What one slot has been worth in this league, over every slot every manager
+        banked in {chosen.season}. The rest of this page is your own season; this is
+        the field it sat in.
+      </p>
+      {par.n === 0 ? (
+        <Card>
+          <p className="text-note leading-snug text-muted">
+            No slot scored in {chosen.season}, so there is no distribution to draw. No
+            default is substituted for this league&apos;s own history.
+          </p>
+        </Card>
+      ) : (
+        <>
+          <ParStrip par={par} marks={myMedian != null ? [myMedian] : []} />
+          {/* A LEGEND, not an axis. Spreading four labels edge to edge under the
+              drawing would put "p90" a centimetre from the dashed line it names, and
+              a caption that lies about a position is worse than no caption. */}
+          <p className="figure text-micro leading-snug text-secondary">
+            0 to {fmt(par.max)} · dashed marks are median {fmt(par.median)} and p90{" "}
+            {fmt(par.p90)}
+            {myMedian != null && <> · the gold mark is your own median slot</>}
+          </p>
+          <p className="mt-1.5 text-note leading-snug text-muted">
+            {par.n.toLocaleString("en-US")} scoring slots across {parTeamWeeks}{" "}
+            team-weeks. Mean {fmt(par.mean)}, median {fmt(par.median)}, and the top
+            tenth start at {fmt(par.p90)}.{" "}
+            {myMedian != null && (
+              <>
+                Your median slot, {fmt(myMedian)}, sits above{" "}
+                {parPercentile(par, myMedian)}% of them.
+              </>
+            )}
+          </p>
+          <p className="mt-1 text-micro leading-snug text-secondary">
+            Half of all slots are under the median by construction, so it is a middle
+            and not a pass mark. {par.deadSlots} of{" "}
+            {par.totalSlots.toLocaleString("en-US")} slots ({parDeadRate.toFixed(1)}%)
+            banked exactly nothing and are counted rather
+            than plotted
+            {par.negativeSlots > 0 && (
+              // The {" "} is load-bearing. Without it JSX eats the space after the
+              // expression and this renders "4that finished below zero" - the exact
+              // shape of the `areno` bug the committee found on /roster.
+              <>
+                , as are the {par.negativeSlots}
+                {" "}
+                that finished below zero, which this league&apos;s scoring permits
+              </>
+            )}
+            .
+          </p>
+        </>
       )}
 
       <SectionHeader title="Week by week" />

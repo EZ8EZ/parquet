@@ -8,7 +8,7 @@ import {
 } from "@/lib/lineage";
 import { EmptyState, SectionHeader, Tag } from "@/components/ui";
 import { cn } from "@/lib/ui";
-import { LineageCard, SeasonTile, boardHref } from "./parts";
+import { LineageCard, SeasonTile } from "./parts";
 import { Onward } from "@/components/Onward";
 
 export const dynamic = "force-dynamic";
@@ -34,7 +34,6 @@ export default async function DraftsPage() {
   const gaveResolved = gave.filter((l) => l.resolved);
   const gotResolved = got.filter((l) => l.resolved);
   const mineOpen = [...mine].filter((l) => !l.resolved);
-  const leagueResolved = all.filter((l) => l.resolved && !mine.has(l));
 
   const noDrafts = !index.supported || seasons.length === 0;
 
@@ -219,44 +218,12 @@ export default async function DraftsPage() {
             </>
           )}
 
-          {leagueResolved.length > 0 && (
-            <>
-              <SectionHeader
-                title="Around the league"
-                action={
-                  <span className="figure text-meta text-secondary">
-                    {Math.min(12, leagueResolved.length)} of {leagueResolved.length}
-                  </span>
-                }
-              />
-              <div className="overflow-hidden rounded-[--radius] border border-border bg-surface">
-                <ul className="divide-y divide-border">
-                  {leagueResolved.slice(0, 12).map((l) => (
-                    <li key={`${l.season}-${l.round}-${l.originalRoster}`}>
-                      <Link
-                        href={boardHref(l.season, l.pickNo)}
-                        aria-label={`${l.season} round ${l.round}: ${l.playerName}, taken by ${l.usedByName}`}
-                        className="flex min-h-11 items-center gap-2 px-2.5 py-1 transition-colors hover:bg-surface-2"
-                      >
-                        <span className="w-14 shrink-0 figure text-meta text-muted">
-                          {l.season} R{l.round}
-                        </span>
-                        <span className="min-w-0 flex-1 truncate text-note text-ink">
-                          {l.playerName}
-                        </span>
-                        <span className="min-w-0 max-w-[34%] shrink truncate text-meta text-secondary">
-                          {l.usedByName}
-                        </span>
-                        <span className="shrink-0 figure text-meta text-accent-text">
-                          #{l.pickNo}
-                        </span>
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </>
-          )}
+          {/* "Around the league" - twelve of the other managers' fifty-six resolved
+              picks - sat here until 2026-08-10. Shelved (SHELVED.md, S3): a truncated
+              sample with no filter, at the foot of a 5,318px page, that was neither
+              complete nor yours. /drafts/grades answers "how did the class go"
+              properly. The revival condition is a better QUESTION, not a longer list:
+              which players other managers took with YOUR picks. */}
         </>
       )}
       <Onward from="/drafts" />

@@ -175,7 +175,6 @@ lib/
     sleeper/              real provider - Zod-validated (schemas.ts)
     csv/                  documented CSV importer (no-API platforms)
     fixture/              deterministic 5-season synthetic corpus (the default)
-    stats/                StatsProvider (fixture + external stub)
   valuation/              transparent model; every weight in config.ts
   picks.ts                draft-pick capital: full holdings, valued as assets
   principals.ts           managers as principals + tenures; succession detection
@@ -253,6 +252,8 @@ conversational analyst.
 - [RESEARCH.md](RESEARCH.md) - competitor teardown, feature matrix, the "is there a
   crowd-vote-for-NBA?" verdict, ranked v1 features, and what we deliberately did NOT build.
 - [DECISIONS.md](DECISIONS.md) - every non-obvious choice, with rejected alternatives.
+- [SHELVED.md](SHELVED.md) - things built and then taken back out of the app, why each
+  one went, and the specific condition that would bring it back.
 - [API_NOTES.md](API_NOTES.md) - empirically observed Sleeper API behavior/shapes.
 - [DESIGN.md](DESIGN.md) - the design system and tokens.
 - [QUESTIONS.md](QUESTIONS.md) - decisions only the owner can make.

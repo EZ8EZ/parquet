@@ -44,13 +44,7 @@ export const EXPERIMENTS: Experiment[] = [
     doubt:
       "Hindsight is not foresight. Nothing here was knowable on the night, and an unbanked game is not a mistake.",
   },
-  {
-    slug: "startline",
-    href: "/lab/startline",
-    title: "The start line",
-    premise:
-      "Tonight, not the season. Where your seven slots stand, what a slot has been worth in this league, and which nights your roster has left.",
-    doubt:
-      "It refuses to recommend anybody, so it is a board and not an answer. The moment it picked a player it would be claiming to know what he will score, and it does not.",
-  },
+  // "The start line" (/lab/startline) sat here until the committee review of
+  // 2026-08-10 shelved it - see SHELVED.md, S1. Its slot-par distribution survived
+  // and now renders on /lab/regret, which already read the same lineups.
 ];

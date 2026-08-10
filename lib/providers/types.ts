@@ -304,6 +304,12 @@ export interface PlayerSeasonStats {
  * Stats are abstracted so a real external source can replace the fixture
  * without touching the valuation model. Never called from a render path — always
  * cached to the DB first.
+ *
+ * FORWARD DECLARATION ONLY. Nothing in the app implements or consumes this today:
+ * `lib/providers/stats/` held a fixture implementation with zero inbound edges and
+ * was shelved on 2026-08-10 (SHELVED.md, S5). The interface is kept because it is
+ * the shape D4 committed to; the unused implementation of it was the part that
+ * pretended the capability existed.
  */
 export interface StatsProvider {
   readonly name: string;
