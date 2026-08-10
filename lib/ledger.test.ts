@@ -266,3 +266,82 @@ describe("getLedgerEntries — confined to the viewer's own tenure across a succ
     expect(scoped.total).toBeLessThan(unscoped.total);
   });
 });
+
+/**
+ * THE DESK'S STATUS LINE USED TO BE A COUNTER THAT COULD ONLY GO UP.
+ *
+ * "29 to capture · 0/29 annotated", on the bottom of every screen, in the accent
+ * colour, on every visit - because it counted every notable decision the seat had
+ * ever made. A dynasty seat accumulates those forever and a two-season-old waiver
+ * claim has no reasoning left to capture, so the figure never settled and the
+ * chrome read as a standing accusation rather than a status. `recentUnannotated`
+ * is the fix: the same set, windowed to the period a reader can still honestly
+ * answer "why did I do that?" about. See lib/desk.ts rule 1b.
+ */
+describe("getLedgerSummary — recentUnannotated, the figure chrome is allowed to print", () => {
+  const DAY = 24 * 60 * 60 * 1000;
+  const now = Date.UTC(2026, 7, 10);
+
+  function ledgerOf(transactions: Transaction[]) {
+    return getLedgerSummary({ ...h, transactions }, undefined, now);
+  }
+
+  it("counts only the uncaptured decisions inside the window", () => {
+    const s = ledgerOf([
+      tx({ transactionId: "new", type: "trade", rosterIds: [1, 2], created: now - 2 * DAY }),
+      tx({ transactionId: "old", type: "trade", rosterIds: [1, 2], created: now - 400 * DAY }),
+    ]);
+    expect(s.unannotatedNotable).toBe(2);
+    expect(s.recentUnannotated).toBe(1);
+  });
+
+  it("settles to zero once nothing recent is outstanding, while the backlog stands", () => {
+    // The whole point. A seat with a long unwritten history and a quiet month is
+    // CAUGHT UP as far as the every-screen chrome is concerned, and lib/desk.ts
+    // falls through to the record line - the zero state being the goal state.
+    const s = ledgerOf([
+      tx({ transactionId: "a", type: "trade", rosterIds: [1, 2], created: now - 90 * DAY }),
+      tx({ transactionId: "b", type: "trade", rosterIds: [1, 2], created: now - 91 * DAY }),
+    ]);
+    expect(s.unannotatedNotable).toBe(2);
+    expect(s.recentUnannotated).toBe(0);
+  });
+
+  it("never exceeds the full backlog it is a subset of", () => {
+    // Pinned as an invariant rather than a value: the two figures render together
+    // (Home's badge and the Desk's line), and a window wider than the population
+    // would put a bigger number in the smaller claim.
+    const s = getLedgerSummary(h, undefined, now);
+    expect(s.recentUnannotated).toBeLessThanOrEqual(s.unannotatedNotable);
+  });
+
+  it("drops a decision out of the window as soon as it is captured", () => {
+    const recent = tx({
+      transactionId: "recent-trade",
+      type: "trade",
+      rosterIds: [1, 2],
+      created: now - DAY,
+    });
+    const annotation: Annotation = {
+      transactionId: recent.transactionId,
+      ownerId: h.me.userId,
+      reasoning: "Because the window is 2031 and he is 31.",
+      posture: null,
+      createdAt: new Date(now),
+      updatedAt: new Date(now),
+    };
+    const before = ledgerOf([recent]);
+    expect(before.recentUnannotated).toBe(1);
+
+    const after = getLedgerSummary(
+      {
+        ...h,
+        transactions: [recent],
+        annotations: new Map([[annotationKey(recent.transactionId, h.me.userId), annotation]]),
+      },
+      undefined,
+      now,
+    );
+    expect(after.recentUnannotated).toBe(0);
+  });
+});

@@ -1762,3 +1762,98 @@ A first attempt that paid a player for the pick flipped the viewer's own coheren
 `leagueWindows`, which is a real fixture property other tests are built on; test data
 does not get to change it. A test now pins that the corpus contains a round trip at
 all, so this cannot silently go vacuous again.
+
+## D52. THE ALWAYS-VISIBLE NAVIGATION, RESTORED AS A SHORTCUT ROW RATHER THAN REVERTED
+
+**What happened.** Two commits, twenty-six minutes apart, each green and each locally
+correct, composed into a regression neither one intended. `32d86d6` deleted the Desk's
+four-link destination row and stated its compensation explicitly: *"Home is a hub
+again: the landing page now lists EVERY surface."* `746698b` then deleted that hub,
+also correctly - three copies of one registry (Home, the drawer, `/more`) is the exact
+failure the registry was built to end. But the second commit's argument only held while
+the first commit's compensation was still standing, and nobody was holding both. What
+shipped was an app whose always-visible navigation is a button reading "Menu", a seat
+chip and a status line, with the four primaries surviving one tap deeper in the drawer
+under "Go to". This is the same coordination failure the project has caught twice
+before (D41's two hand-kept nav arrays, D43's `weightsAgree`); it just happened to the
+navigation itself, which is the one part of the app nobody navigates *to* in order to
+notice it is missing.
+
+**The review split, and both sides were right.** A cold walk of the shipped app rated
+it the single highest-confidence keep in the review: the button says a word rather than
+showing six-point icon captions, the full registry is grouped and one tap away from
+every screen, and `/more` behind it is a real page for no-JS and crawlers. A read
+against the owner's stated bar - *easy for users to see the options and choose where
+they want to go* - rated it the most serious finding: a generic button cannot satisfy
+"see the options" as well as visible options can, however good the button is, and the
+novel bottom navigation was replaced by the single most conventional pattern on mobile.
+
+**Why a middle path and not a revert.** The two verdicts answer different questions -
+*can a reader find things* (yes, demonstrably) and *are the options visible without an
+action* (no) - so a revert would trade a real, tested improvement for the half that was
+actually missing. Restoring the destination row would also undo the drawer, the worded
+button, the grouped registry and the search box, none of which anyone found fault with.
+So: restore ONE of the two halves that were removed, and restore the cheaper one.
+
+**What ships.** A compact four-link shortcut row near the top of Home, one 44pt line,
+rendered from the same `primary` flag the drawer's pinned "Go to" block reads, with
+Home's own slot marked `aria-current="page"` rather than dropped. Home grows by 56pt
+(2,329 -> 2,385 at 390x844 against the fixture), which is 2.4% of a page the density
+work had already brought down by an order more than that.
+
+**It is a SHORTCUT ROW, NOT A RETURNED INDEX, and the distinction is the whole
+decision.** The second commit was right that Home should not be a third printing of
+the registry; `homeNext()`'s three situational steps beat a twenty-four-item grid, and
+they stay. Four links is not an index, it is the answer to "what are the main things
+here", which is the question a first-time leaguemate has and the one the Menu button
+answers only after a tap. `e2e/nav.spec.ts` pins the property rather than the
+arrangement - whatever `primarySurfaces()` returns is reachable from Home at rest, and
+the row holds exactly that many links and no more - because this regression was a
+property of two commits held together and only a browser can assert one.
+
+Rejected: restoring the Desk's destination row (undoes work that tested well, and
+re-spends the row of chrome the Desk bought back); restoring Home's full index (the
+thing the second commit correctly killed); leaving it (fails the owner's stated bar,
+and leaves the first commit's own stated compensation unpaid).
+
+**Two fixes shipped alongside, both found in the same review.**
+
+**The drawer's scroll region was hiding half the registry with no cue.** The window was
+`min(26rem, 100dvh-16rem)`, and on every phone in the design range the flat 26rem arm
+won: 416pt of an 846pt list on a screen with 588pt available, so The Lab, Methodology,
+Settings and Switch team all sat under a fold that nothing on screen admitted existed.
+The cap bought nothing the viewport arm was not already buying. It is gone, leaving the
+honest arithmetic (the screen, minus the resting sheet, minus the pinned block, minus
+the home indicator, minus a gap wide enough that the page behind still reads as a
+page): 416 -> 588pt at 390x844, 676pt at 430x932, and on a tall screen the whole
+registry with no scroll at all. What is still below the fold now says so - a "More
+below" cue that measures the element rather than counting items, driven by the scroll
+event and the drawer's own open animation finishing, never by an effect keyed on the
+open state (that is the cascading-render pattern the lint rule rejects). It clears the
+moment the list is read to the end, which is the half that makes it information rather
+than decoration.
+
+**The capture count was a counter that could only go up.** The Desk's status line read
+"29 to capture · 0/29 annotated", on the bottom of every screen, in the accent colour,
+on every visit. Both halves were true and the pair was anti-informative: the
+denominator is every notable decision the seat has ever made, a dynasty seat
+accumulates those forever, and a two-season-old waiver claim has no reasoning left to
+capture because the moment of conviction is gone. A figure that cannot reach zero
+through ordinary use is not a status, it is a standing accusation, and D40 already
+established that this app does not print an anti-informative number merely because it
+is true. So the line now counts `recentUnannotated` - uncaptured notable decisions
+inside a rolling 30-day window (`RECENT_CAPTURE_DAYS`, lib/ledger.ts) - and reads "1
+new decision to capture" or "4 new decisions to capture". It reaches zero the week you
+catch up and stays there until you trade again, at which point the row falls through to
+its existing record line, which was always the goal state (rule 2 in lib/desk.ts).
+The ratio came out with it: "0/29 annotated" beside "29 to capture" was the same fact
+twice in one 44pt row, and the half of it that was a score.
+
+Thirty days is deliberately not a season or a league phase: `currentLeague.status`
+carries four values against six real modes of a dynasty year, so a window keyed to it
+would change shape on boundaries the reader cannot see. The full backlog did not go
+anywhere - `/ledger` leads with it and Home's badge still offers it. It simply stopped
+following the reader around. Rejected: a fixed count threshold (this league is at 29,
+so any threshold small enough to be meaningful is one the app is permanently above);
+a dismissable state (a to-do you can silence is a to-do the app has stopped believing
+in).

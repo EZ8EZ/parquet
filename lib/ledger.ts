@@ -145,23 +145,49 @@ export function getLedgerEntries(
     .sort((a, b) => b.created - a.created);
 }
 
+/**
+ * HOW RECENT A DECISION HAS TO BE TO STILL BE A TO-DO.
+ *
+ * The whole backlog is a real number and /ledger prints it. It is not, however, an
+ * outstanding ACTION: a waiver claim from two seasons ago has no reasoning left to
+ * capture at the moment of conviction, because the moment is gone. Treating it as a
+ * task is what turned the Desk's status line - which is on the bottom of every
+ * screen, in the accent colour, forever - into a counter that could only ever go
+ * up. Thirty days is deliberately not a season or a league phase: a window keyed to
+ * the calendar changes shape on boundaries the reader cannot see, and this one is
+ * the same width every day of the year.
+ */
+export const RECENT_CAPTURE_DAYS = 30;
+
 export interface LedgerSummary {
   total: number;
   notable: number;
   annotated: number;
+  /** Every notable decision with no reasoning captured, however old. */
   unannotatedNotable: number;
+  /**
+   * The subset of those made in the last `RECENT_CAPTURE_DAYS` - the ones a reader
+   * can still honestly answer "why did I do that?" about. This is what chrome that
+   * renders on every page should count; the full figure belongs on /ledger, which
+   * is the page about the backlog.
+   */
+  recentUnannotated: number;
 }
 
 export function getLedgerSummary(
   h: LeagueHistory,
   principals?: PrincipalIndex,
+  now: number = Date.now(),
 ): LedgerSummary {
   const entries = getLedgerEntries(h, principals);
   const notable = entries.filter((e) => e.notable);
+  const unannotated = notable.filter((e) => !e.annotation);
+  const cutoff = now - RECENT_CAPTURE_DAYS * 24 * 60 * 60 * 1000;
   return {
     total: entries.length,
     notable: notable.length,
     annotated: entries.filter((e) => e.annotation).length,
-    unannotatedNotable: notable.filter((e) => !e.annotation).length,
+    unannotatedNotable: unannotated.length,
+    recentUnannotated: unannotated.filter((e) => e.created >= cutoff).length,
   };
 }
