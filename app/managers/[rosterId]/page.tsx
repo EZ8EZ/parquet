@@ -204,7 +204,14 @@ export default async function ManagerDetailPage({
       */}
       {buybacks.length > 0 && (
         <>
-          <SectionHeader title={`Picks they bought back - ${buybacks.length}`} />
+          {/* The dossier answers "does this manager do it". The league-wide list on
+              /deals answers "who else does", which is the reading a single dossier
+              structurally cannot give and the reason that section exists. */}
+          <SectionHeader
+            title={`Picks they bought back - ${buybacks.length}`}
+            href="/deals#buybacks"
+            cta="league-wide"
+          />
           <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
             {buybacks.map((b, i) => {
               const body = (

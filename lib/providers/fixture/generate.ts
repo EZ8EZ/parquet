@@ -648,6 +648,48 @@ export function generateCorpus(): FixtureCorpus {
         id: "fx-2025-pivot",
       });
     }
+    if (season === "2026") {
+      /*
+       * THE BUYBACK, and the generated corpus had none at all before this.
+       *
+       * `pickBuybacks` (lib/agency) detects a manager reacquiring a pick they
+       * originally owned. The live league has seventeen of them; this fixture had
+       * zero, which meant every surface that renders one was untested end to end and
+       * the league-wide aggregation's corpus assertions were vacuously true.
+       *
+       * DELIBERATELY VALUE-NEUTRAL. Two pick-only trades between two rosters, and the
+       * pick ends the season exactly where it started, so no roster's assets, values,
+       * timeline, posture or window move by a single point - only the transaction log
+       * grows, which is the thing the detector reads. A version of this that paid a
+       * player for the pick flipped the viewer's own coherence in `leagueWindows`,
+       * which is a real fixture property other tests are built on and not something a
+       * detector's test data gets to change.
+       *
+       * Two hops out and one back, so the round trip is also the "changed hands more
+       * than twice" case rather than a straight there-and-back.
+       */
+      recordTrade({
+        season, week: 2, a: 10, b: 14,
+        aOut: [], bOut: [],
+        aPicksOut: [["2029", 1, 10]],
+        creator: 10,
+        id: "fx-2026-pick-out",
+      });
+      recordTrade({
+        season, week: 6, a: 14, b: 8,
+        aOut: [], bOut: [],
+        aPicksOut: [["2029", 1, 10]],
+        creator: 14,
+        id: "fx-2026-pick-on",
+      });
+      recordTrade({
+        season, week: 14, a: 10, b: 8,
+        aOut: [], bOut: [],
+        bPicksOut: [["2029", 1, 10]],
+        creator: 10,
+        id: "fx-2026-buyback",
+      });
+    }
 
     // Snapshot rosters + traded picks at season end.
     rosterSnapshots[season] = rosters.map((r) =>
