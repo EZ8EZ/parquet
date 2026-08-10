@@ -11,8 +11,19 @@
  * HOUSE SVG RULES (D3): fixed viewBox, integer coordinates, colours from tokens, one
  * full-sentence aria-label, and no library.
  *
- * The per-pick rows are native `<details>` so the summary line stays scannable at
- * 375px and the full read is one tap away without any client JavaScript.
+ * THE LIST IS GROUPED, NOT PER-PICK. It used to be one native `<details>` per live
+ * pick, and the sentence inside each one is a template: every pick riding on a
+ * rebuilding roster expands to the same clause with a different name in it. Twelve
+ * disclosure widgets therefore advertised twelve findings and held four, and the
+ * reader who opened three of them learned the template. `groupAgency` partitions the
+ * same reads into the picks you set yourself plus one group per posture, states the
+ * shared clause once, and puts the picks underneath as a compact list where the
+ * season, the round and the roster whose season sets each one are what is actually
+ * different between them. Nothing is dropped: the group counts, firsts and values sum
+ * to the ungrouped list, which lib/agency's test pins.
+ *
+ * Still native `<details>`, so the summary line stays scannable at 375px and the full
+ * read is one tap away without any client JavaScript.
  *
  * ONLY THE PICKS STILL IN PLAY GET A ROW. The panel's question is "whose season decides
  * this", and for a pick whose determining season is already over that question has an
@@ -28,7 +39,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Card, Tag } from "@/components/ui";
 import { CHART_ACCENT, CHART_NEUTRAL } from "@/lib/chart-colors";
-import type { AgencySummary, PickAgency, Posture } from "@/lib/agency";
+import { groupAgency, type AgencySummary, type PickAgency, type Posture } from "@/lib/agency";
 import { fmtValue } from "@/lib/ui";
 
 const POSTURE_TONE: Record<Posture | "unread", "accent" | "positive" | "info" | "negative" | "neutral"> = {
@@ -75,6 +86,7 @@ export function PickAgencyPanel({ reads, summary, orderNote }: PickAgencyPanelPr
 
   const live = reads.filter((r) => !r.settled);
   const settledCount = reads.length - live.length;
+  const groups = groupAgency(live);
 
   return (
     <>
@@ -139,8 +151,8 @@ export function PickAgencyPanel({ reads, summary, orderNote }: PickAgencyPanelPr
       </Card>
 
       <ul className="mt-1.5 divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface empty:hidden">
-        {live.map((r) => (
-          <li key={r.key}>
+        {groups.map((g) => (
+          <li key={g.key}>
             <details className="group">
               <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-2.5 py-1.5">
                 <ChevronRight
@@ -148,39 +160,68 @@ export function PickAgencyPanel({ reads, summary, orderNote }: PickAgencyPanelPr
                   aria-hidden="true"
                   className="shrink-0 text-faint transition-transform group-open:rotate-90"
                 />
-                {/* The label drops the "(via X)" qualifier and the line below names
-                    the manager instead: at 375px the qualifier ate the season and
-                    the round to repeat what the next line already says. Neither line
-                    truncates now, because the manager's name IS the information. */}
                 <span className="min-w-0 flex-1">
-                  <span className="block figure text-body font-semibold leading-tight text-ink">
-                    {r.shortLabel}
+                  <span className="block text-body font-semibold leading-tight text-ink">
+                    {g.title}
                   </span>
-                  <span className="block text-meta leading-tight text-secondary">
-                    {r.controlled
-                      ? "Your season sets it"
-                      : `${r.determinedByName}'s season sets it`}
-                    {r.settled ? " · already settled" : ""}
+                  {/* The counts, which is what a closed group has to earn its line
+                      with: how many, how much, and how much of it is a first. */}
+                  <span className="block figure text-meta leading-tight text-secondary">
+                    {g.count} {g.count === 1 ? "pick" : "picks"} · {fmtValue(g.value)}
+                    {g.firsts > 0
+                      ? ` · ${g.firsts} ${g.firsts === 1 ? "first" : "firsts"}`
+                      : ""}
                   </span>
                 </span>
-                {r.controlled ? (
+                {g.kind === "controlled" ? (
                   <Tag tone="accent">yours</Tag>
                 ) : (
-                  <Tag tone={POSTURE_TONE[r.posture ?? "unread"]}>
-                    {r.posture ?? "unread"}
+                  <Tag tone={POSTURE_TONE[g.posture ?? "unread"]}>
+                    {g.posture ?? "unread"}
                   </Tag>
                 )}
               </summary>
               <div className="px-2.5 pb-2.5 pt-0.5">
-                <p className="text-note leading-relaxed text-muted">{r.note}</p>
-                {!r.controlled && (
-                  <Link
-                    href={`/managers/${r.determinedBy}`}
-                    className="mt-1 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent-text"
-                  >
-                    Read {r.determinedByName}&apos;s dossier
-                    <ChevronRight size={12} aria-hidden="true" />
-                  </Link>
+                {/* The templated clause, once. */}
+                <p className="text-note leading-relaxed text-muted">{g.note}</p>
+                {/* And then the part that genuinely differs pick to pick. The second
+                    line names the season whose standings set the slot, which is not
+                    the season on the pick and is the thing readers get wrong. */}
+                <ul className="mt-1.5 space-y-1">
+                  {g.picks.map((r) => (
+                    <li
+                      key={r.key}
+                      className="flex items-baseline justify-between gap-2 text-meta leading-snug"
+                    >
+                      <span className="min-w-0">
+                        <span className="block figure font-semibold text-ink">
+                          {r.shortLabel}
+                        </span>
+                        <span className="block text-secondary">
+                          {r.controlled ? "your" : `${r.determinedByName}'s`}{" "}
+                          <span className="figure">{r.determiningSeason}</span> season
+                          sets it
+                        </span>
+                      </span>
+                      <span className="shrink-0 figure text-muted">
+                        {fmtValue(r.pick.value)}
+                      </span>
+                    </li>
+                  ))}
+                </ul>
+                {g.managers.length > 0 && (
+                  <div className="mt-1 flex flex-wrap gap-x-3">
+                    {g.managers.map((m) => (
+                      <Link
+                        key={m.rosterId}
+                        href={`/managers/${m.rosterId}`}
+                        className="inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent-text"
+                      >
+                        {m.name}&apos;s dossier
+                        <ChevronRight size={12} aria-hidden="true" />
+                      </Link>
+                    ))}
+                  </div>
                 )}
               </div>
             </details>

@@ -1687,3 +1687,78 @@ never assumes the pick came straight back, which matters: EZ8's own 2024 first l
 on 2023-10-27, moved on once more while it was away, and came home 71 days later
 having changed hands three times. It also reports the same pick twice when it
 genuinely came home twice, because those are two separate decisions.
+
+## D51. THREE GOOD FEATURES NOBODY COULD FIND, and the one that was twelve cards of the same sentence
+
+A five-member review converged, from five different lenses, on one shape: the app's
+most distinctive work is also its least reachable. Three fixes, one theme.
+
+**1. THE PROVENANCE RAIL GETS A DOOR ON THE PAGES THAT ASK THE QUESTION.**
+`/lineage/[assetKey]` was rated the clearest good-and-undiscoverable case in the app:
+excellent page, three doors, none guessable. A link repeated thirty-one times on
+`/drafts`, a line on a deal receipt, and search, which was the best of the three and
+found by accident. The question it answers - *how did I end up with this guy* - is one
+you have while looking at a roster, so the door now sits on the asset row itself:
+`ValueAssetRow` (shared by `/roster` and `/values`) carries a trailing `Route` link
+with its own accessible name, `self-stretch` so it takes the row's height rather than
+setting one. Measured: `/values` is **4,009px before and 4,009px after**, exactly
+unchanged at 375, 390 and 430. The expanded row keeps the written "Where he came from"
+link, which is where a reader learns what the glyph means, and `/roster` - which
+renders the whole rail inline and until now offered no way to link to it - gains "This
+chain on its own page", the one thing an in-row rail structurally cannot be.
+
+Rejected: a labelled text link in the row (at 375px it eats the name column on the
+tightest real row); a `min-h-11` icon button (+16px on every one of sixty rows).
+
+**2. PICK AGENCY'S CARDS COLLAPSE TO GROUPS. THE SPLIT BAR AND THE PILLS DO NOT MOVE.**
+The headline - a controlled-versus-passenger split bar and the posture pills under it -
+is the best twelve seconds in the app and is untouched here. What followed it was one
+`<details>` per live pick, and the sentence inside each one is a template: every
+passenger pick on a rebuilding roster expands to the same clause with a different name
+in it. Twelve widgets advertised twelve findings and held four.
+
+`groupAgency` partitions the same reads into the picks you set yourself plus one group
+per posture, states the shared clause once, and lists the picks underneath with the
+thing that actually differs between them: the season, the round, the roster whose
+season sets it, and the value. The group summary carries counts, value and firsts, so a
+closed group earns its line. Controlled picks collapse to a single group by
+construction - tension for a pick you control is a function of your own posture - and
+the group key still carries the tension so a future change that breaks that assumption
+splits the group rather than mixing two readings under one sentence. `/roster`:
+**3,658px to 3,523px**, and the ceiling of six groups is a test.
+
+D6 and D19 survive the regrouping, which is the only way it could ship: the group notes
+state the position and never judge it, no branch says anyone is tanking, and the test
+sweeps every posture in both directions to prove it.
+
+**3. THE LEAGUE-WIDE BUYBACK VIEW LIVES ON `/deals`, NOT ON A NEW ROUTE.**
+D50's round trips rendered on one dossier at a time, so seeing the pattern the owner
+named from memory meant opening fourteen pages and holding the answer in his head.
+`leagueBuybacks` is a regrouping and not a new derivation - it adds no fact
+`pickBuybacks` had not already established - and it reports the denominator ("N round
+trips, made by M of 14 rosters") for the same reason the dossier does: a total without
+a denominator reads as a league habit when it may be two people's habit.
+
+**Placement, argued rather than assumed.** It is a reading OF the trade record: every
+dated round trip resolves to a receipt `/deals` already hosts, the ordering is
+chronological like the index above it, and that page already carries two other
+league-wide readings of the same corpus. It joins those instead of becoming a
+twenty-fifth registered surface for a seventeen-row list, which leaves the drawer, the
+registry and `ONWARD`'s two-steps rule untouched. Not `/managers`, which is one row per
+person: a chronological list of round trips there would be a second list in a different
+order on a page whose whole shape is the roster of people. The dossier keeps its own
+section and now links across at `/deals#buybacks`. Section cost at rest: **306px** on a
+19,307px page, with the seventeen rows behind a closed `<details>` and the four lines
+that are the actual reading above it.
+
+**THE FIXTURE GAINED A ROUND TRIP, because it had none.** The live league has
+seventeen; the generated corpus had zero, which meant every surface that renders one
+was untested end to end and the aggregation's corpus assertions were vacuously true.
+The scripted trade is deliberately **value-neutral** - three pick-only trades, and the
+pick ends where it started, so no roster's assets, values, timeline, posture or window
+move by a point - and it is a three-hop return rather than a straight there-and-back,
+so the "changed hands more than twice" case is in the fixture and not only in a stub.
+A first attempt that paid a player for the pick flipped the viewer's own coherence in
+`leagueWindows`, which is a real fixture property other tests are built on; test data
+does not get to change it. A test now pins that the corpus contains a round trip at
+all, so this cannot silently go vacuous again.

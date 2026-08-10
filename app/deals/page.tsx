@@ -15,6 +15,7 @@ import Link from "next/link";
 import { ChevronRight, Users } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getPrincipals } from "@/lib/principals";
+import { leagueBuybacks } from "@/lib/agency";
 import { buildTradeLedger } from "@/lib/tradegraph";
 import { dealHref, dealsQueryString, parseDealsParams } from "@/lib/tradegraph/url";
 import { Card, EmptyState, PageHeader, SectionHeader, Stat, Tag } from "@/components/ui";
@@ -68,6 +69,28 @@ export default async function DealsPage({
   const possiblePairs =
     (ledger.managers.length * (ledger.managers.length - 1)) / 2;
   const busiest = ledger.pairings[0];
+
+  /*
+   * WHY THE LEAGUE-WIDE BUYBACK VIEW LIVES HERE.
+   *
+   * A buyback is a manager reacquiring a pick they originally owned, and until now it
+   * rendered only on an individual dossier - so seeing the league's pattern meant
+   * opening fourteen pages and holding the answer in your head. It is a reading OF the
+   * trade record: every dated round trip resolves to a receipt this page already hosts,
+   * the ordering is chronological like the index above it, and this page already
+   * carries two other league-wide readings of the same corpus ("who trades with whom",
+   * "managers"). It joins those rather than becoming a twenty-fifth registered surface
+   * for a seventeen-row list, which keeps the drawer, the registry and ONWARD's
+   * two-steps rule untouched.
+   *
+   * It is NOT on /managers, which is one row per person: a chronological list of round
+   * trips there would be a second list in a different order on a page whose whole shape
+   * is the roster of people. The dossier keeps its own section and now links here.
+   *
+   * Only on the unfiltered index, exactly like the two readings below it: under
+   * `?manager=` the dossier's own section is the better answer and is one tap away.
+   */
+  const buybacks = leagueBuybacks(h);
 
   const filterLabel = pairing
     ? `${byOwner.get(pairing.a)?.name ?? pairing.a} and ${byOwner.get(pairing.b)?.name ?? pairing.b}`
@@ -185,6 +208,147 @@ export default async function DealsPage({
             </li>
           ))}
         </ul>
+      )}
+
+      {!pairing && !manager && buybacks.total > 0 && (
+        <section id="buybacks" className="scroll-mt-4">
+          <SectionHeader
+            title={`Picks that came home - ${buybacks.total}`}
+            href="/managers"
+            cta="dossiers"
+          />
+          <Card className="p-3">
+            <p className="text-body leading-relaxed text-ink">
+              A manager traded away a pick they originally owned, and later got it
+              back. {buybacks.total} round {buybacks.total === 1 ? "trip" : "trips"} on
+              record, made by{" "}
+              <span className="figure">{buybacks.byManager.length}</span> of{" "}
+              <span className="figure">{buybacks.rosters}</span> rosters. This says
+              what happened, not why: intent is not in the record, and a pick can come
+              home as a throw-in as easily as on purpose.
+            </p>
+            <div className="rule my-2.5" />
+            <ul className="space-y-1 text-meta leading-snug text-secondary">
+              {/* Only worth a line when there is a field to be busiest in. */}
+              {buybacks.byManager.length > 1 && (
+                <li>
+                  Busiest:{" "}
+                  <span className="font-semibold text-ink">
+                    {buybacks.byManager[0].rosterName}
+                  </span>
+                  ,{" "}
+                  <span className="figure">{buybacks.byManager[0].count}</span>{" "}
+                  {buybacks.byManager[0].count === 1 ? "round trip" : "round trips"}.
+                </li>
+              )}
+              {buybacks.longestAway && (
+                <li>
+                  Longest away:{" "}
+                  <span className="font-semibold text-ink">
+                    {buybacks.longestAway.rosterName}
+                  </span>
+                  &apos;s own <span className="figure">{buybacks.longestAway.label}</span>
+                  , <span className="figure">{buybacks.longestAway.awayDays}</span> days
+                  gone.
+                </li>
+              )}
+              {buybacks.multiHop.length > 0 && (
+                <li>
+                  {buybacks.total > 1 ? (
+                    <>
+                      <span className="figure">{buybacks.multiHop.length}</span> of them
+                      changed hands
+                    </>
+                  ) : (
+                    "It changed hands"
+                  )}{" "}
+                  somewhere else before coming home, so it was not bought back from the
+                  roster it was sold to.
+                </li>
+              )}
+              {buybacks.unrecorded > 0 && (
+                <li>
+                  <span className="figure">{buybacks.unrecorded}</span> show up only in
+                  the traded-picks snapshot: the round trip is a fact, but no
+                  transaction explains it, so those carry no date rather than a guessed
+                  one.
+                </li>
+              )}
+            </ul>
+          </Card>
+
+          {/* Closed by default. The four lines above are the reading; the seventeen
+              rows are the evidence, and an already tall index does not need them
+              unfolded to make the point (the house Disclosure idiom, D15). */}
+          <details className="group mt-1.5">
+            <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-meta font-semibold uppercase tracking-wide text-accent-text">
+              <ChevronRight
+                size={13}
+                aria-hidden="true"
+                className="transition-transform group-open:rotate-90"
+              />
+              Every round trip, oldest first
+            </summary>
+            <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
+              {buybacks.all.map((b, i) => {
+                const body = (
+                  /* Wraps rather than truncating. The counterparty and the hop count
+                     sit at the END of these two lines, and they are the half of a
+                     round trip that is not already in the headline above - clipping
+                     them to hold one line each would drop exactly the information
+                     this section exists to show. The list is inside a closed
+                     `<details>`, so the extra lines cost nothing at rest. */
+                  <>
+                    <span className="block text-body leading-snug text-ink">
+                      <span className="font-semibold">{b.rosterName}</span>
+                      <span className="text-secondary"> bought back their own </span>
+                      <span className="figure">{b.label}</span>
+                      <span className="text-secondary"> from {b.fromName}</span>
+                    </span>
+                    <span className="block figure text-meta leading-snug text-secondary">
+                      {b.recorded ? (
+                        <>
+                          <LocalDate ts={b.at!} />
+                          {b.awayDays != null
+                            ? ` · away ${b.awayDays} days${
+                                b.recordedHops && b.recordedHops > 2
+                                  ? `, changing hands ${b.recordedHops} times`
+                                  : ""
+                              }`
+                            : " · the trade that sent it out is not in the record"}
+                        </>
+                      ) : (
+                        "No transaction records this move, so it carries no date"
+                      )}
+                    </span>
+                  </>
+                );
+                return (
+                  <li key={`${b.season}-${b.round}-${b.rosterId}-${i}`}>
+                    {b.recorded && b.transactionId ? (
+                      <Link
+                        href={dealHref(b.transactionId)}
+                        className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-surface-2"
+                      >
+                        <span className="min-w-0 flex-1">{body}</span>
+                        <ChevronRight
+                          size={13}
+                          aria-hidden="true"
+                          className="shrink-0 text-faint"
+                        />
+                      </Link>
+                    ) : (
+                      <div className="flex min-h-11 items-center gap-2 px-2.5 py-1.5">
+                        <span className="min-w-0 flex-1">{body}</span>
+                        <Tag tone="warn">unrecorded</Tag>
+                      </div>
+                    )}
+                  </li>
+                );
+              })}
+            </ul>
+          </details>
+        </section>
       )}
 
       {!pairing && !manager && (

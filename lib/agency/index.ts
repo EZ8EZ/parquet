@@ -299,6 +299,168 @@ export function summarizeAgency(reads: PickAgency[]): AgencySummary {
   };
 }
 
+// ------------------------------------------------------------ grouped agency
+
+/**
+ * THE SAME READS, GROUPED, because twelve cards were saying four things.
+ *
+ * `readPickAgency` writes one sentence per pick, and that sentence is a template:
+ * every passenger pick riding on a rebuilding roster gets the same clause with a
+ * different name in it. Rendered as twelve separate disclosure widgets, the list read
+ * as twelve findings when it held four, and a reader who opened three of them learned
+ * the template rather than anything about their own picks.
+ *
+ * The grouping is not a new derivation and it invents no facts: it partitions the
+ * reads the panel already had, states the shared clause once, and leaves the picks
+ * themselves as a compact list underneath where the season, the round and the roster
+ * whose season sets each one are the actual information.
+ *
+ * CONTROLLED PICKS COLLAPSE TO ONE GROUP by construction - `tension` for a pick you
+ * control is a function of your own posture, which is the same for all of them - and
+ * the key still carries the tension so a future change that breaks that assumption
+ * splits the group rather than silently mixing two readings under one sentence.
+ */
+export interface AgencyGroup {
+  key: string;
+  kind: "controlled" | "passenger";
+  tension: AgencyTension;
+  /** Posture of the roster whose season sets these picks. Null when it is not read. */
+  posture: Posture | null;
+  picks: PickAgency[];
+  count: number;
+  firsts: number;
+  value: number;
+  /** Rosters whose seasons set these picks. Empty for the controlled group. */
+  managers: { rosterId: number; name: string }[];
+  /** The line that stays visible when the group is closed. */
+  title: string;
+  /** The shared clause, stated once. States the position and never judges it (D6). */
+  note: string;
+}
+
+/** "A", "A and B", "A, B and C". No serial comma, no em dash. */
+function listNames(names: string[]): string {
+  if (names.length <= 1) return names[0] ?? "";
+  if (names.length === 2) return `${names[0]} and ${names[1]}`;
+  return `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}`;
+}
+
+function controlledNote(count: number, tension: AgencyTension, posture: Posture | null): string {
+  const one = count === 1;
+  const subject = one ? "One pick is" : `${count} picks are`;
+  const own = one ? "your own season" : "your own seasons";
+  const it = one ? "it" : "them";
+  const head = `${subject} set by ${own}`;
+  if (tension === "aligned") {
+    return (
+      `${head}, and your roster reads rebuilding. The picks and the timeline point ` +
+      `the same way: your own results are what move ${it}.`
+    );
+  }
+  if (tension === "opposed") {
+    return (
+      `${head}, and your roster reads contending. Those two pull against each other: ` +
+      `every win moves ${it} later in the round. Both ends are yours, which is what ` +
+      `makes ${it} a decision rather than a problem.`
+    );
+  }
+  const tail = posture
+    ? ` Right now your roster reads ${posture}, which does not point ${it} either way.`
+    : " Your roster's timeline is not read here.";
+  return `${head}, so the outcome is yours to move rather than somebody else's to hand you.${tail}`;
+}
+
+function passengerNote(
+  count: number,
+  posture: Posture | null,
+  managers: string[],
+): string {
+  const one = count === 1;
+  const many = managers.length > 1;
+  const who = listNames(managers);
+  const seasons = many || !one ? "seasons set" : "season sets";
+  const slots = one ? "this pick's slot" : "these picks' slots";
+  const assets = one ? "the asset" : "the assets";
+  const outcomes = one ? "the outcome" : "the outcomes";
+  const theirs = many ? "Those rosters read" : "Their roster reads";
+  const tail = posture
+    ? ` ${theirs} ${posture}.`
+    : ` No timeline is read for ${many ? "those rosters" : "them"} here.`;
+  return (
+    `${who}'s ${seasons} ${slots}, not yours. You hold ${assets}; they hold ` +
+    `${outcomes}.${tail}`
+  );
+}
+
+const CONTROLLED_ORDER: AgencyTension[] = ["aligned", "opposed", "open"];
+
+/**
+ * Partition a set of reads into the four postures plus the picks you set yourself.
+ *
+ * Order is fixed rather than by size: the picks whose outcome is yours come first
+ * because they are the ones a decision can act on, then the rest in the same posture
+ * order `summarizeAgency` already prints above them, so the group list and the
+ * "what the seasons you ride on are doing" summary read top to bottom in step.
+ */
+export function groupAgency(reads: PickAgency[]): AgencyGroup[] {
+  const buckets = new Map<string, PickAgency[]>();
+  for (const r of reads) {
+    const key = r.controlled
+      ? `controlled:${r.tension}`
+      : `passenger:${r.posture ?? "unread"}`;
+    const list = buckets.get(key) ?? [];
+    list.push(r);
+    buckets.set(key, list);
+  }
+
+  const keys = [
+    ...CONTROLLED_ORDER.map((t) => `controlled:${t}`),
+    ...POSTURE_ORDER.map((p) => `passenger:${p}`),
+  ];
+
+  const out: AgencyGroup[] = [];
+  for (const key of keys) {
+    const picks = buckets.get(key);
+    if (!picks || !picks.length) continue;
+    const kind = key.startsWith("controlled") ? "controlled" : "passenger";
+    const posture = picks[0].posture;
+    const tension = picks[0].tension;
+    const managerMap = new Map<number, string>();
+    if (kind === "passenger") {
+      for (const p of picks) managerMap.set(p.determinedBy, p.determinedByName);
+    }
+    const managers = [...managerMap]
+      .map(([rosterId, name]) => ({ rosterId, name }))
+      .sort((a, b) => a.name.localeCompare(b.name));
+    out.push({
+      key,
+      kind,
+      tension,
+      posture,
+      picks,
+      count: picks.length,
+      firsts: picks.filter((p) => p.pick.round === 1).length,
+      value: picks.reduce((s, p) => s + p.pick.value, 0),
+      managers,
+      title:
+        kind === "controlled"
+          ? "Your own seasons set these"
+          : posture
+            ? `Set by rosters that read ${posture}`
+            : "Set by rosters with no timeline read here",
+      note:
+        kind === "controlled"
+          ? controlledNote(picks.length, tension, posture)
+          : passengerNote(
+              picks.length,
+              posture,
+              managers.map((m) => m.name),
+            ),
+    });
+  }
+  return out;
+}
+
 // ---------------------------------------------------------------- the buyback
 
 /**
@@ -472,6 +634,87 @@ export function buybacksByRoster(h: LeagueHistory): Map<number, PickBuyback[]> {
     out.set(b.rosterId, list);
   }
   return out;
+}
+
+/**
+ * EVERY ROUND TRIP IN THE LEAGUE, ON ONE SURFACE.
+ *
+ * `buybacksByRoster` already had all of this; what it did not have was a shape a page
+ * could render without opening fourteen dossiers in turn. The pattern being described
+ * here - which managers buy their own seasons back, how often, and how far the pick
+ * travelled before it came home - is a league-wide reading, and a per-manager map can
+ * only ever show one fourteenth of it at a time.
+ *
+ * PURELY A REGROUPING. Not one fact here is derived that `pickBuybacks` did not
+ * already establish, and the same two-source honesty carries through: `unrecorded`
+ * is counted and named rather than folded into the total, and `longestAway` can only
+ * ever be a dated round trip because an undated one has no length to compare.
+ *
+ * `rosters` and `rostersWithNone` are here for the same reason the dossier prints the
+ * denominator: "15 round trips" without "across 8 of 14 rosters" reads as a league
+ * habit when it may be two people's habit.
+ */
+export interface BuybackManager {
+  rosterId: number;
+  rosterName: string;
+  count: number;
+  /** How many of that manager's round trips a transaction actually records. */
+  recorded: number;
+}
+
+export interface LeagueBuybacks {
+  /** Every round trip, in `pickBuybacks` order: dated oldest first, undated last. */
+  all: PickBuyback[];
+  total: number;
+  recorded: number;
+  unrecorded: number;
+  /** Busiest first, then alphabetical. Only rosters with at least one. */
+  byManager: BuybackManager[];
+  /** Rosters in the current league, and how many of them have never done this. */
+  rosters: number;
+  rostersWithNone: number;
+  /**
+   * Round trips where the pick changed hands somewhere else before coming home.
+   * Real in this league, and the case a there-and-back assumption would misreport.
+   */
+  multiHop: PickBuyback[];
+  /** The longest time away, among the round trips the log actually dates. */
+  longestAway: PickBuyback | null;
+}
+
+export function leagueBuybacks(h: LeagueHistory): LeagueBuybacks {
+  const all = pickBuybacks(h);
+
+  const byRoster = new Map<number, BuybackManager>();
+  for (const b of all) {
+    const m =
+      byRoster.get(b.rosterId) ??
+      { rosterId: b.rosterId, rosterName: b.rosterName, count: 0, recorded: 0 };
+    m.count++;
+    if (b.recorded) m.recorded++;
+    byRoster.set(b.rosterId, m);
+  }
+  const byManager = [...byRoster.values()].sort(
+    (a, b) => b.count - a.count || a.rosterName.localeCompare(b.rosterName),
+  );
+
+  const dated = all.filter((b) => b.awayDays != null);
+  const longestAway = dated.length
+    ? dated.reduce((best, b) => (b.awayDays! > best.awayDays! ? b : best))
+    : null;
+
+  const rosters = h.rosters.length;
+  return {
+    all,
+    total: all.length,
+    recorded: all.filter((b) => b.recorded).length,
+    unrecorded: all.filter((b) => !b.recorded).length,
+    byManager,
+    rosters,
+    rostersWithNone: Math.max(0, rosters - byManager.length),
+    multiHop: all.filter((b) => b.recordedHops != null && b.recordedHops > 2),
+    longestAway,
+  };
 }
 
 // ------------------------------------------------------- how the order is set

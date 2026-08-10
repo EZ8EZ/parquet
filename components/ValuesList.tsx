@@ -25,7 +25,7 @@
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { ChevronDown, ChevronRight, Search } from "lucide-react";
+import { ChevronDown, ChevronRight, Route, Search } from "lucide-react";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { Sparkline } from "./charts";
 import { cn, fmtValue, fold } from "@/lib/ui";
@@ -151,12 +151,31 @@ export function ValueAssetRow({
         justArrived && "ring-2 ring-accent",
       )}
     >
+      {/*
+        THE ROW HAS TWO ACTIONS NOW, and the second one is the fix for the app's
+        clearest good-and-undiscoverable feature. The provenance rail
+        (/lineage/[assetKey]) answers "how did I end up with this guy", which is a
+        question you have while looking at a roster, and until now the only doors to
+        it were a link repeated thirty-one times on /drafts, a deal receipt, and the
+        search panel. This is the door on the page where the question occurs.
+
+        `self-stretch` rather than `min-h-11`: the link takes the row's own height
+        instead of setting one, so the tap column is as tall as the row and the list
+        does not grow by a single pixel at rest. That mattered - /values renders sixty
+        of these and /roster seventeen, so anything that added even 8px per row would
+        have cost more than the feature is worth.
+
+        It carries its own accessible name because the glyph is the whole label; the
+        expanded row keeps the written "Where he came from" link, which is where a
+        reader learns what the glyph means.
+      */}
+      <div className="flex items-stretch">
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
         aria-expanded={open}
         aria-label={`${name}, value ${fmtValue(value)}. Show details`}
-        className="flex w-full items-center gap-2.5 px-2.5 py-1.5 text-left"
+        className="flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-1.5 text-left"
       >
         {rank != null && (
           <span className="w-5 shrink-0 text-right figure text-meta text-secondary">
@@ -237,6 +256,17 @@ export function ValueAssetRow({
           )}
         />
       </button>
+        {playerId && (
+          <Link
+            href={playerLineageHref(playerId)}
+            aria-label={`How ${name} got here`}
+            title={`How ${name} got here`}
+            className="flex shrink-0 items-center self-stretch border-l border-border px-2.5 text-secondary transition-colors hover:bg-surface-2 hover:text-accent-text"
+          >
+            <Route size={14} aria-hidden="true" />
+          </Link>
+        )}
+      </div>
 
       {open && (
         <div className="border-t border-border bg-bg/40 px-2.5 py-2">
@@ -290,7 +320,22 @@ export function ValueAssetRow({
           {playerId && (
             <>
               {provenance ? (
-                <div className="mt-2 border-t border-border pt-2">{provenance}</div>
+                <div className="mt-2 border-t border-border pt-2">
+                  {provenance}
+                  {/* The rail is already the whole answer here, so this is not a
+                      second copy of it - it is the ADDRESS of the answer, which is
+                      the one thing an in-row rail cannot be. That address is the
+                      thing anybody would paste into a league chat, and until now
+                      /roster was the only surface that showed the chain and offered
+                      no way to link to it. */}
+                  <Link
+                    href={playerLineageHref(playerId)}
+                    className="mt-1 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent-text"
+                  >
+                    This chain on its own page
+                    <ChevronRight size={13} aria-hidden="true" />
+                  </Link>
+                </div>
               ) : (
                 <Link
                   href={playerLineageHref(playerId)}
