@@ -175,7 +175,7 @@ export const VALUATION_CONFIG: ValuationConfig = {
    * THE PEAK IS UNCHANGED AT EXACTLY 1.16, and that is not a coincidence, it is D28.
    * `theoreticalMaxMultiplier()` folds the largest age anchor into the constant every
    * value in this app is divided by, so a moved peak would rescale every price in the
-   * product and quietly change what `tierOf()`'s thresholds mean. The derivation
+   * product and quietly change where the league's tier breaks land. The derivation
    * therefore scales its whole curve to the peak the hand-set anchors already had.
    * Only the SHAPE is recalibrated - and shape is the entire content of an age curve,
    * because the level divides out.

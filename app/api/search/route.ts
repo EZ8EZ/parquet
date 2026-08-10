@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { getLeagueHistory, type LeagueHistory } from "@/lib/history";
 import { getPrincipals, tenureLabel } from "@/lib/principals";
 import { cachedValuePlayers, injuryLabel, type ValueBreakdown } from "@/lib/valuation";
-import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
+import { leagueTiers, tierResolver } from "@/lib/rankings/tiers";
 import {
   buildDraftIndex,
   getDraftBoard,
@@ -106,7 +106,7 @@ function getPlayerValuation(h: LeagueHistory) {
     .map((v) => v.value)
     .filter((v) => v > 0)
     .sort((a, b) => b - a);
-  const tiers = computeTiers(valuesDesc, { floor: (valuesDesc[0] ?? 0) * 0.1 });
+  const tiers = leagueTiers(valuesDesc);
   const tierFor = tierResolver(tiers);
   tierCache = { at: Date.now(), key, tierFor };
   return { values, tierFor };

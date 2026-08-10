@@ -1,6 +1,9 @@
 import { describe, expect, it } from "vitest";
 import type { Player } from "../providers/types";
-import { computeTiers, tierResolver } from "./tiers";
+import { TIER_FLOOR_FRACTION, computeTiers, leagueTiers, tierResolver } from "./tiers";
+import { buildFixtureHistory } from "../testing/fixtureHistory";
+import { leagueTierLabel } from "./leagueTiers";
+import { cachedValuePlayers } from "../valuation";
 import {
   applyRanks,
   blendSources,
@@ -105,6 +108,39 @@ describe("computeTiers", () => {
     expect(resolve(390)!.tier).toBe(2);
     // Below everything still resolves rather than returning null.
     expect(resolve(1)!.tier).toBe(2);
+  });
+});
+
+describe("one tier system", () => {
+  /**
+   * The regression this pins. Before the age-curve recalibration the app carried two
+   * tier systems - `computeTiers` off the live distribution, and a `tierOf` with six
+   * hardcoded literals - and they agreed, so nothing complained. The recalibration
+   * moved the distribution, the literals stayed put, and a trade receipt started
+   * calling a player "Franchise" while /values called the same player "Cornerstone".
+   * No test failed, because no test compared the two.
+   *
+   * This one does. If a second tiering ever reappears anywhere, the label a receipt
+   * shows and the label the ranking board shows have to be produced by the same
+   * function or this fails.
+   */
+  it("gives a value the same label wherever it is asked", () => {
+    const h = buildFixtureHistory();
+    const label = leagueTierLabel(h);
+    const desc = [...cachedValuePlayers(h).values()]
+      .map((v) => v.value)
+      .filter((v) => v > 0)
+      .sort((a, b) => b - a);
+    const boardLabel = tierResolver(leagueTiers(desc));
+    expect(desc.length).toBeGreaterThan(0);
+    for (const v of desc) expect(label(v)).toBe(boardLabel(v)?.label);
+  });
+
+  it("floors the cliff search at a fixed fraction of the top asset", () => {
+    const desc = [10000, 9000, 8000, 900, 800, 50, 40, 30, 20, 10];
+    expect(leagueTiers(desc)).toEqual(
+      computeTiers(desc, { floor: 10000 * TIER_FLOOR_FRACTION }),
+    );
   });
 });
 

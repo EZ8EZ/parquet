@@ -76,7 +76,7 @@
  * anchors already had. That is deliberate and it is D28: `theoreticalMaxMultiplier()`
  * multiplies the largest age anchor into the constant every value in the app is divided
  * by, so moving the peak would rescale every price in the product and silently shift
- * what `tierOf()`'s thresholds mean. Only the SHAPE of the curve is being recalibrated,
+ * where the league's tier breaks land. Only the SHAPE of the curve is being recalibrated,
  * and the shape is the entire content of an age curve - the level cancels.
  */
 import "./_env";

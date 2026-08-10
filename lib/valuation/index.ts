@@ -458,16 +458,23 @@ export function pickValue(
   return Math.round(blended * discount);
 }
 
-/** Coarse display tier from a value. */
-export function tierOf(value: number): string {
-  if (value >= 7000) return "Franchise";
-  if (value >= 4500) return "Cornerstone";
-  if (value >= 2800) return "Core Starter";
-  if (value >= 1500) return "Starter";
-  if (value >= 700) return "Rotation";
-  if (value >= 250) return "Depth";
-  return "Fringe";
-}
+/*
+ * `tierOf(value)` USED TO LIVE HERE and mapped a value to a tier name with six
+ * hardcoded literals (7000 = Franchise, 4500 = Cornerstone, 2800, 1500, 700, 250).
+ * It is gone, deliberately, and nothing replaced it in this file.
+ *
+ * Those literals were fitted to where this league's value distribution cliffed when
+ * they were written, and while that held they agreed with `lib/rankings/tiers.ts`,
+ * which reads the breaks off the live distribution instead. The age-curve
+ * recalibration moved the distribution and the two systems came apart without any
+ * error: measured against the live league, 7000 stopped tracking the top break (which
+ * moved from 7,133 to 7,605) and 2800 fell from a clean gap into the middle of a
+ * cluster, so a trade receipt and /values started printing different tier names for
+ * the same player on the same afternoon.
+ *
+ * The replacement is `leagueTierLabel(h)` in `lib/rankings/leagueTiers.ts`: one recipe,
+ * derived from the distribution it is describing, so this cannot drift again.
+ */
 
 function round2(n: number): number {
   return Math.round(n * 100) / 100;

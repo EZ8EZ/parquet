@@ -22,7 +22,7 @@ import { ProvenanceRail, chainSummary } from "@/components/ProvenanceRail";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { Card, Disclosure, SectionHeader } from "@/components/ui";
 import { cachedValuePlayers } from "@/lib/valuation";
-import { computeTiers, tierResolver } from "@/lib/rankings/tiers";
+import { leagueTiers, tierResolver } from "@/lib/rankings/tiers";
 import { assetPlayerId } from "@/lib/tradegraph";
 import { valuesFocusHref } from "@/lib/values/url";
 import { fmtValue } from "@/lib/ui";
@@ -67,7 +67,7 @@ export default async function LineagePage({
         .sort((a, b) => b - a);
       value = v.value;
       tier =
-        tierResolver(computeTiers(desc, { floor: (desc[0] ?? 0) * 0.1 }))(v.value)
+        tierResolver(leagueTiers(desc))(v.value)
           ?.label ?? null;
     }
   }

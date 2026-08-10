@@ -5,7 +5,7 @@
 import type { LeagueHistory } from "./history";
 import type { Roster } from "./providers/types";
 import { cachedValuePlayers, injuryLabel, type ValueBreakdown } from "./valuation";
-import { computeTiers, tierResolver } from "./rankings/tiers";
+import { leagueTiers, tierResolver } from "./rankings/tiers";
 import { pickCapital, type PickCapital } from "./picks";
 import { loadSeasonRosters } from "./metrics/skill";
 
@@ -101,7 +101,7 @@ export function analyzeRoster(h: LeagueHistory, rosterId: number): RosterAnalysi
     .filter((v) => v > 0)
     .sort((a, b) => b - a);
   const tierFor = tierResolver(
-    computeTiers(leagueValuesDesc, { floor: (leagueValuesDesc[0] ?? 0) * 0.1 }),
+    leagueTiers(leagueValuesDesc),
   );
   const valued: ValuedPlayer[] = (roster?.players ?? [])
     .map((pid) => {
