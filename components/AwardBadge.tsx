@@ -35,9 +35,15 @@ import type { AwardGroup } from "@/lib/superlatives";
 import { cn } from "@/lib/ui";
 
 /**
- * Group -> tone, following the same convention as POSTURE_TONE in app/league/page.tsx
- * and the Tag component's tone prop: one of the app's five semantic colors, never a
- * new palette.
+ * Group -> tone, using the Tag component's tone prop: one of the app's five semantic
+ * colors, never a new palette.
+ *
+ * NOT YET FIXED, and it is the same defect posture had: `margins: "negative"` and
+ * `taste: "positive"` are categories wearing pass/fail tokens. The posture maps this
+ * comment used to point at were retired for exactly that reason - see the note in
+ * components/PostureTag.tsx. Award groups need the same treatment and did not get it
+ * in that pass, because a badge's icon already carries the category and the recolor
+ * needs its own look at what each group means.
  */
 export type BadgeTone = "accent" | "positive" | "negative" | "info" | "warn";
 

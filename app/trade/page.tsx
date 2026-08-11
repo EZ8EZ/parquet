@@ -4,7 +4,8 @@ import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { analyzeRoster, leagueValueRanking } from "@/lib/roster";
 import { leagueTimelines } from "@/lib/metrics/duration";
-import { PageHeader, SectionHeader, Tag } from "@/components/ui";
+import { PageHeader, SectionHeader } from "@/components/ui";
+import { PostureTag } from "@/components/PostureTag";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { Onward } from "@/components/Onward";
 import {
@@ -14,13 +15,6 @@ import {
 } from "@/components/TradeBuilder";
 
 export const dynamic = "force-dynamic";
-
-const POSTURE_TONE = {
-  contending: "accent",
-  ascending: "positive",
-  rebuilding: "info",
-  straddling: "negative",
-} as const;
 
 export default async function TradePage() {
   const h = await getLeagueHistory();
@@ -158,7 +152,7 @@ export default async function TradePage() {
                         {Math.round(t.laterShare * 100)}% later
                       </span>
                     </span>
-                    <Tag tone={POSTURE_TONE[t.posture]}>{t.posture}</Tag>
+                    <PostureTag posture={t.posture} />
                     <ChevronRight
                       size={14}
                       aria-hidden="true"

@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ArrowLeft, ChevronRight, Lightbulb, Trophy } from "lucide-react";
+import { PostureGlyph } from "@/components/PostureTag";
 import { getLeagueHistory } from "@/lib/history";
 import { buildDossier, dossiersByOwner } from "@/lib/dossier";
 import { titleSummariesByOwner } from "@/lib/dossier/titles";
@@ -56,11 +57,11 @@ function Metric({
   );
 }
 
-const POSTURE_TONE: Record<string, string> = {
-  rebuilding: "border-info/30 bg-info/[0.08] text-info",
-  contending: "border-accent-edge bg-accent-wash text-accent-text",
-  balanced: "border-border bg-elevated text-muted",
-};
+/* Postures are categories, not grades - see the note in components/PostureTag.tsx.
+ * These season chips used to spell rebuilding as `info` and contending as `accent`,
+ * which spent the app's one reserved "this is yours" hue on a category unrelated to
+ * the viewer. One neutral chip now; the glyph and the word carry the distinction. */
+const POSTURE_CHIP = "border-border bg-elevated text-muted";
 
 export default async function ManagerDetailPage({
   params,
@@ -388,11 +389,12 @@ export default async function ManagerDetailPage({
                 key={s.season}
                 className={cn(
                   "inline-flex items-baseline gap-1.5 rounded-full border px-2 py-0.5 figure text-meta",
-                  POSTURE_TONE[s.posture] ?? POSTURE_TONE.balanced,
+                  POSTURE_CHIP,
                 )}
               >
                 {s.season}
-                <span className="text-meta font-medium not-italic opacity-80">
+                <span className="inline-flex items-baseline gap-1 text-meta font-medium not-italic opacity-80">
+                  <PostureGlyph posture={s.posture} />
                   {s.posture}
                 </span>
               </span>

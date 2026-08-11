@@ -2242,3 +2242,70 @@ sentence never enter that branch and pay none of it.
 Verified at 375, 390 and 430 with no horizontal overflow, with and without
 `prefers-reduced-motion`, and with the drawer's full open/close cycle driven for real
 rather than asserted from the stylesheet.
+
+---
+
+## D61. A CONTRAST RATIO IS A PROPERTY OF A PAIR, AND POSTURE IS NOT A GRADE
+
+Two defects, one shape. Both are cases of a value that was measured once, against one
+partner, and then used everywhere.
+
+**`--color-faint` was measured against the wrong ground.** The token file recorded it at
+3.7:1 and that number was true - against `--color-bg`. Almost nothing in this app sits on
+`--color-bg`; text sits on cards. On `--color-surface` the shipped `#656c78` measured
+**3.36:1**, on `--color-surface-2` **2.98:1**, and on the `/deals` accent wash **2.44:1**.
+Roughly 260 call sites across six routes inherited one authoring-time mistake, and every
+one of them failed SC 1.4.3. `--color-secondary` had the same crack, smaller: it passed
+on `--color-surface` and measured 4.03:1 on `--color-elevated`.
+
+The fix is a raised token **plus a ground-scoped restatement**, because one value cannot
+do it. `faint` has to clear 4.5:1 on the accent wash and stay recessive under
+`secondary`, and on the dark theme those two demands cross. So the ground restates the
+token: `.bg-surface-2`, `.bg-elevated` and `.bg-accent-wash` declare their own
+`--color-faint`, `.bg-bg` and `.bg-surface` declare the base back, and custom-property
+inheritance resolves nesting on its own. A component still writes `text-faint` and gets a
+measured pair either way. Dark: **3.36 -> 4.71** on surface, **2.44 -> 4.59** on the wash.
+Paper needed the lift only on its two darkest grounds (4.30 -> 4.64 on elevated). The
+contrast theme already passed on every ground and is left alone, with an explicit rule so
+the dark theme's values cannot leak into it. Verified live: 12 routes x 3 themes x
+375/390/430 now report zero rendered text below 4.5:1.
+
+Not fixed, and named so the next round does not have to rediscover it: the token's own
+comment reserves `faint` for "chrome ONLY, never a number", and ~130 call sites set real
+prose and real figures in it. Raising the token makes those legible. Moving them onto
+`text-secondary` is a pass over call sites, not a token edit.
+
+**Posture was wearing a verdict.** Six copies of the same map had grown across the app,
+each spelling a roster's posture as a semantic tone: `straddling: "negative"`,
+`ascending: "positive"`, `contending: "accent"`. `--color-negative` is this app's pass/fail
+token - it is the colour of a number below zero, of an injury, of an armed destructive
+button - so a straddling roster was being handed a red pill on a page whose entire thesis
+is that it issues no grades. D6 says the app states theses, not verdicts, and a reader
+takes the grade off the colour in half a second and never reaches the sentence underneath
+that refuses to give one. `contending: "accent"` was a second, quieter error: gold means
+"you" everywhere else here, and a category unrelated to the viewer was spending it.
+
+`components/PostureTag.tsx` replaces all six maps. Every posture renders in the already
+measured neutral tone and the distinction is carried by a **glyph** - circle, triangle,
+square, diamond, hexagon - beside the word, which was always printed anyway. Pure
+geometry, because no reader takes a square as worse than a triangle. It survives every
+form of colour blindness and the paper theme for free and adds no token to measure.
+`fragilityTone()` deliberately keeps its `negative`: it fires only where a brittle roster
+is actually a threat to the plan its owner chose, which is a conditioned alarm about a
+specific risk, not a grade on a category.
+
+**Two more of the same family, fixed here.** The contrast theme's `--color-warn`
+(`#ffd07a`) and `--color-accent` (`#ffd27a`) were dE76 **1.3** apart - the same colour,
+in the theme built for readers who need separation most. Warn moves off gold entirely to
+`#ff9d3d`, dE76 **30.4** from the accent and 52.8 from negative. And `toneClasses` in
+`components/ui.tsx` still shipped `bg-positive/12 text-positive` for four of its six
+tones: a colour tinting its own ground at 12% alpha, whose effective background depends
+on whatever is painted behind the pill, which is why an earlier round recorded these as
+"unfixable". They now use opaque washes composited once in the token file, the same fix
+`accent` already had. Every pair is a real number in all three themes; worst is negative
+on its own wash at 4.66:1.
+
+`DistributionStrip` also stopped giving the viewer's own tick to the diverging ramp in
+signed mode. Accent means "you", and the one chart where "you" matters most was the only
+place that spent it on sign - which the tick's position and every other tick's fill
+already carry twice over.

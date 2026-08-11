@@ -19,19 +19,13 @@
 import Link from "next/link";
 import { Layers } from "lucide-react";
 import { Tag } from "@/components/ui";
+import { PostureTag } from "@/components/PostureTag";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { fmtValue } from "@/lib/ui";
 import { fragilityTone } from "@/lib/metrics/bands";
 import { assetPlayerId, type ManagerMetric, type PlayerNow } from "@/lib/tradegraph";
 import { playerLineageHref } from "@/lib/tradegraph/url";
-
-const POSTURE_TONE = {
-  contending: "accent",
-  ascending: "positive",
-  rebuilding: "info",
-  straddling: "negative",
-} as const;
 
 export interface ManagerRef {
   ownerId: string;
@@ -63,7 +57,7 @@ function ManagerMetricPills({
         href="/league"
         className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-1.5 py-0.5 text-micro font-semibold leading-normal text-muted transition-colors hover:text-ink"
       >
-        <Tag tone={POSTURE_TONE[metric.posture]}>{metric.tci} TCI</Tag>
+        <PostureTag posture={metric.posture}>{metric.tci} TCI</PostureTag>
         <span className="text-faint">{metric.posture}</span>
       </Link>
       {metric.fragility != null && metric.fragilityBand && (

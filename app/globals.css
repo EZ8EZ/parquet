@@ -50,19 +50,41 @@
    * a date you are meant to read) AND it drew chrome (separators, the "·" glue between
    * two facts, axis ticks, rank ordinals). It was 57% of all text in the app at
    * 3.45:1 WCAG - which sounds borderline - but APCA Lc 25, which is below the floor
-   * for text at ANY size. The fix is not to brighten it, because chrome genuinely
-   * should recede. The fix is to split it.
+   * for text at ANY size. The fix was to split it by JOB, and that split still stands.
    *
-   *   ink        #f3f5f8   16.3:1 / Lc 100  primary
-   *   muted      #9aa1ad    6.8:1 / Lc  50  supporting prose
-   *   secondary  #858d9c    5.9:1 / Lc  41  NEW - anything that carries a DATUM
-   *   faint      #656c78    3.7:1 / Lc  25  demoted to chrome ONLY: separators, "·",
-   *                                         axis ticks, rank ordinals. Never a number.
+   * WHAT WAS STILL WRONG: the numbers were measured against --color-bg, and almost
+   * nothing in this app sits on --color-bg. Text sits on cards. The shipped `faint`
+   * (#656c78) measured 3.70:1 on the ground it was recorded against, 3.36:1 on
+   * --color-surface where it actually renders, 2.98:1 on --color-surface-2 and
+   * 2.44:1 on --color-accent-wash (the /deals pill ground). Roughly 260 call sites
+   * inherited one authoring-time mistake, and every one of them failed SC 1.4.3.
+   *
+   * Both new values are re-picked at constant hue - only CIE L* moves - so the cool
+   * grey ink family is unchanged and only luminance does the work. Ratios are against
+   * --color-surface, the ground these actually render on:
+   *
+   *   ink        #f3f5f8  L* 96.5  16.26:1 / Lc 100  primary
+   *   muted      #9aa1ad  L* 66.0   6.83:1 / Lc  50  supporting prose
+   *   secondary  #8b93a2  L* 60.8   5.74:1 / Lc  43  anything carrying a DATUM
+   *                                 (was #858d9c: 5.32:1 here, but 4.03:1 on
+   *                                 --color-elevated and 3.86:1 on the wash)
+   *   faint      #7b8493  L* 54.9   4.71:1 / Lc  35  chrome: separators, "·", axis
+   *                                 ticks, rank ordinals (was #656c78, 3.36:1)
+   *
+   * On --color-bg the same four are 17.92 / 7.52 / 6.33 / 5.18. The lifted grounds
+   * (surface-2, elevated, accent-wash) are handled by the ground-scoped block below
+   * the theme definitions: no single ink value clears 4.5:1 on the accent wash
+   * without overtaking the step above it, so the ground restates the token.
+   *
+   * KNOWN MISMATCH, deliberately not fixed here: the reservation "chrome ONLY, never
+   * a number" is not what the code does. Real prose and real figures are set in
+   * `text-faint` at ~130 call sites. Raising the token makes all of them legible;
+   * moving them onto `text-secondary` is a pass over call sites, not a token edit.
    */
   --color-ink: #f3f5f8;
   --color-muted: #9aa1ad;
-  --color-secondary: #858d9c;
-  --color-faint: #656c78;
+  --color-secondary: #8b93a2;
+  --color-faint: #7b8493;
 
   /* Brand + semantic (single sharp accent = parquet gold) */
   --color-accent: #e6b34d;
@@ -161,6 +183,34 @@
   --color-accent-strong: #b28c41;
 
   /*
+   * THE SAME TREATMENT FOR THE OTHER FOUR SEMANTIC HUES.
+   *
+   * `accent` was migrated to an opaque wash and the other four were not, so
+   * `toneClasses` in components/ui.tsx kept shipping `bg-positive/12 text-positive`:
+   * a colour tinting its own ground at 12% alpha, which is the exact pattern the
+   * block above calls unmeasurable. It is unmeasurable for the same reason - the
+   * effective ground depends on whatever is painted behind the pill.
+   *
+   * Same recipe: the hue composited over --color-surface once, here, at 16% (wash)
+   * and 40% (edge). Negative alone composites at 12%, because at 16% its own text
+   * value lands at 4.42:1 and 12% brings it to 4.66:1.
+   *
+   * Measured, self-on-own-wash (this is the pair a Tag actually renders):
+   *   positive #37d383 on #1b362d = 6.70:1 / Lc 60.2
+   *   negative #f2585f on #302025 = 4.66:1 / Lc 40.6
+   *   info     #5aa9ff on #212f41 = 5.53:1 / Lc 49.3
+   *   warn     #f0a83c on #392f22 = 6.47:1 / Lc 58.0
+   */
+  --color-positive-wash: #1b362d;
+  --color-positive-edge: #236346;
+  --color-negative-wash: #302025;
+  --color-negative-edge: #6e3237;
+  --color-info-wash: #212f41;
+  --color-info-edge: #315277;
+  --color-warn-wash: #392f22;
+  --color-warn-edge: #6d5229;
+
+  /*
    * DEPTH - two declarations, and the cheapest "this is a real product" fix available.
    *
    * Rule: cards separate by SURFACE, never by shadow. `--shadow-raised` goes only on
@@ -252,9 +302,6 @@
   /* On paper the type-weight gold goes DARKER than the fill gold, not lighter:
    * 7.66:1 / APCA Lc 86.1 on --color-surface. */
   --color-accent-text: #6d4d0b;
-  /* On paper the type-weight gold goes DARKER than the fill gold, not lighter:
-   * 7.66:1 / APCA Lc 86.1 on --color-surface. */
-  --color-accent-text: #6d4d0b;
   --color-positive: #0f7040;
   /* Darkened from #b3252c by measurement: at the old value, positive and negative
    * were near-identical under red-green color blindness (CVD deltaE 3.3 against a
@@ -272,6 +319,18 @@
   --color-accent-wash: #eae3d5;
   --color-accent-edge: #cabc9d;
   --color-accent-strong: #9b824b;
+
+  /* Same recipe as the dark theme's, this theme's hues over this theme's surface at
+   * 16% / 40%. Self-on-own-wash: positive 4.81:1, negative 5.85:1, info 5.31:1,
+   * warn 5.04:1. Paper needs no alpha exception - the darker inks clear it at 16%. */
+  --color-positive-wash: #d9e7dd;
+  --color-positive-edge: #9fc5b0;
+  --color-negative-wash: #f0d7d8;
+  --color-negative-edge: #da9ea3;
+  --color-info-wash: #dae4ee;
+  --color-info-edge: #a3bcda;
+  --color-warn-wash: #ebe3d3;
+  --color-warn-edge: #ceba97;
 
   /* Paper does not need the raised shadow to be as heavy - a near-white page reads
    * depth from a much smaller value, and the dark theme's would look like soot. */
@@ -353,7 +412,16 @@
    * lightness moved; deltaE is now 10.4 with 8.4:1 text contrast on black. */
   --color-negative: #e5979b;
   --color-info: #a9d4ff;
-  --color-warn: #ffd07a;
+  /*
+   * Was #ffd07a, two hex digits away from this theme's --color-accent (#ffd27a) and
+   * indistinguishable from it on screen. A `Tag tone="warn"` and a `Tag tone="accent"`
+   * were separated only by their background tint, in the one theme built for readers
+   * who need the separation most, and gold already carries a reserved meaning here
+   * (accent = "you"). Moved off gold entirely rather than nudged: CIE dE76 to the
+   * accent is now 30.4, up from 1.3. Holds 9.55:1 on --color-bg and 8.74:1 on
+   * --color-surface, and stays clear of --color-negative (#e5979b, dE76 52.8).
+   */
+  --color-warn: #ff9d3d;
 
   /* No decorative wash here: it is contrast that is being asked for. */
   --grain-1: transparent;
@@ -362,6 +430,18 @@
   --color-accent-wash: #3a342a;
   --color-accent-edge: #726141;
   --color-accent-strong: #c4a362;
+
+  /* Same recipe again. Self-on-own-wash: positive 8.89:1, negative 6.00:1,
+   * info 8.11:1, warn 6.50:1 - every one of them well past the pills these
+   * replace, which could not be measured at all. */
+  --color-positive-wash: #253934;
+  --color-positive-edge: #3e6e59;
+  --color-negative-wash: #352b2f;
+  --color-negative-edge: #684a4e;
+  --color-info-wash: #2c343f;
+  --color-info-edge: #506276;
+  --color-warn-wash: #3a2c20;
+  --color-warn-edge: #724c29;
 
   /* Heavier than the default's, because this ground is darker and a shadow that
    * reads on #0b0c0e disappears on #0a0a0c. */
@@ -376,6 +456,73 @@
   --tci-2: #f19024;
   --tci-3: #9fd86d;
   --tci-4: #72feb5;
+}
+
+/*
+ * GROUND-SCOPED INK - the second half of the --color-faint fix.
+ *
+ * A contrast ratio is a property of a PAIR, and every ink token in this file is one
+ * value trying to serve four grounds. On the dark theme those grounds span 12 CIE L*
+ * (bg #0b0c0e through accent-wash #373125), which is enough to move `faint` from
+ * 5.18:1 to 2.44:1 without a single component changing a class. That is how ~260 call
+ * sites failed SC 1.4.3 while the token file recorded a passing number.
+ *
+ * There is no single value that fixes it. `faint` has to clear 4.5:1 on the accent
+ * wash AND stay recessive under `secondary`, and on the dark theme those two demands
+ * cross. So the GROUND restates the token, and a component still writes `text-faint`
+ * and gets a measured pair either way.
+ *
+ * Custom properties inherit from the nearest ancestor that sets them, so nesting
+ * resolves correctly on its own: a `.bg-surface` card inside a `.bg-surface-2` shell
+ * picks the base values back up from the reset rules below.
+ *
+ * DARK, on --color-surface-2 / --color-elevated / --color-accent-wash:
+ *   faint      #909bac  5.61 / 4.79 / 4.59  (was 2.98 / 2.54 / 2.44)
+ *   secondary  #9aa1ad  6.06 / 5.18 / 4.96  (was 4.72 / 4.03 / 3.86)
+ * `secondary` lands on `muted`'s value here rather than a fifth grey: on these three
+ * grounds the scale is two steps, not three, and inventing a value between them would
+ * be a distinction no reader could see.
+ */
+.bg-surface-2,
+.bg-elevated,
+.bg-accent-wash {
+  --color-faint: #909bac;
+  --color-secondary: #9aa1ad;
+}
+
+.bg-bg,
+.bg-surface {
+  --color-faint: #7b8493;
+  --color-secondary: #8b93a2;
+}
+
+/* PAPER. Only `faint` crosses the line here, and only on the two darkest paper
+ * grounds: #616875 measures 4.30:1 on --color-elevated and 4.39:1 on the wash.
+ * #5c636f takes those to 4.64:1 and 4.74:1 (5.13:1 on --color-surface-2) and stays
+ * lighter than `secondary`, so the ordering survives the flip. */
+:root[data-theme="light"] .bg-surface-2,
+:root[data-theme="light"] .bg-elevated,
+:root[data-theme="light"] .bg-accent-wash {
+  --color-faint: #5c636f;
+  --color-secondary: #5b626e;
+}
+:root[data-theme="light"] .bg-bg,
+:root[data-theme="light"] .bg-surface {
+  --color-faint: #616875;
+  --color-secondary: #5b626e;
+}
+
+/* CONTRAST needs no lift - its inks already clear the bar on every ground it has
+ * (worst pair: faint #a6adb8 on the accent wash, 5.45:1). These two rules exist only
+ * so the dark theme's values, which are set on an unqualified class selector above,
+ * cannot leak into this theme. */
+:root[data-theme="contrast"] .bg-surface-2,
+:root[data-theme="contrast"] .bg-elevated,
+:root[data-theme="contrast"] .bg-accent-wash,
+:root[data-theme="contrast"] .bg-bg,
+:root[data-theme="contrast"] .bg-surface {
+  --color-faint: #a6adb8;
+  --color-secondary: #c2c9d3;
 }
 
 html {
