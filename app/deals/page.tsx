@@ -10,13 +10,27 @@
  * state, so this page is a plain server component with no client bundle at all - and
  * so Manager Compare and the dossiers can link straight at a filtered view, which is
  * what they were already trying to do through `pairWebHref`/`managerWebHref`.
+ *
+ * AN INDEX, NOT NINETY-ONE RECEIPTS (D58). This page used to print every deal as its
+ * full two-sided prose - and because a trade has two sides, it printed the SAME deal
+ * twice, mirrored, one sentence per party. Ninety-one of those measured 17,499px at
+ * 390px wide, five times this app's own median page. The sentences were not wrong;
+ * they were in the wrong place. `/deals/[transactionId]` already prints them, with
+ * what each side is worth today and every asset linked into its provenance rail, and
+ * it does it better than a list ever could.
+ *
+ * So a row is now one tap target carrying the three things you scan a deal index for -
+ * who, when, how big - and nothing you would rather read on the receipt. The two
+ * directories underneath (pairings, managers) are `<details>`: they are ways IN to a
+ * filtered index, not things you read on arrival, and expanded they were another
+ * 3,000px under a list you had already finished with.
  */
 import Link from "next/link";
 import { ChevronRight, Users } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getPrincipals } from "@/lib/principals";
 import { leagueBuybacks } from "@/lib/agency";
-import { buildTradeLedger } from "@/lib/tradegraph";
+import { buildTradeLedger, dealPieces } from "@/lib/tradegraph";
 import { dealHref, dealsQueryString, parseDealsParams } from "@/lib/tradegraph/url";
 import { Card, EmptyState, PageHeader, SectionHeader, Stat, Tag } from "@/components/ui";
 import { LocalDate } from "@/components/LocalDate";
@@ -106,7 +120,7 @@ export default async function DealsPage({
       <PageHeader
         kicker="The record"
         title="Every deal"
-        subtitle="One page per trade, with what each side got and what it is worth today. Tap any deal to open its receipt."
+        subtitle="Every trade on record, newest first. Tap one to open its receipt - what each side got, and what it is worth today."
       />
 
       {!pairing && !manager && (
@@ -168,42 +182,48 @@ export default async function DealsPage({
             : "Nothing on record for this filter."}
         </EmptyState>
       ) : (
-        <ul className="space-y-1.5">
+        <ul
+          data-testid="deal-index"
+          className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface"
+        >
           {trades.map((t) => (
             <li key={t.id}>
               <Link
                 href={dealHref(t.id)}
-                className="block rounded-[--radius-sm] border border-border bg-surface px-3 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
+                className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-surface-2"
               >
-                <div className="mb-1 flex flex-wrap items-center gap-1.5">
-                  <span className="figure text-meta text-muted">
-                    <LocalDate ts={t.created} /> · {t.season} wk {t.week}
+                <span className="min-w-0 flex-1">
+                  {/* Who, on one line. The parties ARE the headline of a deal index -
+                      what each of them got is the receipt's job, and printing it here
+                      printed every deal twice. */}
+                  <span className="block truncate text-body font-semibold leading-tight">
+                    {t.sides.map((s, i) => (
+                      <span key={s.rosterId}>
+                        {i > 0 && <span className="text-faint"> &harr; </span>}
+                        <span
+                          className={
+                            s.rosterId === ledger.meRosterId
+                              ? "text-accent-text"
+                              : "text-ink"
+                          }
+                        >
+                          {s.name}
+                        </span>
+                      </span>
+                    ))}
                   </span>
-                  {t.multiTeam && <Tag tone="info">{t.parties.length}-team</Tag>}
-                  {t.commissionerExecuted && (
-                    <Tag tone="warn">no pick record</Tag>
-                  )}
-                  <ChevronRight
-                    size={13}
-                    aria-hidden="true"
-                    className="ml-auto shrink-0 text-faint"
-                  />
-                </div>
-                <ul className="space-y-0.5">
-                  {t.sides.map((s) => (
-                    <li key={s.rosterId} className="text-body leading-snug">
-                      <span
-                        className={cn(
-                          "font-semibold",
-                          s.rosterId === ledger.meRosterId ? "text-accent-text" : "text-ink",
-                        )}
-                      >
-                        {s.name}
-                      </span>{" "}
-                      <span className="text-muted">{s.text}</span>
-                    </li>
-                  ))}
-                </ul>
+                  <span className="block truncate figure text-meta leading-tight text-secondary">
+                    <LocalDate ts={t.created} /> · wk {t.week} ·{" "}
+                    {dealPieces(t.assets)}
+                  </span>
+                </span>
+                {t.multiTeam && <Tag tone="info">{t.parties.length}-team</Tag>}
+                {t.commissionerExecuted && <Tag tone="warn">no pick record</Tag>}
+                <ChevronRight
+                  size={13}
+                  aria-hidden="true"
+                  className="shrink-0 text-faint"
+                />
               </Link>
             </li>
           ))}
@@ -353,7 +373,10 @@ export default async function DealsPage({
 
       {!pairing && !manager && (
         <>
-          <SectionHeader title={`Who trades with whom (${ledger.pairings.length})`} />
+          {/* Both directories are doors into a filtered index rather than reading
+              matter, so they arrive shut. Native `<details>`: no client bundle, and
+              find-in-page still reaches every name inside them. */}
+          <Directory title={`Who trades with whom (${ledger.pairings.length})`}>
           {busiest && (
             <p className="mb-1.5 text-meta leading-snug text-secondary">
               Busiest pairing: {byOwner.get(busiest.a)?.name} and{" "}
@@ -388,8 +411,9 @@ export default async function DealsPage({
               );
             })}
           </ul>
+          </Directory>
 
-          <SectionHeader title={`Managers (${ledger.managers.length})`} />
+          <Directory title={`Managers (${ledger.managers.length})`}>
           <ul className="space-y-1">
             {ledger.managers.map((m) => (
               <li key={m.ownerId}>
@@ -436,10 +460,40 @@ export default async function DealsPage({
               </li>
             ))}
           </ul>
+          </Directory>
         </>
       )}
       <Onward from="/deals" />
     </div>
+  );
+}
+
+/**
+ * A shut directory. The summary line is the whole affordance and it states its own
+ * count, so nothing is hidden behind a label that does not admit what is inside it
+ * (D46: no dead ends). The chevron is the only thing that moves, on `--motion-fast`,
+ * and the revealed body arrives on `--motion-base` - both retired under
+ * `prefers-reduced-motion` by `.disclosure-*` in app/interaction.css.
+ */
+function Directory({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <details className="group mt-3">
+      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-meta font-semibold uppercase tracking-wide text-secondary">
+        <ChevronRight
+          size={13}
+          aria-hidden="true"
+          className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
+        />
+        {title}
+      </summary>
+      <div className="disclosure-body pt-1">{children}</div>
+    </details>
   );
 }
 

@@ -159,6 +159,32 @@ export function getLedgerEntries(
  */
 export const RECENT_CAPTURE_DAYS = 30;
 
+/**
+ * THE ONE DECISION THE PAGE ASKS FOR FIRST.
+ *
+ * The Desk badge and the Home banner both promise a single next action and the ledger
+ * used to answer with twenty-nine open textareas. This picks the one to pin: the most
+ * recent NOTABLE entry with no reasoning on it yet.
+ *
+ * Newest, not oldest, and that is the whole argument of the feature - reasoning decays
+ * from the moment the trade clears, so the freshest uncaptured decision is the one
+ * whose "why" is still recoverable. The oldest is the one you would be inventing.
+ *
+ * `getLedgerEntries` already sorts newest-first, so this is a find rather than a
+ * re-sort; it does not assume that and compares `created` anyway, because a caller
+ * handing over a filtered or re-ordered array should still get the right answer.
+ * Returns null when everything notable is captured (or nothing is notable yet), which
+ * is the state the page renders as "all caught up".
+ */
+export function newestToCapture(entries: LedgerEntry[]): LedgerEntry | null {
+  let best: LedgerEntry | null = null;
+  for (const e of entries) {
+    if (!e.notable || e.annotation) continue;
+    if (!best || e.created > best.created) best = e;
+  }
+  return best;
+}
+
 export interface LedgerSummary {
   total: number;
   notable: number;

@@ -16,6 +16,8 @@ export function LedgerItem({
   initialReasoning,
   initialPosture,
   readOnly = false,
+  showChrome = true,
+  autoFocus = false,
 }: {
   transactionId: string;
   description: string;
@@ -30,6 +32,20 @@ export function LedgerItem({
    * is the UI half, so nobody is offered a textarea that leads to a 401.
    */
   readOnly?: boolean;
+  /**
+   * False when this item is the body of a summary row that has already printed the
+   * season, the week, the type and the description on the line you tapped
+   * (app/ledger/page.tsx). Repeating them inside would print the same two lines twice,
+   * and the card's own border would draw a second box inside the row's.
+   */
+  showChrome?: boolean;
+  /**
+   * Only the pinned "capture the newest" card takes the caret on arrival, and it has
+   * to be asked for. This used to be implicit - every unannotated item set `autoFocus`,
+   * so with twenty-nine of them stacked the browser handed focus to whichever mounted
+   * last, i.e. the OLDEST decision on the page and the one nobody can still reconstruct.
+   */
+  autoFocus?: boolean;
 }) {
   const router = useRouter();
   const alreadyAnnotated = !!initialReasoning;
@@ -91,30 +107,41 @@ export function LedgerItem({
   return (
     <div
       className={cn(
-        "rounded-[--radius] border p-4",
-        // The accent border is a call to action ("this one still needs your why"),
-        // so a reader who cannot act on it gets the calm treatment instead.
-        readOnly || (alreadyAnnotated && !editing)
-          ? "border-border bg-surface"
-          : "border-accent-edge bg-surface",
+        showChrome
+          ? cn(
+              "rounded-[--radius] border p-4",
+              // The accent border is a call to action ("this one still needs your
+              // why"), so a reader who cannot act on it gets the calm treatment
+              // instead.
+              readOnly || (alreadyAnnotated && !editing)
+                ? "border-border bg-surface"
+                : "border-accent-edge bg-surface",
+            )
+          : "px-2.5 pb-2.5",
       )}
     >
-      <div className="mb-1 flex items-center gap-2 text-meta uppercase tracking-wide text-secondary">
-        <span className="figure">{season}</span>
-        <span>·</span>
-        <span>wk {week}</span>
-        <span>·</span>
-        <span>{type.replace("_", " ")}</span>
-      </div>
+      {/* The date/week/type line belongs to whatever printed the summary row, if
+          anything did. The description does NOT: the row above truncates it to one
+          line to stay scannable, and the full sentence is exactly what you need in
+          front of you while writing down why you did it. */}
+      {showChrome && (
+        <div className="mb-1 flex items-center gap-2 text-meta uppercase tracking-wide text-secondary">
+          <span className="figure">{season}</span>
+          <span>·</span>
+          <span>wk {week}</span>
+          <span>·</span>
+          <span>{type.replace("_", " ")}</span>
+        </div>
+      )}
       <p className="text-body font-medium leading-snug text-ink">{description}</p>
 
       {editing && !readOnly ? (
-        <div className="mt-3">
+        <div className={showChrome ? "mt-3" : ""}>
           <textarea
             value={reasoning}
             onChange={(e) => setReasoning(e.target.value)}
             rows={3}
-            autoFocus={!alreadyAnnotated}
+            autoFocus={autoFocus}
             placeholder="What's the reasoning? What has to be true for this to work?"
             className="w-full resize-y rounded-[--radius-sm] border border-border bg-bg p-3 font-display text-body leading-relaxed text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
           />
