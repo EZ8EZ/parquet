@@ -38,17 +38,10 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Card, Tag } from "@/components/ui";
+import { PostureTag } from "@/components/PostureTag";
 import { CHART_ACCENT, CHART_NEUTRAL } from "@/lib/chart-colors";
-import { groupAgency, type AgencySummary, type PickAgency, type Posture } from "@/lib/agency";
+import { groupAgency, type AgencySummary, type PickAgency } from "@/lib/agency";
 import { fmtValue } from "@/lib/ui";
-
-const POSTURE_TONE: Record<Posture | "unread", "accent" | "positive" | "info" | "negative" | "neutral"> = {
-  contending: "accent",
-  ascending: "positive",
-  rebuilding: "info",
-  straddling: "negative",
-  unread: "neutral",
-};
 
 const BAR_W = 300;
 const BAR_H = 14;
@@ -116,7 +109,7 @@ export function PickAgencyPanel({ reads, summary, orderNote }: PickAgencyPanelPr
                   key={b.posture}
                   className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-meta leading-snug"
                 >
-                  <Tag tone={POSTURE_TONE[b.posture]}>{b.posture}</Tag>
+                  <PostureTag posture={b.posture} />
                   <span className="figure text-secondary">
                     {b.picks} {b.picks === 1 ? "pick" : "picks"}
                   </span>
@@ -182,9 +175,7 @@ export function PickAgencyPanel({ reads, summary, orderNote }: PickAgencyPanelPr
                 {g.kind === "controlled" ? (
                   <Tag tone="accent">yours</Tag>
                 ) : (
-                  <Tag tone={POSTURE_TONE[g.posture ?? "unread"]}>
-                    {g.posture ?? "unread"}
-                  </Tag>
+                  <PostureTag posture={g.posture ?? "unread"} />
                 )}
               </summary>
               <div className="disclosure-body px-2.5 pb-2.5 pt-0.5">

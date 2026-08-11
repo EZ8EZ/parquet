@@ -146,13 +146,29 @@ export function Disclosure({
 }
 
 type Tone = "neutral" | "accent" | "positive" | "negative" | "info" | "warn";
+/*
+ * OPAQUE WASHES, not self-tints.
+ *
+ * `bg-positive/12 text-positive` is a colour tinting its own ground at 12% alpha, so
+ * the pill's effective background is whatever happens to be painted behind it and its
+ * contrast cannot be computed at all. That is why an earlier round recorded ~8 of
+ * these as "unfixable". globals.css retired the pattern for `accent` and left the
+ * other four behind. Each now names an opaque wash and edge composited once in the
+ * token file, so every pair below is a real number in every theme.
+ *
+ * Text on its own wash (dark / paper / contrast):
+ *   positive  6.70 / 4.81 / 8.89
+ *   negative  4.66 / 5.85 / 6.00
+ *   info      5.53 / 5.31 / 8.11
+ *   warn      6.47 / 5.04 / 6.50
+ */
 const toneClasses: Record<Tone, string> = {
   neutral: "bg-elevated text-muted border-border",
   accent: "bg-accent-wash text-accent-text border-accent-edge",
-  positive: "bg-positive/12 text-positive border-positive/25",
-  negative: "bg-negative/12 text-negative border-negative/25",
-  info: "bg-info/12 text-info border-info/25",
-  warn: "bg-warn/12 text-warn border-warn/25",
+  positive: "bg-positive-wash text-positive border-positive-edge",
+  negative: "bg-negative-wash text-negative border-negative-edge",
+  info: "bg-info-wash text-info border-info-edge",
+  warn: "bg-warn-wash text-warn border-warn-edge",
 };
 
 export function Tag({

@@ -37,6 +37,7 @@ import {
   type FragilityProfile,
 } from "@/lib/metrics/fragility";
 import { Card, SectionHeader, Tag } from "@/components/ui";
+import { PostureTag } from "@/components/PostureTag";
 import { MetricGloss } from "@/components/MetricGloss";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import {
@@ -48,13 +49,6 @@ import { Onward } from "@/components/Onward";
 import { cn, signed } from "@/lib/ui";
 
 export const dynamic = "force-dynamic";
-
-const POSTURE_TONE = {
-  contending: "accent",
-  ascending: "positive",
-  rebuilding: "info",
-  straddling: "negative",
-} as const;
 
 interface Cell {
   main: ReactNode;
@@ -458,11 +452,11 @@ export default async function CompareManagersPage({
             label: "TCI",
             a: {
               main: aTl.tci,
-              sub: <Tag tone={POSTURE_TONE[aTl.posture]}>{aTl.posture}</Tag>,
+              sub: <PostureTag posture={aTl.posture} />,
             },
             b: {
               main: bTl.tci,
-              sub: <Tag tone={POSTURE_TONE[bTl.posture]}>{bTl.posture}</Tag>,
+              sub: <PostureTag posture={bTl.posture} />,
             },
           },
           {

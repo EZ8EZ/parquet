@@ -182,7 +182,15 @@ export function DistributionStrip({
               width={3}
               height={18}
               rx={1.5}
-              fill={signed ? divergingFill(mine) : CHART_ACCENT}
+              /* ALWAYS accent, including in signed mode. Accent means "you"
+                 everywhere else in this app, and the one chart where "you" matters
+                 most was the one place that gave the viewer's own tick away to the
+                 diverging ramp - so on a signed strip the reader had to find
+                 themselves by shape alone while every other mark on screen still
+                 used colour for identity. The sign is already carried twice over: by
+                 the tick's position relative to the midline and by the diverging fill
+                 on every OTHER tick. */
+              fill={CHART_ACCENT}
             />
             {/* A shape as well as a colour, so "which one is mine" never rests on
                 the accent alone. */}

@@ -5,6 +5,7 @@ import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
 import { leagueTimelines } from "@/lib/metrics/duration";
 import { leagueFragility, lineupSlots } from "@/lib/metrics/fragility";
 import { Card, SectionHeader, Tag } from "@/components/ui";
+import { PostureTag } from "@/components/PostureTag";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { ValueAssetRow } from "@/components/ValuesList";
 import { ProvenanceRail } from "@/components/ProvenanceRail";
@@ -45,13 +46,6 @@ const WINDOW_COPY: Record<
     note: "A mixed-age core - you can pivot either direction.",
   },
 };
-
-const POSTURE_TONE = {
-  contending: "accent",
-  ascending: "positive",
-  rebuilding: "info",
-  straddling: "negative",
-} as const;
 
 /** How many seasons of trajectory the sparkline shows, current season included. */
 const TRAJECTORY_SEASONS = 4;
@@ -319,7 +313,7 @@ export default async function RosterPage() {
                   </span>
                 </span>
               </div>
-              <Tag tone={POSTURE_TONE[tl.posture]}>{tl.posture}</Tag>
+              <PostureTag posture={tl.posture} />
             </div>
             <p className="mt-1 figure text-meta text-secondary">
               {Math.round(tl.nowShare * 100)}% of value pays off inside 2 seasons ·{" "}

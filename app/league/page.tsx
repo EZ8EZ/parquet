@@ -1,6 +1,7 @@
 import { Suspense } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
+import { PostureGlyph } from "@/components/PostureTag";
 import { getLeagueHistory } from "@/lib/history";
 import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
 import { leagueTimelines } from "@/lib/metrics/duration";
@@ -30,13 +31,6 @@ const WINDOW_INK = {
  * the one negative reading (straddling) legible without giving the other three the
  * visual weight of a chip.
  */
-const POSTURE_INK: Record<string, string> = {
-  contending: "text-accent-text",
-  ascending: "text-positive",
-  rebuilding: "text-info",
-  straddling: "text-negative",
-};
-
 export default async function LeaguePage() {
   const h = await getLeagueHistory();
   const ranked = leagueValueRanking(h);
@@ -276,7 +270,8 @@ export default async function LeaguePage() {
                       </span>{" "}
                       · TCI <span className="text-muted">{m.tci}</span> · RFI{" "}
                       <span className="text-muted">{m.fragility}</span> ·{" "}
-                      <span className={POSTURE_INK[m.posture] ?? "text-muted"}>
+                      <span className="text-muted">
+                        <PostureGlyph posture={m.posture} className="mr-1" />
                         {m.posture}
                       </span>
                     </span>
