@@ -2115,3 +2115,51 @@ clothes.
 After, same viewport and same league: **`/deals` 4,849px (a 72% cut), `/ledger` 2,270px
 (a 77% cut)**. Both are now under the app's own median. Checked at 375, 390 and 430 with
 no horizontal overflow, in all three themes.
+## D59. SHELVING IS A WRITTEN ACT, AND `SHELVED.md` IS WHERE IT IS WRITTEN
+A five-member committee review of every surface in the app produced 21 keeps, 14
+keep-and-reintegrates, and a short shelve list. This entry records executing the shelve
+list; **the arguments live in `SHELVED.md` and are not repeated here.** That split is
+the decision: `DECISIONS.md` answers "why is the app like this", and a reader six months
+from now asking "why is this *not* in the app, and what would bring it back" was
+previously asking a question nothing in the repository answered. Git history holds the
+code and none of the reasoning; a changelog holds the event and none of the condition.
+So every shelved thing gets an entry naming what it was, why it went, and the specific
+condition that would revive it — a condition a future round can *check* instead of
+re-arguing.
+
+**What came out of the live app.** `/lab/startline`'s nightly board and ten-game log
+(1,786 lines, four of five reviewers, no e2e by construction and no tests on the file
+that did the fetching); Home's "Since your last visit" panel; `/drafts`' "Around the
+league"; `windowForRoster()`; `lib/providers/stats/`. `tierOf()` was already gone
+(`c997ae3`) and is recorded alongside them because it is the canonical instance of the
+failure this file exists to prevent.
+
+**NOTHING WAS SHELVED WHOLE WHERE ONLY A PART HAD FAILED.** Two of the five are splits,
+and both splits were the point:
+
+- **Slot par survives the start line.** The board needed a live week and this league is
+  out of season most of the year; the distribution of every slot every manager ever
+  banked is history and reads the same in August. It moved to `lib/lab/regret/slotPar.ts`
+  and renders on `/lab/regret` **at zero additional request cost** — `loadLockInWeek`
+  already returns all fourteen rosters and the ledger was discarding thirteen of them.
+  Verified live on 2025: 2,124 scoring slots across 322 team-weeks, median 26, p90 36.
+- **The digest's derivation survives its panel.** `lib/digest/` is untouched and
+  `components/DigestBeacon.tsx` renders nothing while still advancing the last-seen
+  marker. The panel's defect was that it burned its own baseline on first view; freezing
+  the marker as well would have turned `homeNext()`'s "did anything move" into "yes,
+  always" and left a revived panel with no history to diff. Shelving a surface must not
+  silently degrade a different feature.
+
+**One thing on the list was kept.** `/awards` "Left On The Bench" was proposed by one
+reviewer at their own stated low confidence, called a coin flip, and explicitly offered
+for overrule; a second reviewer looked at `/awards` and said keep the set. A coin flip is
+not a verdict, and permanent removal is the wrong way to settle one — the award states
+its own limit in the sentence under its title, which is the behaviour the rest of this
+app is praised for. It is recorded in `SHELVED.md` under "Considered, and deliberately
+not shelved", so the argument is not lost and the next round knows it was heard.
+
+**Dead code created by a shelve is part of the shelve.** Removing the board orphaned
+`loadSeasonSchedule()` (and with it a whole undocumented Sleeper endpoint on a second
+host), `sleeperMatchupUrl()` and `LocalTime`. All three went, each with a note where it
+stood. A zero-caller function that outlives its only caller is S4's exact failure mode,
+and leaving three behind while shelving one for it would have been incoherent.

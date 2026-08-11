@@ -13,7 +13,7 @@ import { iconForSurface } from "@/components/nav-icons";
 import { canCapture, readSeat } from "@/lib/auth/server";
 import { cn } from "@/lib/ui";
 import { Onward } from "@/components/Onward";
-import { DigestPanel } from "@/components/DigestPanel";
+import { DigestBeacon } from "@/components/DigestBeacon";
 import { StreakPanel } from "@/components/StreakPanel";
 import { Wordmark } from "@/components/Brand";
 import { Card, Tag, DeltaValue, SectionHeader } from "@/components/ui";
@@ -208,10 +208,19 @@ export default async function HomePage() {
         </div>
       ) : null}
 
-      {/* What moved while you were gone - the memory the rest of the page cannot give,
-          because every other figure here describes a state rather than a change. */}
-      <SectionHeader title="Since your last visit" />
-      <DigestPanel digest={digest} />
+      {/* "Since your last visit" rendered here until 2026-08-10. It was shelved
+          (SHELVED.md, S2) because it burned its own baseline on the first page view:
+          load once and it reads "no earlier visit to compare against", reload thirty
+          seconds later and it reads "nothing has moved since just now". The steady
+          state for a weekly visitor was ~190px of labelled empty box, second element
+          on the front page - which is the anti-information D40 already ruled against
+          in StreakPanel and then let back in here.
+
+          The beacon below renders nothing. It keeps the marker advancing so the fact
+          survives even though the panel does not: `homeNext` still reads whether
+          anything moved, and a panel revived against a live marker starts with
+          something to say. */}
+      <DigestBeacon metrics={digest.nextMetrics} />
 
       {/* YOUR SEASON, in figures. Four numbers in one card's worth of height rather
           than four stacked boxes, and every one of them is a link. */}

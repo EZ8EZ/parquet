@@ -8,6 +8,7 @@
  */
 import type { LeagueHistory } from "../../history";
 import { buildRegretLedger, type RegretLedger } from "./index";
+import { buildSlotPar, type SlotPar } from "./slotPar";
 import { loadLockInWeek, loadPlayerSeasons } from "./source";
 
 export interface SeasonOption {
@@ -51,6 +52,14 @@ export function regretSeasons(h: LeagueHistory): SeasonOption[] {
 
 export interface LoadedLedger {
   ledger: RegretLedger;
+  /**
+   * What a slot has been worth to EVERYONE in this league this season.
+   *
+   * Free, in requests: `loadLockInWeek` returns all fourteen rosters for a week and
+   * this loader was already reading every week of the season. Until /lab/startline
+   * was shelved (SHELVED.md, S1) it discarded thirteen fourteenths of that payload.
+   */
+  par: SlotPar;
   /** Distinct players whose box scores were requested. The dominant request cost. */
   playersFetched: number;
   /** Weeks of lineups read. One request each. */
@@ -78,15 +87,31 @@ export async function loadRegretLedger(
   const perWeek = await Promise.all(
     weeks.map(async (week) => {
       try {
-        const all = await loadLockInWeek(option.leagueId, week);
-        return all.find((m) => m.rosterId === rosterId) ?? null;
+        return await loadLockInWeek(option.leagueId, week);
       } catch {
-        // A single unreachable week drops out of the ledger rather than sinking it.
-        return null;
+        // A single unreachable week drops out of the ledger rather than sinking it,
+        // and narrows par rather than voiding it. The surface prints the slot count
+        // par was actually built from, so a short read is visible instead of silent.
+        return [];
       }
     }),
   );
-  const matchups = perWeek.filter((m) => m !== null);
+  const matchups = perWeek
+    .map((all) => all.find((m) => m.rosterId === rosterId) ?? null)
+    .filter((m) => m !== null);
+
+  // Every roster's every slot, this season. Zeros and negatives are classified inside
+  // `buildSlotPar`, not filtered here - see that file for why they are not low scores.
+  const par = buildSlotPar(
+    perWeek.flatMap((week) =>
+      week.flatMap((m) =>
+        m.starters.map((pid, i) => ({
+          playerId: pid && pid !== "0" ? pid : null,
+          points: m.startersPoints[i] ?? 0,
+        })),
+      ),
+    ),
+  );
 
   const playerIds = new Set<string>();
   for (const m of matchups) for (const pid of m.players) playerIds.add(pid);
@@ -111,6 +136,7 @@ export async function loadRegretLedger(
       ),
       playoffWeekStart: option.playoffWeekStart,
     }),
+    par,
     playersFetched: playerIds.size,
     weeksRead: matchups.length,
     slotLabels,

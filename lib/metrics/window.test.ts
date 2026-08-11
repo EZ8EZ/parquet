@@ -376,7 +376,7 @@ describe("leagueWindows on the real league", () => {
   });
 
   it("has exactly one single-roster entry point, and it is the agreeing one", () => {
-    // `windowForRoster` was deleted (SHELVED S6): zero production callers, and its one
+    // `windowForRoster` was deleted (SHELVED S4): zero production callers, and its one
     // distinguishing behaviour was carrying the ABSOLUTE posture fallback, so it
     // disagreed with the function every page uses on 6 of 14 live rosters. This pins
     // the replacement contract - a caller holding one roster goes through

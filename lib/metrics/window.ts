@@ -411,16 +411,20 @@ export function windowsByRoster(
 }
 
 /*
- * `windowForRoster(h, rosterId, cfg)` USED TO LIVE HERE AND WAS DELETED. It read one
- * roster's window off a single `getTimelineProfile` without walking the league, which
- * meant it carried the ABSOLUTE posture fallback rather than the league-relative one -
- * so its only distinguishing behaviour was DISAGREEING with `leagueWindows`, on 6 of 14
- * rosters on the live league. It had zero production callers; its own docstring warned
- * about the disagreement, which is exactly the warning the next person in a hurry does
- * not read before reaching for the obvious-sounding single-roster function.
+ * `windowForRoster(h, rosterId)` stood here: one roster's window without walking the
+ * league. It was shelved on 2026-08-10 (SHELVED.md, S4) and this note is deliberately
+ * where the function was, because the next person to want one will look here first.
  *
- * A caller with one roster in hand wants `windowsByRoster(h, cfg).get(rosterId)`, which
- * is the same derivation the pages use and therefore cannot disagree with them. See
- * SHELVED S6: if a genuine single-roster need appears, it comes back taking
- * `leagueDurations` as a REQUIRED argument, so disagreement is not expressible.
+ * It had ZERO production callers, and its one distinguishing behaviour was
+ * DISAGREEING with the function every page uses. Costing a single
+ * `getTimelineProfile` meant it carried the ABSOLUTE posture fallback rather than the
+ * league-relative one, which differs on 6 of 14 rosters on the live league. Its own
+ * docstring warned about that - which is exactly the warning the next person in a
+ * hurry does not read.
+ *
+ * If you need one roster's window, use `windowsByRoster(h).get(rosterId)` above: same
+ * derivation as /league, /plan and the finder, so a dossier line and the league map
+ * cannot disagree. Bringing the standalone back means giving it a signature that
+ * makes disagreement impossible - i.e. taking `leagueDurations` as a required
+ * argument. Without that, it should not come back.
  */
