@@ -9,7 +9,7 @@ import { leagueWindows, windowShort, windowSynthesis } from "@/lib/metrics/windo
 import { leagueFragility } from "@/lib/metrics/fragility";
 import { buildQuadrantView } from "@/lib/metrics/quadrant";
 import { LeagueBoard } from "@/components/LeagueBoard";
-import { DeltaValue, SectionHeader } from "@/components/ui";
+import { DeltaValue, PageHeader, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { fmtValue } from "@/lib/ui";
 import { ordinal } from "@/lib/derive/describe";
@@ -93,27 +93,22 @@ export default async function LeaguePage() {
 
   return (
     <div>
-      <header className="mb-2.5">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0 flex-1">
-            <p className="truncate text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-              {h.currentLeague.name}
-            </p>
-            <h1 className="font-display text-display font-semibold leading-tight text-ink">
-              The League
-            </h1>
-          </div>
+      <PageHeader
+        kicker={<span className="block truncate">{h.currentLeague.name}</span>}
+        title="The League"
+        aside={
           <OpenInSleeper
             href={sleeperLeagueUrl(h.currentLeague.leagueId)}
             label="Sleeper"
-            className="shrink-0"
           />
-        </div>
-        <p className="mt-1 figure text-meta text-secondary">
-          {h.currentLeague.totalRosters} teams · {h.chain.length} seasons ·{" "}
-          {h.currentLeague.season} · {fmtValue(h.transactions.length)} transactions
-        </p>
-      </header>
+        }
+        below={
+          <p className="mt-1 figure text-meta text-secondary">
+            {h.currentLeague.totalRosters} teams · {h.chain.length} seasons ·{" "}
+            {h.currentLeague.season} · {fmtValue(h.transactions.length)} transactions
+          </p>
+        }
+      />
 
       {/* Window split as one rail rather than three tall cards. */}
       <div className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">

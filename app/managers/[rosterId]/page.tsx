@@ -12,7 +12,7 @@ import { windowLabel, windowsByRoster } from "@/lib/metrics/window";
 import { dealHref, managerDealsHref } from "@/lib/tradegraph/url";
 import { buybacksByRoster } from "@/lib/agency";
 import { LocalDate } from "@/components/LocalDate";
-import { Tag, DeltaValue, SectionHeader } from "@/components/ui";
+import { Tag, DeltaValue, PageHeader, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { BarChart } from "@/components/charts";
 import { ManagerRail } from "@/components/ManagerRail";
@@ -130,30 +130,28 @@ export default async function ManagerDetailPage({
         All dossiers
       </Link>
 
-      <header className="mb-2 flex items-start gap-3">
-        <TeamAvatar
-          name={p.teamName ?? p.displayName}
-          avatarId={user?.avatar}
-          teamLogoUrl={user?.teamLogoUrl}
-          size="lg"
-          isMe={isMe}
-        />
-        <div className="min-w-0 flex-1">
-          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-            {isMe ? "Your own file" : "Dossier"}
-          </p>
-          <h1 className="truncate font-display text-display font-semibold leading-[1.15] text-ink">
-            {p.teamName ?? p.displayName}
-          </h1>
-          <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
-            <span className="truncate">{p.displayName}</span>
-            <span aria-hidden="true">·</span>
-            <span>{p.trades} trades</span>
-            <span aria-hidden="true">·</span>
-            <span>{d.tradesPerSeason}/szn</span>
-          </div>
+      <PageHeader
+        leading={
+          <TeamAvatar
+            name={p.teamName ?? p.displayName}
+            avatarId={user?.avatar}
+            teamLogoUrl={user?.teamLogoUrl}
+            size="lg"
+            isMe={isMe}
+          />
+        }
+        kicker={isMe ? "Your own file" : "Dossier"}
+        title={p.teamName ?? p.displayName}
+        truncateTitle
+      >
+        <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
+          <span className="truncate">{p.displayName}</span>
+          <span aria-hidden="true">·</span>
+          <span>{p.trades} trades</span>
+          <span aria-hidden="true">·</span>
+          <span>{d.tradesPerSeason}/szn</span>
         </div>
-      </header>
+      </PageHeader>
 
       {titles && (
         <p className="mb-2 flex items-center gap-1.5 text-note font-semibold text-accent-text">

@@ -7,6 +7,7 @@ import { leagueTiers, tierResolver } from "@/lib/rankings/tiers";
 import { ValuesList, type ValueRow } from "@/components/ValuesList";
 import { fmtValue } from "@/lib/ui";
 import { Onward } from "@/components/Onward";
+import { PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -82,26 +83,25 @@ export default async function ValuesPage({
 
   return (
     <div>
-      <header className="mb-2">
-        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-          Dynasty values
-        </p>
-        <div className="flex items-center justify-between gap-3">
-          <h1 className="font-display text-display font-semibold leading-tight text-ink">
-            Asset values
-          </h1>
+      <PageHeader
+        kicker="Dynasty values"
+        title="Asset values"
+        action={
           <Link
             href="/methodology"
             className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
           >
             Methodology
           </Link>
-        </div>
-        <p className="mt-0.5 text-note leading-snug text-muted">
-          A transparent, tunable model - not a scraped market. Computed from this
-          league&apos;s own scoring settings. Tiers break where the value
-          distribution actually cliffs.
-        </p>
+        }
+        subtitle={
+          <>
+            A transparent, tunable model - not a scraped market. Computed from this
+            league&apos;s own scoring settings. Tiers break where the value
+            distribution actually cliffs.
+          </>
+        }
+      >
         <dl className="mt-2 grid grid-cols-3 divide-x divide-border rounded-[--radius-sm] border border-border bg-surface">
           <Figure label="ranked" value={`${rows.length}`} />
           <Figure label="top value" value={top ? fmtValue(top.value) : "-"} sub={top?.name} />
@@ -111,7 +111,7 @@ export default async function ValuesPage({
             sub={`${franchise} franchise tier`}
           />
         </dl>
-      </header>
+      </PageHeader>
 
       {/* This is somebody else's board (Sleeper's search rank). /rank is where
           that stops being true - drag your own order in and blend it against

@@ -16,7 +16,7 @@ import { Onward } from "@/components/Onward";
 import { DigestBeacon } from "@/components/DigestBeacon";
 import { StreakPanel } from "@/components/StreakPanel";
 import { Wordmark } from "@/components/Brand";
-import { Card, Tag, DeltaValue, SectionHeader } from "@/components/ui";
+import { Card, Tag, DeltaValue, PageHeader, SectionHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -148,12 +148,10 @@ export default async function HomePage() {
           names WHOSE strategy, because "You said win-now. You sold." only lands when
           the reader knows who "you" is - obvious to the manager in their own seat,
           not to a leaguemate seeing this app (or this seat) for the first time. */}
-      <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-        Revealed strategy · {p.teamName ?? p.displayName}
-      </p>
-      <h1 className="mt-0.5 font-display text-display font-semibold leading-[1.12] text-ink">
-        {report.headline}
-      </h1>
+      <PageHeader
+        kicker={`Revealed strategy · ${p.teamName ?? p.displayName}`}
+        title={report.headline}
+      />
 
       {report.contradictions.length > 0 ? (
         <div className="mt-3 space-y-2">

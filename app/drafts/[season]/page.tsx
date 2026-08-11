@@ -4,7 +4,7 @@ import { ArrowLeft, ChevronRight, Hourglass } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildDraftIndex, getDraftBoard, getDraftSeasons } from "@/lib/lineage";
 import { getPrincipals } from "@/lib/principals";
-import { EmptyState } from "@/components/ui";
+import { EmptyState, PageHeader } from "@/components/ui";
 import { cn } from "@/lib/ui";
 import { BoardPickRow } from "../parts";
 
@@ -63,11 +63,9 @@ export default async function DraftBoardPage({
         Pick lineage
       </Link>
 
-      <header className="mb-2">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-            Draft board
-          </p>
+      <PageHeader
+        kicker="Draft board"
+        kickerAction={
           <Link
             href="/values"
             className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
@@ -75,10 +73,9 @@ export default async function DraftBoardPage({
             pick values
             <ChevronRight size={12} aria-hidden="true" />
           </Link>
-        </div>
-        <h1 className="font-display text-display font-semibold leading-[1.1] text-ink">
-          {season} draft
-        </h1>
+        }
+        title={`${season} draft`}
+      >
         <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 figure text-meta text-secondary">
           {board.draftId ? (
             <>
@@ -106,7 +103,7 @@ export default async function DraftBoardPage({
             <span>No draft on record for this season.</span>
           )}
         </div>
-      </header>
+      </PageHeader>
 
       {/* Season switcher - 44px tap targets, horizontal only for these pills. */}
       {seasons.length > 1 && (

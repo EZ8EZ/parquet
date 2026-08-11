@@ -3,34 +3,110 @@ import type { ReactNode } from "react";
 import { ChevronRight } from "lucide-react";
 import { cn } from "@/lib/ui";
 
+/**
+ * THE PAGE HEADER, NOW ACTUALLY SHARED.
+ *
+ * This component was already exact and already correct. Seventeen routes hand-rolled
+ * it anyway, and the copies drifted the way copies do: four h1 leadings
+ * (`tight`/`[1.1]`/`[1.12]`/`[1.15]`), three bottom margins (`mb-3`/`mb-2.5`/`mb-2`),
+ * the gold kicker class string retyped verbatim in twelve files, and one `text-[26px]`
+ * h1 that had wandered off the six-step scale entirely.
+ *
+ * The props below are the structural shapes those seventeen headers actually needed,
+ * and nothing more - the rule for this pass was to extend the one component rather
+ * than let any route stay hand-rolled and fork the pattern a third way:
+ *
+ *   leading       an avatar or player crest to the left of the whole block
+ *                 (roster, plan, trade/finder, lineage, both manager dossiers)
+ *   kickerAction  a small "go here instead" link on the KICKER's line
+ *                 (awards, drafts, drafts/[season], plan, managers)
+ *   action        a control on the TITLE's line (values' methodology pill) - the
+ *                 prop that already existed, unchanged
+ *   aside         a control aligned to the top of the whole block, clearing both
+ *                 rows (league and roster's Sleeper links)
+ *   children      the meta line under the subtitle: counts, tags, dates. Deliberately
+ *                 outside `subtitle`, which stays a <p> and so cannot hold a <div>.
+ *   below         the same, but spanning the FULL header width rather than the column
+ *                 beside the avatar. Not a cosmetic distinction: roster's record line
+ *                 is long enough that indenting it behind a 44pt crest costs a whole
+ *                 extra wrapped line at 375px, which is the density this app just
+ *                 spent two rounds buying back.
+ *
+ * One leading, one margin, one kicker, one place to change any of them.
+ */
 export function PageHeader({
   kicker,
+  kickerAction,
   title,
   subtitle,
   action,
+  aside,
+  leading,
+  truncateTitle,
+  children,
+  below,
 }: {
-  kicker?: string;
-  title: string;
-  subtitle?: string;
-  /** Optional right-aligned control (e.g. a Sleeper link or methodology pill). */
+  kicker?: ReactNode;
+  /** Optional control on the kicker's line (e.g. a sideways link). */
+  kickerAction?: ReactNode;
+  title: ReactNode;
+  subtitle?: ReactNode;
+  /** Optional right-aligned control on the title's line (e.g. a methodology pill). */
   action?: ReactNode;
+  /** Optional control aligned to the top of the header, clearing kicker and title. */
+  aside?: ReactNode;
+  /** Optional avatar or crest to the left of the whole block. */
+  leading?: ReactNode;
+  /** Long titles that must not wrap (a team name, a player name). */
+  truncateTitle?: boolean;
+  /** Meta line under the subtitle: counts, tags, dates. */
+  children?: ReactNode;
+  /** Meta content spanning the full header width, clear of `leading`. */
+  below?: ReactNode;
 }) {
   return (
     <header className="mb-3">
-      {kicker && (
-        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-          {kicker}
-        </p>
-      )}
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="min-w-0 font-display text-display font-semibold leading-tight text-ink">
-          {title}
-        </h1>
-        {action && <div className="shrink-0">{action}</div>}
+      <div className="flex items-start gap-3">
+        {leading}
+        <div className="min-w-0 flex-1">
+          {(kicker || kickerAction) && (
+            <div className="flex items-center justify-between gap-3">
+              {kicker ? (
+                // No `truncate` here on purpose: most kickers are fixed house
+                // copy that must read in full, and clipping "Manager dossiers"
+                // to "MANAGER DOSS..." to make room for a link is worse than
+                // wrapping it. The one kicker that IS user data (league's league
+                // name) passes its own truncating span.
+                <p className="min-w-0 text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
+                  {kicker}
+                </p>
+              ) : (
+                <span />
+              )}
+              {kickerAction && <div className="shrink-0">{kickerAction}</div>}
+            </div>
+          )}
+          <div className="flex items-center justify-between gap-3">
+            <h1
+              className={cn(
+                "min-w-0 font-display text-display font-semibold leading-tight text-ink",
+                truncateTitle && "truncate",
+              )}
+            >
+              {title}
+            </h1>
+            {action && <div className="shrink-0">{action}</div>}
+          </div>
+          {subtitle && (
+            <p className="mt-0.5 text-note leading-snug text-muted">
+              {subtitle}
+            </p>
+          )}
+          {children}
+        </div>
+        {aside && <div className="shrink-0">{aside}</div>}
       </div>
-      {subtitle && (
-        <p className="mt-0.5 text-note leading-snug text-muted">{subtitle}</p>
-      )}
+      {below}
     </header>
   );
 }
@@ -214,8 +290,15 @@ export function Stat({
           : "text-ink";
   return (
     <div className="rounded-[--radius-sm] border border-border bg-surface p-3">
-      <div className="text-meta uppercase tracking-wide text-secondary">{label}</div>
-      <div className={cn("figure text-display leading-tight font-semibold", valueColor)}>
+      <div className="text-meta uppercase tracking-wide text-secondary">
+        {label}
+      </div>
+      <div
+        className={cn(
+          "figure text-display leading-tight font-semibold",
+          valueColor,
+        )}
+      >
         {value}
       </div>
       {sub && <div className="mt-0.5 text-meta text-muted">{sub}</div>}
@@ -234,7 +317,6 @@ export function DeltaValue({ n, suffix }: { n: number; suffix?: string }) {
   );
 }
 
-
 export function EmptyState({
   icon,
   title,
@@ -248,10 +330,16 @@ export function EmptyState({
 }) {
   return (
     <div className="rounded-[--radius] border border-dashed border-border-strong bg-surface p-6 text-center">
-      {icon && <div className="mb-3 flex justify-center text-accent-text">{icon}</div>}
-      <h3 className="font-display text-lede leading-tight font-semibold text-ink">{title}</h3>
+      {icon && (
+        <div className="mb-3 flex justify-center text-accent-text">{icon}</div>
+      )}
+      <h3 className="font-display text-lede leading-tight font-semibold text-ink">
+        {title}
+      </h3>
       {children && (
-        <div className="mx-auto mt-1.5 max-w-sm text-body leading-relaxed text-muted">{children}</div>
+        <div className="mx-auto mt-1.5 max-w-sm text-body leading-relaxed text-muted">
+          {children}
+        </div>
       )}
       {cta && (
         <Link

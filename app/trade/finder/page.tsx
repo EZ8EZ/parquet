@@ -192,27 +192,24 @@ export default async function TradeFinderPage({
         {selected ? "All ideas" : "All partners"}
       </Link>
 
-      <header className="mb-3 flex items-start gap-2.5">
-        <TeamAvatar
-          name={result.partner.name}
-          avatarId={user?.avatar}
-          teamLogoUrl={user?.teamLogoUrl}
-        />
-        <div className="min-w-0">
-          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-            Trade finder
-          </p>
-          <h1 className="min-w-0 font-display text-display font-semibold leading-tight text-ink">
-            {result.partner.name}
-          </h1>
-          <div className="mt-1 flex flex-wrap items-center gap-1">
-            <Tag tone={stance.tone}>{stance.label}</Tag>
-            {result.dossier.tags.slice(0, 3).map((t) => (
-              <Tag key={t}>{t}</Tag>
-            ))}
-          </div>
+      <PageHeader
+        leading={
+          <TeamAvatar
+            name={result.partner.name}
+            avatarId={user?.avatar}
+            teamLogoUrl={user?.teamLogoUrl}
+          />
+        }
+        kicker="Trade finder"
+        title={result.partner.name}
+      >
+        <div className="mt-1 flex flex-wrap items-center gap-1">
+          <Tag tone={stance.tone}>{stance.label}</Tag>
+          {result.dossier.tags.slice(0, 3).map((t) => (
+            <Tag key={t}>{t}</Tag>
+          ))}
         </div>
-      </header>
+      </PageHeader>
 
       {/* The dossier's own words, not a paraphrase: this is the read the finder
           searched against, so the user can judge the premise before the packages. */}

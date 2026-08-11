@@ -38,7 +38,7 @@ import { leagueTiers, tierResolver } from "@/lib/rankings/tiers";
 import { leagueTimelines, playerDuration } from "@/lib/metrics/duration";
 import { leagueFragility } from "@/lib/metrics/fragility";
 import { ordinal } from "@/lib/derive/describe";
-import { Card, Disclosure, SectionHeader } from "@/components/ui";
+import { Card, Disclosure, PageHeader, SectionHeader } from "@/components/ui";
 import { LocalDate } from "@/components/LocalDate";
 import { ManagerLink, PlayerNowRow } from "@/components/TradeParts";
 import { SideBars } from "@/components/charts";
@@ -145,18 +145,15 @@ export default async function DealPage({
         All deals
       </Link>
 
-      <header className="mb-3">
-        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-          {record.season} · week {record.week}
-        </p>
-        <h1 className="font-display text-display font-semibold leading-tight text-ink">
-          {record.multiTeam ? `${parties.length}-team deal` : "The deal"}
-        </h1>
+      <PageHeader
+        kicker={`${record.season} · week ${record.week}`}
+        title={record.multiTeam ? `${parties.length}-team deal` : "The deal"}
+      >
         <p className="mt-0.5 figure text-meta text-secondary">
           <LocalDate ts={record.created} />
         </p>
         <p className="mt-1 text-note leading-snug text-muted">{record.summary}</p>
-      </header>
+      </PageHeader>
 
       {record.commissionerExecuted && (
         <Card className="mb-3 border-warn/30 bg-warn/[0.06]">
