@@ -2163,3 +2163,82 @@ not shelved", so the argument is not lost and the next round knows it was heard.
 host), `sleeperMatchupUrl()` and `LocalTime`. All three went, each with a note where it
 stood. A zero-caller function that outlives its only caller is S4's exact failure mode,
 and leaving three behind while shelving one for it would have been incoherent.
+
+## D60. THE MOTION SYSTEM WAS SHIPPED AND NEVER DEPLOYED, AND EVERY DISCLOSURE OPENED WITHOUT CLOSING
+D-whatever's ancestor entry created `--motion-fast/base/slow` and one `--ease-out` curve
+and argued, correctly, that the app had three motion systems. It then applied the fix to
+exactly one file. A committee pass over interaction found the tokens still governed
+almost nothing: **122 `transition-*` utilities across `components/` and `app/` carried no
+`duration-*` or `ease-*` class**, so every one of them was still running Tailwind's own
+150ms and its own `cubic-bezier(0.4, 0, 0.2, 1)`. The third system the tokens were
+written to delete was the one the app was actually using, everywhere, on every page.
+
+**The fix is two lines, not 122 edits.** `--default-transition-duration` and
+`--default-transition-timing-function` in `@theme` now point at `--motion-fast` and
+`--ease-out`, which is the pair Tailwind reads for the bare `transition-*` shorthand. One
+change and all 122 call sites join the vocabulary, and they cannot fall back out of it
+one component at a time the way 122 hand-written class lists would. It is the same
+argument the press-feedback block makes for one global `:where()` rule over 140 component
+edits, and it is the reason that block was right. Audited before it landed: exactly one
+place in the codebase overrides a duration (`ValuesList`'s deliberately slow 700ms
+just-arrived highlight), it still wins on the cascade, and nothing anywhere was relying
+on Tailwind's default values.
+
+**Disclosure motion reached 2 of 11 `<details>`.** `.disclosure-body` and
+`.disclosure-chevron` were used on the ledger's rows and the deal index's directories and
+nowhere else, including in `components/ui.tsx`'s shared `Disclosure` primitive, which is
+the one every other page reaches for. The consequence was not only that nine disclosures
+opened with no motion; it was that the reduced-motion override in `interaction.css` names
+`.disclosure-chevron`, so nine chevrons rotating on a bare `transition-transform` were
+**silently outside the reduced-motion contract**. A contract honoured at two of eleven
+sites is not a contract. All eleven are wired now, there are zero bare
+`transition-transform` classes left in the app, and the count is checkable: every
+`<details>` on every page has exactly one `.disclosure-body`.
+
+**And then the harder half: everything opened and nothing closed.** The drawer animated
+in over 180ms and then `hidden` removed it in one frame; every `<details>` did the same.
+Opening was a considered gesture, dismissing was a snap, and that asymmetry was most of
+why a well-tokened app still read as mechanical.
+
+For `<details>` the answer is `::details-content`, which did not exist when the original
+block was written: it makes the content slot a real styleable box in BOTH states, so one
+declaration covers the open and the close and they cannot drift apart. **This animates
+`block-size`, which this app's motion header bans**, and the exception is recorded rather
+than smuggled: that ban assumed the alternatives were a transform or nothing, and there
+is no compositor-only way to make a box that is about to be `display: none` recede. The
+honest choice was a bounded height transition or a permanent snap. It is one property,
+one curve, one token of time, on bodies that are a paragraph and a short list, gated
+behind `@supports selector()` so browsers without the pseudo keep the old open-only
+keyframe unchanged - strictly no worse, never a degradation. `overflow: clip` with a 3px
+clip margin rather than `hidden`, because a flush clip would have shaved the 2px-offset
+focus ring off any control at the edge of a disclosure body, which is a real regression
+in the ledger's annotation form.
+
+For the Desk drawer, a closing drawer is a **third state**, not the absence of the open
+one, so it is a field rather than a transition inferred between renders (which would be
+the `useEffect`-that-only-calls-setState pattern this repo lints against, and which the
+drawer's own open state is deliberately shaped to avoid). It is set only by deliberate
+dismissal - the close button, Escape, the scrim, the handle, the flick down - and never
+by navigation, because animating a drawer out over a page that has already changed is
+motion describing something that did not happen. `inert` goes back on immediately and
+`hidden` waits for the animation, so the drawer stops being reachable the instant it is
+dismissed and only then plays itself out; focus returns to the handle at the start of the
+exit, not the end of it, since by then there is nothing inside left to hold it. The scrim
+loses `pointer-events` on the way out for the same reason.
+
+Under `prefers-reduced-motion` all of it reduces rather than disappears, which is the
+existing house rule and now applies at eleven disclosure sites instead of two: the size
+change goes and opacity carries the whole gesture at `--motion-fast`, still in both
+directions, which is the property this pass exists to add.
+
+**The worst tap target in the app is fixed.** `/awards`' expandable subtitle was a `py-1`
+summary on a 12px line - roughly a 20px strip, the only control in Parquet sitting inline
+in a running sentence, and short of `min-h-11` it was also outside the press-feedback
+selector's own stated convention, so a miss and a hit looked identical. It is 44px and
+explicitly `min-h-11` now. A one-line subtitle reserves 24px it did not before; that is
+the cost of the target being hittable at all, and the awards whose subtitle is a single
+sentence never enter that branch and pay none of it.
+
+Verified at 375, 390 and 430 with no horizontal overflow, with and without
+`prefers-reduced-motion`, and with the drawer's full open/close cycle driven for real
+rather than asserted from the stylesheet.

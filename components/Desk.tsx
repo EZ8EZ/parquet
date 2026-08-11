@@ -121,11 +121,56 @@ export function Desk({ data }: { data: DeskData | null }) {
    */
   const [openOn, setOpenOn] = useState<string | null>(null);
   const [seatMenuOn, setSeatMenuOn] = useState<string | null>(null);
+  /*
+   * THE EXIT, which the drawer did not have. `.desk-drawer:not([hidden])` animated the
+   * sheet in over 180ms and then `hidden` + `inert` removed it in a single frame, so
+   * opening was a considered gesture and closing was a snap - the asymmetry the
+   * interaction review named as the biggest source of jank in the app.
+   *
+   * A closing drawer is a THIRD state, not the absence of the open one, so it gets its
+   * own field rather than being derived from a transition between renders (which is
+   * the `useEffect`-that-only-calls-setState pattern the comment above and this repo's
+   * lint rule both reject). It stores a path for exactly the reason `openOn` does.
+   *
+   * It is set only by `setExpanded`, so it covers every deliberate dismissal - the
+   * close button, Escape, the scrim, the handle tap and the flick down - and NOT the
+   * navigation case, which is correct: navigating away is the page changing underneath
+   * the sheet, and animating a drawer out over a page that is already gone would be
+   * motion describing something that did not happen.
+   */
+  const [closingOn, setClosingOn] = useState<string | null>(null);
+  const closeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const expanded = openOn === pathname;
+  const closing = !expanded && closingOn === pathname;
   const seatMenu = seatMenuOn === pathname;
   const setExpanded = useCallback(
-    (next: boolean) => setOpenOn(next ? pathname : null),
+    (next: boolean) => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+      closeTimer.current = null;
+      if (next) {
+        // Reopening mid-exit has to cancel the exit outright, or the pending timer
+        // fires into the newly open drawer and hides it.
+        setClosingOn(null);
+      } else {
+        setClosingOn(pathname);
+        /*
+         * Matches `--motion-base`. Deliberately a plain number rather than a read of
+         * the custom property: this only decides when an already-invisible, already
+         * `inert` node leaves the tree, so being 60ms generous under reduced motion
+         * (where the CSS runs the exit at `--motion-fast`) costs nothing and is
+         * cheaper than a `getComputedStyle` on every dismissal.
+         */
+        closeTimer.current = setTimeout(() => setClosingOn(null), 180);
+      }
+      setOpenOn(next ? pathname : null);
+    },
     [pathname],
+  );
+  useEffect(
+    () => () => {
+      if (closeTimer.current) clearTimeout(closeTimer.current);
+    },
+    [],
   );
   const sheetRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLDivElement>(null);
@@ -134,12 +179,14 @@ export function Desk({ data }: { data: DeskData | null }) {
   const seatMenuId = useId();
 
   const close = useCallback(() => {
-    setOpenOn(null);
+    setExpanded(false);
     // Focus returns to the control that opened the drawer, not to the top of the
     // document - the standard dialog contract, and the reason the handle is the one
-    // element that stays put in both states.
+    // element that stays put in both states. It happens at the START of the exit, not
+    // at the end of it: the drawer is `inert` from this frame on, so there is nothing
+    // inside it left to hold focus and nothing to wait for.
     handleRef.current?.focus();
-  }, []);
+  }, [setExpanded]);
 
   // The background half of the modal contract. Set imperatively because the element
   // it applies to is rendered by the server layout, which cannot hold this state.
@@ -300,11 +347,18 @@ export function Desk({ data }: { data: DeskData | null }) {
       {/* Visible, but not reachable: the page stays legible behind an open drawer
           (that is most of the point of a sheet over a full-screen menu) while this
           absorbs the tap that dismisses it. */}
-      {expanded && (
+      {(expanded || closing) && (
         <div
           aria-hidden="true"
-          onClick={close}
-          className="desk-scrim fixed inset-0 z-40 bg-bg/60"
+          onClick={expanded ? close : undefined}
+          data-closing={closing ? "" : undefined}
+          className={cn(
+            "desk-scrim fixed inset-0 z-40 bg-bg/60",
+            // On the way out it is a picture of a drawer receding, not a control:
+            // a tap during the exit must reach the page, which is what the reader is
+            // aiming at by then.
+            closing && "pointer-events-none",
+          )}
         />
       )}
 
@@ -332,14 +386,21 @@ export function Desk({ data }: { data: DeskData | null }) {
             id={drawerId}
             ref={drawerRef}
             tabIndex={-1}
-            hidden={!expanded}
+            // `hidden` waits for the exit animation; `inert` does not. The drawer stops
+            // being reachable the instant it is dismissed and only then plays itself
+            // out, so nothing focusable and nothing tappable survives the gesture.
+            hidden={!expanded && !closing}
             inert={!expanded}
-            onAnimationEnd={syncMoreBelow}
+            data-closing={closing ? "" : undefined}
+            onAnimationEnd={expanded ? syncMoreBelow : undefined}
             // The display utility is applied ONLY when open. Tailwind's preflight
             // hides `[hidden]` with a plain `display: none` rule, and a `flex`
             // utility in the same class list wins on order - so a permanent `flex`
             // here would render the whole drawer on every page, closed or not.
-            className={cn("desk-drawer outline-none", expanded && "flex flex-col")}
+            className={cn(
+              "desk-drawer outline-none",
+              (expanded || closing) && "flex flex-col",
+            )}
           >
           <div className="relative">
           {/*
@@ -547,7 +608,7 @@ export function Desk({ data }: { data: DeskData | null }) {
                   <ChevronUp
                     size={12}
                     aria-hidden="true"
-                    className={cn("shrink-0 text-faint", seatMenu && "rotate-180")}
+                    className={cn("disclosure-chevron shrink-0 text-faint", seatMenu && "rotate-180")}
                   />
                 </button>
 

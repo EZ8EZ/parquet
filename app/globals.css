@@ -580,6 +580,25 @@ a[role="button"],
   to   { opacity: 1; }
 }
 /*
+ * THE EXITS, which did not exist. The drawer arrived over 180ms and then vanished in a
+ * single frame when `hidden` came back, and the scrim did the same - opening was a
+ * considered gesture and dismissing was a snap. These are the same token, the same
+ * curve and the same 10px of travel, reversed, so the two halves cannot drift.
+ *
+ * `both` matters: it holds the last frame for the few milliseconds between the
+ * animation finishing and Desk.tsx putting `hidden` back on the node, which is the
+ * gap that would otherwise show one frame of a fully opaque drawer at the end of its
+ * own dismissal.
+ */
+@keyframes desk-drawer-out {
+  from { opacity: 1; transform: translateY(0); }
+  to   { opacity: 0; transform: translateY(10px); }
+}
+@keyframes desk-fade-out {
+  from { opacity: 1; }
+  to   { opacity: 0; }
+}
+/*
  * The Desk drawer is the ONE thing in this app that genuinely floats above the page,
  * so it is the one thing that gets `--shadow-raised`. Everything else - every card,
  * every panel - separates from its ground by surface, never by shadow. Stated here
@@ -590,15 +609,29 @@ a[role="button"],
   animation: desk-drawer-in var(--motion-base) var(--ease-out);
   box-shadow: var(--shadow-raised), var(--edge-hilite);
 }
+/* Same specificity as the rule above and written after it, so the exit wins for the
+ * one render pass in which both selectors match. */
+.desk-drawer[data-closing] {
+  animation: desk-drawer-out var(--motion-base) var(--ease-out) both;
+}
 .desk-scrim {
   animation: desk-fade-in var(--motion-base) linear;
+}
+.desk-scrim[data-closing] {
+  animation: desk-fade-out var(--motion-base) linear both;
 }
 
 @media (prefers-reduced-motion: reduce) {
   .desk-drawer:not([hidden]) {
     animation: desk-fade-in var(--motion-fast) linear;
   }
-  .desk-scrim {
+  /* Reduced, not removed, and still symmetric: the travel goes and the fade stays,
+   * in both directions. */
+  .desk-drawer[data-closing] {
+    animation: desk-fade-out var(--motion-fast) linear both;
+  }
+  .desk-scrim,
+  .desk-scrim[data-closing] {
     animation: none;
   }
 }
