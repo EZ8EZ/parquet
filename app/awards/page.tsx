@@ -2,7 +2,7 @@ import Link from "next/link";
 import { ChevronRight, Scale, Trophy, type LucideIcon } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { AWARD_GROUPS, awardsPageData, type Award, type AwardEntrant } from "@/lib/superlatives";
-import { Tag, Disclosure, EmptyState, SectionHeader } from "@/components/ui";
+import { Tag, Disclosure, EmptyState, PageHeader, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { AwardBadge, GROUP_TONE, iconForAward, type BadgeTone } from "@/components/AwardBadge";
 import type { LeagueUser } from "@/lib/providers/types";
@@ -322,11 +322,9 @@ export default async function AwardsPage() {
 
   return (
     <div>
-      <header className="mb-2">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-            League awards
-          </p>
+      <PageHeader
+        kicker="League awards"
+        kickerAction={
           <Link
             href="/league"
             className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
@@ -334,14 +332,10 @@ export default async function AwardsPage() {
             the league
             <ChevronRight size={12} aria-hidden="true" />
           </Link>
-        </div>
-        <h1 className="font-display text-display font-semibold leading-[1.1] text-ink">
-          The Superlatives
-        </h1>
-        <p className="mt-0.5 text-note leading-snug text-muted">
-          Earned, not voted. Judged purely on what they actually did.
-        </p>
-      </header>
+        }
+        title="The Superlatives"
+        subtitle="Earned, not voted. Judged purely on what they actually did."
+      />
 
       {awards.length === 0 ? (
         <EmptyState

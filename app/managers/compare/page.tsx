@@ -36,7 +36,7 @@ import {
   leagueFragility,
   type FragilityProfile,
 } from "@/lib/metrics/fragility";
-import { Card, SectionHeader, Tag } from "@/components/ui";
+import { Card, PageHeader, SectionHeader, Tag } from "@/components/ui";
 import { PostureTag } from "@/components/PostureTag";
 import { MetricGloss } from "@/components/MetricGloss";
 import { TeamAvatar } from "@/components/TeamAvatar";
@@ -243,17 +243,11 @@ export default async function CompareManagersPage({
         <ArrowLeft size={13} aria-hidden="true" />
         All dossiers
       </Link>
-      <header className="mb-2.5">
-        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-          Manager compare
-        </p>
-        <h1 className="font-display text-display font-semibold leading-[1.1] text-ink">
-          Side by side
-        </h1>
-        <p className="mt-0.5 text-note leading-snug text-muted">
-          The same numbers for two managers, from the same reads their own dossiers
-          use.
-        </p>
+      <PageHeader
+        kicker="Manager compare"
+        title="Side by side"
+        subtitle="The same numbers for two managers, from the same reads their own dossiers use."
+      >
         <div className="mt-1 flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
           <span>{options.length} managers</span>
           <span aria-hidden="true">·</span>
@@ -262,7 +256,7 @@ export default async function CompareManagersPage({
             private
           </span>
         </div>
-      </header>
+      </PageHeader>
       <ManagerComparePicker options={options} a={aId} b={bId} />
     </>
   );

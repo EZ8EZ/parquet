@@ -20,7 +20,7 @@ import { buildProvenance, parsePickKey } from "@/lib/provenance";
 import { loadProvenanceSource } from "@/lib/provenance/source";
 import { ProvenanceRail, chainSummary } from "@/components/ProvenanceRail";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { Card, Disclosure, SectionHeader } from "@/components/ui";
+import { Card, Disclosure, PageHeader, SectionHeader } from "@/components/ui";
 import { cachedValuePlayers } from "@/lib/valuation";
 import { leagueTiers, tierResolver } from "@/lib/rankings/tiers";
 import { assetPlayerId } from "@/lib/tradegraph";
@@ -74,12 +74,10 @@ export default async function LineagePage({
 
   return (
     <div>
-      <header className="mb-3">
-        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-          How this got here
-        </p>
-        <div className="flex items-center gap-2.5">
-          {pid && (
+      <PageHeader
+        kicker="How this got here"
+        leading={
+          pid ? (
             <PlayerAvatar
               name={player?.fullName ?? chain.label}
               team={player?.team ?? null}
@@ -91,33 +89,32 @@ export default async function LineagePage({
               // opposite of the 260-row lists where the letters stay text.
               teamBadge
             />
-          )}
-          <div className="min-w-0">
-            <h1 className="min-w-0 font-display text-display font-semibold leading-tight text-ink">
-              {player?.fullName ?? chain.label}
-            </h1>
-            <p className="figure text-meta text-secondary">
-              {pid
-                ? [player?.position, player?.age != null ? `${player.age}y` : null]
-                    .filter(Boolean)
-                    .join(" · ")
-                : "draft pick"}
-            </p>
-          </div>
-        </div>
-        <p className="mt-1 text-note leading-snug text-muted">
-          {chainSummary(chain)}
-          {value != null && (
-            <>
-              {" · worth "}
-              <span className="figure font-semibold text-ink">
-                {fmtValue(value)}
-              </span>
-              {tier ? ` today (${tier})` : " today"}
-            </>
-          )}
+          ) : undefined
+        }
+        title={player?.fullName ?? chain.label}
+        below={
+          <p className="mt-1 text-note leading-snug text-muted">
+            {chainSummary(chain)}
+            {value != null && (
+              <>
+                {" · worth "}
+                <span className="figure font-semibold text-ink">
+                  {fmtValue(value)}
+                </span>
+                {tier ? ` today (${tier})` : " today"}
+              </>
+            )}
+          </p>
+        }
+      >
+        <p className="figure text-meta text-secondary">
+          {pid
+            ? [player?.position, player?.age != null ? `${player.age}y` : null]
+                .filter(Boolean)
+                .join(" · ")
+            : "draft pick"}
         </p>
-      </header>
+      </PageHeader>
 
       <Card>
         <ProvenanceRail chain={chain} />

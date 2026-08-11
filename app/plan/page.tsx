@@ -5,7 +5,7 @@ import { buildGamePlan } from "@/lib/gameplan";
 import { getPrincipals } from "@/lib/principals";
 import { leagueTimelines } from "@/lib/metrics/duration";
 import { leagueWindows, windowSynthesis } from "@/lib/metrics/window";
-import { Tag } from "@/components/ui";
+import { PageHeader, Tag } from "@/components/ui";
 import { MetricGloss } from "@/components/MetricGloss";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { cn, fmtValue } from "@/lib/ui";
@@ -87,39 +87,36 @@ export default async function PlanPage() {
 
   return (
     <div>
-      <header className="mb-2 flex items-start gap-2.5">
-        <TeamAvatar
-          name={h.me.teamName ?? h.me.displayName}
-          avatarId={myUser?.avatar}
-          teamLogoUrl={myUser?.teamLogoUrl}
-          size="md"
-          isMe
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-              Game plan
-            </p>
-            <Link
-              href="/roster"
-              className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
-            >
-              your roster
-              <ChevronRight size={12} aria-hidden="true" />
-            </Link>
-          </div>
-          <h1 className="font-display text-display font-semibold leading-[1.12] text-ink">
-            How to improve this team
-          </h1>
-          <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
-            <span className="truncate">{h.me.teamName ?? h.me.displayName}</span>
-            <span aria-hidden="true">·</span>
-            <span>
-              #{dx.valueRank} of {dx.teams} by asset value
-            </span>
-          </div>
+      <PageHeader
+        leading={
+          <TeamAvatar
+            name={h.me.teamName ?? h.me.displayName}
+            avatarId={myUser?.avatar}
+            teamLogoUrl={myUser?.teamLogoUrl}
+            size="md"
+            isMe
+          />
+        }
+        kicker="Game plan"
+        kickerAction={
+          <Link
+            href="/roster"
+            className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
+          >
+            your roster
+            <ChevronRight size={12} aria-hidden="true" />
+          </Link>
+        }
+        title="How to improve this team"
+      >
+        <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
+          <span className="truncate">{h.me.teamName ?? h.me.displayName}</span>
+          <span aria-hidden="true">·</span>
+          <span>
+            #{dx.valueRank} of {dx.teams} by asset value
+          </span>
         </div>
-      </header>
+      </PageHeader>
 
       {/* The verdict, up top - the one thing that must be readable on landing. */}
       <section className="rounded-[--radius] border border-border bg-surface p-2.5">

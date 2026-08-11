@@ -426,7 +426,7 @@ export function RankingBoard({
               className={cn(
                 "relative flex h-14 items-center gap-2 rounded-[--radius-sm] border px-2 transition-colors",
                 dragging
-                  ? "z-10 border-accent/50 bg-surface-2 shadow-lg"
+                  ? "z-10 border-accent-edge bg-surface-2 shadow-lg"
                   : "border-border bg-surface/60",
               )}
             >

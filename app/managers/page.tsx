@@ -4,7 +4,7 @@ import { getLeagueHistory } from "@/lib/history";
 import { getAllDossiers } from "@/lib/dossier";
 import { titleSummariesByOwner } from "@/lib/dossier/titles";
 import { getPrincipals } from "@/lib/principals";
-import { Tag } from "@/components/ui";
+import { PageHeader, Tag } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { signed } from "@/lib/ui";
 import { Onward } from "@/components/Onward";
@@ -23,12 +23,10 @@ export default async function ManagersPage() {
     <div>
       {/* Compact editorial header: the kicker row doubles as a nav slot so the
           top of the page carries an action instead of dead space. */}
-      <header className="mb-2.5">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-            Manager dossiers
-          </p>
-          <div className="flex shrink-0 items-center gap-3">
+      <PageHeader
+        kicker="Manager dossiers"
+        kickerAction={
+          <div className="flex items-center gap-3">
             <Link
               href="/managers/compare"
               className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
@@ -46,13 +44,10 @@ export default async function ManagersPage() {
               </Link>
             )}
           </div>
-        </div>
-        <h1 className="font-display text-[26px] font-semibold leading-[1.1] text-ink">
-          Scout the managers
-        </h1>
-        <p className="mt-0.5 text-[12px] leading-snug text-muted">
-          How they act, not what they hold.
-        </p>
+        }
+        title="Scout the managers"
+        subtitle="How they act, not what they hold."
+      >
         <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-1 figure text-meta text-faint">
           <span>{dossiers.length} scouted</span>
           <span aria-hidden="true">·</span>
@@ -65,7 +60,7 @@ export default async function ManagersPage() {
             private
           </span>
         </div>
-      </header>
+      </PageHeader>
 
       {/* One list, hairline-divided. Cards-with-gaps cost ~30px of pure air per
           screen and read as unrelated objects; a divided list reads as a ledger. */}

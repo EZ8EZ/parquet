@@ -8,7 +8,7 @@ import { titleSummariesByOwner } from "@/lib/dossier/titles";
 import { getPrincipals } from "@/lib/principals";
 import { partnerIdentity } from "@/lib/dossier/partners";
 import { managerDealsHref } from "@/lib/tradegraph/url";
-import { Tag, DeltaValue, SectionHeader } from "@/components/ui";
+import { Tag, DeltaValue, PageHeader, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { BarChart } from "@/components/charts";
 import { cn, signed } from "@/lib/ui";
@@ -101,31 +101,29 @@ export default async function FormerManagerDetailPage({
         All dossiers
       </Link>
 
-      <header className="mb-2 flex items-start gap-3">
-        <TeamAvatar
-          name={p.teamName ?? p.displayName}
-          avatarId={principal?.avatar}
-          teamLogoUrl={principal?.teamLogoUrl}
-          size="lg"
-        />
-        <div className="min-w-0 flex-1">
-          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-            Dossier · former manager
-          </p>
-          <h1 className="truncate font-display text-display font-semibold leading-[1.15] text-ink">
-            {p.teamName ?? p.displayName}
-          </h1>
-          <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
-            <span className="truncate">{p.displayName}</span>
-            <span aria-hidden="true">·</span>
-            <span>{identity.tenureLabel}</span>
-            <span aria-hidden="true">·</span>
-            <span>{p.trades} trades</span>
-            <span aria-hidden="true">·</span>
-            <span>{d.tradesPerSeason}/szn</span>
-          </div>
+      <PageHeader
+        leading={
+          <TeamAvatar
+            name={p.teamName ?? p.displayName}
+            avatarId={principal?.avatar}
+            teamLogoUrl={principal?.teamLogoUrl}
+            size="lg"
+          />
+        }
+        kicker="Dossier · former manager"
+        title={p.teamName ?? p.displayName}
+        truncateTitle
+      >
+        <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
+          <span className="truncate">{p.displayName}</span>
+          <span aria-hidden="true">·</span>
+          <span>{identity.tenureLabel}</span>
+          <span aria-hidden="true">·</span>
+          <span>{p.trades} trades</span>
+          <span aria-hidden="true">·</span>
+          <span>{d.tradesPerSeason}/szn</span>
         </div>
-      </header>
+      </PageHeader>
 
       <p className="mb-2 rounded-[--radius-sm] border border-border-strong bg-elevated px-2.5 py-1.5 text-meta leading-snug text-muted">
         No longer in the league - ran this roster {identity.tenureLabel}, then handed

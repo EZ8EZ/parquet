@@ -6,7 +6,7 @@ import {
   getDraftSeasons,
   getTradedPickLineages,
 } from "@/lib/lineage";
-import { EmptyState, SectionHeader, Tag } from "@/components/ui";
+import { EmptyState, PageHeader, SectionHeader, Tag } from "@/components/ui";
 import { cn } from "@/lib/ui";
 import { LineageCard, SeasonTile } from "./parts";
 import { Onward } from "@/components/Onward";
@@ -39,11 +39,9 @@ export default async function DraftsPage() {
 
   return (
     <div>
-      <header className="mb-2">
-        <div className="flex items-center justify-between gap-3">
-          <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-            Pick lineage
-          </p>
+      <PageHeader
+        kicker="Pick lineage"
+        kickerAction={
           <Link
             href="/values"
             className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
@@ -51,15 +49,10 @@ export default async function DraftsPage() {
             pick values
             <ChevronRight size={12} aria-hidden="true" />
           </Link>
-        </div>
-        <h1 className="font-display text-display font-semibold leading-[1.1] text-ink">
-          What that pick became
-        </h1>
-        <p className="mt-0.5 text-note leading-snug text-muted">
-          Every traded pick, traced to the player it turned into. Tap one to land on
-          it in its own draft.
-        </p>
-      </header>
+        }
+        title="What that pick became"
+        subtitle="Every traded pick, traced to the player it turned into. Tap one to land on it in its own draft."
+      />
 
       {noDrafts ? (
         <EmptyState icon={<Layers size={28} />} title="No draft data">

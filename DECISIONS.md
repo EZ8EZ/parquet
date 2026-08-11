@@ -2309,3 +2309,77 @@ on its own wash at 4.66:1.
 signed mode. Accent means "you", and the one chart where "you" matters most was the only
 place that spent it on sign - which the tick's position and every other tick's fill
 already carry twice over.
+## D62. ONE MARK EVERYWHERE, ONE HEADER EVERYWHERE
+The same committee review that produced D59 found the app is coherent at the token layer
+and weakly branded at the surface layer: a user could not describe the brand, because the
+two things carrying it visually barely appeared. Two defects, one cause.
+
+**The mark was on one route out of twenty-five, and it was not a token citizen.**
+`components/Brand.tsx`'s `Wordmark` was imported by `app/page.tsx` and nowhere else, so
+deep-linking into `/lineage` landed on a page that never said Parquet. Worse, it was
+frozen at three hardcoded hexes that had drifted out of the palette: the tile filled
+`#131519`, a surface value that no longer exists (`--color-surface` is `#16181d`), so the
+logo was subtly darker than every card beside it; and its gradient ran `#f0c268` to
+`#c9922f`, a third gold matching neither `--color-accent` (`#e6b34d`) nor
+`--color-accent-text` (`#edc167`). On the paper theme it was a dark tile in a warm-white
+page - a logo that had opted out of the theme system the rest of the app is built on.
+
+The mark now fills `var(--color-surface)` and runs `var(--color-accent-text)` into
+`var(--color-accent)`, the same two golds this app already splits by job. Verified
+resolved in all three themes rather than assumed: tile `#16181d` / `#fffefb` / `#14161b`,
+stops `#edc167`->`#e6b34d` / `#6d4d0b`->`#7a5810` / `#ffdb94`->`#ffd27a`. `var()` goes
+through `style` rather than a presentation attribute, which is the weakest cascade level
+and unreliable for `stop-color` across engines.
+
+**WHERE IT WENT IS THE DECISION, AND IT COST NO PIXELS.** The Desk is the one piece of
+chrome on every route, and it is already 116pt of a phone screen that two rounds of
+density work have been defending. So the mark did not get a row, a bar, or a slot in the
+44pt context row where it would have stolen width from a truncating status line. It
+replaced the `LayoutGrid` glyph inside the menu button, at the identical 18pt, with the
+line under it already reading "Every page in Parquet, and search" as its caption. A
+generic grid icon carried no information the word "Menu" beside it was not already
+carrying. Twenty-five routes gained the mark and the Desk's height arithmetic is
+untouched.
+
+**Seventeen routes hand-rolled a page header that already existed as a component.**
+`PageHeader` was exact and correct; being copy-pasted instead of imported, it had drifted
+into four h1 leadings (`tight` / `[1.1]` / `[1.12]` / `[1.15]`), three bottom margins
+(`mb-3` / `mb-2.5` / `mb-2`), a gold kicker class string retyped verbatim in twelve files,
+and one `text-[26px]` h1 that had left the six-step scale entirely. Sixteen of the
+seventeen are page headers and all sixteen now import the component.
+
+**THE RULE WAS TO EXTEND THE COMPONENT, NEVER TO LEAVE ONE ROUTE HAND-ROLLED**, because a
+route kept out "just this once" is how the pattern forks a third way. Five props absorbed
+every structural shape the seventeen actually needed: `leading` (an avatar or crest left
+of the block), `kickerAction` (a link on the kicker's line), `aside` (a control clearing
+both rows), `children` (a meta line in the column), and `below` (a meta line spanning the
+FULL width). The last two look like one prop and are not: roster's record line indented
+behind a 44pt crest costs a whole extra wrapped line at 375px, which is precisely the
+density D58 just bought back. Measured, not guessed - the first attempt nested it and
+the line count went up on screen.
+
+Two smaller things fell out of the same pass. The kicker deliberately does NOT truncate:
+clipping "Manager dossiers" to "MANAGER DOSS..." to make room for a link is worse than
+wrapping it, so the one kicker that is user data (league's own name) passes its own
+truncating span instead. And `--color-accent-text` was declared twice in the paper theme,
+same value, same duplicated comment - one deleted. The last surviving translucent accent
+(`border-accent/50`, the dragged row on `/rank`) took the opaque-wash treatment as
+`border-accent-edge`; the other three the review counted were already gone.
+
+Checked at 375, 390 and 430 in dark, paper and contrast.
+
+### Addendum: the creative committee's blue-sky directions, recorded and NOT built
+The same review produced three speculative directions, kept here so the ideas are not
+lost to a scratchpad, in the spirit of `SHELVED.md`. **None is authorized; each is
+recorded with the obstacle that stopped it.** (1) Make elapsed time a shared drawing axis
+and fill `ProvenanceRail`'s long empty gaps with the league's own activity as texture, so
+"it sat unresolved" is a scene rather than 800px of nothing - blocked by running straight
+into D58's freshly won density mandate. (2) Draw `/deals` as a persistent fourteen-node
+league object where the 59 pairs that have never traded are as visible as the 46 that
+have, since the holes are what a dynasty manager acts on - blocked by D3 forbidding a
+chart library, so any layout is hand-rolled at 375px and every readable one implies
+adjacency the data does not support (the D19 trap in visual form). (3) Give refusal a
+drawn vocabulary: one deliberate mark for "not enough to say", generalizing `WindowMap`'s
+dotted unfilled span, so the app's rare habit of publishing negative results becomes a
+visible house style instead of prose a reader skips - blocked by the mark being one
+iteration away from reading as a loading skeleton, which this app already ships.

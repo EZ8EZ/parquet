@@ -79,10 +79,10 @@ import {
   ChevronRight,
   ChevronUp,
   ExternalLink,
-  LayoutGrid,
   Repeat,
   Settings,
 } from "lucide-react";
+import { BrandMark } from "./Brand";
 import { groupedSurfaces, primarySurfaces } from "@/lib/nav";
 import type { DeskData } from "@/lib/desk";
 import { cn } from "@/lib/ui";
@@ -695,10 +695,22 @@ export function Desk({ data }: { data: DeskData | null }) {
                 : "border-border text-ink hover:bg-surface-2",
             )}
           >
+            {/* WHERE THE MARK LIVES NOW. It used to appear on exactly one route
+                (Home's Wordmark) and nowhere else, so deep-linking into /lineage
+                showed a page that never said Parquet. This slot is the cheapest
+                honest place to fix that: the menu button is the one control on
+                every one of the 25 routes, the mark is drawn at the same 18pt the
+                LayoutGrid glyph it replaces was drawn at, so the Desk's height
+                arithmetic and density are untouched - and the line directly under
+                it already reads "Every page in Parquet", which is the mark's
+                caption. A generic grid glyph was carrying no information the word
+                "Menu" beside it was not already carrying. */}
             {expanded ? (
               <ChevronDown size={18} aria-hidden="true" className="shrink-0" />
             ) : (
-              <LayoutGrid size={18} aria-hidden="true" className="shrink-0 text-accent-text" />
+              <span className="shrink-0 leading-none">
+                <BrandMark size={18} gradientId="desk-mark" />
+              </span>
             )}
             <span className="min-w-0">
               <span className="block text-body font-semibold leading-none">

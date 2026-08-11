@@ -4,7 +4,7 @@ import { getLeagueHistory } from "@/lib/history";
 import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
 import { leagueTimelines } from "@/lib/metrics/duration";
 import { leagueFragility, lineupSlots } from "@/lib/metrics/fragility";
-import { Card, SectionHeader, Tag } from "@/components/ui";
+import { Card, PageHeader, SectionHeader, Tag } from "@/components/ui";
 import { PostureTag } from "@/components/PostureTag";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { ValueAssetRow } from "@/components/ValuesList";
@@ -182,33 +182,29 @@ export default async function RosterPage() {
       {/* Identity, record, window and core age in one block - what used to be a
           header plus a separate window card. min-w-0 lets long names truncate
           instead of pushing the Sleeper link off a 390px screen. */}
-      <header className="mb-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="flex min-w-0 flex-1 items-center gap-2.5">
-            <TeamAvatar
-              name={a.teamName ?? a.ownerName}
-              avatarId={user?.avatar}
-              teamLogoUrl={user?.teamLogoUrl}
-              size="md"
-              isMe
-            />
-            <div className="min-w-0">
-              <p className="truncate text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-                {a.teamName ?? "Your team"}
-              </p>
-              <h1 className="truncate font-display text-display font-semibold leading-tight text-ink">
-                {a.ownerName}
-              </h1>
-            </div>
-          </div>
+      <PageHeader
+        leading={
+          <TeamAvatar
+            name={a.teamName ?? a.ownerName}
+            avatarId={user?.avatar}
+            teamLogoUrl={user?.teamLogoUrl}
+            size="md"
+            isMe
+          />
+        }
+        kicker={<span className="block truncate">{a.teamName ?? "Your team"}</span>}
+        title={a.ownerName}
+        truncateTitle
+        aside={
           <OpenInSleeper
             href={sleeperTeamUrl(h.currentLeague.leagueId, rosterId)}
             label="Sleeper"
-            className="shrink-0"
           />
-        </div>
-        <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-          {/* One string, so a wrap never leaves a dangling separator. */}
+        }
+        below={
+          <>
+            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
+              {/* One string, so a wrap never leaves a dangling separator. */}
           <span className="figure text-meta text-secondary">
             <span className="font-semibold text-ink">
               {form ? `${form.wins}-${form.losses}` : `${a.record.wins}-${a.record.losses}`}
@@ -229,10 +225,12 @@ export default async function RosterPage() {
               </>
             )}
           </span>
-          <Tag tone={win.tone}>{win.label}</Tag>
-        </div>
-        <p className="mt-1 text-note leading-snug text-muted">{win.note}</p>
-      </header>
+              <Tag tone={win.tone}>{win.label}</Tag>
+            </div>
+            <p className="mt-1 text-note leading-snug text-muted">{win.note}</p>
+          </>
+        }
+      />
 
       {/*
        * THE HEADLINE NUMBERS, WITH THE ONLY THING THAT MAKES THEM MEAN ANYTHING.

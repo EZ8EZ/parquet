@@ -3,6 +3,7 @@ import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { RankingBoard } from "@/components/RankingBoard";
 import { Onward } from "@/components/Onward";
+import { PageHeader } from "@/components/ui";
 
 export const dynamic = "force-dynamic";
 
@@ -23,19 +24,11 @@ export default async function RankPage() {
 
   return (
     <div>
-      <header className="mb-2">
-        <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-          Your ranking
-        </p>
-        <h1 className="font-display text-display font-semibold leading-tight text-ink">
-          Rank the board
-        </h1>
-        <p className="mt-0.5 text-note leading-snug text-muted">
-          Drag players into your own order, blend it against consensus at
-          whatever weight you trust today, and see exactly where the two
-          disagree.
-        </p>
-      </header>
+      <PageHeader
+        kicker="Your ranking"
+        title="Rank the board"
+        subtitle="Drag players into your own order, blend it against consensus at whatever weight you trust today, and see exactly where the two disagree."
+      />
 
       {/* WHAT THIS BOARD IS FOR, said on the page that asks for the work. The board
           has always fed the Trade Finder - every package it proposes is checked
