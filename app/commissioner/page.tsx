@@ -12,7 +12,7 @@ import { getAuditLog, getStaleRosters, type AuditEntry } from "@/lib/commissione
 import { notableWaiverLabel } from "@/lib/ledger";
 import { EmptyState, PageHeader, SectionHeader, Tag } from "@/components/ui";
 import { Onward } from "@/components/Onward";
-import { cn, fmtValue } from "@/lib/ui";
+import { fmtValue } from "@/lib/ui";
 import { LineageCard } from "../drafts/parts";
 import { SeatLinks } from "./seats";
 
@@ -173,7 +173,7 @@ export default async function CommissionerPage() {
             {pendingPicks.length} more traded pick{pendingPicks.length === 1 ? "" : "s"}{" "}
             waiting on a future or in-progress draft - normal, not a health issue
           </summary>
-          <div className="space-y-1.5 border-t border-border p-1.5">
+          <div className="disclosure-body space-y-1.5 border-t border-border p-1.5">
             {pendingPicks.map((l) => (
               <LineageCard key={`${l.season}-${l.round}-${l.originalRoster}`} l={l} />
             ))}
@@ -221,7 +221,7 @@ export default async function CommissionerPage() {
                   <ChevronRight
                     size={13}
                     aria-hidden="true"
-                    className="shrink-0 text-faint transition-transform group-open:rotate-90"
+                    className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
                   />
                   <span className="figure text-note font-semibold text-ink">
                     {season}
@@ -231,7 +231,7 @@ export default async function CommissionerPage() {
                   {bySeason.get(season)!.length} notable
                 </span>
               </summary>
-              <ul className={cn("divide-y divide-border border-t border-border")}>
+              <ul className="disclosure-body divide-y divide-border border-t border-border">
                 {bySeason.get(season)!.map((e) => (
                   <AuditRow key={e.transactionId} e={e} />
                 ))}

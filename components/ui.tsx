@@ -130,12 +130,12 @@ export function Disclosure({
         <ChevronRight
           size={12}
           aria-hidden="true"
-          className="shrink-0 transition-transform group-open:rotate-90"
+          className="disclosure-chevron shrink-0 group-open:rotate-90"
         />
       </summary>
       <div
         className={cn(
-          "mb-2 rounded-[--radius-sm] border border-border bg-surface p-2.5 text-note leading-snug text-muted",
+          "disclosure-body mb-2 rounded-[--radius-sm] border border-border bg-surface p-2.5 text-note leading-snug text-muted",
           bodyClassName,
         )}
       >

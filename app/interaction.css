@@ -53,6 +53,31 @@
   --motion-base: 180ms;
   --motion-slow: 260ms;
   --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
+
+  /*
+   * AND THIS IS THE PAIR THAT ACTUALLY DEPLOYS THEM.
+   *
+   * The four tokens above shipped and were then adopted almost nowhere: 122
+   * `transition-*` utilities across `components/` and `app/` carry no `duration-*` or
+   * `ease-*` class, so every one of them was still running Tailwind's own 150ms and
+   * its own `cubic-bezier(0.4, 0, 0.2, 1)`. The file documented a fix it had applied
+   * only to itself, and the third motion system it was written to delete was the one
+   * the app was still actually using.
+   *
+   * Tailwind reads these two theme keys for the bare `transition-*` shorthand, so
+   * pointing them at the tokens converts all 122 call sites in ONE edit rather than in
+   * 122 hand-written class-list changes that would drift apart again within a round -
+   * the same argument the press-feedback block makes for one global rule over 140
+   * component edits.
+   *
+   * A component that wants something else still writes `duration-700` and wins on the
+   * cascade. Exactly one place in the codebase asks (`components/ValuesList.tsx:147`,
+   * the just-arrived row highlight, deliberately slow), and it is unaffected. Audited
+   * before this landed: nothing else in `app/` or `components/` names a duration or an
+   * easing as a utility, so nothing was relying on Tailwind's default values.
+   */
+  --default-transition-duration: var(--motion-fast);
+  --default-transition-timing-function: var(--ease-out);
 }
 
 /*
@@ -180,6 +205,82 @@ details[open] .disclosure-body {
   }
   details[open] .disclosure-body {
     animation: disclosure-fade var(--motion-fast) linear;
+  }
+}
+
+/*
+ * ------------------------- AND THE CLOSE -------------------------
+ *
+ * The block above only ever described half a gesture. Every disclosure in the app
+ * opened over 180ms and then vanished in one frame, because a closed `<details>` is
+ * `display: none` and a keyframe cannot outlive the box it is painted in. Opening was
+ * considered; closing was a snap, and the asymmetry is most of why the app read as
+ * mechanical rather than as a surface with weight.
+ *
+ * `::details-content` is the platform's answer and it did not exist when the block
+ * above was written: it addresses the content slot as a real, styleable box in BOTH
+ * states, so the same declaration covers the open and the close and they cannot drift.
+ * Gated behind `@supports selector()` - browsers without it keep the open-only
+ * keyframe above unchanged, which is a strictly-no-worse fallback rather than a
+ * degradation.
+ *
+ * THIS ANIMATES `block-size`, which the header of this file bans, and the exception is
+ * deliberate. That ban was written when the only alternatives were a transform or
+ * nothing, and it bought nothing here: there is no compositor-only way to make a box
+ * that is about to be `display: none` recede, so the honest choice was a height
+ * transition or a permanent snap. It is bounded - one property, one curve, one token's
+ * worth of time, on disclosure bodies that are short lists and a paragraph rather than
+ * on anything page-sized.
+ *
+ * `overflow: clip` with a 3px clip margin rather than `hidden`: the content has to be
+ * clipped to the growing box or it spills over whatever is below it mid-transition,
+ * but a flush `overflow: hidden` would also shave the 2px-offset focus ring off any
+ * control sitting at the edge of a disclosure body, which is a real regression in the
+ * ledger's annotation form. The margin gives the ring its 2px back.
+ */
+@supports selector(details::details-content) {
+  :root {
+    /* Required for `block-size: auto` to be an interpolable endpoint at all. */
+    interpolate-size: allow-keywords;
+  }
+
+  details::details-content {
+    block-size: 0;
+    opacity: 0;
+    overflow: clip;
+    overflow-clip-margin: 3px;
+    transition:
+      block-size var(--motion-base) var(--ease-out),
+      opacity var(--motion-base) var(--ease-out),
+      content-visibility var(--motion-base) allow-discrete;
+  }
+  details[open]::details-content {
+    block-size: auto;
+    opacity: 1;
+  }
+
+  /*
+   * The box itself now carries the arrival, so the body keyframe would be a second
+   * animation of the same 180ms - a slide inside a grow. One or the other.
+   */
+  details[open] .disclosure-body {
+    animation: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  @supports selector(details::details-content) {
+    /*
+     * Reduced, not removed, exactly as the press-feedback block argues. The size
+     * change is the vestibular part, so it goes instant and the opacity carries the
+     * whole gesture at `--motion-fast` - and it still carries it in both directions,
+     * which is the property this section exists to add.
+     */
+    details::details-content {
+      transition:
+        opacity var(--motion-fast) linear,
+        content-visibility var(--motion-fast) allow-discrete;
+    }
   }
 }
 

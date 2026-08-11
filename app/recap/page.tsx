@@ -180,7 +180,7 @@ export default async function RecapPage() {
             {routineDecisions.length} smaller waiver move
             {routineDecisions.length === 1 ? "" : "s"} this season
           </summary>
-          <ul className="divide-y divide-border border-t border-border">
+          <ul className="disclosure-body divide-y divide-border border-t border-border">
             {routineDecisions.map((d) => (
               <li key={d.transactionId} className="px-2.5 py-1.5">
                 <div className="flex items-baseline gap-2">

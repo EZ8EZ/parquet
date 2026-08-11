@@ -93,18 +93,29 @@ function AwardSubtitle({ text }: { text: string }) {
   }
   return (
     <details className="group mt-0.5">
-      <summary className="cursor-pointer list-none py-1 text-meta leading-snug text-muted">
+      {/*
+        `min-h-11` and real vertical padding, because this was the worst target in the
+        app: a `py-1` summary on a 12px line is a ~20px strip, and it is the only
+        control in Parquet that sits inline in a running sentence rather than in a row
+        of its own. It also has to carry `min-h-11` explicitly rather than lean on the
+        `summary` arm of the press-feedback selector, since `min-h-11` is the app's own
+        stated convention for "this text is a control" and the one thing a reviewer
+        greps for. The cost is real - a one-line subtitle now reserves 44px instead of
+        20px - and it is the cost of the target being hittable at all; the awards whose
+        subtitle is a single sentence never enter this branch and pay none of it.
+      */}
+      <summary className="block min-h-11 cursor-pointer list-none py-3 text-meta leading-snug text-muted">
         {head}{" "}
         <span className="whitespace-nowrap font-semibold text-accent-text">
           more
           <ChevronRight
             size={11}
             aria-hidden="true"
-            className="inline align-[-1px] transition-transform group-open:rotate-90"
+            className="disclosure-chevron inline align-[-1px] group-open:rotate-90"
           />
         </span>
       </summary>
-      <p className="pb-1 text-meta leading-snug text-muted">{rest}</p>
+      <p className="disclosure-body pb-1 text-meta leading-snug text-muted">{rest}</p>
     </details>
   );
 }

@@ -164,7 +164,7 @@ export function PickAgencyPanel({ reads, summary, orderNote }: PickAgencyPanelPr
                 <ChevronRight
                   size={13}
                   aria-hidden="true"
-                  className="shrink-0 text-faint transition-transform group-open:rotate-90"
+                  className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
                 />
                 <span className="min-w-0 flex-1">
                   <span className="block text-body font-semibold leading-tight text-ink">
@@ -187,7 +187,7 @@ export function PickAgencyPanel({ reads, summary, orderNote }: PickAgencyPanelPr
                   </Tag>
                 )}
               </summary>
-              <div className="px-2.5 pb-2.5 pt-0.5">
+              <div className="disclosure-body px-2.5 pb-2.5 pt-0.5">
                 {/* The templated clause, once. */}
                 <p className="text-note leading-relaxed text-muted">{g.note}</p>
                 {/* And then the part that genuinely differs pick to pick. The second

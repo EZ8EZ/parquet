@@ -305,11 +305,11 @@ export default async function DealsPage({
               <ChevronRight
                 size={13}
                 aria-hidden="true"
-                className="transition-transform group-open:rotate-90"
+                className="disclosure-chevron group-open:rotate-90"
               />
               Every round trip, oldest first
             </summary>
-            <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
+            <ul className="disclosure-body divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
               {buybacks.all.map((b, i) => {
                 const body = (
                   /* Wraps rather than truncating. The counterparty and the hop count

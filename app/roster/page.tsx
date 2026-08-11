@@ -417,11 +417,11 @@ export default async function RosterPage() {
                 <ChevronRight
                   size={13}
                   aria-hidden="true"
-                  className="transition-transform group-open:rotate-90"
+                  className="disclosure-chevron group-open:rotate-90"
                 />
                 Every asset, by duration
               </summary>
-              <ul className="space-y-0.5 pb-1">
+              <ul className="disclosure-body space-y-0.5 pb-1">
                 {tl.assets.map((as) => (
                   <li
                     key={as.id}

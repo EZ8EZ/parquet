@@ -251,7 +251,7 @@ export function ValueAssetRow({
           size={14}
           aria-hidden="true"
           className={cn(
-            "shrink-0 text-faint transition-transform",
+            "disclosure-chevron shrink-0 text-faint",
             open && "rotate-180 text-accent-text",
           )}
         />

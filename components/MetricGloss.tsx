@@ -86,10 +86,10 @@ export function MetricGloss({
         <ChevronRight
           size={12}
           aria-hidden="true"
-          className="transition-transform group-open:rotate-90"
+          className="disclosure-chevron group-open:rotate-90"
         />
       </summary>
-      <div className="mb-2 space-y-2 rounded-[--radius-sm] border border-border bg-surface p-2.5">
+      <div className="disclosure-body mb-2 space-y-2 rounded-[--radius-sm] border border-border bg-surface p-2.5">
         {metrics.map((m) => {
           const g = METRIC_GLOSS[m];
           return (
