@@ -24,7 +24,6 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronRight, Route, Search } from "lucide-react";
-import { PlayerAvatar } from "./PlayerAvatar";
 import { Sparkline } from "./charts";
 import { cn, fmtValue, fold } from "@/lib/ui";
 import { playerLineageHref } from "@/lib/tradegraph/url";
@@ -108,7 +107,6 @@ export function ValueAssetRow({
               {rank}
             </span>
           )}
-          <PlayerAvatar name={name} team={team} playerId={playerId} size="sm" />
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
               <span className="truncate text-[13px] font-semibold leading-tight text-ink">
@@ -123,18 +121,26 @@ export function ValueAssetRow({
             {/*
           THE MARKER, and it is deliberately a word in this line rather than a chip
           beside it. A chip has to be `shrink-0` to keep its shape, and on the
-          tightest real row here - a long name, a sparkline, and "High-End Rotation"
-          in the value column - a shrink-0 anything overruns the sparkline and eats
-          the position code on its way. As plain text it truncates with everything
-          else and cannot break the row at any width.
+          tightest real row here - a long name and "High-End Rotation" in the value
+          column - a shrink-0 anything eats the position code on its way. As plain
+          text it wraps with everything else instead.
 
           One word, in the same secondary voice as the rest of the line. Not a badge,
           not red, and not competing with the injury chip above it: the injury chip
           is a warning, this is a coordinate on a published curve. It sits before
           `meta` so the owner's name is what gives way first, and colour does no
           encoding at all here, which is the point.
+
+          THIS USED TO BE `truncate` (single line, CSS ellipsis). At 390px, a row
+          carrying position + team + age + "downslope" routinely ran past its own
+          width and cut off mid-word ("SF · 35y · ▾ d...", "C · 30y · ▾ do...",
+          screenshotted on the live 260-row list). A caption clipping mid-word is a
+          bug, not density - the fix is to let it wrap rather than shrink anything
+          further; `line-clamp-2` bounds the row's height instead of letting an
+          unbounded wrap grow it indefinitely, which two lines of "position · team
+          · age · downslope" never needs to exceed in practice.
         */}
-            <span className="mt-px block truncate figure text-meta text-secondary">
+            <span className="mt-px line-clamp-2 block figure text-meta text-secondary">
               {position ?? "-"}
               {team ? ` · ${team}` : ""}
               {age != null ? ` · ${age}y` : ""}
@@ -168,12 +174,19 @@ export function ValueAssetRow({
               />
             </span>
           )}
-          <span className="shrink-0 text-right">
+          <span className="w-[4.5rem] shrink-0 text-right">
             <span className="block figure text-[13px] font-semibold leading-tight text-ink">
               {fmtValue(value)}
             </span>
+            {/* Was `whitespace-nowrap`, which sizes this shrink-0 column to fit its
+                LONGEST tier name ("High-End Rotation") on one line - the single
+                biggest fixed-width cost in the row, and the reason names truncated
+                ("Bennedict...", "Deandre Ay...", "Damian Lill...", all screenshotted
+                on the live list) even after the row lost its avatar disc below.
+                Wrapping a two-word tier onto two lines costs nothing: the name/meta
+                block beside it is already two lines tall at rest. */}
             {tier && (
-              <span className="block whitespace-nowrap text-meta leading-tight text-secondary">
+              <span className="block text-meta leading-tight text-secondary">
                 {tier}
               </span>
             )}

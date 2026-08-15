@@ -27,6 +27,60 @@ import {
   SectionHeader,
 } from "@/components/ui";
 export const dynamic = "force-dynamic";
+/**
+ * A FOLDED HOME SECTION. Same disclosure idiom the rest of the app already
+ * uses for this exact problem - Awards' `AwardGroup`, /deals' `Directory`,
+ * /methodology's `Subsection`, all a `<details>` whose `<summary>` states its
+ * own count so nothing hides behind a label that will not admit what is
+ * inside it (D46) - closed by default. Built locally rather than reusing
+ * `components/ui.jsx`'s `Disclosure`, whose summary is styled as a small
+ * inline footnote (`text-meta text-faint`): right for "what this cannot
+ * know," wrong for a section that used to be a full `SectionHeader`. This
+ * keeps SectionHeader's own type scale, so folding a section does not also
+ * quietly demote it.
+ *
+ * Home used to render "Still running," "What your record shows" and "Who you
+ * deal with" open, permanently, at the same visual weight as the headline
+ * insight above them and the stat grid beside them - ten bordered sections in
+ * a row with nothing to tell a reader which one mattered most. These three are
+ * real information, not chrome, so nothing here is deleted; they are one tap
+ * away instead of a scroll away, exactly the fix D58 already proved on
+ * /deals and /ledger (60-70% shorter, zero information lost) and this round
+ * applies to the one page that had never had it applied to it.
+ */
+function HomeFold({ title, count, href, cta, children }) {
+  return (
+    <details className="group mt-4">
+      <summary className="mb-1.5 flex min-h-11 cursor-pointer list-none items-center gap-1.5">
+        <ChevronRight
+          size={13}
+          aria-hidden="true"
+          className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
+        />
+        <h2 className="min-w-0 flex-1 text-note font-semibold uppercase tracking-[0.16em] text-muted">
+          {title}
+        </h2>
+        {count != null && (
+          <span className="shrink-0 figure text-meta text-secondary">
+            {count}
+          </span>
+        )}
+      </summary>
+      <div className="disclosure-body">
+        {children}
+        {href && cta && (
+          <Link
+            href={href}
+            className="mt-2 inline-flex min-h-11 items-center gap-0.5 text-meta font-semibold text-accent-text"
+          >
+            {cta}
+            <ChevronRight size={13} aria-hidden="true" />
+          </Link>
+        )}
+      </div>
+    </details>
+  );
+}
 export default async function HomePage() {
   const h = await getLeagueHistory();
   // Scoped to the PERSON in the seat, not the seat: see `getStrategyReport`.
@@ -274,18 +328,24 @@ export default async function HomePage() {
 
       {/* The natural sibling of the digest, and the other half of the same question:
             that panel is what CHANGED while you were gone, this one is what is still
-            running right now. Both are about the present; neither is a ranking. */}
-      <SectionHeader
+            running right now. Both are about the present; neither is a ranking.
+            Closed by default (HomeFold) - real content, one tap away rather than
+            permanently at the same weight as the headline above it. */}
+      <HomeFold
         title="Still running"
+        count={`${streaks.length} active`}
         href="/awards"
         cta="vs. settled awards"
-      />
-      <StreakPanel streaks={streaks} countedAt={countedAt} />
+      >
+        <StreakPanel streaks={streaks} countedAt={countedAt} />
+      </HomeFold>
 
       {/* Findings */}
       {report.findings.length > 0 && (
-        <>
-          <SectionHeader title="What your record shows" />
+        <HomeFold
+          title="What your record shows"
+          count={`${report.findings.length} findings`}
+        >
           <ul className="space-y-1.5">
             {report.findings.map((f, i) => (
               <li key={i} className="flex gap-2 text-body leading-snug">
@@ -297,17 +357,17 @@ export default async function HomePage() {
               </li>
             ))}
           </ul>
-        </>
+        </HomeFold>
       )}
 
       {/* Trade partners - the people behind the numbers, each a dossier. */}
       {partners.length > 0 && (
-        <>
-          <SectionHeader
-            title="Who you deal with"
-            href="/managers"
-            cta="all dossiers"
-          />
+        <HomeFold
+          title="Who you deal with"
+          count={`top ${partners.length}`}
+          href="/managers"
+          cta="all dossiers"
+        >
           <div className="scroll-x flex gap-1.5">
             {partners.map((tp) => (
               <Link
@@ -330,7 +390,7 @@ export default async function HomePage() {
               </Link>
             ))}
           </div>
-        </>
+        </HomeFold>
       )}
 
       {/*

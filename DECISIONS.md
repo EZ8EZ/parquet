@@ -3002,3 +3002,175 @@ hand-placed node layout for the pair map (still correctly blocked - no construct
 avoids the D19 adjacency claim); drawing deal count as an opacity ramp on the matrix
 (D48's own measurement already rules this out); applying the refusal mark everywhere
 D19 appears in one pass (scope creep beyond what this round verified).
+
+## D72. THE OWNER SAID IT LOOKS THE SAME. IT WAS - the last round never touched density, and this one found the actual repetition and a dozen real truncation bugs, screenshotted, not assumed
+
+The owner's exact words: "UI still looks mostly the same though, doesn't look new and
+still a lot of information but a lot of clutter and not very intuitive." He was right,
+and the reason is procedural: the prior round touched Home's masthead type and
+background grain only, never the row-density and disclosure problems he was actually
+describing. This round did not start from a theory of what was wrong - it screenshot
+every list-heavy page at 390px first (per this file's own established practice, D51,
+D58, D71) and fixed only what the pixels showed.
+
+**THE PATTERN, CONFIRMED ON SIX PAGES, NOT GUESSED AT.** Every one below was
+screenshotted before any change; every quoted string is what actually rendered.
+
+**`/values` (`components/ValuesList.jsx`).** Every one of 60 visible rows carried a
+32px generic monogram-in-a-themed-disc (`PlayerAvatar`) whose only per-row signal was
+a 2px team-colour edge already described in the component's own header as "present if
+you know to look for it, never competing with the row's content" - i.e. already
+designed to be nearly invisible, while still costing the row's single biggest block of
+fixed width. That cost showed up as real truncation, not aesthetics: player names
+clipped mid-word ("Julius Ran...", "Deandre Ay...", "Bennedict...", "Damian Lill...",
+"Kawhi Leon...", "Fred VanVI...") and the age-curve marker clipped mid-word too
+("C · 30y · ▾ do..." for "downslope"), because the tier column
+(`whitespace-nowrap`, sized to fit its longest label, "High-End Rotation") was eating
+width the name needed. Fix: the avatar disc is gone from this row - `/roster` already
+has the identical precedent for exactly this call (`app/roster/page.jsx`'s single
+fragility-callout avatar, captioned "the ONE inline avatar on this page rather than
+one per row"), so repeating a disc 60 times was already contrary to a pattern this
+codebase had reasoned its way to once before. The freed width, plus letting the tier
+label and the position/age/marker line wrap (`line-clamp-2`) instead of
+single-line-truncating, ends every one of those cutoffs. `/roster` shares this exact
+row component (`ValueAssetRow`) and inherits the same fix for free.
+
+**`/managers` (`app/managers/page.jsx`).** One card, real evidence: the departed
+manager's row (team "Blockbuster", owner "BigTrades", tenure tag "former
+2022-2024") rendered as "Blockbu... BigTra..." - team name AND owner name clipped
+in the same card, because both were sharing one baseline row with `truncate` and a
+fixed-width tag. A second bug on every card: the tag line truncated mid-word
+("...Reactiv..." for "Reactive after losses"). Fix: team name gets its own full-width
+line; owner name + tenure tag move to a second line where each has the whole card
+width instead of a fraction of it; the tag line wraps (`line-clamp-2`) instead of
+truncating. The per-manager avatar colour (`TeamAvatar`) was checked, not assumed, and
+left alone: `components/TeamAvatar.jsx`'s own source order is a manager's own uploaded
+Sleeper team logo (7 of 14 in this league), then their Sleeper user avatar, falling
+back to a deterministic per-name colour only when neither exists - real per-entity
+identity carried through from Sleeper, not a decorative circle, and the one case in
+this audit where the task's own instinct ("check what's real before deciding") said
+keep it.
+
+**`/awards` (`app/awards/page.jsx`).** The worst version of the same bug: runner-up
+rows crushed real team names to single letters plus an ellipsis - "Par...", "Win...",
+"Dra..." for Parquet Kings, Win Now, Draft Vault - because a long multi-fact stat
+string ("3,509 pts benched · 94.3% started") sat `shrink` beside a `flex-1` name with
+three fixed-width circles (place number, per-award icon badge, team avatar) already
+eating the row. A second, subtler bug in the same file: the award headline's own
+editorial title wrapped mid-word onto two lines ("The" / "Reach") whenever that
+award's `statLine` was long (a runner's name plus pick plus rank, not a short number),
+because title and statLine shared one baseline with the title on `flex-1`. Fix: runner-
+up rows stack name above stat instead of beside it, each getting the row's near-full
+width; card headlines stack title above statLine the same way, protecting the short
+editorial title (never wraps) and letting the longer, variable statLine wrap
+(`line-clamp-2`) below it instead of stealing the title's line.
+
+**`/rank` (`components/RankingBoard.jsx`).** The identical `PlayerAvatar`-plus-tier
+pattern as `/values`, on a 120-player drag-to-reorder board, with an added
+complication: the meta line truncated consensus rank mid-digit ("cons #37" ->
+"cons #..." for Damian Lillard, Kyrie Irving, screenshotted live). This row's height
+is load-bearing - `ROW_HEIGHT`/`ROW_PITCH` constants drive the drag gesture's
+pointer-to-index math, and the file's own comment already warned "if the row markup's
+height classes ever change, this constant has to move with them." So the fix is the
+same shape (drop the avatar disc from both the drag list and the disagreements list;
+let the tier and meta lines wrap) plus the one thing `/values` didn't need: `h-14`
+(56px) raised to `h-16` (64px) with `ROW_HEIGHT` moved to match, verified to leave
+comfortable room for the now-occasional two-line meta without the row overflowing its
+own border.
+
+**`/commissioner` (`app/commissioner/page.jsx`).** The most severe instance found:
+EVERY visible row of the transaction audit log truncated - "Full Tilt claimed Xavier
+Kowalski..." (itself cut from "Kowalski ($26), dropped Deshawn Larsson"), "Trade -
+Draft Vault sent Bobby P...", "Trade - The Process sent Marc...", every single row on
+the live 362-move log, because `e.description` is a full
+transaction sentence (`describeTransaction`, `lib/derive/describe.js`) forced onto one
+`truncate` line. An audit log's entire purpose is to state exactly what happened;
+silently cutting every row is closer to data loss than density. Fix: the row already
+used `min-h-11` (a minimum, not a fixed height), so removing `truncate` and letting the
+sentence wrap costs nothing structurally - some rows are now three or four lines for a
+big multi-asset trade, which is correct, not a regression.
+
+**`/league`'s power ranking (`app/league/page.jsx`).** Two more truncating lines:
+owner name + record + ordinal rank clipped a digit ("2nd of 1..." for "2nd of 14"),
+and the window/TCI/RFI/posture line clipped a posture word mid-syllable ("strad..."
+for "straddling"). The second one is notable because the code's own comment had
+already reasoned about this line's truncation and called it acceptable ("what
+truncation eats has to be the recoverable half") - but that reasoning assumed a cut
+would land cleanly on a "·" separator, and in practice it did not; a whole word going
+missing was the design, a word being sliced in half was not. Both lines now
+`line-clamp-2` instead of `truncate`, preserving the original ordering (posture is
+still what wraps first, since it's still printed last) without ever mangling a word.
+
+**PAGES CHECKED AND FOUND CLEAN, NOT SKIPPED.** `/drafts`, `/drafts/grades`, and
+`/deals` were screenshotted at 390px alongside the rest and show none of this: `/deals`
+already carries D58's disclosure work and a plain team-name index with no avatars;
+`/drafts` and `/drafts/grades` use varied card shapes (one or two named callouts per
+season, not a 60-row repeated list) with no truncation on any visible name. Nothing was
+changed on these three - the fix is for the pages that actually had the problem, not a
+global sweep for its own sake.
+
+**HOME (`app/page.jsx`): the density fix, not another token pass.** Screenshotted
+before any change: ten roughly-equal-weight bordered sections stacked in a single
+scroll - banner, decision badge, the "Stated vs Revealed" headline card, a four-number
+stat grid, an activity tape, "Still running" (a five-row streak panel), "What your
+record shows" (a bullet list), "Who you deal with" (partner pills), "Where next," and
+a footer link - measured at **2,243px**. Nothing on the page said which one mattered
+most. The fix is the identical disclosure idiom this file already proved on `/deals`
+and `/ledger` (D58, 60-77% shorter, zero information lost) and on Awards/Methodology/
+Deals since (`93d4227`, "Fold Awards, Methodology and Deals into the house disclosure
+pattern") - `<details>`/`<summary>` closed by default, opened by a reader who wants
+more, never a deletion. `HomeFold` (a small local component in `app/page.jsx`, not a
+new idiom: same `group`/`disclosure-chevron`/`disclosure-body` classes and the same
+`.disclosure-*` motion in `app/interaction.css` every other fold in this app already
+uses) wraps "Still running," "What your record shows," and "Who you deal with" -
+exactly the three the owner's own brief named - each closed by default with its own
+count stated on the shut summary line ("5 active," "4 findings," "top 3") so nothing
+hides behind a label that will not admit what is inside it (D46). Left open: the
+wordmark and banners, the "Stated vs Revealed" headline (the one thing every reader
+came for), the four-number stat grid plus its activity tape (the one stat cluster),
+and "Where next" (already a short, deliberately-capped utility list, not a section
+that benefits from folding). After: **1,543px**, a 31% cut, with the same three
+sections one tap away instead of permanently competing with the headline for the
+reader's first look.
+
+**Reused, not invented, everywhere in this round.** No new colour, no new disclosure
+mechanism, no new row shape - every fix above is either (a) the existing
+`Disclosure`/`Directory`/`AwardGroup`/`Subsection` `<details>` idiom this file has
+documented four times already, or (b) `line-clamp-2` in place of `truncate` on a line
+that was cutting real content, which is already how `app/managers/page.jsx`'s own
+"read" sentence and `app/trade/finder/page.jsx` handle exactly this problem elsewhere
+in the app. The one-accent rule (D47/D48/D61) was not touched: every fix here is size,
+weight, spacing, wrapping and disclosure, never a new hue. `TeamAvatar`'s per-manager
+colour (checked above) is the only colour signal in any of these rows and it already
+existed before this round.
+
+**Verified.** `pnpm lint` clean. `pnpm test`: **1018 passed (61 files)**, unchanged by
+this round (no test files touched - the fixes are all layout, not logic). `pnpm build`
+succeeds. Full `pnpm e2e` (`rm -rf .next` first): **78 passed**, zero failures,
+including `e2e/nav.spec.js` and `e2e/density.spec.js` against the pages this round
+touched. `axe-scan` clean in both dark and light on `/`, `/values`, `/managers`,
+`/awards`, `/rank`, `/commissioner`, `/league` and `/roster`. Screenshots at 375, 390
+and 430px in dark confirmed no wrap introduces a new overflow or a new truncation at
+either edge of the app's supported width range; light theme screenshotted at 390px on
+the same eight routes. Height deltas at 390px, dark, live-fixture data (before ->
+after): `/values` 4,013 -> 4,233 (+220, the cost of wrapping instead of clipping);
+`/managers` 2,207 -> 2,582 (+375); `/awards` 4,670 -> 4,872 (+202); `/rank` 8,731 ->
+9,691 (+960, the `ROW_HEIGHT` 56 -> 64 change accounts for essentially all of it);
+`/commissioner` 3,462 -> 3,907 (+445); `/league` 2,410 -> 2,914 (+504); Home
+2,243 -> 1,543 (**-700, -31%**). Every page that grew did so because a truncation bug
+was fixed by giving real content room instead of cutting it - the only page whose job
+was to get SHORTER is Home, and it did.
+
+Rejected: shrinking type further to fit the old widths (the owner's own brief ruled
+this out explicitly, and D48 already established that this codebase treats a shrunk,
+still-truncating label as no fix at all); leaving `/league`'s posture-word truncation
+alone because a comment had already blessed it as acceptable (re-examined against a
+live screenshot instead of trusting the comment, since the comment's own assumption -
+a clean cut at a separator - did not hold in practice); deleting `PlayerAvatar` or
+`TeamAvatar` as components (only their per-row use in the four dense lists above was
+removed; both remain the correct choice everywhere they carry unique per-view
+information, e.g. `/roster`'s single fragility callout and the manager identity
+context `TeamAvatar` was built for); folding Home's four-number stat grid too (the
+brief said "maybe one stat cluster" stays open, and this is the one - the headline
+alone, with no supporting figures, would have read as an assertion with nothing under
+it).

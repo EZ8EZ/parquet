@@ -98,11 +98,24 @@ export default async function ManagersPage() {
                     size="sm"
                   />
                   <div className="min-w-0 flex-1">
-                    <div className="flex items-baseline gap-1.5">
-                      <span className="min-w-0 truncate text-[13px] font-semibold leading-tight text-ink">
-                        {p.teamName ?? p.displayName}
-                      </span>
-                      <span className="min-w-0 shrink truncate text-meta leading-tight text-secondary">
+                    {/*
+                        THIS USED TO BE ONE BASELINE ROW: team name, owner name and a
+                        "former 2022-2024" tag all fighting `truncate` for the same
+                        line. On the live 14-card list that cost a real bug - the one
+                        former-manager row (team "Blockbuster", owner "BigTrades",
+                        plus the tag) clipped BOTH names at once: "Blockbu... BigTra...".
+                        Three variable-length strings sharing one truncating line will
+                        always have a combination that breaks; splitting the owner name
+                        (+ tag, when present) onto its own line below gives each string
+                        the full card width instead of a fraction of it, which is what
+                        an 11-character team name and a 9-character owner name never
+                        needed to share in the first place.
+                      */}
+                    <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+                      {p.teamName ?? p.displayName}
+                    </span>
+                    <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
+                      <span className="min-w-0 truncate text-meta leading-tight text-secondary">
                         {p.displayName}
                       </span>
                       {isFormer && d.identity.kind === "former" && (
@@ -122,7 +135,12 @@ export default async function ManagersPage() {
                       </div>
                     )}
                     {shown.length > 0 && (
-                      <div className="mt-0.5 truncate text-meta font-medium leading-tight text-accent-text">
+                      // Was single-line `truncate`: three tags joined with " · "
+                      // routinely ran past the card width and clipped the last one
+                      // mid-word ("...Reactiv...", screenshotted on the live list).
+                      // `line-clamp-2` wraps instead, which a three-tag line needs at
+                      // most - never shrinks type, never grows the card past two lines.
+                      <div className="mt-0.5 line-clamp-2 text-meta font-medium leading-tight text-accent-text">
                         {shown.join(" · ")}
                         {extra > 0 && (
                           <span className="text-secondary"> +{extra}</span>
