@@ -236,7 +236,7 @@ inlined at BUILD time and a forgotten var would otherwise ship monograms with no
 visible cause. `LEAGUE_PROVIDER=fixture` is now the explicit opt-in to the offline
 demo, and the demo banner was made loud and unmissable rather than a small tag.
 
-Consequence: tests had to pin `LEAGUE_PROVIDER=fixture` in `vitest.config.ts`, because
+Consequence: tests had to pin `LEAGUE_PROVIDER=fixture` in `vitest.config.mjs`, because
 several reach a provider and would otherwise start making real HTTP calls (this
 actually happened - the suite went from 0.3s to 20s and 11 tests timed out).
 Rejected: documenting the env vars harder (the failure mode is silent, so docs don't
@@ -1251,7 +1251,7 @@ nothing in the app draws one any more. Kept and reused verbatim: `buildAssetMove
 `buildHoldings`, `TradeRecord` (it WAS the receipt, it just had nowhere to print),
 `PlayerNow`, `ManagerMetric`, `ManagerLink`, `PlayerNowRow`, and all of `lib/lineage`.
 
-**`/web` 308s to `/deals`** (`next.config.ts`). Permanent rather than temporary because
+**`/web` 308s to `/deals`** (`next.config.mjs`). Permanent rather than temporary because
 the move is permanent and a 308 is the only redirect a crawler treats as an instruction
 to update the link. It lands on the INDEX and deliberately does not try to rebuild
 `?trade=<id>` into `/deals/<id>`: a redirect that parses query strings is a route in
@@ -2383,3 +2383,58 @@ drawn vocabulary: one deliberate mark for "not enough to say", generalizing `Win
 dotted unfilled span, so the app's rare habit of publishing negative results becomes a
 visible house style instead of prose a reader skips - blocked by the mark being one
 iteration away from reading as a loading skeleton, which this app already ships.
+
+## D63. TypeScript removed. The app is now plain JavaScript, by owner request
+D2 pinned "TypeScript strict" as part of the confirmed stack. This reverses that,
+deliberately: 249 `.ts`/`.tsx` files converted to `.js`/`.jsx`, `tsconfig.json` gone,
+`typescript`/`tsx`/`@types/*` dropped from `package.json`, and the CI `gate` job's
+Typecheck step removed (it is now "lint / test", not "typecheck / lint / test").
+
+**Mechanical, not hand-edited.** Hand-converting 249 files invites exactly the kind of
+transcription error a reviewer cannot easily catch against a diff this size. Every file
+went through TypeScript's own `ts.transpileModule` (`jsx: preserve`, so JSX markup is
+untouched - only TS-specific syntax is stripped: types, interfaces, generics, `as`/
+`satisfies` casts, `import type`), then Prettier, to land as close to hand-written house
+style as a mechanical pass reasonably can. Checked first for anything the compiler API
+couldn't round-trip cleanly: no `enum`, no `namespace`, no decorators, no explicit
+`.ts`/`.tsx` extensions in import specifiers anywhere in the codebase - the conversion
+had no hard cases to solve.
+
+**Config files, not just source.** `next.config.ts` / `vitest.config.ts` /
+`playwright.config.ts` → `.mjs` (matching this repo's own existing convention -
+`eslint.config.mjs` and `postcss.config.mjs` were already `.mjs`), not `.js`: both are
+`export default` ESM and at least one tool in this chain resolves top-level config files
+directly rather than through a bundler, where an extensionless relative import
+(`./e2e/constants`, no `.js`) that a bundler tolerates fine can be exactly the kind of
+thing a stricter loader does not - fixed defensively rather than found broken.
+`tsconfig.json`'s one behavior this app actually depended on, the `@/*` path alias,
+carries over verbatim in a new `jsconfig.json` (Next.js honors the identical `paths` key
+there). `next-env.d.ts` deleted - pure TS ambient declarations, and it stops
+regenerating on its own once there is no more `tsconfig.json` to trigger it.
+
+**Branch protection is NOT self-repairing.** GitHub's required-status-checks list on
+`main` still names the `gate` job by its OLD title, `"typecheck / lint / test"` - a
+string this job no longer produces. That is not a job that fails; it is a required
+check that can never report at all, which reads to GitHub as permanently pending. Every
+PR after this one is unmergeable until an owner renames it in Settings -> Branches ->
+main -> Require status checks (remove the old name, add `"lint / test"`). Documented in
+`ci.yml` itself, beside the `e2e` job's own already-existing note about needing the same
+kind of manual promotion.
+
+**One real bug the conversion surfaced, in a test, not the app.** `e2e/density.spec.js`
+started failing a `/deals` row-click assertion - reproduced directly (5 manual attempts,
+console and pageerror both watched): the click landed in the gap between "SSR HTML
+rendered" (`expectStableChrome`'s actual guarantee) and "React hydrated," and did
+nothing there - no error, always successful once hydration had a moment to finish. The
+same test passed 5/5 on the pre-conversion build, because per-request Turbopack
+type-compilation overhead had been accidentally masking the same gap the whole time.
+Fixed by waiting for `networkidle` before the click, not by touching the app - the
+underlying race is not new, only newly visible now that dev-server responses are
+faster with no TypeScript transform in the loop.
+
+Rejected: JSDoc + `// @ts-check` (keeps a TypeScript-shaped tool in the loop, which is
+what "get out of typescript" asked to leave); an AltJS compile-to-JS language for the
+frontend itself (ReScript, Kotlin/JS, etc.) - explicitly considered and explicitly
+declined by the owner, since none has real support for the App Router/React Server
+Components this app is built on, and adopting one would be a rewrite of the rendering
+layer, not a conversion of it.
