@@ -17,7 +17,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildProvenance, parsePickKey } from "@/lib/provenance";
-import { loadProvenanceSource } from "@/lib/provenance/source";
+import { chainGapActivity, loadProvenanceSource } from "@/lib/provenance/source";
 import { ProvenanceRail, chainSummary } from "@/components/ProvenanceRail";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { Card, Disclosure, PageHeader, SectionHeader } from "@/components/ui";
@@ -39,6 +39,12 @@ export default async function LineagePage({ params }) {
   const { ctx } = await loadProvenanceSource(h);
   const chain = buildProvenance(ctx, assetKey);
   if (!chain) notFound();
+  // Opt-in texture for the chain's single longest gap - see the docstring on
+  // `chainGapActivity`. Computed only here, not on /roster's inline rails: this page
+  // is one asset at a time, so the cost is bounded and the disclosure stays closed by
+  // default regardless (D58's density mandate is about what a reader sees on arrival,
+  // and a shut `<details>` shows nothing extra).
+  const activity = chainGapActivity(h, chain);
   // The chain's SUBJECT, which is not always what was asked for: a spent pick
   // resolves to the player it became, since that is the same chain and the player is
   // the half that still exists.
@@ -103,7 +109,7 @@ export default async function LineagePage({ params }) {
       </PageHeader>
 
       <Card>
-        <ProvenanceRail chain={chain} />
+        <ProvenanceRail chain={chain} activity={activity} />
       </Card>
 
       <SectionHeader title="What this is and is not" />
