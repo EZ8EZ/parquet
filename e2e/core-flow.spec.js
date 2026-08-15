@@ -47,18 +47,10 @@ test("ledger annotate affordance, then the audit-log deep link into the deal rec
   // ---- Half one: Home -> Decision ledger -> the annotate affordance ----
   await page.goto("/");
   await expectStableChrome(page);
-  // Through the Desk's menu, which is now the ONLY chrome-level way to any
-  // destination: round 8b deleted the four-tab destination row and replaced it with
-  // one worded button (components/Desk.tsx). This is the whole navigation contract
-  // in three lines - a real `<button>` opens it by tap, and the four former slots
-  // are pinned to the bottom of the drawer it opens. Scoped to the Primary
-  // navigation on purpose: "Record" is also the label of Home's record figure,
-  // which links to /league, and this test means the destination.
-  // Anchored regex, not a plain substring: the button's accessible name now
-  // spells out its caption too (see Desk.tsx), and a bare "Menu" substring also
-  // matches the drag handle's "Drag handle: open the menu" - ^Menu\b matches
-  // only the worded button, whose name starts with the word.
-  await page.getByRole("button", { name: /^Menu\b/ }).click();
+  // Through the Desk's persistent tab row (D65) - one of the four always-visible
+  // primaries, no drawer to open first. Scoped to the Primary navigation on purpose:
+  // "Record" is also the label of Home's record figure, which links to /league, and
+  // this test means the destination.
   await page
     .getByRole("navigation", { name: "Primary" })
     .getByRole("link", { name: "Record", exact: true })

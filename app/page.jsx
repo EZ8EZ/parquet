@@ -13,10 +13,8 @@ import { loadDigest } from "@/lib/digest";
 import { currentFormByRoster } from "@/lib/roster";
 import { ordinal } from "@/lib/derive/describe";
 import { liveStreaks } from "@/lib/streaks";
-import { homeNext, primarySurfaces } from "@/lib/nav";
-import { iconForSurface } from "@/components/nav-icons";
+import { homeNext } from "@/lib/nav";
 import { canCapture, readSeat } from "@/lib/auth/server";
-import { cn } from "@/lib/ui";
 import { Onward } from "@/components/Onward";
 import { DigestBeacon } from "@/components/DigestBeacon";
 import { StreakPanel } from "@/components/StreakPanel";
@@ -77,58 +75,6 @@ export default async function HomePage() {
           </div>
         </div>
       )}
-
-      {/*
-          THE FOUR PRIMARIES, VISIBLE WITHOUT AN ACTION.
-  
-          Round 8b removed the Desk's permanent destination row and paid for it by
-          making Home list every surface; twenty-six minutes later a second commit
-          removed that index, correctly (three copies of one registry is the failure
-          the registry exists to end) but without restoring the row. Composed, the two
-          changes left the app advertising exactly one destination - a button reading
-          "Menu" - on every screen, and the second commit's own argument only held
-          while the first commit's compensation was still there.
-  
-          This is the missing half, and deliberately only the half that was missing: a
-          SHORTCUT ROW, not a returned index. Four links, one line, the same `primary`
-          flag the drawer's pinned "Go to" block reads, so there is still exactly one
-          list. The full registry stays where the second commit put it - in the drawer
-          and on /more - and Home's own job (what changed, what is outstanding, the
-          three moves worth making) is untouched below.
-  
-          One row rather than a grid because the cost is the point: 44pt is the tap
-          minimum and this page had ~2,330pt of density already earned. Home's own
-          slot renders `aria-current="page"` rather than being dropped, so the row
-          reads as the set of four with a you-are-here mark instead of shuffling to
-          three entries on one page and four everywhere else.
-        */}
-      <nav aria-label="Shortcuts" className="mb-3">
-        <ul className="grid grid-cols-4 gap-1.5">
-          {primarySurfaces().map((s) => {
-            const Icon = iconForSurface(s.href);
-            const here = s.href === "/";
-            return (
-              <li key={s.href}>
-                <Link
-                  href={s.href}
-                  aria-current={here ? "page" : undefined}
-                  className={cn(
-                    "flex min-h-11 items-center justify-center gap-1.5 rounded-[--radius-sm] border px-1 transition-colors",
-                    here
-                      ? "border-accent-edge bg-accent-wash text-accent-text"
-                      : "border-border bg-surface text-muted hover:border-border-strong hover:bg-surface-2",
-                  )}
-                >
-                  <Icon size={14} aria-hidden="true" className="shrink-0" />
-                  <span className="truncate text-micro font-semibold uppercase tracking-[0.08em] leading-none">
-                    {s.short ?? s.label}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      </nav>
 
       {/* Unannotated decisions badge - a to-do to clear, not paperwork. One line. */}
       {mayCapture && ledger.unannotatedNotable > 0 && (

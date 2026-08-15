@@ -2500,3 +2500,45 @@ Verified: `pnpm lint` clean, `pnpm test` 985/985, axe-core clean on `/`, `/roste
 `/league` in all three themes, before/after screenshots at 390px confirming the
 headline and page titles read visibly bigger and bolder and the grain is now
 perceptible on a real viewport capture.
+
+## D65. THE DESK GROWS FIVE PERSISTENT TABS, ANSWERING D53'S OPEN QUESTION
+
+D53 shipped the single full-bleed "Menu" button with an explicit, unresolved question
+attached: did "easy to see the options and choose" mean a reader can FIND the four
+primaries, or that they are VISIBLE WITHOUT AN ACTION - and it named the cheap middle
+path if the answer turned out to be the second one, "put the four primaries back on
+Home as a compact row." That shipped as D52's Home-only shortcut row, which held for
+one round. **The owner has now answered directly: visible without an action, on every
+route, matching Sleeper's own bottom bar** - and a Home-only row was never actually
+that, since every other page still advertised exactly one destination.
+
+**THE SINGLE BUTTON BECOMES FIVE TABS.** `components/Desk.jsx`'s resting sheet used to
+end in one 53pt full-bleed control saying "Menu"; it now ends in a 53pt five-column
+row - the same four `primarySurfaces()` (Home, Roster, Plan, Ledger) as plain links,
+plus a fifth "More" tab that opens the identical drawer, unchanged focus-trap and all.
+Nothing about the SHEET's mechanics moved - drag, `inert`, the modal contract, the
+"more below" cue - only what sits above it at rest. The More tab lights up whenever
+the current route is not one of the four primaries (not only while the drawer is
+open), so exactly one tab is always lit, matching the native-app convention Sleeper
+itself uses for its own catch-all tab.
+
+**TWO NOW-REDUNDANT COPIES REMOVED, NOT LEFT TO ROT.** Home's D52 shortcut row
+(`app/page.jsx`) printed the same four links the tab row now prints on every route
+including Home - keeping both would have been the exact "same destination advertised
+twice" failure this codebase's own comments elsewhere warn against. Deleted, along
+with the imports it alone used. The drawer's pinned "Go to" block (the four slots
+D53 pinned a thumb's width above the Menu button) is now the same redundancy one
+level down - also deleted, which recovers real drawer height for the scrolling
+registry list (the `max-h` arithmetic subtracting for it is removed too).
+
+**WHAT THIS DOES NOT CLAIM.** It does not claim the D53 drawer was broken - a
+reviewer rated it the highest-confidence keep in the app, and it is unchanged here
+except for losing its now-duplicate pinned block. The claim is narrower: the OPEN
+QUESTION D53 recorded is now closed, by the person who owns the answer, in the
+direction that matches the app Parquet's own navigation was explicitly benchmarked
+against.
+
+Verified: `pnpm lint` clean, `pnpm test` 985/985, full e2e suite (102 specs) green
+against a clean Turbopack cache, axe-core clean on every route in all three themes,
+production build succeeds, before/after screenshots at 390px confirming all five tabs
+render and highlight correctly on Home and on an arbitrary non-primary route.
