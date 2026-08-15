@@ -28,21 +28,32 @@ const TYPE_TONE = {
 function AuditRow({ e }) {
   const href =
     e.tradeHref ?? (e.rosterId != null ? `/managers/${e.rosterId}` : null);
+  /*
+   * `e.description` USED TO BE `truncate` (single-line ellipsis). It is a full
+   * transaction sentence built by `describeTransaction` - "Trade - Roster A sent
+   * Bobby Portis, ...; Roster B sent ..." for a multi-asset deal - not a short
+   * label, and a one-line cap silently cut off every row on the live 362-move
+   * log ("Full Tilt claimed Xavier Kowals...", "Trade - Draft Vault sent Bobby
+   * P...", every single visible row screenshotted mid-word). An audit log's
+   * whole job is to state exactly what happened; the fix is to let it wrap
+   * (the row is already `min-h-11`, not a fixed height, so it can grow), not to
+   * keep shrinking a sentence this log exists to show in full.
+   */
   const inner = (
     <>
-      <span className="w-11 shrink-0 figure text-meta text-secondary">
+      <span className="mt-1.5 w-11 shrink-0 figure text-meta text-secondary">
         wk {e.week}
       </span>
-      <Tag tone={TYPE_TONE[e.type] ?? "neutral"} className="shrink-0">
+      <Tag tone={TYPE_TONE[e.type] ?? "neutral"} className="mt-1 shrink-0">
         {e.type.replace("_", " ")}
       </Tag>
-      <span className="min-w-0 flex-1 truncate text-note text-ink">
+      <span className="min-w-0 flex-1 text-note leading-snug text-ink">
         {e.description}
       </span>
       {href && (
         <ChevronRight
           size={13}
-          className="shrink-0 text-faint"
+          className="mt-1.5 shrink-0 text-faint"
           aria-hidden="true"
         />
       )}
@@ -53,12 +64,12 @@ function AuditRow({ e }) {
       {href ? (
         <Link
           href={href}
-          className="flex min-h-11 items-center gap-2 px-2.5 py-1 transition-colors hover:bg-surface-2"
+          className="flex min-h-11 items-start gap-2 px-2.5 py-1 transition-colors hover:bg-surface-2"
         >
           {inner}
         </Link>
       ) : (
-        <div className="flex min-h-11 items-center gap-2 px-2.5 py-1">
+        <div className="flex min-h-11 items-start gap-2 px-2.5 py-1">
           {inner}
         </div>
       )}

@@ -39,12 +39,18 @@ import {
   syncCustomOrder,
 } from "@/lib/rankings/customOrder";
 import { Card, DeltaValue, EmptyState, SectionHeader } from "@/components/ui";
-import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { cn, fmtValue } from "@/lib/ui";
-// Row pitch: 56px row (h-14) + 4px gap (gap-1). The drag math below assumes
+// Row pitch: 64px row (h-16) + 4px gap (gap-1). The drag math below assumes
 // every row is exactly this tall, so if the row markup's height classes ever
 // change, this constant has to move with them.
-const ROW_HEIGHT = 56;
+//
+// WAS 56px (h-14) until the row lost its avatar disc and its meta line moved
+// from single-line `truncate` to `line-clamp-2` (see the row markup below) - a
+// long meta line ("SF · 35y · cons #37") was clipping mid-number ("cons #...")
+// at the old width even with the avatar gone, screenshotted on the live
+// 120-player board. Two meta lines plus the name line is 64px at this type
+// scale with room to spare; 56px was not.
+const ROW_HEIGHT = 64;
 const ROW_GAP = 4;
 const ROW_PITCH = ROW_HEIGHT + ROW_GAP;
 /**
@@ -387,7 +393,7 @@ export function RankingBoard({ players, scoring }) {
                 dragging ? undefined : { viewTransitionName: `rank-row-${id}` }
               }
               className={cn(
-                "relative flex h-14 items-center gap-2 rounded-[--radius-sm] border px-2 transition-colors",
+                "relative flex h-16 items-center gap-2 rounded-[--radius-sm] border px-2 transition-colors",
                 dragging
                   ? "z-10 border-accent-edge bg-surface-2 shadow-lg"
                   : "border-border bg-surface/60",
@@ -407,12 +413,15 @@ export function RankingBoard({ players, scoring }) {
               <span className="w-6 shrink-0 text-right figure text-meta text-faint">
                 {i + 1}
               </span>
-              <PlayerAvatar
-                name={p.fullName}
-                team={p.team}
-                playerId={p.playerId}
-                size="sm"
-              />
+              {/*
+                  NO AVATAR DISC HERE ANY MORE. Every row already carries a drag
+                  handle, a rank number and a value+tier column of fixed width - a
+                  32px monogram circle on top of that was the single biggest fixed
+                  cost left in the row, and it duplicated the name printed right
+                  beside it. Freeing that width (plus the tier fix below) is what
+                  actually stops names and the "cons #NN" meta from truncating,
+                  not shrinking either one further.
+                */}
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5">
                   <span className="truncate text-[13px] font-semibold leading-tight text-ink">
@@ -424,18 +433,23 @@ export function RankingBoard({ players, scoring }) {
                     </span>
                   )}
                 </span>
-                <span className="mt-px block truncate figure text-meta text-faint">
+                {/* Was single-line `truncate`: position + team + age + "cons #NN"
+                      routinely ran past the row width and clipped the consensus
+                      rank mid-number ("cons #..."), screenshotted on the live
+                      120-player board. `line-clamp-2` wraps instead - the row's
+                      height (ROW_HEIGHT above) was raised to fit it. */}
+                <span className="mt-px line-clamp-2 block figure text-meta text-faint">
                   {p.position ?? "-"}
                   {p.team ? ` · ${p.team}` : ""}
                   {p.age != null ? ` · ${p.age}y` : ""} · cons #{p.searchRank}
                 </span>
               </span>
-              <span className="shrink-0 text-right">
+              <span className="w-[4.5rem] shrink-0 text-right">
                 <span className="block figure text-[13px] font-semibold leading-tight text-ink">
                   {v ? fmtValue(v.value) : "-"}
                 </span>
                 {tier && (
-                  <span className="block whitespace-nowrap text-meta leading-tight text-faint">
+                  <span className="block text-meta leading-tight text-faint">
                     {tier}
                   </span>
                 )}
@@ -458,18 +472,11 @@ export function RankingBoard({ players, scoring }) {
       ) : (
         <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface/60">
           {gaps.map((g) => {
-            const p = playersById.get(g.playerId);
             return (
               <li
                 key={g.playerId}
                 className="flex min-h-11 items-center gap-2.5 px-2.5 py-1.5"
               >
-                <PlayerAvatar
-                  name={g.name}
-                  team={p?.team}
-                  playerId={g.playerId}
-                  size="sm"
-                />
                 <span className="min-w-0 flex-1">
                   <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
                     {g.name}

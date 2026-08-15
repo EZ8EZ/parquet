@@ -238,7 +238,15 @@ export default async function LeaguePage() {
                       </span>
                     )}
                   </span>
-                  <span className="mt-px block truncate figure text-meta text-secondary">
+                  {/* Was single-line `truncate`: owner name + record + ordinal
+                        rank + team count + the window word is real content, and
+                        on the live 14-roster board it routinely cut a rank number
+                        mid-digit ("2nd of 1...", "1st of 1...", screenshotted live)
+                        rather than losing a whole word cleanly. `line-clamp-2`
+                        wraps instead - this block already stacks two more lines
+                        below it, so a second line here costs the row nothing it
+                        wasn't already spending. */}
+                  <span className="mt-px line-clamp-2 block figure text-meta text-secondary">
                     {r.ownerName} ·{" "}
                     {f ? (
                       <>
@@ -254,11 +262,12 @@ export default async function LeaguePage() {
                   {/* The line that used to be two separate fourteen-row lists.
                     WINDOW FIRST, NUMBERS NEXT, WORD LAST, and that ordering is the
                     whole design of this line: at 375px it is the first thing on the
-                    row with no room to spare, so what truncation eats has to be the
-                    recoverable half. The window leads because the board above is now
-                    the window map, and this line is the only TEXT rendering of what
-                    that chart draws - fourteen SVG spans have no screen-reader path
-                    of their own beyond the chart's one summary label.
+                    row with no room to spare, so if anything has to give, it should
+                    be the recoverable half (the posture word), not TCI or RFI. The
+                    window leads because the board above is now the window map, and
+                    this line is the only TEXT rendering of what that chart draws -
+                    fourteen SVG spans have no screen-reader path of their own beyond
+                    the chart's one summary label.
                     Posture is a label the board itself prints; TCI and RFI are the
                     figures the two deleted lists existed to carry.
 
@@ -266,9 +275,17 @@ export default async function LeaguePage() {
                     the timelines list, and the fragility BAND is not printed here at
                     all - "resilient" as a chip on a torn-down roster is exactly the
                     claim D23 refuses, and the board's own panel says it properly, in
-                    percentile terms, for the roster you selected. */}
+                    percentile terms, for the roster you selected.
+
+                    THIS WAS `truncate` (single-line ellipsis), and the ordering
+                    above assumed a cut would land cleanly between the " · "
+                    separators. It did not: "straddling" on the live board rendered
+                    as "strad..." - a real word cut mid-syllable, the same class of
+                    bug as everywhere else on this page. `line-clamp-2` keeps the
+                    same ordering (posture is still what wraps to the second line
+                    first, since it comes last) without ever slicing a word in half. */}
                   {m && (
-                    <span className="block truncate figure text-meta text-secondary">
+                    <span className="line-clamp-2 block figure text-meta text-secondary">
                       <span className="text-muted">
                         {w ? windowShort(w) : "-"}
                       </span>{" "}
