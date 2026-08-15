@@ -28,6 +28,7 @@ import { Sparkline } from "./charts";
 import { cn, fmtValue, fold } from "@/lib/ui";
 import { playerLineageHref } from "@/lib/tradegraph/url";
 import { firstCliffAge, pastFirstCliff } from "@/lib/valuation/ageCurve";
+import { PlayerAvatar, photosEnabled } from "@/components/PlayerAvatar";
 import {
   VALUE_FILTERS,
   parseValuesParams,
@@ -106,6 +107,20 @@ export function ValueAssetRow({
             <span className="w-5 shrink-0 text-right figure text-meta text-secondary">
               {rank}
             </span>
+          )}
+          {/* Only rendered when this deploy has real photos on (D39, `photosEnabled`).
+              A monogram repeated across sixty rows was removed as pure decoration
+              (D72); a real photo repeated sixty times is the opposite - recognition
+              a reader actually uses - so the column returns for exactly that case
+              and stays gone otherwise. */}
+          {photosEnabled() && (
+            <PlayerAvatar
+              name={name}
+              team={team}
+              playerId={playerId}
+              size="sm"
+              className="shrink-0"
+            />
           )}
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">

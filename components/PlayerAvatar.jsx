@@ -101,6 +101,17 @@ function initials(name) {
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
 const SIZES = { sm: 32, md: 40, lg: 56 };
+/**
+ * Whether this deploy renders real photos rather than monograms. Exported so a
+ * dense list (many identical avatars at once, e.g. `/values`, `/rank`) can decide
+ * whether to render the avatar column AT ALL: a real photo repeated 60 times is
+ * recognition value, a generic monogram repeated 60 times is the exact "same
+ * decoration with no information" clutter a density pass correctly strips out.
+ * Same env var PlayerAvatar itself reads, kept in one place rather than two.
+ */
+export function photosEnabled() {
+  return process.env.NEXT_PUBLIC_USE_PLAYER_PHOTOS === "true";
+}
 export function PlayerAvatar({
   name,
   team,

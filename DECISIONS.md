@@ -3174,3 +3174,45 @@ context `TeamAvatar` was built for); folding Home's four-number stat grid too (t
 brief said "maybe one stat cluster" stays open, and this is the one - the headline
 alone, with no supporting figures, would have read as an assertion with nothing under
 it).
+
+## D73. THE PHOTO COLUMN COMES BACK, CONDITIONALLY - D72 was right for monograms, not for photos
+
+D72 removed `/values` and `/rank`'s avatar column because a 32px monogram disc,
+identical in shape and near-identical in colour across sixty (or 120) rows, was pure
+decoration duplicating the name printed beside it - correct, and unchanged here. But
+the owner's actual want, surfaced right after, was real player photos
+(`NEXT_PUBLIC_USE_PLAYER_PHOTOS`, D39): sixty DIFFERENT faces is not the same claim as
+sixty identical circles. A monogram repeating is decoration; a photo repeating is
+recognition - the two rows in D72's "no avatar" comments were both true for the
+monogram case and both false for the photo case, so the fix is not "avatar back" or
+"avatar gone," it is "gone when it would be a monogram, back when it would be a face."
+
+**`photosEnabled()`, exported from `components/PlayerAvatar.jsx`** - the same
+`NEXT_PUBLIC_USE_PLAYER_PHOTOS === "true"` check `PlayerAvatar` itself already reads,
+in one place rather than duplicated at every call site that needs to know before
+deciding whether to render the column at all. `ValueAssetRow` (`/values`, `/roster`
+inherits it) and the `/rank` board both now render `<PlayerAvatar size="sm">` only
+when this returns true; off (the default, unlicensed-fork-safe per D39), both rows
+render exactly as D72 left them - nothing regresses for anyone who has not set the
+var. `/rank`'s row height (`ROW_HEIGHT`/`ROW_PITCH`, raised 56->64px by D72 for the
+two-line wrap fix) has room for a 32px disc either way, so the photo column costs no
+further height there.
+
+**Verified the code path renders correctly even where the photo itself cannot be
+fetched.** This sandbox's network policy does not reach `sleepercdn.com`, so the real
+image never resolves here - screenshotted anyway, with the flag on, to confirm: all
+sixty `<img>` tags render at the right position with the correct src, the row layout
+does not shift or reflow around a pending image, and the themed backdrop disc (D39)
+shows correctly as the loading state. This is the same component and the same fetch
+`/roster`, `/deals/[id]`, `/lineage/[assetKey]`, `/recap`, `/drafts`, the trade builder
+and search panel already use in production - nothing new to license or licence-gate,
+this only restores the two list views D72 had (correctly, for the monogram case)
+stopped rendering it on.
+
+Turning the flag on is a Vercel project setting, not a code change, and
+`NEXT_PUBLIC_*` is inlined at BUILD time - setting it requires a redeploy (a restart of
+the same build will not pick it up).
+
+Verified: `pnpm lint` clean; `pnpm test` 1018/1018 unchanged; `pnpm build` succeeds;
+full e2e suite green (flag off, matching what ships by default); screenshotted `/values`
+and `/rank` with the flag on to confirm the column renders and the row layout holds.
