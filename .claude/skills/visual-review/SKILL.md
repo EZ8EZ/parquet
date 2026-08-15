@@ -1,12 +1,12 @@
 ---
 name: visual-review
-description: Screenshot Parquet's pages at its 390px design viewport across all three themes (dark/paper/contrast), and run automated axe-core accessibility scans against a running dev server. Use before and after any UI or visual-design change, and whenever asked to review, audit, or verify how a page actually looks/renders.
+description: Screenshot Parquet's pages at its 390px design viewport across both themes (dark/paper), and run automated axe-core accessibility scans against a running dev server. Use before and after any UI or visual-design change, and whenever asked to review, audit, or verify how a page actually looks/renders.
 ---
 
 # Visual review
 
-Parquet is mobile-first, dark-editorial, and has three themes (`dark`/`light`/
-`contrast`, see DESIGN.md and `lib/theme.ts`) and a team-scoped cookie
+Parquet is mobile-first, dark-editorial, and has two themes (`dark`/`light`,
+see DESIGN.md and `lib/theme.js`) and a team-scoped cookie
 (`parquet_roster`) that gates almost every page behind a first-run team picker.
 A naive `page.goto` + `page.screenshot` loop shows the team picker on every
 route instead of the actual page - this skill exists so that mistake isn't
@@ -40,9 +40,9 @@ node .claude/skills/visual-review/scripts/axe-scan.mjs --base "$BASE" --theme da
 node .claude/skills/visual-review/scripts/lighthouse.mjs --base "$BASE" / /roster
 ```
 
-Repeat step 2/4 with `--theme light` and `--theme contrast` - most visual bugs
-this skill has caught so far were theme-specific (a token that reads fine in
-dark and fails once the same element sits on `light`'s ground).
+Repeat step 2/4 with `--theme light` - most visual bugs this skill has caught
+so far were theme-specific (a token that reads fine in dark and fails once
+the same element sits on `light`'s ground).
 
 Already have `pnpm dev` running on your own port for manual testing? Point
 `--base` at that instead of starting a second server - reuse, don't relaunch
@@ -61,11 +61,11 @@ anything that's about layout/visual design rather than real data.
 
 ## The committed a11y CI gate
 
-`e2e/a11y.spec.ts` runs the same axe-core check as `axe-scan.mjs`, but as a
+`e2e/a11y.spec.js` runs the same axe-core check as `axe-scan.mjs`, but as a
 proper Playwright test: full ruleset once per route (dark) plus a
-`color-contrast`-only pass per route in `light` and `contrast`, driven off the
-same `ALL_SURFACES` registry `e2e/smoke.spec.ts` uses (`lib/nav.ts`). Run it
-with `pnpm e2e e2e/a11y.spec.ts`. This is the thing to keep green, not a
+`color-contrast`-only pass per route in `light`, driven off the
+same `ALL_SURFACES` registry `e2e/smoke.spec.js` uses (`lib/nav.js`). Run it
+with `pnpm e2e e2e/a11y.spec.js`. This is the thing to keep green, not a
 replacement for eyeballing the screenshots - axe catches contrast/ARIA/label
 issues, not "this looks cramped" or "this reads as a verdict, not a fact".
 

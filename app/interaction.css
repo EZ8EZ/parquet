@@ -289,9 +289,9 @@ details[open] .disclosure-body {
  * offset 2) and this is the note on why it survives everywhere rather than a second
  * definition of it: the 2px gap lands on the PARENT's ground rather than on the
  * control, so a focused `bg-accent` button shows gold / gap / gold instead of a gold
- * ring lost inside a gold fill. Checked against all three themes - dark #e6b34d on
- * #0b0c0e, paper #7a5810 on #f6f4f0, contrast #ffd27a on #000 - and the accent clears
- * the 3:1 non-text bar against its own theme's ground in each.
+ * ring lost inside a gold fill. Checked against both themes - dark #e6b34d on
+ * #0b0c0e, paper #7a5810 on #f6f4f0 - and the accent clears the 3:1 non-text bar
+ * against its own theme's ground in each.
  *
  * The one thing an outline offset cannot survive is a clipping ancestor, and this app
  * has several horizontally scrolling strips whose children are focusable. They get the

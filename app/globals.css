@@ -289,9 +289,9 @@
 }
 
 /*
- * THEMES. Dark is the identity (DECISIONS D15) and stays the default - these are an
- * escape hatch, not a rebrand, which is why they are overrides of the same token names
- * rather than a second design system. Tailwind v4 compiles every utility down to
+ * THEMES. Dark is the identity (DECISIONS D15) and stays the default - light is an
+ * escape hatch, not a rebrand, which is why it is an override of the same token names
+ * rather than a second design system (D64). Tailwind v4 compiles every utility down to
  * `var(--color-*)`, so restating those variables here re-colors the whole app without
  * one component knowing a theme exists.
  *
@@ -378,117 +378,6 @@
 }
 
 /*
- * High contrast, still dark - the accessibility case that keeps the app's identity
- * rather than trading it away. Pure black ground, pure white ink, borders lifted from
- * "hairline" to actually visible, and every semantic colour pushed to a value that
- * clears text contrast on that ground.
- */
-:root[data-theme="contrast"] {
-  color-scheme: dark;
-
-  /*
-   * NOT pure black any more, and the surfaces move with it.
-   *
-   * This theme expresses elevation the same way the default does - a lighter surface -
-   * and on #000000 there is nowhere below a card to put the contrast, so the card can
-   * only be read by its border. Lifting the ground to #0a0a0c on its own would make
-   * that WORSE (it closes the gap to the old #0d0f12 from +4.25 L* to +1.47), so the
-   * whole stack moves together and the STEPS are what is held constant:
-   *
-   *   bg        #000000 -> #0a0a0c
-   *   surface   #0d0f12 -> #14161b   (+4.46 L* over bg, vs the default's +4.94)
-   *   surface-2 #171a20 -> #20242b   (+11.29 L*)
-   *   elevated  #22272f -> #2d323b   (+17.87 L*)
-   *
-   * Borders lift by the same logic they did in the default theme: they were measured
-   * against the surface they draw on, not against the ground.
-   *   border        Lc 20.2 on --color-surface
-   *   border-strong Lc 43.3
-   */
-  --color-bg: #0a0a0c;
-  --color-surface: #14161b;
-  --color-surface-2: #20242b;
-  --color-elevated: #2d323b;
-  --color-border: #5a6270;
-  --color-border-strong: #8a94a4;
-
-  --color-ink: #ffffff;
-  --color-muted: #d2d7df;
-  /* 10.85:1 / APCA Lc 72.6 on --color-surface. */
-  --color-secondary: #c2c9d3;
-  --color-faint: #a6adb8;
-
-  /*
-   * Brighter than the dark theme's, and stopping deliberately short of near-white.
-   *
-   * A handful of pills in this app tint their background with 15% of the very colour
-   * their text uses (`text-accent` on `bg-accent/15`), which lifts the local ground and
-   * eats the ratio. Clearing 4.5 on that self-tint needs a value so pale that gold stops
-   * reading as gold and `bg-accent` buttons go muddy - checked on screen, not guessed.
-   * These values are the point where the palette is markedly clearer than the default
-   * and still recognisably this app.
-   *
-   * The "~8 unfixable pills" that note describes are fixed now, and not by picking a
-   * paler gold: --color-accent-wash below is OPAQUE, so those pills have one real
-   * ground instead of an unknowable one. accent-text on accent-wash = 8.65:1 / Lc 76.8.
-   */
-  --color-accent: #ffd27a;
-  --color-accent-dim: #c99b3f;
-  --color-accent-ink: #000000;
-  --color-accent-text: #ffdb94;
-  --color-positive: #7cf2b6;
-  /* Darkened from #ffaeb2 by measurement: the contrast theme's red and green were
-   * the WORST red-green-blind pairing of the three themes (CVD deltaE 2.9). Only
-   * lightness moved; deltaE is now 10.4 with 8.4:1 text contrast on black. */
-  --color-negative: #e5979b;
-  --color-info: #a9d4ff;
-  /*
-   * Was #ffd07a, two hex digits away from this theme's --color-accent (#ffd27a) and
-   * indistinguishable from it on screen. A `Tag tone="warn"` and a `Tag tone="accent"`
-   * were separated only by their background tint, in the one theme built for readers
-   * who need the separation most, and gold already carries a reserved meaning here
-   * (accent = "you"). Moved off gold entirely rather than nudged: CIE dE76 to the
-   * accent is now 30.4, up from 1.3. Holds 9.55:1 on --color-bg and 8.74:1 on
-   * --color-surface, and stays clear of --color-negative (#e5979b, dE76 52.8).
-   */
-  --color-warn: #ff9d3d;
-
-  /* No decorative wash here: it is contrast that is being asked for. */
-  --grain-1: transparent;
-  --grain-2: transparent;
-  --selection: rgba(255, 210, 122, 0.35);
-  --color-accent-wash: #3a342a;
-  --color-accent-edge: #726141;
-  --color-accent-strong: #c4a362;
-
-  /* Same recipe again. Self-on-own-wash: positive 8.89:1, negative 6.00:1,
-   * info 8.11:1, warn 6.50:1 - every one of them well past the pills these
-   * replace, which could not be measured at all. */
-  --color-positive-wash: #253934;
-  --color-positive-edge: #3e6e59;
-  --color-negative-wash: #352b2f;
-  --color-negative-edge: #684a4e;
-  --color-info-wash: #2c343f;
-  --color-info-edge: #506276;
-  --color-warn-wash: #3a2c20;
-  --color-warn-edge: #724c29;
-
-  /* Heavier than the default's, because this ground is darker and a shadow that
-   * reads on #0b0c0e disappears on #0a0a0c. */
-  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.55), 0 8px 24px rgb(0 0 0 / 0.4);
-  --edge-hilite: inset 0 1px 0 rgb(255 255 255 / 0.09);
-
-  /* Lifted a full window brighter than the default's ramp (OKLCH L 0.66 -> 0.90), so
-   * the reddest step clears 5.65:1 on pure black instead of the default's 3.42:1.
-   * This is the theme people reach for when the default's separation is not enough,
-   * and a heat ramp is exactly where that bites. */
-  --tci-1: #f05751;
-  --tci-2: #f19024;
-  --tci-3: #9fd86d;
-  --tci-4: #72feb5;
-}
-
-/*
  * GROUND-SCOPED INK - the second half of the --color-faint fix.
  *
  * A contrast ratio is a property of a PAIR, and every ink token in this file is one
@@ -540,19 +429,6 @@
 :root[data-theme="light"] .bg-surface {
   --color-faint: #616875;
   --color-secondary: #5b626e;
-}
-
-/* CONTRAST needs no lift - its inks already clear the bar on every ground it has
- * (worst pair: faint #a6adb8 on the accent wash, 5.45:1). These two rules exist only
- * so the dark theme's values, which are set on an unqualified class selector above,
- * cannot leak into this theme. */
-:root[data-theme="contrast"] .bg-surface-2,
-:root[data-theme="contrast"] .bg-elevated,
-:root[data-theme="contrast"] .bg-accent-wash,
-:root[data-theme="contrast"] .bg-bg,
-:root[data-theme="contrast"] .bg-surface {
-  --color-faint: #a6adb8;
-  --color-secondary: #c2c9d3;
 }
 
 html {
@@ -632,13 +508,11 @@ body {
   display: none;
 }
 :root[data-theme="dark"] [data-theme-choice="dark"],
-:root[data-theme="light"] [data-theme-choice="light"],
-:root[data-theme="contrast"] [data-theme-choice="contrast"] {
+:root[data-theme="light"] [data-theme-choice="light"] {
   color: var(--color-accent);
 }
 :root[data-theme="dark"] button[data-theme-choice="dark"],
-:root[data-theme="light"] button[data-theme-choice="light"],
-:root[data-theme="contrast"] button[data-theme-choice="contrast"] {
+:root[data-theme="light"] button[data-theme-choice="light"] {
   border-color: var(--color-accent);
   /* Each theme's own wash token, NOT color-mix(var(--color-accent)...): the build
    * constant-folds that to the default theme's literal gold, which would tint the
@@ -646,8 +520,7 @@ body {
   background-color: var(--color-accent-wash);
 }
 :root[data-theme="dark"] [data-theme-choice="dark"] .theme-active-check,
-:root[data-theme="light"] [data-theme-choice="light"] .theme-active-check,
-:root[data-theme="contrast"] [data-theme-choice="contrast"] .theme-active-check {
+:root[data-theme="light"] [data-theme-choice="light"] .theme-active-check {
   display: inline;
 }
 

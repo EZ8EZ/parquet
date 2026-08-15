@@ -18,10 +18,10 @@ import { primeLens } from "./helpers";
  * call sites tinted their own ground at 15% alpha instead of using the opaque
  * `*-wash`/`*-edge` tokens app/globals.css already tunes per theme, and one count
  * span applied opacity-60 on TOP of an already-tighter accent-wash margin). So the
- * light/contrast passes re-run the registry with only `color-contrast` checked -
- * still every route, since that is exactly where a theme-specific regression would
- * show up, but a single rule keeps three full sweeps from tripling CI time for no
- * extra coverage on the theme-independent rules already covered by the dark pass.
+ * light pass re-runs the registry with only `color-contrast` checked - still every
+ * route, since that is exactly where a theme-specific regression would show up, but
+ * a single rule keeps the second full sweep from doubling CI time for no extra
+ * coverage on the theme-independent rules already covered by the dark pass.
  */
 function describeViolations(violations) {
   return violations
@@ -60,7 +60,7 @@ for (const surface of ALL_SURFACES) {
     );
   });
 }
-for (const theme of ["light", "contrast"]) {
+for (const theme of ["light"]) {
   for (const surface of ALL_SURFACES) {
     test(`${surface.href} meets color-contrast in the ${theme} theme`, async ({
       page,

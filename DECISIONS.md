@@ -2676,3 +2676,221 @@ One small shared touch: `POS_ORDER` in `lib/roster.ts` is now exported rather th
 private, so the position taxonomy this module measures against is the same five-
 element array `analyzeRoster`'s own "positional strength" already uses, not a second
 copy that could quietly drift from it.
+
+## D69. THE CONTRAST THEME IS REMOVED. Light/dark is the whole preference surface, by owner request
+D34 shipped a third theme - `contrast`, "High contrast" in the toggle - alongside the
+committed dark identity and `light` ("Paper"). This reverses that: `THEMES` in
+`lib/theme.js` drops from `["dark", "light", "contrast"]` to `["dark", "light"]`, and
+every trace of the third option is deleted, not hidden. The owner's own framing is the
+reason, verbatim in spirit: a second selectable *design* was one too many - "just have
+one that's really good so the user never needs to switch" - while light/dark itself
+stays, because it is "the standard, expected pattern" and was never the complaint.
+Three toggles in a `role="radiogroup"` was the picker this app never needed; two is
+the pattern every other app already trained the reader on.
+
+**Why this is safe, not just permitted.** D34's own justification for shipping
+`contrast` was that dark's `--color-faint` sat sub-AA (1,606 failures at 3.75:1) and
+"brightening it everywhere would change what the app looks like," so the third theme
+carried the accessibility fix instead of the default. That premise no longer holds:
+D61 fixed `--color-faint` on the dark theme itself - a raised token plus the
+ground-scoped restatement (`.bg-surface-2`, `.bg-elevated`, `.bg-accent-wash`) - taking
+it from 2.44:1 to 4.59:1 on the wash and 3.36:1 to 4.71:1 on the surface, verified live
+across 12 routes at 375/390/430. The AA remedy `contrast` existed to provide is now
+built into the theme that ships to everyone by default, so removing the escape hatch
+loses no accessibility guarantee - confirmed again here with a fresh `axe-scan.mjs`
+pass and the committed `e2e/a11y.spec.js` color-contrast suite against both remaining
+themes, zero violations.
+
+**What was deleted, file by file.** `lib/theme.js`: `contrast` out of `THEMES`, its
+entry out of `THEME_CHROME` and `THEME_META`, and the header comment's framing of
+"the other two" rewritten - light is now the one reason a light/dark toggle exists in
+any app, not a survivor of a three-way split. `app/globals.css`: the entire
+`:root[data-theme="contrast"]` token block (surfaces, ink, the retuned semantic hues,
+the `grain-1`/`grain-2: transparent` special case, the TCI ramp) and the
+`:root[data-theme="contrast"] .bg-*` ground-scoped ink restatement, plus `contrast`'s
+entry in the three theme-toggle selection-state selector lists (now two).
+`components/ThemeToggle.jsx`: the `Contrast` icon import and its `ICON` map entry,
+and `grid-cols-3` to `grid-cols-2` - `THEME_META.map` already drives the rendered
+buttons and the description list, so trimming the data was the whole UI fix, exactly
+as the module's own header comment about one shared vocabulary promises. `e2e/a11y.spec.js`:
+the per-theme color-contrast loop drops from `["light", "contrast"]` to `["light"]`.
+`.claude/skills/visual-review/`: `SKILL.md` and `shoot.mjs` updated from three themes
+to two. Comments-only cleanup, no behavior change, in `components/ui.jsx`,
+`components/Brand.jsx`, `lib/chart-colors.js`, and `app/interaction.css`, which
+documented measured contrast ratios against a `contrast` ground that no longer exists.
+
+**The stale-localStorage case is not hypothetical, and it already degrades correctly.**
+Anyone who set `parquet:theme` to `"contrast"` before this change keeps that value in
+their browser; nothing in this reversal touches their storage. `parseTheme` and the
+inline boot script both gate on `THEMES.includes(...)`, so a value the array no longer
+contains takes the exact same path as any other unknown string - `sepia`, a typo, a
+future theme this app never ships - falling through to `DEFAULT_THEME` ("dark") rather
+than leaving `<html>` in a `data-theme="contrast"` state no CSS block matches. This was
+true before this change too (the reader was already written to distrust storage); D69
+adds a test (`lib/theme.test.js`, "degrades a stale 'contrast' value from before D69 to
+the default") pinning it, because a value this specific - one this app itself shipped
+and then retired - deserved a named case rather than living only inside the generic
+"anything else" assertions.
+
+**Kept, deliberately.** The light/dark toggle itself - the owner was explicit this is
+the standard pattern and stays. The one-accent-color restraint (D47/D48/D61) and the
+graceful-degradation ethos - this is a subtraction of a design, not a redesign; no
+token, no component, and no other preference changed. `DESIGN.md` now carries a short
+factual `## Themes` section (it previously documented none), naming exactly the two
+that ship and pointing at `lib/theme.js` as the single owner of the vocabulary.
+
+Rejected: keeping `contrast` in the codebase as a dead-but-selectable option, or
+quietly aliasing it to `dark` so old links or scripts referencing it "still work" -
+either would keep the exact complexity ("an alternative UI you can switch to") the
+owner asked to be rid of, just moved one layer down instead of actually gone.
+
+## D70. Hashtag Basketball and dynasty community theory audited the valuation model, and it holds - one real gap named, not fixed
+
+The owner's request: cross-check the model against real external dynasty rankings
+(Hashtag Basketball, plus a second name he gave as "dizzle dynasty dynasty basketball
+rankings") and against dynasty community theory, not to chase agreement on two numeric
+lists but to ask whether the model is missing nuance a stats-only curve would miss -
+age curves, positional scarcity, rebuild timing, pick decay.
+
+**"DIZZLE DYNASTY" RESOLVED - IT IS REAL.** The owner's name was flagged as a likely
+transcription error going in. It is not one: The Dizzle Dynasty
+(dizzledynasty.substack.com, Zach Reifschneider) is a real, active dynasty-basketball
+rankings newsletter, confirmed by direct search and fetch. Its prose (methodology
+essays, a beginner's-guide volume) was reachable; its actual ranked player sheet is
+gated behind an embedded Google Sheet this environment cannot open. Hashtag Basketball
+itself (hashtagbasketball.com) is also real and confirmed to publish exactly this kind
+of dynasty ranking, but returned HTTP 403 to every fetch attempt - it is not reachable
+from here. Reddit is flatly unreachable: `WebFetch` refuses `reddit.com`,
+`old.reddit.com`, and `web.archive.org` outright, and `WebSearch` could not surface
+actual r/DynastyBasketball thread content (results kept returning fantasy
+*football* material instead). Both limitations are stated here plainly rather than
+worked around with invented numbers or invented opinions.
+
+**WHAT WAS ACTUALLY REACHABLE, AND USED.** A current (Aug 2026), numeric, ranked
+dynasty top-300 in the same Hashtag-Basketball-family style, syndicated via NBC
+Sports/Yahoo (the search result that surfaced it: "Wemby on top, Holmgren and
+Cunningham in Top 10" / "the arrival of Cooper Flagg") - real players, real ranks,
+dated to this season, the numeric reference this audit actually measured against.
+Qualitative community theory came from Dizzle Dynasty's own beginner's-guide prose,
+plus RotoWire/Athlon/Yahoo positional-scarcity strategy writing - real, current, and
+reachable, standing in for the Reddit discussion the environment blocks.
+
+**THE METHOD.** Real Sleeper data for the actual NSL Fantasy Hoops league (not the
+fixture corpus - see the note below on how close this came to being measured against
+the wrong thing) was pulled live and run through `valuePlayers` unmodified. The
+resulting ranking was matched by name against the external top-50 (all 50 matched)
+and, for the specific question below, against a deeper five-player slice from the
+external top-150.
+
+**A REAL BUG IN THE MEASUREMENT ITSELF, CAUGHT BEFORE IT COULD PRODUCE A FALSE
+FINDING.** The first pass of this audit ran `LEAGUE_PROVIDER=sleeper` as a shell
+environment variable and got a clean-looking top 300 - Luka, Ja Morant, Anthony
+Edwards at the top, no Victor Wembanyama anywhere in it. That absence looked like a
+finding (an MVP-tier 22-year-old center missing entirely would be a real story), and
+it was tempting to write it up as one. It was not real: `vitest.config.mjs`'s
+`test.env` unconditionally sets `LEAGUE_PROVIDER: "fixture"` for every test run,
+which overrides a shell-level env var rather than merging under it - so every run was
+silently scoring the synthetic fixture corpus regardless of what the shell said. Caught
+by checking `h.players.size` against a raw provider fetch (2,107 vs. 288), not by
+inspection. Fixed for the purposes of this audit with a separate, uncommitted
+`vitest.explore.config.mjs` pointed at the real provider - not by touching the
+project's actual test config, which is correctly pinned to the fixture for every
+reason its own comment gives. Re-run against the real corpus, Wembanyama was exactly
+where the external ranking has him: #1.
+
+**POSITIONAL SCARCITY: MATCHES.** `positionMultipliers` on this league's real scoring
+settings (steals and blocks each weighted 2x, points 0.5x) produces C 1.049, PF 1.020,
+PG 1.001, SF 0.985, SG 0.945 - centers most valuable, shooting guards least, point
+guards comfortably mid-pack despite the "PG is deep" community reputation. That
+ordering is exactly what the reachable community strategy writing says in its own
+words: complete centers "are not sitting in the middle rounds anymore... dries up
+quickly," while point guards "stay deep, meaning you can afford to wait on them." No
+change warranted - the scoring-derived ordering and the community's revealed
+preference already agree.
+
+**REBUILD TIMING / AGING-VET DISCOUNT: NO CLEAN BIAS EITHER WAY.** The hypothesis
+going in was that a hand-measured age curve might over-punish elite aging stars
+relative to a market that still pays for durable greatness (Jokic, 31, external #4 vs.
+this model's #11 was the anecdote that raised the question). Measured properly across
+all 50 external-matched players it does not hold up as a *pattern*: mean rank
+disagreement for the 30-and-over band is +3.6 (this model ranks them very slightly
+worse), for the under-30 band it is +6.0 - not meaningfully different, and several
+individual aging vets (Anthony Davis, Karl-Anthony Towns) come out ranked *better* by
+this model than by the external list. One anecdote is not a pattern, and this one
+didn't survive contact with the full sample.
+
+**THE ONE REAL PATTERN: HIGH-PEDIGREE SOPHOMORES WHOSE BOX SCORE HASN'T CAUGHT UP TO
+THEIR REPUTATION YET.** The under-22 band of the same 50-player comparison disagrees
+by +15.25 ranks on average (n=4) - worth naming precisely rather than trusting a small
+average on its own, so the whole 2025 draft class second-year cohort was pulled
+individually: Cooper Flagg +3, Dylan Harper +29 (external #29, this model #58), Kon
+Knueppel -11, VJ Edgecombe +29 (external #44, this model #73), Ace Bailey +60
+(external #55, this model #115). Four of five run well behind the external
+consensus, and the one exception (Knueppel) is the one whose second-year role has
+already produced box-score numbers big enough to lift his own Sleeper search rank -
+which is precisely the mechanism: `valuePlayer`'s base term is `maxValue *
+exp(-rankDecay * (searchRank - 1))`, anchored to Sleeper's own real-time expert
+consensus of how good a player looks RIGHT NOW, and the age curve on top of it tops
+out at 1.16x even for a 19-year-old - nowhere near enough to undo a 40-60-slot gap
+in `searchRank`. Dynasty theory has a name for exactly this: paying for tomorrow's
+production before this year's box score shows it, the thing Dizzle Dynasty's own
+beginner's-guide prose gestures at directly ("are you trying to collect players or
+are you trying to win") and every rookie-premium discussion in the wider dynasty
+literature assumes as a given.
+
+**WHY THIS IS NOT GETTING A CALIBRATION CONSTANT.** TCI's break-finder and PLI's
+own-share fix (D66, D68) were both real bugs in how EXISTING signals were combined -
+fixable because the right signal was already sitting in the data, just weighted or
+normalised wrong. This is different. `years_exp` is present on every ingested player
+(confirmed: it exists on the raw feed and is threaded through `toPlayer`) and is
+currently used by nothing in `lib/valuation` - grepped for and found only in test
+fixtures - but adding a "still developing" bonus keyed to it would not be recovering a
+signal already in the data, it would be asserting a number with no derivation behind
+it, for exactly the reason `ageCurve.ts`'s own header gives for why it derives instead
+of hand-typing: "a calibration constant does not need... hand-editing a measurement is
+how a measurement stops being one." A defensible version of this fix would need
+something Sleeper's feed does not carry at all - draft slot or draft-class pedigree
+(checked directly on the raw player payload: no such field exists) - so there is no
+honest way to derive a "prospect premium" the way the age curve itself was derived
+from 4,587 real player-seasons. Inventing one from nothing is the identical failure
+D19 deleted a whole inference engine to avoid, and the identical trap D56 and D67 both
+name: measuring what the data cannot support. The age curve is already doing
+everything a production-based measure honestly can here - it gives every 19-year-old
+who cleared the sampling bar the single largest multiplier on the whole table - and
+the gap that remains is the gap between a production curve and a market that also buys
+optionality. `ageCurve.ts`'s own header already draws exactly this line for the OLD
+end of the curve ("a production curve, not a market curve... it does not say when this
+league's fourteen managers stop paying"); this audit's finding is that the identical
+honest limit applies, symmetrically, at the YOUNG end, and the file already says so
+without needing an edit.
+
+**PICK VALUATION: DIRECTIONALLY SOUND.** This year's 1.01 (`pickValue(1, 0, {slot:
+1})`) prices at 5000 - in the range of this season's real top-25-ish players by value,
+which matches the common dynasty framing that an elite first is worth a genuine
+rotation-caliber player, not a lottery ticket. A next year's first from a lottery-range
+team prices at 2507 regardless of exactly how bad the team is (this league's
+`lotteryWeighting: 0`, a separate, already-documented choice not reopened here), a
+non-lottery future first at 1117-1755, and second-rounders at 145-633 - declining
+trust with distance, a non-linear round drop-off, and a floor above zero. All three
+match the qualitative shape of the community's own pick-value writing ("some picks are
+like a new car: the second you use them, their value is already decreasing") without
+needing a number changed.
+
+**DECISION: NO CHANGE TO `lib/valuation`.** Positional scarcity and pick decay both
+check out clean against the external evidence. The aging-vet-discount hypothesis this
+audit went in with did not survive measurement against the full sample. The one real,
+evidence-backed gap - a production-anchored model cannot price the optionality
+dynasty managers pay for in a not-yet-proven high-pedigree sophomore - is real,
+named, and precisely understood, but fixing it honestly would require a signal
+(draft pedigree) that does not exist anywhere in the ingested data, so any numeric
+patch would be an assertion wearing a formula's clothes. This is D67's own precedent
+applied to a different metric: a named, real blind spot the model already discloses
+the shape of (`ageCurve.ts`'s market-curve caveat), left alone rather than papered
+over.
+
+Verified: the comparison ran against live real-league data (not the fixture corpus,
+after the measurement bug above was caught and fixed for this audit only), matched
+all 50 external-ranked players by name, and was cross-checked against a second,
+independent five-player slice (the 2025 sophomore class) before the pattern was
+written down. No source code changed; `pnpm test` reports the same 1008/61 before and
+after this entry.

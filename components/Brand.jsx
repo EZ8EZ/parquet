@@ -9,8 +9,8 @@ import Link from "next/link";
  *
  * Now the tile is `--color-surface` and the gradient runs `--color-accent-text` into
  * `--color-accent` - the same two golds the rest of the app already splits by job, so
- * the mark re-tunes itself on paper (dark gold on warm white) and on contrast (bright
- * gold on near-black) instead of staying frozen at dark's values.
+ * the mark re-tunes itself on paper (dark gold on warm white) instead of staying
+ * frozen at dark's values.
  *
  * `var()` goes through `style`, not a presentation attribute: presentation attributes
  * are the weakest cascade level and `stop-color` in particular is inconsistent about
