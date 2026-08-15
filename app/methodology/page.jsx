@@ -20,12 +20,52 @@ import {
   W_EXPOSURE,
   LOO_TOP_K,
 } from "@/lib/metrics/fragility";
-import { PageHeader, Card, SectionHeader } from "@/components/ui";
+import { PageHeader, Card } from "@/components/ui";
 import { LineChart } from "@/components/charts";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Onward } from "@/components/Onward";
 export const dynamic = "force-dynamic";
+/**
+ * NINE SECTIONS, EACH A DOOR. This page used to print every subsection's charts,
+ * tables and prose fully open, one after another - a first-time reader's page and
+ * a "wait, how is injury priced again" reference page were forced to be the same
+ * length. They are not: the formula card above stays open always (it is the one
+ * sentence every reader needs), the first two subsections (base value, the
+ * measured age curve) arrive open because they are what most readers came for,
+ * and the rest - the market half, position, injury, role, picks, timelines,
+ * fragility - are one tap away rather than a scroll away. Nothing here is
+ * shortened or removed; `SECTION_LINKS` below is only a map of what is already
+ * on the page.
+ */
+const SECTION_LINKS = [
+  { id: "base", label: "1 · Base value" },
+  { id: "age", label: "2 · Age curve" },
+  { id: "market", label: "2b · Market" },
+  { id: "position", label: "3 · Position" },
+  { id: "injury", label: "4 · Injury" },
+  { id: "role", label: "5 · Role" },
+  { id: "picks", label: "6 · Picks" },
+  { id: "timelines", label: "7 · Timelines" },
+  { id: "fragility", label: "8 · Fragility" },
+];
+function Subsection({ id, title, defaultOpen, children }) {
+  return (
+    <details id={id} className="group mt-4 scroll-mt-3" open={defaultOpen || undefined}>
+      <summary className="mb-1.5 flex min-h-11 cursor-pointer list-none items-center gap-1.5">
+        <ChevronRight
+          size={13}
+          aria-hidden="true"
+          className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
+        />
+        <h2 className="min-w-0 text-note font-semibold uppercase tracking-[0.16em] text-muted">
+          {title}
+        </h2>
+      </summary>
+      <div className="disclosure-body space-y-2">{children}</div>
+    </details>
+  );
+}
 export default async function MethodologyPage() {
   const h = await getLeagueHistory();
   const scoring = h.currentLeague.scoringSettings;
@@ -147,7 +187,21 @@ export default async function MethodologyPage() {
         </p>
       </Card>
 
-      <SectionHeader title="1 · Base value from consensus rank" />
+      {/* Jump rail: nine subsections is a long page - let people land on one
+            rather than scroll every closed header on the way past. */}
+      <nav aria-label="Sections" className="mt-2 flex flex-wrap gap-1.5">
+        {SECTION_LINKS.map((s) => (
+          <a
+            key={s.id}
+            href={`#${s.id}`}
+            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-2.5 text-note font-medium text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+          >
+            {s.label}
+          </a>
+        ))}
+      </nav>
+
+      <Subsection id="base" title="1 · Base value from consensus rank" defaultOpen>
       <Card>
         <p className="mb-3 text-body leading-relaxed text-muted">
           Value decays exponentially with rank (studs are scarce):
@@ -159,8 +213,9 @@ export default async function MethodologyPage() {
         </p>
         <LineChart data={baseExamples} format={(n) => n.toLocaleString()} />
       </Card>
+      </Subsection>
 
-      <SectionHeader title="2 · Age curve, measured" />
+      <Subsection id="age" title="2 · Age curve, measured" defaultOpen>
       <Card>
         <LineChart
           data={ageExamples.map((a) => ({
@@ -252,8 +307,9 @@ export default async function MethodologyPage() {
           reason at all.
         </p>
       </Card>
+      </Subsection>
 
-      <SectionHeader title="2b · What this league actually paid" />
+      <Subsection id="market" title="2b · What this league actually paid">
       <Card>
         <p className="text-body leading-relaxed text-muted">
           The curve above says when production declines. It does not say when{" "}
@@ -349,8 +405,9 @@ export default async function MethodologyPage() {
           to move a price.
         </p>
       </Card>
+      </Subsection>
 
-      <SectionHeader title="3 · Positional value - from YOUR scoring" />
+      <Subsection id="position" title="3 · Positional value - from YOUR scoring">
       <Card>
         <p className="mb-3 text-body leading-relaxed text-muted">
           Each position&apos;s canonical stat line is scored under this
@@ -372,8 +429,9 @@ export default async function MethodologyPage() {
           ))}
         </div>
       </Card>
+      </Subsection>
 
-      <SectionHeader title="4 · Injury - by body part, note and age" />
+      <Subsection id="injury" title="4 · Injury - by body part, note and age">
       <Card>
         <p className="text-body leading-relaxed text-muted">
           An injury is not one number. The same word means different things to
@@ -482,8 +540,9 @@ export default async function MethodologyPage() {
           beats a confident guess.
         </p>
       </Card>
+      </Subsection>
 
-      <SectionHeader title="5 · Role" />
+      <Subsection id="role" title="5 · Role">
       <Card>
         <ul className="space-y-0.5 font-mono text-note leading-snug text-muted">
           <li>starter: {cfg.role.starter}×</li>
@@ -491,8 +550,9 @@ export default async function MethodologyPage() {
           <li>bench: {cfg.role.bench}×</li>
         </ul>
       </Card>
+      </Subsection>
 
-      <SectionHeader title="6 · Draft picks - slot-aware, lottery-aware" />
+      <Subsection id="picks" title="6 · Draft picks - slot-aware, lottery-aware">
       <Card>
         <p className="text-body leading-relaxed text-muted">
           Picks are NOT priced by round. The 1.01 and the 1.
@@ -605,8 +665,9 @@ export default async function MethodologyPage() {
           <li>any unlisted season: neutral (1.0 / 1.0)</li>
         </ul>
       </Card>
+      </Subsection>
 
-      <SectionHeader title="7 · Timelines - Dynasty Duration & TCI" />
+      <Subsection id="timelines" title="7 · Timelines - Dynasty Duration & TCI">
       <Card>
         <p className="text-body leading-relaxed text-muted">
           Every asset is a claim on production at some point in TIME. Borrowing
@@ -706,8 +767,9 @@ export default async function MethodologyPage() {
           page.
         </p>
       </Card>
+      </Subsection>
 
-      <SectionHeader title="8 · Fragility - the RFI" />
+      <Subsection id="fragility" title="8 · Fragility - the RFI">
       <Card>
         <p className="text-body leading-relaxed text-muted">
           Duration says WHEN a roster&apos;s value arrives; the{" "}
@@ -773,6 +835,7 @@ export default async function MethodologyPage() {
           theoretical worst case.
         </p>
       </Card>
+      </Subsection>
 
       <p className="mt-6 text-center text-meta leading-relaxed text-secondary">
         Player and pick constants live in{" "}
