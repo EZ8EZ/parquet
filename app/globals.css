@@ -125,7 +125,8 @@
    *   note    12px  alias of meta (see below)
    *   body    13px  primary reading size - row titles, prose, findings
    *   lede    17px  card headings and the big figures that head a panel
-   *   display 25px  page titles (font-display)
+   *   display 30px  page titles (font-display) and the hero figures that anchor
+   *                 a page (Stat, TradeBuilder's price, the counterfactual delta)
    *
    * THE 11px FLOOR IS GONE. 46.8% of every piece of text in this app was exactly
    * 11px, and at 390px on a phone 11 and 12 were never distinguishable from each
@@ -139,13 +140,25 @@
    *
    * Tailwind still generates `text-sm`/`text-lg`/etc. because they are built in; they
    * are simply not used by this app's own components any more.
+   *
+   * DISPLAY RAISED 25 -> 30px (round 9, "the owner's flat/timid complaint"). The step
+   * from `lede` (17) to the old `display` was 1.47x - smaller than `body` (13) to
+   * `lede` (17) at 1.31x was NOT what made the jump feel timid; 25px next to a page
+   * built almost entirely of 12/13px chrome just wasn't a big enough number to read as
+   * a masthead. 30px keeps the six-step scale at six steps (the fix is a value moving,
+   * not a seventh step appearing) and widens the top jump to 1.76x, which is the one
+   * place in the whole scale a reader is supposed to feel a jolt. Checked at 375/390/430
+   * that "You said rebuild. You bought win-now." (the longest headline on Home) still
+   * wraps to two lines, not three - the sentence is written short specifically because
+   * it is set in the biggest type on the page, so a size change that forced a third
+   * line would have been trading the jolt for a worse wrap.
    */
   --text-micro: 10px;
   --text-meta: 12px;
   --text-note: var(--text-meta);
   --text-body: 13px;
   --text-lede: 17px;
-  --text-display: 25px;
+  --text-display: 30px;
 
   /* Radii */
   --radius-sm: 8px;
@@ -154,9 +167,24 @@
 
 
   /* The two grain washes on <body>. Tokens rather than literals so a theme can
-   * restate them - a gold-on-black wash is wrong on paper. */
-  --grain-1: rgba(230, 179, 77, 0.05);
-  --grain-2: rgba(90, 169, 255, 0.03);
+   * restate them - a gold-on-black wash is wrong on paper.
+   *
+   * RAISED 0.05/0.03 -> 0.09/0.05 (round 9). DESIGN.md has claimed a "faint gold+blue
+   * radial grain" since round 1, and at the old alphas it was true only in the
+   * technical sense that the pixels were not literally identical to `--color-bg` -
+   * on a real screen, in the actual viewport (not zoomed into a screenshot), it read
+   * as flat black, which is the exact "looks the same"/"flat" complaint this round
+   * responds to. This is texture, not a new hue: same two rgba stops, same
+   * `radial-gradient` geometry, only the alpha channel moves, so it costs nothing
+   * against the one-accent rule. Kept well short of decorative - still under 0.10,
+   * still fully behind every opaque card (`--color-surface` and up paint over it
+   * completely), and it only ever touches text that sits directly on bare `--color-bg`,
+   * which this app already keeps sparse and low-emphasis (the Wordmark tagline, the
+   * "First time here?" footer line) - re-checked against 4.5:1 at the new alpha and
+   * neither moved enough to matter (bg's own luminance shift from the wash is <0.003
+   * in relative-luminance terms at these strengths). */
+  --grain-1: rgba(230, 179, 77, 0.09);
+  --grain-2: rgba(90, 169, 255, 0.05);
   --selection: rgba(230, 179, 77, 0.28);
 
   /*
@@ -311,8 +339,10 @@
   --color-info: #1a5aa8;
   --color-warn: #855400;
 
-  --grain-1: rgba(122, 88, 16, 0.05);
-  --grain-2: rgba(26, 90, 168, 0.035);
+  /* Same round-9 lift as the dark theme's, same ratio, re-picked against a warm
+   * off-white ground rather than assumed - the wash reads differently on light. */
+  --grain-1: rgba(122, 88, 16, 0.08);
+  --grain-2: rgba(26, 90, 168, 0.05);
   --selection: rgba(122, 88, 16, 0.22);
   /* Same three jobs, this theme's gold composited over this theme's surface.
    * accent-text on accent-wash = 5.09:1 / APCA Lc 65.9. */

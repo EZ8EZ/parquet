@@ -49,18 +49,25 @@ test("the deal index still surfaces every deal, one row each, each one its own r
     ).replace(/[^0-9]/g, ""),
   );
   expect(claimed).toBeGreaterThan(0);
-  const rows = page.getByTestId("deal-index").locator("> li");
+  // Descendant, not direct-child: the unfiltered index is now season-grouped
+  // (the same fold the commissioner audit log already uses), so a row is a
+  // `<li>` nested inside that season's `<details><ul>`, not a direct child of
+  // the testid element itself. Every row is still ATTACHED regardless of
+  // whether its season is open or shut - a fold must hide, never drop.
+  const rows = page.getByTestId("deal-index").locator("li");
   await expect(rows).toHaveCount(claimed);
   // Every row is a link INTO the receipt, which is now the only place the deal's
   // prose exists. A row that lost its href would be a deal nobody can read any more.
   const hrefs = await page
     .getByTestId("deal-index")
-    .locator("> li > a")
+    .locator("li > a")
     .evaluateAll((els) => els.map((e) => e.getAttribute("href")));
   expect(hrefs).toHaveLength(claimed);
   expect(hrefs.every((h) => h?.startsWith("/deals/"))).toBe(true);
   expect(new Set(hrefs).size).toBe(claimed);
-  // And one of them really lands on a receipt, with the receipt's own heading.
+  // The newest season is open on arrival, so its rows resolve to a real receipt
+  // without opening anything first.
+  await expect(rows.first().locator("a")).toBeVisible();
   await rows.first().locator("a").click();
   await expect(page).toHaveURL(/\/deals\/.+/);
   await expect(

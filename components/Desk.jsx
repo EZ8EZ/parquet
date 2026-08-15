@@ -1,54 +1,46 @@
 "use client";
 /**
- * THE DESK - the app's bottom chrome, replacing the six-tab bar.
+ * THE DESK - the app's bottom chrome.
  *
- * Three things stacked at the bottom of every page, bottom-up:
+ * Four things stacked at the bottom of every page, bottom-up:
  *
- *   the menu button  53pt  ONE full-bleed, worded control that opens everything
- *   context row      44pt  what you are looking at, and what is outstanding
- *   handle           19pt  the grip that opens the drawer above all of it
+ *   tab row      53pt  five always-visible destinations: the four primaries plus More
+ *   context row  44pt  what you are looking at, and what is outstanding
+ *   handle       19pt  the grip that opens the drawer above all of it
  *
  * 116pt plus `env(safe-area-inset-bottom)`, so ~150pt at rest on a device with a home
- * indicator - unchanged arithmetic, because the root layout's bottom padding is sized
- * to it and belongs to another owner this round.
+ * indicator - unchanged arithmetic from the single-button design this replaced,
+ * because the root layout's bottom padding is sized to it and belongs to another
+ * owner this round.
  *
- * ROUND 8b DELETED THE DESTINATION ROW. Four fixed links were still a bar of tabs, and
- * the brief was to find out whether the app can live on summoned menus alone. What
- * replaced them is the widest, most literal affordance a phone screen can hold: a
- * full-bleed button that says the word "Menu" and, under it, what is behind it. A bar
- * teaches by being permanently visible; this teaches the same way, in words instead of
- * six-point icon captions, and it spends one row instead of one row per destination.
+ * D53 SHIPPED THE SINGLE FULL-BLEED "MENU" BUTTON WITH AN OPEN QUESTION ATTACHED: can
+ * a reader find the four primaries, or are they visible without an action - and which
+ * of those the owner meant was never settled. This is the owner's answer: visible
+ * without an action, on every route, the way Sleeper's own bottom bar never asks a
+ * returning user to open anything to reach League or Team. See DECISIONS.md D65.
  *
- * THE COST IS ONE TAP, AND IT IS PAID BACK IN TWO PLACES. Reaching /roster from an
- * arbitrary page is 2 taps now where it was 1. So: (a) the four former slots are the
- * FIRST thing in the drawer and are PINNED to its bottom edge, a thumb's width above
- * the button that just opened them - the second tap is the shortest travel on screen,
- * not a hunt through a list; and (b) Home carries a compact four-link shortcut row
- * near the top (app/page.tsx), so the page every session starts on still shows the
- * four things you can do without anyone opening anything.
- *
- * (b) IS LOAD-BEARING FOR (a)'s ARGUMENT AND WAS BRIEFLY MISSING. The commit that
- * deleted the row paid for it with a full surface index on Home; the next commit
- * removed that index, on its own good grounds, and the two composed into an app that
- * advertised one destination anywhere. The replacement is a shortcut row and NOT a
- * second index - the drawer and /more remain the only two places the whole registry
- * is printed. See DECISIONS.md D52.
+ * THE FIVE TABS ARE `primarySurfaces()` PLUS ONE. Four plain links, rendered from the
+ * same registry flag every other pinned-destination view in this app has read (Home's
+ * former shortcut row, the drawer's former pinned block - both gone now, since a
+ * destination printed as a persistent tab does not also need printing beside it). The
+ * fifth is More: the same control that used to be the whole row, now one fifth of it,
+ * still opening the identical drawer below with the identical focus-trap/inert
+ * contract - nothing about the SHEET changed, only what sits above it at rest.
  *
  * WHAT MOVES WHEN IT OPENS: nothing you can reach. The drawer is the FIRST child of
  * the sheet, above the handle, so it grows upward into the page and the three rows
  * below stay bolted to the bottom of the screen. The mockup this was built from had
- * it the other way round - drawer last, so opening pushed the four destinations up
- * the screen and out from under your thumb, which is the one thing a fixed bar is
- * uniquely good at not doing. Muscle memory is the entire budget of a bottom bar, and
- * an element that moves 500pt when you touch a grip next to it has spent it.
+ * it the other way round - drawer last, so opening pushed the tab row up the screen
+ * and out from under your thumb, which is the one thing a fixed bar is uniquely good
+ * at not doing. Muscle memory is the entire budget of a bottom bar, and an element
+ * that moves 500pt when you touch a grip next to it has spent it.
  *
  * TWO ACCESSIBILITY STATES, NOT THREE:
  *
  *   collapsed  non-modal. `<nav aria-label="Primary">` wraps the whole resting sheet -
- *              the seat chip, the status line and the menu button are ALL navigation,
- *              and that landmark is the assertion every route in e2e/ makes (see
- *              e2e/helpers.ts). It used to wrap only the four tabs; with the tabs gone
- *              it wraps what is actually there, and stays visible on every route. The
+ *              the seat chip, the status line and the tab row are ALL navigation, and
+ *              that landmark is the assertion every route in e2e/ makes (see
+ *              e2e/helpers.ts), unchanged by what row happens to sit inside it. The
  *              drawer inside it is `hidden` + `inert` when closed, so it is not in the
  *              tab order, not in the accessibility tree, and not findable by
  *              browser find-in-page.
@@ -56,12 +48,12 @@
  *              Escape closes, and the page behind is `inert`.
  *
  * Drag is an ACCELERATOR, never the contract. The handle is a real `<button>` with
- * `aria-expanded`/`aria-controls`, the menu button below it is the same action at
- * full width and in words, and every destination in the drawer is also on /more and
- * on Home - both of which stay real pages for exactly that reason (no-JS, crawlers,
- * and "see everything"). The former chevron-only toggle in the context row is gone:
- * with a control that says "Menu" two rows down, a bare glyph was a third way to do
- * one thing. Nothing in this component is reachable by drag alone. Intermediate detents are deliberately
+ * `aria-expanded`/`aria-controls`, the More tab below it is the same action in words,
+ * and every destination in the drawer is also on /more - which stays a real page for
+ * exactly that reason (no-JS, crawlers, and "see everything"). The former
+ * chevron-only toggle in the context row is gone: with a control that says "More" in
+ * the row below, a bare glyph was a third way to do one thing. Nothing in this
+ * component is reachable by drag alone. Intermediate detents are deliberately
  * NOT implemented: a third position would be a state with no name to announce and no
  * keyboard equivalent, so it would be a pointer-only nicety pretending to be part of
  * the interface.
@@ -335,6 +327,12 @@ export function Desk({ data }) {
     setMoreBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 12);
   }, []);
   const destinations = primarySurfaces();
+  // The More tab reads as "you are somewhere in here" whenever the current route is
+  // not one of the four always-visible primaries, matching the native-app convention
+  // that exactly one tab is lit at any given time - not only while the drawer itself
+  // is open.
+  const onPrimary = destinations.some((s) => isActive(pathname, s.href));
+  const moreActive = expanded || !onPrimary;
   return (
     <>
       {/* Visible, but not reachable: the page stays legible behind an open drawer
@@ -370,11 +368,10 @@ export function Desk({ data }) {
             rather than a row of tabs, because the whole sheet is the navigation. */}
           <nav aria-label="Primary">
             {/* ------------------------------------------------------- the drawer
-            A scrolling half and a pinned half. The pinned half is at the BOTTOM,
-            against the button that opened it, and holds the four destinations that
-            used to be a permanent row - which is what keeps "get to my roster" a
-            two-tap move with almost no travel between the taps rather than a
-            two-tap move plus a scan. */}
+            Everything that is NOT one of the five tabs below: the search box, then
+            every registry group except Primary, since the primaries are always on
+            screen already and printing them again here would be the same
+            destination advertised twice in one view. */}
             <div
               id={drawerId}
               ref={drawerRef}
@@ -402,15 +399,15 @@ export function Desk({ data }) {
           an 846pt list on a screen with 588pt to spare. The cap bought nothing
           the viewport arm was not already buying, and cost the bottom half of the
           registry. What is left is the honest arithmetic: the whole screen, minus
-          the 116pt resting sheet, minus the pinned "Go to" block, minus the home
-          indicator, minus a gap wide enough that the page behind is still visibly
-          a page. On a tall screen the whole registry now fits with no scroll at
-          all; on a phone it is two thirds of it with the cue below saying so.
+          the 116pt resting sheet, minus the home indicator, minus a gap wide enough
+          that the page behind is still visibly a page. On a tall screen the whole
+          registry now fits with no scroll at all; on a phone it is most of it with
+          the cue below saying so.
         */}
                 <div
                   ref={scrollerRef}
                   onScroll={syncMoreBelow}
-                  className="max-h-[calc(100dvh-16rem-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain px-3.5 pt-3"
+                  className="max-h-[calc(100dvh-10.5rem-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain px-3.5 pt-3"
                 >
                   <Suspense fallback={null}>
                     <SearchPanel
@@ -420,10 +417,10 @@ export function Desk({ data }) {
                   </Suspense>
 
                   {/*
-          Every group EXCEPT Primary. Those four are the pinned block below, a
-          thumb's width from the button - printing them twice in one panel would be
-          the drawer advertising the same destination in two places. /more remains
-          the index that lists literally everything, and it is the last link here.
+          Every group EXCEPT Primary. Those four are already on screen as the tab
+          row below, at rest, on every route - printing them again here would be
+          the same destination advertised twice in one view. /more remains the
+          index that lists literally everything, and it is the last link here.
         */}
                   {groupedSurfaces()
                     .filter((g) => g.group !== "Primary")
@@ -512,42 +509,6 @@ export function Desk({ data }) {
                   </span>
                 </div>
               </div>
-
-              {/* ------------------------------------------- the pinned destinations
-            The four former tabs, rendered from the SAME registry flag that used to
-            draw the row (`primary`), never a list of this component's own. Pinned
-            rather than scrolled: these are the four moves a reader makes most, so
-            they must never be somewhere you have to scroll to, and they must sit
-            where the thumb already is. */}
-              <div className="shrink-0 border-t border-border px-3.5 pb-2 pt-2">
-                <h2 className="mb-1.5 px-0.5 text-micro font-semibold uppercase tracking-[0.16em] text-faint">
-                  Go to
-                </h2>
-                <div className="grid grid-cols-4 gap-1.5">
-                  {destinations.map((s) => {
-                    const Icon = iconForSurface(s.href);
-                    const active = isActive(pathname, s.href);
-                    return (
-                      <Link
-                        key={s.href}
-                        href={s.href}
-                        aria-current={active ? "page" : undefined}
-                        className={cn(
-                          "flex min-h-[3.25rem] flex-col items-center justify-center gap-1 rounded-[--radius-sm] border px-1 text-center transition-colors",
-                          active
-                            ? "border-accent-edge bg-accent-wash text-accent-text"
-                            : "border-border bg-surface text-muted hover:border-border-strong hover:bg-surface-2",
-                        )}
-                      >
-                        <Icon size={18} aria-hidden="true" />
-                        <span className="text-micro font-semibold leading-none">
-                          {s.short ?? s.label}
-                        </span>
-                      </Link>
-                    );
-                  })}
-                </div>
-              </div>
             </div>
 
             {/* ------------------------------------------------------- the handle
@@ -555,10 +516,10 @@ export function Desk({ data }) {
             is why `min-h-0` has to override the global rule in globals.css rather
             than the rule being wrong. It is full-bleed wide, it sits ~97pt above
             `env(safe-area-inset-bottom)` so it never competes with the iOS home
-            indicator's swipe, and the worded button two rows below is the same
-            action at full size for anyone who wants it. Its name says "drag handle"
-            so that it and the menu button are never two identically-named controls
-            in one list to a screen reader. */}
+            indicator's swipe, and the More tab two rows below is the same action
+            for anyone who wants it. Its name says "drag handle" so that it and the
+            More tab are never two identically-named controls in one list to a
+            screen reader. */}
             <button
               ref={handleRef}
               type="button"
@@ -693,80 +654,68 @@ export function Desk({ data }) {
               )}
             </div>
 
-            {/* ------------------------------------------------- the menu button
-            What replaced four tabs. The whole width of the phone, 53pt tall (the
-            destination row's exact height, because the root layout's bottom padding
-            is arithmetic against this sheet and belongs to another owner this
-            round), and it says what it is in a word rather than asking a reader to
-            infer it from a glyph. This is the ONE thing standing between a
-            first-time leaguemate and the rest of the app, so it is the most
-            literal, largest, most permanently visible control in the product.
-
-            `leading-none` on both lines is load-bearing arithmetic, not taste:
-            preflight's `line-height: 1.5` on <html> is an ABSOLUTE 24px that a
-            13px or 11px label inherits unchanged, which would overflow 53pt. */}
-            <button
-              type="button"
-              aria-expanded={expanded}
-              aria-controls={drawerId}
-              // No aria-label: the button already has real visible text (both spans
-              // below), and a hand-written label can only ever paraphrase that text,
-              // never match it exactly - which is itself an accessibility bug (a
-              // mismatch between what's read aloud and what's on screen). Letting the
-              // browser compute the accessible name from content makes a mismatch
-              // structurally impossible.
-              onClick={() => setExpanded(!expanded)}
-              className={cn(
-                "flex h-[53px] w-full items-center justify-center gap-2 border-t px-3.5 transition-colors",
-                expanded
-                  ? "border-accent-edge bg-accent-wash text-accent-text"
-                  : "border-border text-ink hover:bg-surface-2",
-              )}
-            >
-              {/* WHERE THE MARK LIVES NOW. It used to appear on exactly one route
-            (Home's Wordmark) and nowhere else, so deep-linking into /lineage
-            showed a page that never said Parquet. This slot is the cheapest
-            honest place to fix that: the menu button is the one control on
-            every one of the 25 routes, the mark is drawn at the same 18pt the
-            LayoutGrid glyph it replaces was drawn at, so the Desk's height
-            arithmetic and density are untouched - and the line directly under
-            it already reads "Every page in Parquet", which is the mark's
-            caption. A generic grid glyph was carrying no information the word
-            "Menu" beside it was not already carrying. */}
-              {expanded ? (
-                <ChevronDown
-                  size={18}
-                  aria-hidden="true"
-                  className="shrink-0"
-                />
-              ) : (
-                <span className="shrink-0 leading-none">
-                  <BrandMark size={18} gradientId="desk-mark" />
+            {/* ------------------------------------------------------- the tab row
+            The five always-visible destinations, replacing the single "Menu" button
+            (D65). Same 53pt the button used to fill alone - a five-column grid
+            divides the width instead of widening the control - so the root layout's
+            bottom-padding arithmetic (app/layout.tsx) is untouched. Icon-over-label
+            in both cases, matching the shape of a native tab bar rather than the
+            worded full-bleed button it replaced: five short labels read faster at a
+            glance than one long one, which was the whole point of a persistent row. */}
+            <div className="grid h-[53px] grid-cols-5 border-t border-border">
+              {destinations.map((s) => {
+                const Icon = iconForSurface(s.href);
+                const active = isActive(pathname, s.href);
+                return (
+                  <Link
+                    key={s.href}
+                    href={s.href}
+                    aria-current={active ? "page" : undefined}
+                    className={cn(
+                      "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 transition-colors",
+                      active
+                        ? "text-accent-text"
+                        : "text-muted hover:text-ink",
+                    )}
+                  >
+                    <Icon size={18} aria-hidden="true" className="shrink-0" />
+                    <span className="max-w-full truncate text-micro font-semibold leading-none">
+                      {s.short ?? s.label}
+                    </span>
+                  </Link>
+                );
+              })}
+              {/* More: the fifth tab, and the only one that is a button rather than a
+              link - it opens the drawer in place instead of navigating. No
+              aria-label: the visible text below already says "More" (or "Close"
+              while open), and a hand-written label could only ever paraphrase that,
+              never match it exactly. */}
+              <button
+                type="button"
+                aria-expanded={expanded}
+                aria-controls={drawerId}
+                onClick={() => setExpanded(!expanded)}
+                className={cn(
+                  "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 transition-colors",
+                  moreActive ? "text-accent-text" : "text-muted hover:text-ink",
+                )}
+              >
+                {expanded ? (
+                  <ChevronDown
+                    size={18}
+                    aria-hidden="true"
+                    className="shrink-0"
+                  />
+                ) : (
+                  <span className="shrink-0 leading-none">
+                    <BrandMark size={18} gradientId="desk-mark" />
+                  </span>
+                )}
+                <span className="max-w-full truncate text-micro font-semibold leading-none">
+                  {expanded ? "Close" : "More"}
                 </span>
-              )}
-              <span className="min-w-0">
-                <span className="block text-body font-semibold leading-none">
-                  {expanded ? "Close" : "Menu"}
-                </span>
-                <span
-                  className={cn(
-                    "mt-1 block truncate text-micro leading-none",
-                    expanded ? "text-accent-text" : "text-faint",
-                  )}
-                >
-                  {expanded
-                    ? "Back to the page"
-                    : "Every page in Parquet, and search"}
-                </span>
-              </span>
-              {!expanded && (
-                <ChevronUp
-                  size={16}
-                  aria-hidden="true"
-                  className="shrink-0 text-faint"
-                />
-              )}
-            </button>
+              </button>
+            </div>
           </nav>
         </div>
       </div>

@@ -17,6 +17,9 @@
 /test-results/
 /playwright-report/
 /blob-report/
+# sandbox-local Chromium executablePath override - never portable, see
+# ~/.claude/skills/web-qa-tooling/SKILL.md
+playwright.config.verify.mjs
 
 # next.js
 /.next/

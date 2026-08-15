@@ -69,7 +69,14 @@ export function PageHeader({
           <div className="flex items-center justify-between gap-3">
             <h1
               className={cn(
-                "min-w-0 font-display text-display font-semibold leading-tight text-ink",
+                // `font-bold`, not the `font-semibold` every other display-size node
+                // in the app uses (Stat, TradeBuilder, the counterfactual delta) - a
+                // page title is the one masthead moment per screen and earns the
+                // full weight Fraunces has to give; a hero NUMBER sits in the same
+                // size for column-aligned figure work, where semibold is the house
+                // voice for data (see `.figure`'s own header comment). Same token,
+                // different job, so the two are allowed to diverge on weight alone.
+                "min-w-0 font-display text-display font-bold leading-tight text-ink",
                 truncateTitle && "truncate",
               )}
             >

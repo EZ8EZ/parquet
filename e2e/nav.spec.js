@@ -2,7 +2,7 @@ import { expect, test } from "@playwright/test";
 import { primarySurfaces } from "../lib/nav";
 import { expectNoConsoleErrors, primeLens, watchConsole } from "./helpers";
 /**
- * THE ALWAYS-VISIBLE NAVIGATION CONTRACT (DECISIONS.md D52).
+ * THE ALWAYS-VISIBLE NAVIGATION CONTRACT (DECISIONS.md D52, D53, D65).
  *
  * This suite exists because of a composition failure that no unit test could have
  * caught and no unit test can catch: one commit removed the Desk's permanent
@@ -13,19 +13,22 @@ import { expectNoConsoleErrors, primeLens, watchConsole } from "./helpers";
  * held together - "a reader who has tapped nothing can see where they can go" -
  * and a property of the rendered app is a thing only a browser can assert.
  *
- * So this file pins the PROPERTY, at rest, from the registry, rather than any
- * particular arrangement of it: whatever `primarySurfaces()` returns must be
- * reachable from Home without opening anything. If a future round moves the row
- * somewhere better, this test should be edited deliberately; it must never go
- * quietly green because the row vanished.
+ * D65 answered the question D53 left open: the primaries are now a persistent tab
+ * row inside the Desk itself, on every route, not a Home-only shortcut. So this file
+ * pins the PROPERTY somewhere stronger than Home alone - whatever `primarySurfaces()`
+ * returns must be reachable from an ARBITRARY route without opening anything. If a
+ * future round moves the row somewhere better, this test should be edited
+ * deliberately; it must never go quietly green because the row vanished.
  */
-test("the four primary destinations are visible on Home without opening anything", async ({
+test("the four primary destinations are visible on every route without opening anything", async ({
   page,
 }) => {
   const guard = watchConsole(page);
   await primeLens(page);
-  await page.goto("/");
-  const row = page.getByRole("navigation", { name: "Shortcuts" });
+  // An arbitrary non-primary route, deliberately not Home - the property being
+  // pinned is that the row is GLOBAL chrome, not something Home alone carries.
+  await page.goto("/league");
+  const row = page.getByRole("navigation", { name: "Primary" });
   await expect(row).toBeVisible();
   for (const s of primarySurfaces()) {
     const link = row.getByRole("link", {
@@ -35,9 +38,9 @@ test("the four primary destinations are visible on Home without opening anything
     await expect(link).toBeVisible();
     await expect(link).toHaveAttribute("href", s.href);
   }
-  // The row is a SHORTCUT row, not the index the second commit correctly removed.
-  // If it ever grows past the primaries it has become a third copy of the registry.
-  await expect(row.getByRole("link")).toHaveCount(primarySurfaces().length);
+  // The fifth tab: the same control that used to be the only one, still opening
+  // the same drawer.
+  await expect(row.getByRole("button", { name: "More", exact: true })).toBeVisible();
   expectNoConsoleErrors(guard);
 });
 /**
@@ -54,11 +57,7 @@ test("the drawer reaches its last group, and says so while there is more below",
   const guard = watchConsole(page);
   await primeLens(page);
   await page.goto("/");
-  // Anchored regex, not a plain substring: the button's accessible name now
-  // spells out its caption too (see Desk.tsx), and a bare "Menu" substring also
-  // matches the drag handle's "Drag handle: open the menu" - ^Menu\b matches
-  // only the worded button, whose name starts with the word.
-  await page.getByRole("button", { name: /^Menu\b/ }).click();
+  await page.getByRole("button", { name: "More", exact: true }).click();
   const cue = page.locator("[data-more-below]");
   await expect(cue).toHaveAttribute("data-more-below", "true");
   // The deepest entry in the registry's last group, then the link that closes the

@@ -2,13 +2,7 @@ import Link from "next/link";
 import { ChevronRight, Scale, Trophy } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { AWARD_GROUPS, awardsPageData } from "@/lib/superlatives";
-import {
-  Tag,
-  Disclosure,
-  EmptyState,
-  PageHeader,
-  SectionHeader,
-} from "@/components/ui";
+import { Tag, Disclosure, EmptyState, PageHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { AwardBadge, GROUP_TONE, iconForAward } from "@/components/AwardBadge";
 import { cn } from "@/lib/ui";
@@ -215,6 +209,41 @@ function AwardCard({ award, meRosterId, userOf }) {
     </article>
   );
 }
+/**
+ * ONE GROUP, FOLDABLE. Same `<details>` idiom the commissioner audit log and the
+ * ledger rows already use: a group's name and count are the whole affordance shut,
+ * and every award inside is one tap away, never removed.
+ *
+ * The first two groups arrive open - "On the merits" and "At the trade desk" are
+ * the two a first-time reader came for, and a page that opened to five closed
+ * headers would read as empty rather than dense. The other three (draft capital,
+ * taste and timing, working the margins) are the ones a reader picks off the jump
+ * rail above rather than scrolls past, so they start shut.
+ */
+function AwardGroup({ id, label, count, defaultOpen, children }) {
+  return (
+    <section id={id} className="scroll-mt-3">
+      <details className="group" open={defaultOpen || undefined}>
+        <summary className="mb-1.5 mt-4 flex min-h-11 cursor-pointer list-none items-center justify-between gap-2">
+          <span className="flex min-w-0 items-center gap-1.5">
+            <ChevronRight
+              size={13}
+              aria-hidden="true"
+              className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
+            />
+            <h2 className="min-w-0 truncate text-note font-semibold uppercase tracking-[0.16em] text-muted">
+              {label}
+            </h2>
+          </span>
+          <span className="shrink-0 figure text-meta text-secondary">
+            {count}
+          </span>
+        </summary>
+        <div className="disclosure-body space-y-1.5">{children}</div>
+      </details>
+    </section>
+  );
+}
 function RunnerUpRow({ entrant, place, meRosterId, user, icon, tone }) {
   const isMe =
     meRosterId != null &&
@@ -390,20 +419,23 @@ export default async function AwardsPage() {
             </p>
           )}
 
-          {groups.map((g) => (
-            <section key={g.id} id={g.id} className="scroll-mt-3">
-              <SectionHeader title={g.label} />
-              <div className="space-y-1.5">
-                {g.items.map((a) => (
-                  <AwardCard
-                    key={a.id}
-                    award={a}
-                    meRosterId={meRosterId}
-                    userOf={userOf}
-                  />
-                ))}
-              </div>
-            </section>
+          {groups.map((g, i) => (
+            <AwardGroup
+              key={g.id}
+              id={g.id}
+              label={g.label}
+              count={g.items.length}
+              defaultOpen={i < 2}
+            >
+              {g.items.map((a) => (
+                <AwardCard
+                  key={a.id}
+                  award={a}
+                  meRosterId={meRosterId}
+                  userOf={userOf}
+                />
+              ))}
+            </AwardGroup>
           ))}
 
           {/* The rules of the competition, which every reader needs exactly once and

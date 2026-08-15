@@ -2438,3 +2438,241 @@ frontend itself (ReScript, Kotlin/JS, etc.) - explicitly considered and explicit
 declined by the owner, since none has real support for the App Router/React Server
 Components this app is built on, and adopting one would be a rewrite of the rendering
 layer, not a conversion of it.
+
+## D64. THE "IT LOOKS FLAT" COMPLAINT, ANSWERED WITHOUT A SECOND ACCENT
+The owner's round-9 complaint - the app "looks the same" after a session of pure
+accessibility fixes - landed right after a request to "punch up the accent/color
+system," and the two are not the same problem. D47/D48/D61 already spent four rounds
+fighting the reflex fix for exactly this complaint (a second hue, a per-category tint,
+a louder chart ramp) and measuring why each one is wrong for THIS app specifically. Re-
+opening that fight was declined again here. What actually changes the "flat" verdict
+without spending the one accent a second time:
+
+**`--text-display` raised 25px -> 30px, one token, no new step.** The six-step scale
+(D-something, the type-scale comment in `globals.css`) was never the defect - 25px next
+to a page built almost entirely of 12/13px chrome was. The jump from `lede` (17) to the
+old `display` was 1.47x; 30px widens it to 1.76x, which is the one place in the whole
+scale a reader is supposed to feel a jolt, and it is a value moving, not a seventh size
+appearing. Checked at 375/390/430 that Home's longest headline ("You said rebuild. You
+bought win-now.") still wraps to two lines - it is written short specifically because
+it sits in the biggest type on the page, so a size bump that forced a third line would
+have traded the jolt for a worse wrap.
+
+**`PageHeader`'s `<h1>` moved to `font-bold`, and ONLY the `<h1>`.** `--text-display` is
+shared with `Stat`, `TradeBuilder`'s price and the counterfactual delta - hero NUMBERS,
+not headlines - and those stay `font-semibold`, matching every other figure in the app
+(`.figure`'s own header comment: numbers get the house data-voice, not extra weight).
+A page title is the one masthead moment per screen; a number sitting in the same size
+token for column alignment is not, and the two are now allowed to diverge on weight
+without diverging on size.
+
+**The grain wash raised 0.05/0.03 -> 0.09/0.05 (dark), 0.05/0.035 -> 0.08/0.05 (paper).**
+DESIGN.md has claimed a "faint gold+blue radial grain" since round 1, and at the old
+alphas it was true only in the sense that the pixels weren't literally `--color-bg` -
+on an actual screen it read as flat black, which is the literal complaint. Same two
+`rgba` stops, same `radial-gradient` geometry in `body`'s `background-image`, only the
+alpha channel moves - zero new hues, so it costs nothing against the one-accent rule.
+Verified against a real viewport screenshot (not a full-page one - Chromium's full-page
+capture resizes the document before shooting, which stretches a `background-attachment:
+fixed` gradient over the whole scroll height and hides exactly the effect being
+checked): a warm cast is now visibly there behind the wordmark on first paint, still
+fully hidden under every opaque card. The contrast theme's `--grain-1/2: transparent`
+is untouched - "no decorative wash: it is contrast being asked for" was already the
+right call and this round didn't reopen it.
+
+**Rejected, and why, matching what the conversation had already ruled out before this
+round started:** a second saturated hue anywhere in the palette (the owner's literal
+ask, declined - D15's four separate votes and D47/48/61's whole existence are the
+record of what happens when this app tries it); accenting the biggest number on a page
+that isn't already "yours" by the app's own convention (`DistributionStrip`'s `mine`
+figure sits at `text-meta` deliberately - its accent is already spent twice, on the
+tick's position and the tick's own gold fill, and D61 is explicit that a third spend on
+the same datum is restating, not adding); accenting `/roster`'s own total-value figure
+even though `/roster` is always the viewer's own team (same restatement problem -
+`WINDOW_COPY`'s `win-now` tone and the tick already carry "this is yours" for that
+page; a bolder gold number under an already-gold badge is decoration, not information);
+widening the spacing scale (`app`/`components` have exactly two arbitrary `mt-[Npx]`
+values in the whole codebase, both 3px/7px vertical nudges with a comment already
+justifying each - two rounds of density work, D58 and D62, already did this pass and
+there was nothing ad-hoc left to find).
+
+Verified: `pnpm lint` clean, `pnpm test` 985/985, axe-core clean on `/`, `/roster` and
+`/league` in all three themes, before/after screenshots at 390px confirming the
+headline and page titles read visibly bigger and bolder and the grain is now
+perceptible on a real viewport capture.
+
+## D65. THE DESK GROWS FIVE PERSISTENT TABS, ANSWERING D53'S OPEN QUESTION
+
+D53 shipped the single full-bleed "Menu" button with an explicit, unresolved question
+attached: did "easy to see the options and choose" mean a reader can FIND the four
+primaries, or that they are VISIBLE WITHOUT AN ACTION - and it named the cheap middle
+path if the answer turned out to be the second one, "put the four primaries back on
+Home as a compact row." That shipped as D52's Home-only shortcut row, which held for
+one round. **The owner has now answered directly: visible without an action, on every
+route, matching Sleeper's own bottom bar** - and a Home-only row was never actually
+that, since every other page still advertised exactly one destination.
+
+**THE SINGLE BUTTON BECOMES FIVE TABS.** `components/Desk.jsx`'s resting sheet used to
+end in one 53pt full-bleed control saying "Menu"; it now ends in a 53pt five-column
+row - the same four `primarySurfaces()` (Home, Roster, Plan, Ledger) as plain links,
+plus a fifth "More" tab that opens the identical drawer, unchanged focus-trap and all.
+Nothing about the SHEET's mechanics moved - drag, `inert`, the modal contract, the
+"more below" cue - only what sits above it at rest. The More tab lights up whenever
+the current route is not one of the four primaries (not only while the drawer is
+open), so exactly one tab is always lit, matching the native-app convention Sleeper
+itself uses for its own catch-all tab.
+
+**TWO NOW-REDUNDANT COPIES REMOVED, NOT LEFT TO ROT.** Home's D52 shortcut row
+(`app/page.jsx`) printed the same four links the tab row now prints on every route
+including Home - keeping both would have been the exact "same destination advertised
+twice" failure this codebase's own comments elsewhere warn against. Deleted, along
+with the imports it alone used. The drawer's pinned "Go to" block (the four slots
+D53 pinned a thumb's width above the Menu button) is now the same redundancy one
+level down - also deleted, which recovers real drawer height for the scrolling
+registry list (the `max-h` arithmetic subtracting for it is removed too).
+
+**WHAT THIS DOES NOT CLAIM.** It does not claim the D53 drawer was broken - a
+reviewer rated it the highest-confidence keep in the app, and it is unchanged here
+except for losing its now-duplicate pinned block. The claim is narrower: the OPEN
+QUESTION D53 recorded is now closed, by the person who owns the answer, in the
+direction that matches the app Parquet's own navigation was explicitly benchmarked
+against.
+
+Verified: `pnpm lint` clean, `pnpm test` 985/985, full e2e suite (102 specs) green
+against a clean Turbopack cache, axe-core clean on every route in all three themes,
+production build succeeds, before/after screenshots at 390px confirming all five tabs
+render and highlight correctly on Home and on an arbitrary non-primary route.
+
+## D66. TCI learns to name its own outlier - the Timeline Break, found leave-one-out
+
+A full audit pass over both proprietary metrics, at the owner's request: re-derive
+TCI and RFI from first principles against the real 14-roster league, looking for a
+real weakness rather than a hypothetical one. RFI came back clean - see D67. TCI did
+not: `coherenceOf`'s dispersion is a single value-weighted VARIANCE term, and variance
+cannot distinguish "one plan, gently spread" from "two plans sharing a jersey" when
+the two happen to produce the same number. It mostly gets this right by construction
+(SIGMA_REF was calibrated against exactly the barbell case), but the real 14 rosters
+turned up a case it does not: roster 7 ("The Terror Twins") carries a
+Cunningham/Barnes/Amen-and-Ausar-Thompson core reading 4.6-4.9 seasons, worth roughly
+19,000 combined, PLUS Anthony Davis alone at 2.18 seasons worth 4,277 - a real,
+material disagreement with the plan. Its dispersion (1.18) did not cross
+COHERENCE_FLOOR (55), so it read "ascending... assets broadly aligned" with nothing in
+the paragraph naming the one piece that does not fit.
+
+**THE FIX, MIRRORING RFI'S OWN METHOD RATHER THAN INVENTING A NEW ONE.**
+`findTimelineBreak` (lib/metrics/duration.ts) is a leave-one-out search - remove each
+asset, recompute `coherenceOf`, keep whichever removal raises TCI the most - the
+identical technique `looDamage` already uses for lineup risk, aimed at timeline
+agreement instead of startable value. `classify` now appends one sentence naming the
+break asset to EVERY posture, not only "straddling", because the Anthony Davis case is
+exactly the one an "ascending" label was hiding it from.
+
+**WHY NOT A HIGHER-MOMENT STATISTIC (SKEWNESS/KURTOSIS), WHICH WAS TRIED FIRST AND
+REJECTED.** Excess kurtosis is the textbook bimodality signal and it does flag real
+structure on this league's data (roster 8, exKurt -0.92, genuinely platykurtic) - but
+a roster here carries 15 to 32 discrete assets, and a 4th-moment estimate's standard
+error at that sample size (~sqrt(24/n), roughly 1.0-1.3) is close to the whole
+observed range of the statistic itself. A component this noisy would need its own
+calibration constant on top of an already-unstable estimate, which is a worse
+trade than the leave-one-out approach: cheap (O(n^2), the same complexity class LOO
+already pays), needs no new reference constant, and - critically - NAMES A SPECIFIC
+ASSET rather than reporting an abstract shape number nobody can act on.
+
+**CALIBRATED AGAINST THE REAL LEAGUE, not asserted.** Every one of the 14 real rosters
+has at least one asset whose removal improves TCI, spanning +2 to +13 points - real,
+differentiated range. `BREAK_MIN_DELTA = 1` floors it above `coherenceOf`'s own 2dp
+rounding noise, below the smallest genuine case observed (+2). On this league the
+break is either a deep rebuild's own single longest-dated pick (a small, real
+improvement) or one aging star alone against a long-dated core (a large one) - Steph
+Curry, Kevin Durant, LeBron James, Joel Embiid and Giannis Antetokounmpo are the other
+five named across the real 14, alongside Anthony Davis.
+
+**WHAT IT DOES NOT CLAIM**, stated in the code the same way D6 states it for the
+regret ledger: the named asset is very often the team's best player, and the honest
+reading is "this is the one piece that does not match the plan," not "trade him."
+Buying a year of a misaligned star on purpose is a strategy, not a mistake this metric
+is accusing anyone of.
+
+Added: `findTimelineBreak` and its `BREAK_MIN_DELTA` constant, both in
+`lib/metrics/duration.ts`; `timelineBreak` on every `getTimelineProfile` result;
+`classify`'s new `timelineBreak` argument and the `breakSentence` helper. Nine new
+tests in `lib/metrics/metrics.test.ts`, including a pinned scale/tie-break case and an
+integration check that every real roster's published `timelineBreak` matches calling
+`findTimelineBreak` directly. `coherenceOf` itself is UNCHANGED - deliberately kept
+pure and its existing empty-bag test (`toEqual` on an exact 4-key object) intact,
+because `findTimelineBreak` calls `coherenceOf` in a loop and the two must never call
+each other back.
+
+## D67. RFI, audited and left alone - the position-blindness it already names was compensated, not hidden
+
+The other half of D66's audit. Checked for the same class of failure against the real
+league: component saturation (none - LOO/concentration/exposure scores measured 32-91,
+25-83, 1-87, nothing pinned at either end), percentile/band collisions (only the ones
+the ladder rounding is documented to produce, and they resolve the way the file says
+they do), and the header's own stated blind spot - HHI cannot tell WHERE concentration
+sits, so a roster concentrated in a deep position and one concentrated in a scarce one
+score identically on that component. That blind spot is real, but it is not silent:
+`W_LOO` (0.45) already outweighs `W_CONCENTRATION` (0.35) specifically because LOO's
+lineup solver DOES know position (a star with a same-position backup shows small
+damage; one with none shows the full hit), which is the file's own stated reason for
+the weighting, not an assumption re-verified here for the first time.
+
+**DECISION: no change to RFI.** Inventing a fix for a blind spot the file already
+names and already compensates for would be exactly the failure mode D56 exists to
+warn against - measuring what the data cannot support rather than admitting it. The
+complementary lens this audit produced instead is D68's Positional Leverage Index,
+which asks the blind spot's real question - not "how concentrated is MY roster" but
+"where does the LEAGUE'S positional value actually sit, and where do I stand against
+it" - as its own metric rather than a bolted-on RFI component, because it needs a
+different denominator (the whole league's position pools, not one roster's lineup
+solve) that does not belong inside RFI's per-roster scoring pass.
+
+## D68. The Positional Leverage Index ships to /lab, not to /awards
+
+The third metric the owner asked for, held to the same bar as TCI and RFI: a plain-
+language question neither already answers ("where can I actually deal from, and where
+am I exposed with nothing to offer back"), a formula derived and documented at the
+same rigor as `fragility.ts`'s header, and a REAL calibration bug caught and fixed
+before this shipped rather than asserted away.
+
+**THE BUG.** The first version measured a roster's LEAGUE-WIDE SHARE at each position
+directly (`rosterValue(X) / totalLeagueValue(X)`) as the deviation term. Measured
+against the real 14 rosters, that version correlated with total roster value at
+r = 0.975 - it was not a positional metric, it was a relabelled power ranking,
+because a stronger roster holds more value at nearly every position simply by holding
+more value overall. The fix is the same one `concentration()` in fragility.ts already
+applies to HHI: divide by the roster's OWN total first (own SHARE, not league share),
+which is what decouples scale from shape. Re-measured after the fix: r = 0.253 (r² =
+0.064) against the same total-value figure on the same 14 rosters - not literally
+zero, but nothing like restating "who is winning."
+
+**THE FORMULA**, in full in `lib/lab/leverage/index.ts`'s own header: for each of the
+five rosterable positions, `leverage(X) = (ownShare(X) - leagueSharePos(X)) *
+scarcity(X)`, where `scarcity(X)` is that position's top-to-replacement value drop-off
+normalised against the steepest one observed (the RFI convention: a reference just
+above the worst real case, never a theoretical maximum). `LEVERAGE_REF = 0.08` sits
+just past the observed -0.0707..+0.0544 range on the real league, spreading the 14
+real rosters from 6 to 84 with nothing clipped and nothing bunched at 50.
+
+**WHY /LAB AND NOT /AWARDS OR A DOSSIER PAGE**, per this app's own established bar
+(D54): a new analytical claim ships reachable-but-unproven before it ships as a
+headline. It is a real, computable, honestly-limited signal - but it has not been
+lived with across a season the way TCI and RFI have, and D54 is the standing
+counter-case for what happens when a Lab idea does NOT clear that bar later. This one
+gets its own subfolder (`lib/lab/leverage/`), its own page (`app/lab/leverage/`), and
+one line in `lib/lab/index.ts`'s `EXPERIMENTS` registry - nothing else in the app was
+changed to accommodate it, unlike D66's TCI extension, which touches every surface
+that already reads `getTimelineProfile.read`.
+
+**WHAT IT DOES NOT MEASURE**, in full in the module header: whether any of the other
+thirteen managers actually wants what a roster is overweight in (pure supply-side, no
+demand signal); draft picks (unresolved position until drafted, excluded from both
+sides of the ratio - a real gap TCI and RFI do not share, since both price picks);
+UTIL/FLEX demand (two of seven starting slots are position-agnostic and excluded from
+`baseSlots` entirely); and the future (a snapshot of today's pool, blind to a rookie
+class that could reshape a position's scarcity next spring).
+
+One small shared touch: `POS_ORDER` in `lib/roster.ts` is now exported rather than
+private, so the position taxonomy this module measures against is the same five-
+element array `analyzeRoster`'s own "positional strength" already uses, not a second
+copy that could quietly drift from it.
