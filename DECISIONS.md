@@ -2438,3 +2438,65 @@ frontend itself (ReScript, Kotlin/JS, etc.) - explicitly considered and explicit
 declined by the owner, since none has real support for the App Router/React Server
 Components this app is built on, and adopting one would be a rewrite of the rendering
 layer, not a conversion of it.
+
+## D64. THE "IT LOOKS FLAT" COMPLAINT, ANSWERED WITHOUT A SECOND ACCENT
+The owner's round-9 complaint - the app "looks the same" after a session of pure
+accessibility fixes - landed right after a request to "punch up the accent/color
+system," and the two are not the same problem. D47/D48/D61 already spent four rounds
+fighting the reflex fix for exactly this complaint (a second hue, a per-category tint,
+a louder chart ramp) and measuring why each one is wrong for THIS app specifically. Re-
+opening that fight was declined again here. What actually changes the "flat" verdict
+without spending the one accent a second time:
+
+**`--text-display` raised 25px -> 30px, one token, no new step.** The six-step scale
+(D-something, the type-scale comment in `globals.css`) was never the defect - 25px next
+to a page built almost entirely of 12/13px chrome was. The jump from `lede` (17) to the
+old `display` was 1.47x; 30px widens it to 1.76x, which is the one place in the whole
+scale a reader is supposed to feel a jolt, and it is a value moving, not a seventh size
+appearing. Checked at 375/390/430 that Home's longest headline ("You said rebuild. You
+bought win-now.") still wraps to two lines - it is written short specifically because
+it sits in the biggest type on the page, so a size bump that forced a third line would
+have traded the jolt for a worse wrap.
+
+**`PageHeader`'s `<h1>` moved to `font-bold`, and ONLY the `<h1>`.** `--text-display` is
+shared with `Stat`, `TradeBuilder`'s price and the counterfactual delta - hero NUMBERS,
+not headlines - and those stay `font-semibold`, matching every other figure in the app
+(`.figure`'s own header comment: numbers get the house data-voice, not extra weight).
+A page title is the one masthead moment per screen; a number sitting in the same size
+token for column alignment is not, and the two are now allowed to diverge on weight
+without diverging on size.
+
+**The grain wash raised 0.05/0.03 -> 0.09/0.05 (dark), 0.05/0.035 -> 0.08/0.05 (paper).**
+DESIGN.md has claimed a "faint gold+blue radial grain" since round 1, and at the old
+alphas it was true only in the sense that the pixels weren't literally `--color-bg` -
+on an actual screen it read as flat black, which is the literal complaint. Same two
+`rgba` stops, same `radial-gradient` geometry in `body`'s `background-image`, only the
+alpha channel moves - zero new hues, so it costs nothing against the one-accent rule.
+Verified against a real viewport screenshot (not a full-page one - Chromium's full-page
+capture resizes the document before shooting, which stretches a `background-attachment:
+fixed` gradient over the whole scroll height and hides exactly the effect being
+checked): a warm cast is now visibly there behind the wordmark on first paint, still
+fully hidden under every opaque card. The contrast theme's `--grain-1/2: transparent`
+is untouched - "no decorative wash: it is contrast being asked for" was already the
+right call and this round didn't reopen it.
+
+**Rejected, and why, matching what the conversation had already ruled out before this
+round started:** a second saturated hue anywhere in the palette (the owner's literal
+ask, declined - D15's four separate votes and D47/48/61's whole existence are the
+record of what happens when this app tries it); accenting the biggest number on a page
+that isn't already "yours" by the app's own convention (`DistributionStrip`'s `mine`
+figure sits at `text-meta` deliberately - its accent is already spent twice, on the
+tick's position and the tick's own gold fill, and D61 is explicit that a third spend on
+the same datum is restating, not adding); accenting `/roster`'s own total-value figure
+even though `/roster` is always the viewer's own team (same restatement problem -
+`WINDOW_COPY`'s `win-now` tone and the tick already carry "this is yours" for that
+page; a bolder gold number under an already-gold badge is decoration, not information);
+widening the spacing scale (`app`/`components` have exactly two arbitrary `mt-[Npx]`
+values in the whole codebase, both 3px/7px vertical nudges with a comment already
+justifying each - two rounds of density work, D58 and D62, already did this pass and
+there was nothing ad-hoc left to find).
+
+Verified: `pnpm lint` clean, `pnpm test` 985/985, axe-core clean on `/`, `/roster` and
+`/league` in all three themes, before/after screenshots at 390px confirming the
+headline and page titles read visibly bigger and bolder and the grain is now
+perceptible on a real viewport capture.
