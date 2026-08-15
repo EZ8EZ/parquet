@@ -1,8 +1,8 @@
 name: CI
 
-# Runs on every PR and on direct pushes to main. The three gates here are the
-# same three the team runs locally before every commit, so a green check means
-# the same thing in both places - no CI-only rules, no locally-only rules.
+# Runs on every PR and on direct pushes to main. The gates here are the same
+# ones the team runs locally before every commit, so a green check means the
+# same thing in both places - no CI-only rules, no locally-only rules.
 on:
   pull_request:
   push:
@@ -16,7 +16,7 @@ concurrency:
 
 jobs:
   gate:
-    name: typecheck / lint / test
+    name: lint / test
     runs-on: ubuntu-latest
     env:
       # prisma generate reads the datasource url even though it never connects.
@@ -37,13 +37,11 @@ jobs:
       - name: Install
         run: pnpm install --frozen-lockfile
 
-      # The Prisma client is generated code that nothing commits, so typecheck
-      # cannot see the model types until this runs.
+      # The Prisma client is generated code that nothing commits - importing
+      # @prisma/client without this having run first fails before a single
+      # test does.
       - name: Generate Prisma client
         run: pnpm db:generate
-
-      - name: Typecheck
-        run: pnpm typecheck
 
       - name: Lint
         run: pnpm lint
@@ -91,11 +89,16 @@ jobs:
     #
     # ONE HALF OF THE PROMOTION IS NOT IN THIS FILE. Branch protection on main
     # lives in GitHub repo settings, not in the repo, and still requires exactly
-    # "typecheck / lint / test" and "build" (the `gate` and `build` jobs above).
-    # Until "e2e (Playwright smoke)" is added to that required-checks list, this
-    # job goes red on a PR but does not yet block the merge button. Adding it is
-    # a one-click owner action: Settings -> Branches -> main -> Require status
-    # checks -> add "e2e (Playwright smoke)". This is worth doing, because the
+    # "typecheck / lint / test" and "build" (the `gate` and `build` jobs above) -
+    # a NAME the `gate` job no longer produces (TypeScript is gone; it renamed
+    # to "lint / test"). Until an owner updates the required-checks list to the
+    # new name AND adds "e2e (Playwright smoke)", GitHub will show that old,
+    # renamed check as perpetually pending on every future PR and will refuse to
+    # let the merge button go green - not a lint/test/e2e failure, a required
+    # check that can no longer report at all. Both are the same one-click owner
+    # action: Settings -> Branches -> main -> Require status checks -> remove
+    # "typecheck / lint / test", add "lint / test" and "e2e (Playwright smoke)".
+    # The e2e half is worth doing regardless of the rename, because the
     # Playwright smoke suite is the ONLY coverage the rendering layer has - 29 of
     # 32 components carry no unit test - so it is the one check that can catch a
     # page that throws on load, and 949 green unit tests cannot.
@@ -120,7 +123,7 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       # The Prisma client is generated code that nothing commits - same reason
-      # the `gate` job runs this before typecheck.
+      # the `gate` job runs this before lint/test.
       - name: Generate Prisma client
         run: pnpm db:generate
 

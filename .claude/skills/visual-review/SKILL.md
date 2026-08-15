@@ -97,7 +97,7 @@ itself. If you hit this locally:
   `ls $PLAYWRIGHT_BROWSERS_PATH` shows a chromium binary; `lighthouse.mjs` also
   accepts the more conventional `CHROME_PATH`) and they'll launch that build
   directly instead of the one Playwright expects.
-- The committed `pnpm e2e` suite (`playwright.config.ts`) has no such override
+- The committed `pnpm e2e` suite (`playwright.config.mjs`) has no such override
   and shouldn't get one - hard-coding a sandbox-local path into the repo's own
   config would break it on every other machine, including real CI, where the
   correct revision genuinely is installed. If you need to run the suite itself

@@ -7,16 +7,15 @@
     "build": "prisma generate && next build",
     "start": "next start",
     "lint": "eslint",
-    "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "test:watch": "vitest",
     "e2e": "playwright test",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
-    "ingest": "tsx scripts/ingest.ts",
-    "seed": "tsx scripts/seed.ts",
-    "claim-links": "tsx scripts/claim-links.ts",
-    "gen:icons": "tsx scripts/gen-icons.ts",
+    "ingest": "node scripts/ingest.js",
+    "seed": "node scripts/seed.js",
+    "claim-links": "node scripts/claim-links.js",
+    "gen:icons": "node scripts/gen-icons.js",
     "setup": "prisma db push && pnpm seed"
   },
   "dependencies": {
@@ -35,9 +34,6 @@
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
-    "@types/react": "^19",
-    "@types/react-dom": "^19",
     "@vitejs/plugin-react": "^6.0.4",
     "chrome-launcher": "^1.2.1",
     "eslint": "^9",
@@ -47,8 +43,6 @@
     "prisma": "^6.19.3",
     "sharp": "^0.35.3",
     "tailwindcss": "^4",
-    "tsx": "^4.23.1",
-    "typescript": "^5",
     "vitest": "^4.1.10"
   }
 }
