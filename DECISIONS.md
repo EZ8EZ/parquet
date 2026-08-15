@@ -2894,3 +2894,111 @@ all 50 external-ranked players by name, and was cross-checked against a second,
 independent five-player slice (the 2025 sophomore class) before the pattern was
 written down. No source code changed; `pnpm test` reports the same 1008/61 before and
 after this entry.
+
+## D71. PROVENANCE, ROUND TWO: a real hole rendering live, two blue-sky ideas reconsidered on their own merits, one still correctly blocked
+
+D51 fixed discoverability; this round went back to the walk and the rail themselves,
+against the real league (this is the third time this feature has been checked live
+rather than read - D44 found three bugs this way, D51 found the doors were missing,
+and this pass found one real gap and confirmed one old limitation still holds).
+
+**THE GAP: a 3+ team trade's hop sentence has always been silently two-party, even
+when the transaction was not.** `HopBody`'s sentence only ever names the two seats on
+an asset's OWN end of a hop (`from`/`to`), which is the correct predecessor for the
+walk regardless of party count - but this league has run exactly two trades with a
+third team (verified live: a 2023 commissioner-executed reshuffle among rosters 6, 7
+and 11, and a 2024 deal moving four players and three picks among rosters 3, 7 and 11),
+and on both, OTHER assets moved between OTHER seats in the SAME transaction that a
+two-name sentence says nothing about. Rendered live: Zach LaVine's chain
+(`/lineage/p:1526`) used to read "Traded to 6-Month Plan / by The Terror Twins" for
+the December 2024 hop exactly like an ordinary two-team trade - the fact that Wendell
+Carter and Devin Vassell and three picks also changed hands between Terror Twins and
+NSLKB in the identical transaction was invisible unless the reader already knew to
+open the receipt. `buildAssetMoves` (`lib/tradegraph/index.ts`) now carries the
+transaction's own `tradeParties(t).length` onto every asset it moves - players and
+picks alike - through to the hop node, and `HopBody` prints "Part of a 3-team deal -
+the receipt has the rest" (and updates its aria-label to match) whenever that count
+exceeds two. It never names who else was involved or what they got - that is the
+receipt's job, one tap away via the link the row already has - only that there is more
+to this hop than the sentence above it shows. Two lines of test at the hand-built-
+context level (the fixture's `recordTrade` only ever builds two-team trades, so the
+integration case is asserted against a hand-built three-party transaction instead,
+matching how every other multi-team-shaped test in this codebase that the fixture
+cannot produce is written).
+
+**THE OLD LIMITATION, RE-CHECKED AND STILL TRUE: no value-at-trade-time.** D45 stated
+the app holds no historical ranking snapshots, so a receipt can only ever say what a
+player is worth TODAY. `lib/valuation` still carries no time dimension of any kind -
+checked directly rather than assumed, and correctly left alone: building one would be
+a new data-capture pipeline (snapshotting the whole player universe's rank on every
+transaction date, forever after), not a change to this feature, and `lib/valuation` is
+under separate calibration work this same round. Still out of scope; the copy already
+says so.
+
+**THE THREE BLUE-SKY IDEAS FROM THE ADDENDUM ABOVE, RECONSIDERED ONE AT A TIME.**
+
+**(1) Elapsed time as texture - BUILT, opt-in.** The blocked version drew league
+activity into every rail's every gap, unconditionally, which is exactly the density
+D58 fought to remove. The objection was never "this isn't a real reading of the data,"
+it was "not unconditionally, on every row." So it is not unconditional: `chainGapActivity`
+(`lib/provenance/source.ts`) computes, for a chain's SINGLE LONGEST gap only (the long
+gap already IS the story - see `PER_GAP_PX`'s own docstring), how many OTHER trades,
+waiver claims and free-agent signings the league recorded elsewhere during that
+window, excluding the asset's own moves. It returns `null` rather than a hollow
+"nothing happened" object below a 90-day floor or when the league was genuinely quiet
+- a fabricated scene is worse than none. The rail draws it inside a closed
+`<details>` (the same `Disclosure` idiom Awards/Methodology/the mega-pages already use
+for "available, not forced on every reader"), and only the standalone `/lineage`
+page computes it at all - `/roster`'s inline rail, rendering one per rostered player,
+does not, so that page's cost and density are exactly unchanged. Verified live: Zach
+LaVine's page now offers "What else happened during those 16 months," closed by
+default.
+
+**(2) The persistent trade-network map - BUILT, as a GRID rather than a graph.** The
+objection was not laziness, it was D19 in visual form: any layout readable enough to
+place fourteen names as dots on a plane implies an adjacency the trade record does not
+support. A GRID does not make that claim - a cell's position encodes exactly which two
+parties it represents and nothing about how "close" they are to each other or to
+anyone else, which is what a matrix is for. `pairMatrix` (`lib/tradegraph/index.ts`)
+orders every principal alphabetically (never by trade count, which would itself smuggle
+a ranking back into a grid built to avoid implying one) and marks every one of the
+C(n,2) possible pairs traded or never, reporting no magnitude - deal count exists on
+`pairings` and is deliberately not read here, because D48 already measured that an
+opacity ramp cannot both order five steps and clear 3:1 contrast, and there is no
+reason to inherit that failure for a fact this binary. `components/TradeMatrix.tsx`
+draws it as filled-versus-hollow-dashed squares (shape, not shade alone - D47 rule 1),
+with the ordered legend and the full "never traded" list as real HTML underneath, not
+SVG text nobody's screen reader would see. Lives on `/deals` as a third closed
+`Directory`, alongside the two it already had, on the unfiltered index only. Verified
+live: 15 principals (14 rosters, one succession), 105 possible pairs, 47 traded, 58
+never.
+
+**(3) A drawn refusal mark - BUILT.** The first attempt was blocked for reading as a
+loading skeleton one iteration in, and that failure is worth being precise about
+rather than just avoiding by feel: `.skeleton` (`app/globals.css`) is a solid,
+ANIMATED, gradient-filled RECTANGLE. `RefusalMark` (`components/RefusalMark.tsx`)
+shares none of those three properties - it is a static, dashed-outline CIRCLE with a
+short diagonal tick inside, and nothing about it will ever "finish loading" into
+something else, which is the actual claim a skeleton makes and this deliberately does
+not. Wired to the one genuine D19 refusal already on this rail: a pending pick's
+`REASON_TEXT` (unchanged, still printed verbatim per D44's own rule), now wrapped in
+the mark rather than left as plain prose. Broader rollout across the app's other D19
+refusals is left for a future round - this pass builds and ships the mark, it does not
+retrofit every prose refusal in the codebase.
+
+**Verified**: `pnpm lint` clean; `pnpm test` 985 to 994 (+9, no new files, before any
+other concurrent round's changes land - report your own delta against your own
+worktree's baseline, same as this entry does); `pnpm build` succeeds; full e2e suite
+green after `rm -rf .next`; axe-core clean in both dark and light on `/lineage/p:1526`,
+`/roster` and `/deals/1176397530418237440` against the real league; screenshots at
+375/390/430 in both themes confirmed the rail, the refusal mark and the trade matrix
+all read correctly and none regressed `/roster`'s or `/lineage`'s existing layout.
+Checked `lib/theme.js` before starting: two themes, `dark` and `light`, so this round
+was designed and tested against exactly those two, not three.
+
+Rejected outright: filling every rail's every gap with texture unconditionally (the
+original blocked idea, still correctly blocked in that form); a force-directed or
+hand-placed node layout for the pair map (still correctly blocked - no construction
+avoids the D19 adjacency claim); drawing deal count as an opacity ramp on the matrix
+(D48's own measurement already rules this out); applying the refusal mark everywhere
+D19 appears in one pass (scope creep beyond what this round verified).

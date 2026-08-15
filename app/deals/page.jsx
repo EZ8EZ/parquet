@@ -30,7 +30,7 @@ import { ChevronRight, Users } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getPrincipals } from "@/lib/principals";
 import { leagueBuybacks } from "@/lib/agency";
-import { buildTradeLedger, dealPieces } from "@/lib/tradegraph";
+import { buildTradeLedger, dealPieces, pairMatrix } from "@/lib/tradegraph";
 import {
   dealHref,
   dealsQueryString,
@@ -48,6 +48,7 @@ import { LocalDate } from "@/components/LocalDate";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { cn } from "@/lib/ui";
 import { Onward } from "@/components/Onward";
+import { NeverTradedList, TradeMatrix } from "@/components/TradeMatrix";
 export const dynamic = "force-dynamic";
 export default async function DealsPage({ searchParams }) {
   const sp = await searchParams;
@@ -104,6 +105,7 @@ export default async function DealsPage({ searchParams }) {
    * `?manager=` the dossier's own section is the better answer and is one tap away.
    */
   const buybacks = leagueBuybacks(h);
+  const matrix = pairMatrix(ledger.managers, ledger.pairings);
   const filterLabel = pairing
     ? `${byOwner.get(pairing.a)?.name ?? pairing.a} and ${byOwner.get(pairing.b)?.name ?? pairing.b}`
     : manager
@@ -412,6 +414,24 @@ export default async function DealsPage({ searchParams }) {
           {/* Both directories are doors into a filtered index rather than reading
                 matter, so they arrive shut. Native `<details>`: no client bundle, and
                 find-in-page still reaches every name inside them. */}
+          {/* The reconsidered blue-sky idea: every possible pairing as a grid, so a
+                pair that has NEVER traded is as visible as one that has. Shut like its
+                two siblings - this is a reading of the same corpus the directories
+                below already are, not a new destination, and it costs nothing at rest. */}
+          <Directory title={`Trade matrix - ${matrix.traded} of ${matrix.possible} pairs`}>
+            <p className="mb-1.5 text-meta leading-snug text-secondary">
+              Every possible pairing among {matrix.order.length} managers, past and
+              present. A filled square traded at least once; a hollow square never
+              has - {matrix.never} pairs, listed below the chart.
+            </p>
+            <TradeMatrix matrix={matrix} />
+            <div className="rule my-2.5" />
+            <p className="text-meta font-semibold uppercase tracking-wide text-accent-text">
+              Never traded
+            </p>
+            <NeverTradedList matrix={matrix} />
+          </Directory>
+
           <Directory title={`Who trades with whom (${ledger.pairings.length})`}>
             {busiest && (
               <p className="mb-1.5 text-meta leading-snug text-secondary">
