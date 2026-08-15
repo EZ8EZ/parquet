@@ -122,15 +122,23 @@ function AwardCard({ award, meRosterId, userOf }) {
         isMe ? "border-accent-edge bg-accent-wash" : "border-border bg-surface",
       )}
     >
-      {/* Title and the winning number share a line: the figure is the headline. */}
-      <div className="flex items-baseline gap-2">
-        <h3 className="min-w-0 flex-1 font-display text-lede font-semibold leading-tight text-ink">
-          {award.title}
-        </h3>
-        <span className="shrink-0 figure text-note font-semibold text-accent-text">
-          {award.statLine}
-        </span>
-      </div>
+      {/*
+          THIS USED TO SHARE ONE BASELINE: the title on `flex-1` and the stat line
+          on `shrink-0`. That works while `statLine` is a short number ("94.3%
+          started · 3 seasons"), but several awards' statLine is a full clause -
+          a runner's name, a pick, a rank ("Brayden Adeyemi · pick 11, 29th best in
+          2024" for The Reach) - and a `shrink-0` string that long claimed most of
+          the card width and squeezed the SHORT, editorial title into wrapping
+          mid-word onto two lines ("The" / "Reach"). The title is this page's own
+          voice and should never break like that; the stat is the flexible half,
+          so it moves below rather than beside it.
+        */}
+      <h3 className="truncate font-display text-lede font-semibold leading-tight text-ink">
+        {award.title}
+      </h3>
+      <p className="figure text-note font-semibold leading-snug text-accent-text">
+        {award.statLine}
+      </p>
       <AwardSubtitle text={award.subtitle} />
 
       <EntrantLink
@@ -254,13 +262,13 @@ function RunnerUpRow({ entrant, place, meRosterId, user, icon, tone }) {
       entrant={entrant}
       ariaLabel={`${place}: ${entrant.label}, ${entrant.stat}`}
       className={cn(
-        "flex min-h-11 items-center gap-2 rounded-[--radius-sm] px-1.5 transition-colors",
+        "flex min-h-11 items-start gap-2 rounded-[--radius-sm] px-1.5 py-1 transition-colors",
         isMe ? "bg-accent-wash" : "hover:bg-surface-2",
       )}
     >
       <span
         aria-hidden="true"
-        className="w-3 shrink-0 figure text-meta text-faint"
+        className="mt-[3px] w-3 shrink-0 figure text-meta text-faint"
       >
         {place.replace(/\D/g, "")}
       </span>
@@ -272,26 +280,44 @@ function RunnerUpRow({ entrant, place, meRosterId, user, icon, tone }) {
         size="xs"
         isMe={isMe}
       />
-      <span
-        className={cn(
-          "min-w-0 flex-1 truncate text-note",
-          isMe ? "font-semibold text-accent-text" : "text-muted",
-        )}
-      >
-        {entrant.label}
-      </span>
-      {entrant.tenureLabel && (
-        <span className="shrink-0 text-micro text-faint">
-          {entrant.tenureLabel}
+      {/*
+          THIS USED TO BE ONE ROW: place number, badge, avatar, name and stat all on
+          one baseline. A stat like "3,509 pts benched · 94.3% started" is real
+          multi-fact text, not a short label, and giving it `shrink` while the name
+          sat on `flex-1` still left the name only what was left AFTER three fixed
+          circles and the whole stat string claimed their width - which on the live
+          league crushed real team names to "Par...", "Win...", "Dra..." (Parquet
+          Kings, Win Now, Draft Vault). Stacking the stat under the name instead of
+          beside it gives each its own line at close to the row's full width, which
+          is what "adjust the layout" means here rather than shrinking either one
+          further.
+        */}
+      <span className="min-w-0 flex-1">
+        <span className="flex items-baseline gap-1.5">
+          <span
+            className={cn(
+              "min-w-0 truncate text-note",
+              isMe ? "font-semibold text-accent-text" : "text-muted",
+            )}
+          >
+            {entrant.label}
+          </span>
+          {entrant.tenureLabel && (
+            <span className="shrink-0 text-micro text-faint">
+              {entrant.tenureLabel}
+            </span>
+          )}
         </span>
-      )}
-      {/* `shrink-0 truncate` is self-contradictory: truncate needs a shrinkable
-            box and shrink-0 forbids one, so a long stat string refused to compress,
-            crushed the team name beside it to a single character ("6...", "5..."),
-            and still pushed the page 79px past the viewport on every iPhone. The
-            name is what this page is FOR, so the stat yields first. */}
-      <span className="min-w-0 shrink truncate figure text-meta text-secondary">
-        {entrant.stat}
+        {/* Some awards' stat string is two short facts ("94.3% started · 5
+              seasons"); others carry a name plus pick plus rank ("Brayden Adeyemi
+              · pick 35, 21st best in 2023") that a single truncating line still
+              cut mid-number ("...21st best in ...", "...in 2...", screenshotted on
+              the live list even after moving the stat to its own line). Wrap
+              instead of truncating further - `line-clamp-2` is never reached by
+              the shorter stats and bounds the longer ones at two lines. */}
+        <span className="line-clamp-2 block figure text-meta text-secondary">
+          {entrant.stat}
+        </span>
       </span>
     </EntrantLink>
   );
