@@ -6,6 +6,9 @@ import {
   CURVE_SUPPORTED_MIN,
   DERIVED_AGE_CURVE,
   INJURY_CLASS_LABELS,
+  STAR_AGE_ADJUSTMENT,
+  STAR_AGE_ADJUSTMENT_PROVENANCE,
+  STAR_SEARCH_RANK_CUTOFF,
   ageMultiplier,
   firstCliffAge,
   pickValue,
@@ -27,7 +30,7 @@ import { ChevronRight } from "lucide-react";
 import { Onward } from "@/components/Onward";
 export const dynamic = "force-dynamic";
 /**
- * NINE SECTIONS, EACH A DOOR. This page used to print every subsection's charts,
+ * TEN SECTIONS, EACH A DOOR. This page used to print every subsection's charts,
  * tables and prose fully open, one after another - a first-time reader's page and
  * a "wait, how is injury priced again" reference page were forced to be the same
  * length. They are not: the formula card above stays open always (it is the one
@@ -41,6 +44,7 @@ export const dynamic = "force-dynamic";
 const SECTION_LINKS = [
   { id: "base", label: "1 · Base value" },
   { id: "age", label: "2 · Age curve" },
+  { id: "star", label: "2a · Star tier" },
   { id: "market", label: "2b · Market" },
   { id: "position", label: "3 · Position" },
   { id: "injury", label: "4 · Injury" },
@@ -305,6 +309,88 @@ export default async function MethodologyPage() {
           deliberately - it is folded into the constant every value in this app
           is divided by, so moving it would rescale every price here for no
           reason at all.
+        </p>
+      </Card>
+      </Subsection>
+
+      <Subsection id="star" title="2a · Star-tier adjustment (D74)">
+      <Card>
+        <p className="text-body leading-relaxed text-muted">
+          The curve above is a POPULATION average - it does not condition on talent
+          tier at all. Re-running the same derivation split into a top-decile
+          &quot;star&quot; cohort (the mean cohort size across the 13 sampled
+          seasons, {STAR_AGE_ADJUSTMENT_PROVENANCE.meanCohortPerSeason.toFixed(1)}{" "}
+          players a season - roughly a season&apos;s All-NBA plus All-Star pool)
+          against everyone else found the two tracking within noise from 21 to 26,
+          then diverging cleanly from{" "}
+          <span className="figure text-ink">
+            {STAR_AGE_ADJUSTMENT_PROVENANCE.appliedFromAge}
+          </span>{" "}
+          on: a top-decile player keeps materially more of his own current
+          production, discounted forward, than an average qualifying player of the
+          same age.
+        </p>
+        <p className="mt-2 text-body leading-relaxed text-muted">
+          Applied only where the data is clean (
+          {STAR_AGE_ADJUSTMENT_PROVENANCE.appliedFromAge}+, not the noisier 21-26
+          span) and only to a player Sleeper&apos;s own live consensus ranks{" "}
+          {STAR_SEARCH_RANK_CUTOFF} or better - the same rank the base-value term
+          already trusts as this model&apos;s stand-in for &quot;how good a player
+          looks right now.&quot; It multiplies onto the ordinary age multiplier
+          above; it changes nothing for anyone else.
+        </p>
+        <div className="mt-3 overflow-x-auto">
+          <table className="w-full text-meta">
+            <caption className="sr-only">
+              Star-tier age adjustment: ratio, sample size and thinnest supporting
+              horizon cell at each age
+            </caption>
+            <thead>
+              <tr className="text-secondary">
+                <th scope="col" className="py-1 pr-2 text-left font-semibold">
+                  age
+                </th>
+                <th scope="col" className="py-1 pr-2 text-right font-semibold">
+                  adjustment
+                </th>
+                <th scope="col" className="py-1 pr-2 text-right font-semibold">
+                  n
+                </th>
+                <th scope="col" className="py-1 text-right font-semibold">
+                  thinnest cell
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {STAR_AGE_ADJUSTMENT.map((r) => (
+                <tr key={r.age} className="border-t border-border">
+                  <th
+                    scope="row"
+                    className="figure py-1 pr-2 text-left font-normal text-ink"
+                  >
+                    {r.age}
+                  </th>
+                  <td className="figure py-1 pr-2 text-right text-ink">
+                    ×{r.ratio.toFixed(3)}
+                  </td>
+                  <td className="figure py-1 pr-2 text-right text-secondary">
+                    {r.cohort}
+                  </td>
+                  <td className="figure py-1 text-right text-secondary">
+                    {r.thinnestCell}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+        <p className="mt-2 text-meta leading-snug text-secondary">
+          Below {STAR_AGE_ADJUSTMENT_PROVENANCE.appliedFromAge} the adjustment is
+          exactly 1.0 - no correction, not because none exists but because the raw
+          data there does not clear its own noise. Beyond{" "}
+          {STAR_AGE_ADJUSTMENT[STAR_AGE_ADJUSTMENT.length - 1].age} it holds flat
+          at the last measured ratio, the same convention the curve above uses past
+          its own supported range.
         </p>
       </Card>
       </Subsection>

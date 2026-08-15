@@ -15,7 +15,7 @@ import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { AgeStrip, BarChart, PositionRadar } from "@/components/charts";
 import { DistributionStrip } from "@/components/DistributionStrip";
 import { Onward } from "@/components/Onward";
-import { ageMultiplier } from "@/lib/valuation";
+import { ageMultiplier, isStarTier } from "@/lib/valuation";
 import { fmtValue } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTeamUrl } from "@/lib/sleeperLinks";
@@ -63,8 +63,12 @@ function valueTrajectory(v) {
   // so re-walking the age curve at future ages reproduces the current value exactly
   // at offset 0 without re-deriving base/injury/role/position from scratch here.
   const restOfModel = v.value / v.breakdown.age;
+  // D74: a top-decile-consensus player was priced on the star-tier curve, not the
+  // plain population one - the projection has to walk the SAME curve or it would
+  // silently disagree with the value it is supposedly a trajectory of.
+  const star = isStarTier(v.consensusRank);
   return Array.from({ length: TRAJECTORY_SEASONS }, (_, n) =>
-    Math.round(restOfModel * ageMultiplier(v.age + n)),
+    Math.round(restOfModel * ageMultiplier(v.age + n, undefined, { star })),
   );
 }
 /**
