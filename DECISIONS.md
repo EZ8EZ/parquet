@@ -3002,3 +3002,203 @@ hand-placed node layout for the pair map (still correctly blocked - no construct
 avoids the D19 adjacency claim); drawing deal count as an opacity ramp on the matrix
 (D48's own measurement already rules this out); applying the refusal mark everywhere
 D19 appears in one pass (scope creep beyond what this round verified).
+
+## D74. A STAR-TIER AGE ADJUSTMENT, MEASURED SEPARATELY FROM THE POPULATION CURVE - Luka Doncic re-examined, and this time the model agrees with the owner
+
+The owner's exact challenge: Luka Doncic (27, Sleeper's own live consensus rank #3)
+priced at 7,112 - narrowly BELOW Alperen Sengun (24, consensus #10) at 7,179, both
+landing in Cornerstone. "Luka is definitely a cornerstone and ahead of Sengun,
+re-examine your model." The mechanism was disclosed and correct as far as it went
+(D55's own age curve, plus a real 5% center-scarcity premium Sengun gets and Luka does
+not) - but "disclosed and correct" is not the same question as "is the curve itself
+missing something," which is what got re-examined here, the same way D67 and D70 both
+re-examined a real complaint and only fixed what the data actually supported.
+
+**THE HYPOTHESIS.** `DERIVED_AGE_CURVE` (D55) is a POPULATION average - every player
+clearing 30 games and 500 minutes, regardless of talent tier. Dynasty theory commonly
+argues elite talent declines later and slower than a replacement-level contemporary
+of the same age (different touches, different health investment, different skill
+floor). If real, the single population curve systematically over-discounts elite
+players in their late 20s - Luka's exact case - relative to what a star-conditional
+curve would say.
+
+**THE MEASUREMENT.** Re-ran `scripts/derive-age-curve.js`'s exact method (same 4,587
+player-season corpus, same per-36/era-relative normalization, same forward-tracking-
+with-zero-for-non-qualifiers rule, same 0.9/5-season discount) as a second pass that
+also tags every player-season against that SEASON's own top decile by era-relative
+production - a percentile rather than a fixed count because the qualifying pool itself
+ranges 330-420 players across the 13 sampled seasons, and a fixed count would sample a
+thin season and a deep one at different effective tiers. 10% of a season averages
+35.8 players (33-38 across the sample) - almost exactly a season's All-NBA (15) plus
+All-Star (24) pool plus its best snubs, which is what "star tier" means in the
+dynasty-market sense the owner is asking about.
+
+Comparing the star cohort's own discounted forward-production curve against the
+population curve, IN THE SAME UNITS (both are already a multiple of the player's own
+current-season output, so the ratio needs no re-normalizing - an earlier draft of this
+measurement normalized both curves to their own age-27 value for a side-by-side read,
+which trivially forces the ratio to 1.0 exactly at 27 by construction and would have
+hidden the real effect; caught before it produced a false "no signal at 27" read):
+
+| age | population remaining | star remaining | ratio (star/pop) | star n | thinnest cell |
+|---|---|---|---|---|---|
+| 21 | 3.826 | 4.294 | 1.122 | 22 | 12 |
+| 24 | 3.594 | 4.281 | 1.191 | 39 | 25 |
+| 26 | 3.339 | 3.677 | 1.101 | 46 | 30 |
+| 27 | 3.225 | 3.527 | 1.094 | 41 | 25 |
+| 28 | 3.135 | 3.675 | 1.172 | 39 | 25 |
+| 29 | 3.081 | 3.818 | 1.239 | 36 | 22 |
+| 30 | 2.756 | 3.402 | 1.235 | 25 | 17 |
+| 31 | 2.566 | 3.244 | 1.264 | 23 | 12 |
+
+Ages 21-26 bounce without a clean trend (1.10-1.19, no monotone shape even before
+smoothing - the age range where a star and an average qualifier are both still rising
+or at peak, so there is little reason for them to have diverged yet). From 27 on the
+RAW ratios are already nearly monotone before any smoothing (1.094, 1.172, 1.239,
+1.235, 1.264) - a real, clean, and large effect: a top-decile player keeps 9-26% MORE
+of his own current production, discounted forward, than an average qualifying player
+of the same age, and the gap grows with age. That is the basketball story dynasty
+theory tells about "stars age gracefully": not that young stars improve differently,
+but that elite talent resists the DECLINE phase better than a replacement-level
+contemporary - and the data only tells that story from 27 onward, matching this
+model's own existing neutral point (`injury.ageReference = 27`) and its own
+`firstCliffAge()` (30) almost exactly.
+
+**EXTERNAL RESEARCH, AS A CROSS-CHECK, NOT A SUBSTITUTE.** "Size dynasty power
+rankings for dynasty basketball" does NOT resolve to anything real. Multiple direct
+searches ("size dynasty" + rankings/newsletter/podcast/site) turned up nothing
+matching that name - no site, newsletter, or writer, unlike D70's "dizzle dynasty,"
+which searched exactly this way and turned out to be real
+(dizzledynasty.substack.com). Stated plainly rather than invented around. Hashtag
+Basketball's own dynasty page is real and confirmed to exist
+(hashtagbasketball.com/fantasy-basketball-dynasty-rankings) but returned HTTP 403 to
+every fetch attempt - the identical result D70 got auditing the same site. Still not
+reachable from this environment.
+
+What WAS reachable, and used: RotoWire's dynasty keeper rankings explicitly apply the
+hypothesis under test, in the community's own words - Nikola Jokic (then 30) ranked
+#2 overall with the stated reason "his game doesn't rely on athleticism... should
+deliver 4-5 more elite seasons," distinguishing him from a player whose aging is
+tied to explosiveness. The SAME article ranked Luka Doncic #4 and Alperen Sengun #32
+- real, independent, external corroboration that the wider dynasty market already
+had Luka clearly ahead of Sengun, matching what this re-derivation found and the
+owner's own read, not just this league's live consensus.
+
+Found and weighed HONESTLY rather than cherry-picked: The Dynasty Guru's own
+statistical treatment of aging curves pushes back on part of the folk theory - it
+argues (for baseball, the sport its regression was built on) that elite and average
+players follow SIMILAR aging patterns and peak at similar ages, and that elite
+players show smaller percentage swings mostly because "better players tend to
+improve less than average players... mostly because of regression to the mean," not
+because they decline later in age. That is a real, more rigorous counter-voice, not
+dismissed here - which is exactly why this decision rests on THIS league's own
+reconstructed NBA history (a sport-specific, methodology-matched measurement) rather
+than on either the folk theory or its rebuttal. The external research corroborates
+that the STAR-AGES-DIFFERENTLY question is a genuinely live, real debate in dynasty
+theory, not a settled consensus either way - and sanity-checks that the SHAPE and
+rough MAGNITUDE of what the historical data found (a growing separation from the
+late 20s) matches at least one real, current, numerically-explicit dynasty source's
+own reasoning about the exact players in question. No external ranking was copied
+into a value; every number in the table above came from this league's own
+reconstructed NBA history.
+
+**WHAT SHIPPED.** `lib/valuation/ageCurve.js` gains `STAR_AGE_ADJUSTMENT` (five rows,
+ages 27-31, ratios 1.139/1.172/1.237/1.237/1.264 after weighted isotonic smoothing -
+the same PAVA machinery `DERIVED_AGE_CURVE` already uses, non-decreasing this time
+since the hypothesis is that the star/population gap widens with age), `isStarTier`
+(a player Sleeper's own live consensus ranks 36 or better - the derivation's own mean
+cohort size, 35.8, rounded up to the next whole player, reusing the SAME rank the
+base-value term already spends its whole trust budget on rather than inventing a
+second notion of "good"), and `starAgeAdjustment()` (interpolates the table; exactly
+1.0 below age 27 - no correction, not because none exists but because the raw 21-26
+data does not clear its own noise; holds flat at 1.264 past 31, the same convention
+`DERIVED_AGE_CURVE` uses past its own supported range). `valuePlayer` (`lib/
+valuation/index.js`) multiplies it onto the ordinary age term for any player who
+clears the rank cutoff; everyone else is priced identically to before. `ageMultiplier`
+takes a new optional third argument, `{ star }`, defaulting to false everywhere it
+already wasn't threaded through (the /methodology curve illustrations, `lib/metrics/
+duration.ts`'s generic payout-profile math - both deliberately left reading the plain
+population curve; see "what this does not touch" below).
+
+**WHY THE TABLE STARTS AT 27 AND NOT 21 - two honest reasons, not one convenient one.**
+First, the evidence: 21-26's raw ratios do not clear their own noise the way 27-31's
+already-monotone-before-smoothing ones do. Second, extending the correction below 27
+would push a star-adjusted 21-year-old to 1.071 (population) x 1.106 (the 21-26
+block's own smoothed ratio) = 1.185, ABOVE the whole app's 1.16 ceiling
+(`theoreticalMaxMultiplier`), which would have required rescaling every value in the
+product to accommodate a correction the data does not cleanly support in the first
+place. Not applying it there is the conservative reading of a genuinely noisier
+result, not a boundary drawn to land on any one player's age - the raw ratio at 26
+(1.101) and at 27 (1.094) are themselves nearly identical, and the table's floor of
+1.0 below 27 UNDERSTATES whatever real effect exists there rather than inventing one.
+Checked, not assumed: the largest star-adjusted multiplier anywhere in the applied
+range (27-36, holding flat past 31) is 1.067 at age 29 - comfortably under the 1.16
+peak `ageAnchors` already sets at 19-20 - so `theoreticalMaxMultiplier` needed no
+code change, and a new test (`lib/valuation/valuation.test.js`, "never lifts the
+combined multiplier above the population curve's own peak") checks this exhaustively
+across ages 19-45 rather than trusting the arithmetic once.
+
+**`ageBlindConfig` (`lib/valuation/exitWindow.js`) HAD TO LEARN ABOUT THE NEW TABLE
+TOO, AND A TEST CAUGHT IT.** The star-tier adjustment is itself an age-dependent
+multiplier - flattening `ageAnchors` alone left it live, so a "young, rank 30" and
+"old, rank 30" synthetic pair (both star-tier by rank) priced UNEQUALLY under
+supposedly age-blind pricing, failing `exitWindow.test.js`'s own "the age curve cannot
+manufacture its own confirmation" test. Fixed by flattening `starAgeAdjustment`'s
+ratios to 1 alongside `ageAnchors` - the exact "an absolute/derived value that must
+track a recalibration" class of defect D55 named, caught here by the existing test
+suite rather than by inspection.
+
+**VERIFIED AGAINST THE REAL LEAGUE, NOT JUST THE DISPUTED PAIR.** Ran against live
+Sleeper data for the real NSL Fantasy Hoops league (D70's own technique: an
+uncommitted `vitest.explore.config.mjs` pointed at the real provider, deleted before
+this was committed):
+- **Luka Doncic (27, rank 3):** age multiplier 0.90 -> 1.03, value **7,112 -> 8,100**,
+  tier **Cornerstone -> Franchise** - now clearly ahead of Sengun, which is what the
+  owner argued for and what the re-derived data actually supports.
+- **Alperen Sengun (24, rank 10):** unchanged at 7,179, Cornerstone - age 24 is below
+  the applied floor, so nothing about his price moves. The two are no longer
+  uncomfortably close; Luka is now unambiguously ahead.
+- **A young non-star** (Kyshawn George, 22, rank 106): unaffected, as expected.
+- **An old star** (Anthony Davis, 33, rank 15): age multiplier 0.72 -> 0.85, matching
+  exactly the "durable greatness" case D70's own audit flagged as an open question.
+- **A declined former star** (Joel Embiid, 32, rank 56): correctly UNAFFECTED - live
+  consensus no longer ranks him top-decile, so the mechanism does not apply, which is
+  the intended self-correcting property of anchoring "star" to a LIVE rank rather
+  than a fixed historical label.
+- **An old role player** (CJ McCollum, 34, rank 105): unaffected, as expected.
+- Giannis (31, #7), Durant (37, #26) and Tatum (28, #11) all moved in the same
+  direction and by a plausible amount, confirming the pattern isn't overfit to one
+  player.
+
+**WHAT THIS DOES NOT TOUCH, AND WHY.** `lib/metrics/duration.ts`'s `playerDuration` -
+the TCI payout-profile math - takes a bare age with no player identity attached, and
+was deliberately left reading the plain population curve rather than threaded through
+with star-awareness. Extending it would be real, additional scope (every roster's TCI
+would shift, not just star-holding rosters' age-based value) beyond what this audit
+set out to check, and the app's own roster-page trajectory (`app/roster/page.jsx`'s
+`valueTrajectory`, which DOES carry player identity) was updated to stay consistent
+with the value it is a projection of, which is the surface that actually needed it.
+
+**Verified**: `pnpm lint` clean; `pnpm test` 1018 -> 1028 (+10, this worktree's own
+baseline, all new tests exercise the star-tier machinery and its invariants); `pnpm
+build` succeeds; full e2e suite green (78/78) after `rm -rf .next` - the exact
+Turbopack dev-cache staleness gotcha this file has warned about before, reproduced
+here (a stale production `.next` from `pnpm build` made the dev server used by `pnpm
+e2e` hang on first compile until cleared) and worked around the same way, not papered
+over.
+
+**Rejected**: applying the adjustment across the full measured 21-31 range (real
+signal exists there too, but noisier, and would have required rescaling
+`theoreticalMaxMultiplier` for a correction the data does not cleanly support at the
+young end); rewriting `DERIVED_AGE_CURVE` itself rather than layering a second table
+on top (the population curve is not wrong, it is exactly what it has always claimed to
+be - an average across every qualifying player regardless of tier; this is a narrower,
+separate measurement of how much LESS a top-decile player should be discounted once
+decline starts); trusting "size dynasty" as a real source without a real search
+turning one up (stated as unresolved, not treated as confirmed); letting RotoWire's
+(or any external ranking's) community framing set the magnitude of the adjustment
+rather than the historical data - and, symmetrically, letting The Dynasty Guru's own
+more skeptical statistical treatment overrule the historical measurement either
+(both were weighed as real, current dynasty-theory voices on opposite sides of the
+same question, used only to confirm the SHAPE of the claim is a genuine, live debate
+worth encoding rather than a settled consensus copied wholesale).
