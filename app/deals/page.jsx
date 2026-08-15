@@ -111,6 +111,22 @@ export default async function DealsPage({ searchParams }) {
       : null;
   const hrefWith = (next) =>
     `/deals${dealsQueryString({ ...url, pair: pairing?.key ?? null, manager: manager?.ownerId ?? null, season, ...next })}`;
+  // Only built for the unfiltered index - see the render branch below. `trades`
+  // is already newest-first (buildTradeLedger), so grouping preserves that
+  // order for free; sorting the season keys themselves guards against a
+  // corpus where the newest trade's season is not the newest season on record
+  // (a quiet offseason with no deals yet, for instance).
+  const seasonGroups = [];
+  if (!season && !pairing && !manager) {
+    const bySeason = new Map();
+    for (const t of trades) {
+      if (!bySeason.has(t.season)) bySeason.set(t.season, []);
+      bySeason.get(t.season).push(t);
+    }
+    for (const s of [...bySeason.keys()].sort((a, b) => b.localeCompare(a))) {
+      seasonGroups.push({ season: s, trades: bySeason.get(s) });
+    }
+  }
   return (
     <div>
       <PageHeader
@@ -186,55 +202,59 @@ export default async function DealsPage({ searchParams }) {
             ? `Nothing was traded in ${season} under this filter.`
             : "Nothing on record for this filter."}
         </EmptyState>
-      ) : (
+      ) : season || pairing || manager ? (
+        // Already a small, already-filtered set - print it flat, exactly as
+        // before. Grouping one season, or one manager's history, by season
+        // again would just be re-adding the header it took a tap to get past.
         <ul
           data-testid="deal-index"
           className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface"
         >
           {trades.map((t) => (
-            <li key={t.id}>
-              <Link
-                href={dealHref(t.id)}
-                className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-surface-2"
-              >
-                <span className="min-w-0 flex-1">
-                  {/* Who, on one line. The parties ARE the headline of a deal index -
-                    what each of them got is the receipt's job, and printing it here
-                    printed every deal twice. */}
-                  <span className="block truncate text-body font-semibold leading-tight">
-                    {t.sides.map((s, i) => (
-                      <span key={s.rosterId}>
-                        {i > 0 && <span className="text-faint"> &harr; </span>}
-                        <span
-                          className={
-                            s.rosterId === ledger.meRosterId
-                              ? "text-accent-text"
-                              : "text-ink"
-                          }
-                        >
-                          {s.name}
-                        </span>
-                      </span>
-                    ))}
-                  </span>
-                  <span className="block truncate figure text-meta leading-tight text-secondary">
-                    <LocalDate ts={t.created} /> · wk {t.week} ·{" "}
-                    {dealPieces(t.assets)}
-                  </span>
-                </span>
-                {t.multiTeam && <Tag tone="info">{t.parties.length}-team</Tag>}
-                {t.commissionerExecuted && (
-                  <Tag tone="warn">no pick record</Tag>
-                )}
-                <ChevronRight
-                  size={13}
-                  aria-hidden="true"
-                  className="shrink-0 text-faint"
-                />
-              </Link>
-            </li>
+            <DealRow key={t.id} t={t} meRosterId={ledger.meRosterId} />
           ))}
         </ul>
+      ) : (
+        /*
+         * THE SAME DIET THE COMMISSIONER AUDIT LOG ALREADY GOT (D-round-9): this
+         * unfiltered index used to print every trade, oldest and newest alike,
+         * fully expanded - the majority of the ~92 rows behind the ~5,300px this
+         * page cost at 390px wide. Grouping by season and folding every season
+         * but the newest is the identical idiom, not a new one: current season
+         * open, the rest `<details>`, the count printed on the shut summary, and
+         * every row still a real link into its own receipt the moment you tap.
+         */
+        <div className="space-y-1.5" data-testid="deal-index">
+          {seasonGroups.map((g, i) => (
+            <details
+              key={g.season}
+              open={i === 0 || undefined}
+              className="group overflow-hidden rounded-[--radius-sm] border border-border bg-surface"
+            >
+              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-1">
+                <span className="flex items-center gap-1.5">
+                  <ChevronRight
+                    size={13}
+                    aria-hidden="true"
+                    className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
+                  />
+                  <span className="figure text-note font-semibold text-ink">
+                    {g.season}
+                  </span>
+                </span>
+                <span className="figure text-meta text-secondary">
+                  {g.trades.length}{" "}
+                  {g.trades.length === 1 ? "deal" : "deals"}
+                </span>
+              </summary>
+              <ul className="disclosure-body divide-y divide-border border-t border-border">
+                {g.trades.map((t) => (
+                  <DealRow key={t.id} t={t} meRosterId={ledger.meRosterId} />
+                ))}
+              </ul>
+            </details>
+          ))}
+        </div>
       )}
 
       {!pairing && !manager && buybacks.total > 0 && (
@@ -492,6 +512,51 @@ export default async function DealsPage({ searchParams }) {
       )}
       <Onward from="/deals" />
     </div>
+  );
+}
+/**
+ * ONE DEAL, ONE ROW. Pulled out unchanged from the flat list so the season-grouped
+ * branch and the filtered (small, already-flat) branch render the identical row -
+ * a season fold must never mean two different rows for the same deal.
+ */
+function DealRow({ t, meRosterId }) {
+  return (
+    <li>
+      <Link
+        href={dealHref(t.id)}
+        className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-surface-2"
+      >
+        <span className="min-w-0 flex-1">
+          {/* Who, on one line. The parties ARE the headline of a deal index -
+            what each of them got is the receipt's job, and printing it here
+            printed every deal twice. */}
+          <span className="block truncate text-body font-semibold leading-tight">
+            {t.sides.map((s, i) => (
+              <span key={s.rosterId}>
+                {i > 0 && <span className="text-faint"> &harr; </span>}
+                <span
+                  className={
+                    s.rosterId === meRosterId ? "text-accent-text" : "text-ink"
+                  }
+                >
+                  {s.name}
+                </span>
+              </span>
+            ))}
+          </span>
+          <span className="block truncate figure text-meta leading-tight text-secondary">
+            <LocalDate ts={t.created} /> · wk {t.week} · {dealPieces(t.assets)}
+          </span>
+        </span>
+        {t.multiTeam && <Tag tone="info">{t.parties.length}-team</Tag>}
+        {t.commissionerExecuted && <Tag tone="warn">no pick record</Tag>}
+        <ChevronRight
+          size={13}
+          aria-hidden="true"
+          className="shrink-0 text-faint"
+        />
+      </Link>
+    </li>
   );
 }
 /**
