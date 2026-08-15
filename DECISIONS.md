@@ -2438,3 +2438,137 @@ frontend itself (ReScript, Kotlin/JS, etc.) - explicitly considered and explicit
 declined by the owner, since none has real support for the App Router/React Server
 Components this app is built on, and adopting one would be a rewrite of the rendering
 layer, not a conversion of it.
+
+## D64. TCI learns to name its own outlier - the Timeline Break, found leave-one-out
+
+A full audit pass over both proprietary metrics, at the owner's request: re-derive
+TCI and RFI from first principles against the real 14-roster league, looking for a
+real weakness rather than a hypothetical one. RFI came back clean - see D65. TCI did
+not: `coherenceOf`'s dispersion is a single value-weighted VARIANCE term, and variance
+cannot distinguish "one plan, gently spread" from "two plans sharing a jersey" when
+the two happen to produce the same number. It mostly gets this right by construction
+(SIGMA_REF was calibrated against exactly the barbell case), but the real 14 rosters
+turned up a case it does not: roster 7 ("The Terror Twins") carries a
+Cunningham/Barnes/Amen-and-Ausar-Thompson core reading 4.6-4.9 seasons, worth roughly
+19,000 combined, PLUS Anthony Davis alone at 2.18 seasons worth 4,277 - a real,
+material disagreement with the plan. Its dispersion (1.18) did not cross
+COHERENCE_FLOOR (55), so it read "ascending... assets broadly aligned" with nothing in
+the paragraph naming the one piece that does not fit.
+
+**THE FIX, MIRRORING RFI'S OWN METHOD RATHER THAN INVENTING A NEW ONE.**
+`findTimelineBreak` (lib/metrics/duration.ts) is a leave-one-out search - remove each
+asset, recompute `coherenceOf`, keep whichever removal raises TCI the most - the
+identical technique `looDamage` already uses for lineup risk, aimed at timeline
+agreement instead of startable value. `classify` now appends one sentence naming the
+break asset to EVERY posture, not only "straddling", because the Anthony Davis case is
+exactly the one an "ascending" label was hiding it from.
+
+**WHY NOT A HIGHER-MOMENT STATISTIC (SKEWNESS/KURTOSIS), WHICH WAS TRIED FIRST AND
+REJECTED.** Excess kurtosis is the textbook bimodality signal and it does flag real
+structure on this league's data (roster 8, exKurt -0.92, genuinely platykurtic) - but
+a roster here carries 15 to 32 discrete assets, and a 4th-moment estimate's standard
+error at that sample size (~sqrt(24/n), roughly 1.0-1.3) is close to the whole
+observed range of the statistic itself. A component this noisy would need its own
+calibration constant on top of an already-unstable estimate, which is a worse
+trade than the leave-one-out approach: cheap (O(n^2), the same complexity class LOO
+already pays), needs no new reference constant, and - critically - NAMES A SPECIFIC
+ASSET rather than reporting an abstract shape number nobody can act on.
+
+**CALIBRATED AGAINST THE REAL LEAGUE, not asserted.** Every one of the 14 real rosters
+has at least one asset whose removal improves TCI, spanning +2 to +13 points - real,
+differentiated range. `BREAK_MIN_DELTA = 1` floors it above `coherenceOf`'s own 2dp
+rounding noise, below the smallest genuine case observed (+2). On this league the
+break is either a deep rebuild's own single longest-dated pick (a small, real
+improvement) or one aging star alone against a long-dated core (a large one) - Steph
+Curry, Kevin Durant, LeBron James, Joel Embiid and Giannis Antetokounmpo are the other
+five named across the real 14, alongside Anthony Davis.
+
+**WHAT IT DOES NOT CLAIM**, stated in the code the same way D6 states it for the
+regret ledger: the named asset is very often the team's best player, and the honest
+reading is "this is the one piece that does not match the plan," not "trade him."
+Buying a year of a misaligned star on purpose is a strategy, not a mistake this metric
+is accusing anyone of.
+
+Added: `findTimelineBreak` and its `BREAK_MIN_DELTA` constant, both in
+`lib/metrics/duration.ts`; `timelineBreak` on every `getTimelineProfile` result;
+`classify`'s new `timelineBreak` argument and the `breakSentence` helper. Nine new
+tests in `lib/metrics/metrics.test.ts`, including a pinned scale/tie-break case and an
+integration check that every real roster's published `timelineBreak` matches calling
+`findTimelineBreak` directly. `coherenceOf` itself is UNCHANGED - deliberately kept
+pure and its existing empty-bag test (`toEqual` on an exact 4-key object) intact,
+because `findTimelineBreak` calls `coherenceOf` in a loop and the two must never call
+each other back.
+
+## D65. RFI, audited and left alone - the position-blindness it already names was compensated, not hidden
+
+The other half of D64's audit. Checked for the same class of failure against the real
+league: component saturation (none - LOO/concentration/exposure scores measured 32-91,
+25-83, 1-87, nothing pinned at either end), percentile/band collisions (only the ones
+the ladder rounding is documented to produce, and they resolve the way the file says
+they do), and the header's own stated blind spot - HHI cannot tell WHERE concentration
+sits, so a roster concentrated in a deep position and one concentrated in a scarce one
+score identically on that component. That blind spot is real, but it is not silent:
+`W_LOO` (0.45) already outweighs `W_CONCENTRATION` (0.35) specifically because LOO's
+lineup solver DOES know position (a star with a same-position backup shows small
+damage; one with none shows the full hit), which is the file's own stated reason for
+the weighting, not an assumption re-verified here for the first time.
+
+**DECISION: no change to RFI.** Inventing a fix for a blind spot the file already
+names and already compensates for would be exactly the failure mode D56 exists to
+warn against - measuring what the data cannot support rather than admitting it. The
+complementary lens this audit produced instead is D66's Positional Leverage Index,
+which asks the blind spot's real question - not "how concentrated is MY roster" but
+"where does the LEAGUE'S positional value actually sit, and where do I stand against
+it" - as its own metric rather than a bolted-on RFI component, because it needs a
+different denominator (the whole league's position pools, not one roster's lineup
+solve) that does not belong inside RFI's per-roster scoring pass.
+
+## D66. The Positional Leverage Index ships to /lab, not to /awards
+
+The third metric the owner asked for, held to the same bar as TCI and RFI: a plain-
+language question neither already answers ("where can I actually deal from, and where
+am I exposed with nothing to offer back"), a formula derived and documented at the
+same rigor as `fragility.ts`'s header, and a REAL calibration bug caught and fixed
+before this shipped rather than asserted away.
+
+**THE BUG.** The first version measured a roster's LEAGUE-WIDE SHARE at each position
+directly (`rosterValue(X) / totalLeagueValue(X)`) as the deviation term. Measured
+against the real 14 rosters, that version correlated with total roster value at
+r = 0.975 - it was not a positional metric, it was a relabelled power ranking,
+because a stronger roster holds more value at nearly every position simply by holding
+more value overall. The fix is the same one `concentration()` in fragility.ts already
+applies to HHI: divide by the roster's OWN total first (own SHARE, not league share),
+which is what decouples scale from shape. Re-measured after the fix: r = 0.253 (r² =
+0.064) against the same total-value figure on the same 14 rosters - not literally
+zero, but nothing like restating "who is winning."
+
+**THE FORMULA**, in full in `lib/lab/leverage/index.ts`'s own header: for each of the
+five rosterable positions, `leverage(X) = (ownShare(X) - leagueSharePos(X)) *
+scarcity(X)`, where `scarcity(X)` is that position's top-to-replacement value drop-off
+normalised against the steepest one observed (the RFI convention: a reference just
+above the worst real case, never a theoretical maximum). `LEVERAGE_REF = 0.08` sits
+just past the observed -0.0707..+0.0544 range on the real league, spreading the 14
+real rosters from 6 to 84 with nothing clipped and nothing bunched at 50.
+
+**WHY /LAB AND NOT /AWARDS OR A DOSSIER PAGE**, per this app's own established bar
+(D54): a new analytical claim ships reachable-but-unproven before it ships as a
+headline. It is a real, computable, honestly-limited signal - but it has not been
+lived with across a season the way TCI and RFI have, and D54 is the standing
+counter-case for what happens when a Lab idea does NOT clear that bar later. This one
+gets its own subfolder (`lib/lab/leverage/`), its own page (`app/lab/leverage/`), and
+one line in `lib/lab/index.ts`'s `EXPERIMENTS` registry - nothing else in the app was
+changed to accommodate it, unlike D64's TCI extension, which touches every surface
+that already reads `getTimelineProfile.read`.
+
+**WHAT IT DOES NOT MEASURE**, in full in the module header: whether any of the other
+thirteen managers actually wants what a roster is overweight in (pure supply-side, no
+demand signal); draft picks (unresolved position until drafted, excluded from both
+sides of the ratio - a real gap TCI and RFI do not share, since both price picks);
+UTIL/FLEX demand (two of seven starting slots are position-agnostic and excluded from
+`baseSlots` entirely); and the future (a snapshot of today's pool, blind to a rookie
+class that could reshape a position's scarcity next spring).
+
+One small shared touch: `POS_ORDER` in `lib/roster.ts` is now exported rather than
+private, so the position taxonomy this module measures against is the same five-
+element array `analyzeRoster`'s own "positional strength" already uses, not a second
+copy that could quietly drift from it.
