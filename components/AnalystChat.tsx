@@ -139,9 +139,10 @@ export function AnalystChat() {
           <button
             type="submit"
             disabled={loading || !input.trim()}
+            aria-label="Ask"
             className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-accent text-accent-ink disabled:opacity-40"
           >
-            <Send size={17} />
+            <Send size={17} aria-hidden="true" />
           </button>
         </form>
       </div>

@@ -205,7 +205,12 @@ export default async function LeaguePage() {
                 href={`/managers/${r.rosterId}`}
                 className={`flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2 ${
                   isMe
-                    ? "border-accent-edge bg-accent-wash"
+                    ? // bg-surface, not bg-accent-wash: the row holds arbitrary child
+                      // content (DeltaValue's text-negative among it) that is only
+                      // validated against the default ground, and the "you" pill a few
+                      // lines below already carries its own self-contained, validated
+                      // accent-wash - so the border alone is enough to mark the row.
+                      "border-accent-edge bg-surface"
                     : "border-border bg-surface"
                 }`}
               >

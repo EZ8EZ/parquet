@@ -36,7 +36,7 @@ export function PlayerRow({
         <div className="flex items-center gap-1.5">
           <span className="truncate text-sm font-semibold text-ink">{name}</span>
           {injury && (
-            <span className="rounded bg-negative/15 px-1 text-[10px] font-semibold text-negative">
+            <span className="rounded bg-negative-wash px-1 text-[10px] font-semibold text-negative">
               {injury}
             </span>
           )}

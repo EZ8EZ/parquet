@@ -69,7 +69,7 @@ export default async function TradeFinderPage({
           title="Who should you call?"
           subtitle="Ranked by how much room actually exists between your two rosters, not by who is best. A trade needs the same asset to be worth more to them than to you, so this reads their behaviour and their holes alongside the values."
         />
-        <dl className="grid grid-cols-2 gap-1.5">
+        <div className="grid grid-cols-2 gap-1.5">
           <Stat
             label="live matches"
             value={`${live.length}`}
@@ -81,7 +81,7 @@ export default async function TradeFinderPage({
             sub={live.length ? live[0].name : "nothing clears the bar"}
             tone={live.length ? "accent" : "neutral"}
           />
-        </dl>
+        </div>
 
         <SectionHeader title="Every leaguemate, best room first" />
         <ul className="space-y-1">
@@ -510,7 +510,7 @@ function PackageDetail({
         {pkg.headline}
       </h2>
 
-      <dl className="mt-2 grid grid-cols-3 gap-1.5">
+      <div className="mt-2 grid grid-cols-3 gap-1.5">
         <Stat label="you send" value={fmtValue(e.give.total)} sub={`${pkg.give.length} assets`} />
         <Stat label="you get" value={fmtValue(e.get.total)} sub={`${pkg.get.length} assets`} />
         <Stat
@@ -519,7 +519,7 @@ function PackageDetail({
           sub={`${e.deltaPct > 0 ? "+" : ""}${e.deltaPct}% · ${e.direction}`}
           tone={e.delta >= 0 ? "positive" : "negative"}
         />
-      </dl>
+      </div>
 
       <div className="mt-2 grid gap-1.5">
         <AssetTable title="You send" side={e.give} />

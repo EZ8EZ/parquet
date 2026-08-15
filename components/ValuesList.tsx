@@ -189,7 +189,7 @@ export function ValueAssetRow({
               {name}
             </span>
             {injury && (
-              <span className="shrink-0 rounded bg-negative/15 px-1 text-meta font-semibold leading-tight text-negative">
+              <span className="shrink-0 rounded bg-negative-wash px-1 text-meta font-semibold leading-tight text-negative">
                 {injury}
               </span>
             )}
@@ -477,7 +477,10 @@ export function ValuesList({ rows }: { rows: ValueRow[] }) {
               )}
             >
               {f}
-              <span className="figure text-meta opacity-60">
+              {/* Only dimmed against the plain default ground: on the active pill's
+                  accent-wash fill, opacity-60 pushes text-accent-text's already-tighter
+                  contrast margin below WCAG AA (caught by axe-core, see e2e/a11y.spec.ts). */}
+              <span className={cn("figure text-meta", pos !== f && "opacity-60")}>
                 {counts[f] ?? 0}
               </span>
             </button>

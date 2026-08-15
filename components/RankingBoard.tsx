@@ -381,7 +381,7 @@ export function RankingBoard({
             className={cn(
               "inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border px-3 text-meta font-semibold transition-colors",
               resetArmed
-                ? "border-negative/40 bg-negative/12 text-negative"
+                ? "border-negative-edge bg-negative-wash text-negative"
                 : "border-border text-muted hover:border-border-strong",
             )}
           >
@@ -451,7 +451,7 @@ export function RankingBoard({
                     {p.fullName}
                   </span>
                   {injury && (
-                    <span className="shrink-0 rounded bg-negative/15 px-1 text-meta font-semibold leading-tight text-negative">
+                    <span className="shrink-0 rounded bg-negative-wash px-1 text-meta font-semibold leading-tight text-negative">
                       {injury}
                     </span>
                   )}
