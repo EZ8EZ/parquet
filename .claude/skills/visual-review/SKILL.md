@@ -34,6 +34,10 @@ node .claude/skills/visual-review/scripts/shoot.mjs --base "$BASE" --theme dark 
 #    one rule category that genuinely varies by theme).
 node .claude/skills/visual-review/scripts/axe-scan.mjs --base "$BASE" --theme dark \
   / /roster /values
+
+# 5. Optional: a Lighthouse pass for the categories axe doesn't cover -
+#    viewport meta, heading order, touch target size, deprecated APIs.
+node .claude/skills/visual-review/scripts/lighthouse.mjs --base "$BASE" / /roster
 ```
 
 Repeat step 2/4 with `--theme light` and `--theme contrast` - most visual bugs
@@ -65,6 +69,21 @@ with `pnpm e2e e2e/a11y.spec.ts`. This is the thing to keep green, not a
 replacement for eyeballing the screenshots - axe catches contrast/ARIA/label
 issues, not "this looks cramped" or "this reads as a verdict, not a fact".
 
+## Lighthouse: what it catches that axe doesn't
+
+`lighthouse.mjs` runs performance/accessibility/best-practices/SEO against a
+route (mobile form factor at the app's 390x844 design viewport, same team
+cookie trick as the other two scripts, via an extra request header since
+Lighthouse has no page-scripting hook). Its accessibility category overlaps
+with `axe-scan.mjs` but isn't identical - it caught a real WCAG 2.5.8
+touch-target-size finding and a real WCAG 2.5.3 label/content mismatch on the
+Desk's menu button that axe-core's ruleset doesn't check for at all. Treat its
+`performance` score as noisy in a shared sandbox
+(that's a spot-check number, not a merge gate) - `accessibility` and `seo` are
+the stable, actionable ones. See the script's header comment for one more
+known dev-server-only false positive (`valid-source-maps`, harmless under
+`next dev`, says nothing about the production build).
+
 ## Chromium revision mismatch (sandbox-specific)
 
 Some containers pre-install a chromium build older than what this repo's
@@ -73,9 +92,11 @@ exist at .../chromium_headless_shell-<rev>`). Real CI isn't affected -
 `.github/workflows/ci.yml` runs `playwright install --with-deps chromium`
 itself. If you hit this locally:
 
-- `shoot.mjs` / `axe-scan.mjs`: set `VISUAL_REVIEW_CHROMIUM=/opt/pw-browsers/chromium`
-  (or wherever `ls $PLAYWRIGHT_BROWSERS_PATH` shows a chromium binary) and they'll
-  launch that build directly instead of the one Playwright expects.
+- `shoot.mjs` / `axe-scan.mjs` / `lighthouse.mjs`: set
+  `VISUAL_REVIEW_CHROMIUM=/opt/pw-browsers/chromium` (or wherever
+  `ls $PLAYWRIGHT_BROWSERS_PATH` shows a chromium binary; `lighthouse.mjs` also
+  accepts the more conventional `CHROME_PATH`) and they'll launch that build
+  directly instead of the one Playwright expects.
 - The committed `pnpm e2e` suite (`playwright.config.ts`) has no such override
   and shouldn't get one - hard-coding a sandbox-local path into the repo's own
   config would break it on every other machine, including real CI, where the

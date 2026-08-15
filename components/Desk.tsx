@@ -686,7 +686,12 @@ export function Desk({ data }: { data: DeskData | null }) {
             type="button"
             aria-expanded={expanded}
             aria-controls={drawerId}
-            aria-label={expanded ? "Close the menu" : "Menu"}
+            // No aria-label: the button already has real visible text (both spans
+            // below), and a hand-written label can only ever paraphrase that text,
+            // never match it exactly - which is itself an accessibility bug (a
+            // mismatch between what's read aloud and what's on screen). Letting the
+            // browser compute the accessible name from content makes a mismatch
+            // structurally impossible.
             onClick={() => setExpanded(!expanded)}
             className={cn(
               "flex h-[53px] w-full items-center justify-center gap-2 border-t px-3.5 transition-colors",

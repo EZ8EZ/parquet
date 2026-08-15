@@ -52,7 +52,11 @@ test("ledger annotate affordance, then the audit-log deep link into the deal rec
   // are pinned to the bottom of the drawer it opens. Scoped to the Primary
   // navigation on purpose: "Record" is also the label of Home's record figure,
   // which links to /league, and this test means the destination.
-  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  // Anchored regex, not a plain substring: the button's accessible name now
+  // spells out its caption too (see Desk.tsx), and a bare "Menu" substring also
+  // matches the drag handle's "Drag handle: open the menu" - ^Menu\b matches
+  // only the worded button, whose name starts with the word.
+  await page.getByRole("button", { name: /^Menu\b/ }).click();
   await page
     .getByRole("navigation", { name: "Primary" })
     .getByRole("link", { name: "Record", exact: true })

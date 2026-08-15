@@ -57,7 +57,11 @@ test("the drawer reaches its last group, and says so while there is more below",
   await primeLens(page);
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Menu", exact: true }).click();
+  // Anchored regex, not a plain substring: the button's accessible name now
+  // spells out its caption too (see Desk.tsx), and a bare "Menu" substring also
+  // matches the drag handle's "Drag handle: open the menu" - ^Menu\b matches
+  // only the worded button, whose name starts with the word.
+  await page.getByRole("button", { name: /^Menu\b/ }).click();
 
   const cue = page.locator("[data-more-below]");
   await expect(cue).toHaveAttribute("data-more-below", "true");
