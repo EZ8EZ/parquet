@@ -186,11 +186,11 @@ export function Disclosure({
  * other four behind. Each now names an opaque wash and edge composited once in the
  * token file, so every pair below is a real number in every theme.
  *
- * Text on its own wash (dark / paper / contrast):
- *   positive  6.70 / 4.81 / 8.89
- *   negative  4.66 / 5.85 / 6.00
- *   info      5.53 / 5.31 / 8.11
- *   warn      6.47 / 5.04 / 6.50
+ * Text on its own wash (dark / paper):
+ *   positive  6.70 / 4.81
+ *   negative  4.66 / 5.85
+ *   info      5.53 / 5.31
+ *   warn      6.47 / 5.04
  */
 const toneClasses = {
   neutral: "bg-elevated text-muted border-border",

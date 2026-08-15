@@ -42,6 +42,17 @@ Defined in `app/globals.css` under Tailwind v4 `@theme` (so `bg-*`, `text-*`,
 The near-black background carries a faint gold+blue radial grain so it never reads
 as flat black.
 
+## Themes
+Two, not more: **dark** (the default identity, D15) and **light** ("Paper" in the
+toggle UI) - the standard light/dark pattern, not a second design. Both are overrides
+of the same token names in `app/globals.css` (`:root[data-theme="light"]`), so no
+component ever branches on which theme is active. Selectable from `/settings`
+(`components/ThemeToggle.jsx`), persisted to `localStorage`, and owned end-to-end by
+`lib/theme.js` (the theme list, the default, and the inline boot script that sets
+`data-theme` before first paint). A third theme, a high-contrast dark variant, shipped
+and was later removed by owner direction - D64 - once light/dark alone covered the
+same accessibility need without asking anyone to choose between designs.
+
 ## Layout & interaction rules (lessons from the competitor teardown)
 - **The Desk**, a bottom sheet fixed to the screen: a four-item destination row
   (Home / Roster / Plan / Decision ledger, icon **and** label) over a context row
