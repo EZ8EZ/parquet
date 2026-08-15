@@ -25,6 +25,8 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { LocalDate } from "@/components/LocalDate";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { Disclosure } from "@/components/ui";
+import { RefusalMark } from "@/components/RefusalMark";
 import { ordinal } from "@/lib/derive/describe";
 import { dealHref } from "@/lib/tradegraph/url";
 import { parsePickKey } from "@/lib/provenance";
@@ -108,7 +110,7 @@ export function layoutRows(times, floors) {
   rows.push(floorAt(n - 1));
   return rows;
 }
-export function ProvenanceRail({ chain, showTitle, className }) {
+export function ProvenanceRail({ chain, showTitle, className, activity }) {
   const nodes = [...chain.events, chain.today];
   const times = nodes.map((n) => n.at);
   const rows = layoutRows(
@@ -228,8 +230,34 @@ export function ProvenanceRail({ chain, showTitle, className }) {
           </div>
         ))}
       </div>
+      {activity && (
+        <Disclosure
+          summary={`What else happened during those ${formatGap(activity.days * DAY)}`}
+          className="mt-1.5"
+        >
+          <p>
+            While this sat, the league elsewhere recorded{" "}
+            {activityParts(activity)}. Not a claim about this asset or anyone
+            holding it - only what else was happening in the league during
+            the same stretch.
+          </p>
+        </Disclosure>
+      )}
     </div>
   );
+}
+/** "14 trades, 62 waiver moves and 9 free-agent signings" - omits any kind that was zero. */
+function activityParts(a) {
+  const parts = [];
+  if (a.trades) parts.push(`${a.trades} trade${a.trades === 1 ? "" : "s"}`);
+  if (a.waivers)
+    parts.push(`${a.waivers} waiver move${a.waivers === 1 ? "" : "s"}`);
+  if (a.freeAgents)
+    parts.push(
+      `${a.freeAgents} free-agent signing${a.freeAgents === 1 ? "" : "s"}`,
+    );
+  if (parts.length === 1) return parts[0];
+  return `${parts.slice(0, -1).join(", ")} and ${parts[parts.length - 1]}`;
 }
 function NodeBody({ node }) {
   if (node.node === "origin") return <OriginBody o={node} />;
@@ -240,7 +268,17 @@ function NodeBody({ node }) {
       <p className="text-body font-semibold leading-snug text-accent-text">
         Today
       </p>
-      <p className="text-meta leading-snug text-muted">{node.text}</p>
+      {/* A pending pick is a genuine D19 refusal, not a fact yet to arrive: nobody
+          knows when this draft happens, and the app will not guess. The mark says so
+          in the house's own drawn vocabulary rather than in prose alone - see
+          RefusalMark's own docstring for why it is built to never be mistaken for a
+          loading skeleton. `node.text` still prints verbatim (D44: /drafts and this
+          rail must describe the same unresolved pick in the same words), only wrapped. */}
+      {node.pending ? (
+        <RefusalMark className="mt-0.5">{node.text}</RefusalMark>
+      ) : (
+        <p className="text-meta leading-snug text-muted">{node.text}</p>
+      )}
     </div>
   );
 }
@@ -273,8 +311,27 @@ function isHomecoming(h) {
     pick.originalRoster !== h.from
   );
 }
+/**
+ * More than two rosters touched the same transaction.
+ *
+ * `HopBody`'s sentence only ever names the two seats on THIS asset's own end of the
+ * hop - `from`/`to` - and that is the right predecessor to walk regardless of how many
+ * parties the trade had. But a real three-team deal (this league has two, both
+ * verified live: a 2023 commissioner-executed reshuffle among three rosters, and a
+ * 2024 deal moving four players and three picks the same way) has OTHER assets moving
+ * between OTHER seats in the SAME transaction, and a bare "traded to X by Y" reads
+ * exactly like an ordinary two-team trade - the third party's half is invisible unless
+ * the reader already knows to open the receipt. This says the fact without naming who
+ * the third party was or what they got (that is the receipt's job, one tap away via
+ * the same link this row already has) - just that there is more to this one than the
+ * sentence above it shows.
+ */
+function isMultiTeam(h) {
+  return typeof h.parties === "number" && h.parties > 2;
+}
 function HopBody({ h }) {
   const homecoming = isHomecoming(h);
+  const multiTeam = isMultiTeam(h);
   return (
     <div className="min-w-0">
       <Link
@@ -283,7 +340,7 @@ function HopBody({ h }) {
         aria-label={
           homecoming
             ? `Traded back to ${h.toName}, who originally owned this pick, in ${h.season}. Open the deal.`
-            : `Traded to ${h.toName} in ${h.season}. Open the deal.`
+            : `Traded to ${h.toName} in ${h.season}${multiTeam ? `, as part of a ${h.parties}-team deal` : ""}. Open the deal.`
         }
       >
         <span className="min-w-0">
@@ -303,6 +360,11 @@ function HopBody({ h }) {
       {homecoming && (
         <p className="text-meta leading-snug text-accent-text">
           Back to {h.toName}, who originally owned this pick.
+        </p>
+      )}
+      {multiTeam && (
+        <p className="text-meta leading-snug text-info">
+          Part of a {h.parties}-team deal - the receipt has the rest.
         </p>
       )}
       <p className="figure text-micro leading-normal text-faint">
