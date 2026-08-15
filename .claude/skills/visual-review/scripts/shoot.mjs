@@ -14,7 +14,7 @@ function flag(name, fallback) {
   return i === -1 ? fallback : args[i + 1];
 }
 const base = flag("base", "http://localhost:3200");
-const theme = flag("theme", "dark"); // dark | light | contrast
+const theme = flag("theme", "dark"); // dark | light
 const roster = flag("roster", "1"); // fixture roster id; irrelevant against live Sleeper data
 const outDir = flag("out", "./shots");
 const routes = args.filter((a, i) => !a.startsWith("--") && args[i - 1] !== undefined && !["--base", "--theme", "--roster", "--out"].includes(args[i - 1]));

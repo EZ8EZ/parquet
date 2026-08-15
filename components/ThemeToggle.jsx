@@ -1,6 +1,6 @@
 "use client";
 /**
- * The theme control. Three explicit choices, never a cycle button: a cycle gives no way
+ * The theme control. Two explicit choices, never a cycle button: a cycle gives no way
  * to see what is selected or to jump straight to the one you want, which is a poor deal
  * for a control whose whole purpose is accessibility.
  *
@@ -11,7 +11,7 @@
  * up a change made by anything else, including another instance of this control.
  */
 import { useSyncExternalStore } from "react";
-import { Check, Contrast, Moon, Sun } from "lucide-react";
+import { Check, Moon, Sun } from "lucide-react";
 import {
   DEFAULT_THEME,
   THEME_ATTRIBUTE,
@@ -23,7 +23,6 @@ import {
 const ICON = {
   dark: Moon,
   light: Sun,
-  contrast: Contrast,
 };
 /** Re-read whenever anything writes the attribute, including the boot script. */
 function subscribe(onChange) {
@@ -64,7 +63,7 @@ export function ThemeToggle() {
       <div
         role="radiogroup"
         aria-label="Theme"
-        className="grid grid-cols-3 gap-1.5"
+        className="grid grid-cols-2 gap-1.5"
       >
         {THEME_META.map((t) => {
           const Icon = ICON[t.id];

@@ -2438,3 +2438,70 @@ frontend itself (ReScript, Kotlin/JS, etc.) - explicitly considered and explicit
 declined by the owner, since none has real support for the App Router/React Server
 Components this app is built on, and adopting one would be a rewrite of the rendering
 layer, not a conversion of it.
+
+## D64. THE CONTRAST THEME IS REMOVED. Light/dark is the whole preference surface, by owner request
+D34 shipped a third theme - `contrast`, "High contrast" in the toggle - alongside the
+committed dark identity and `light` ("Paper"). This reverses that: `THEMES` in
+`lib/theme.js` drops from `["dark", "light", "contrast"]` to `["dark", "light"]`, and
+every trace of the third option is deleted, not hidden. The owner's own framing is the
+reason, verbatim in spirit: a second selectable *design* was one too many - "just have
+one that's really good so the user never needs to switch" - while light/dark itself
+stays, because it is "the standard, expected pattern" and was never the complaint.
+Three toggles in a `role="radiogroup"` was the picker this app never needed; two is
+the pattern every other app already trained the reader on.
+
+**Why this is safe, not just permitted.** D34's own justification for shipping
+`contrast` was that dark's `--color-faint` sat sub-AA (1,606 failures at 3.75:1) and
+"brightening it everywhere would change what the app looks like," so the third theme
+carried the accessibility fix instead of the default. That premise no longer holds:
+D61 fixed `--color-faint` on the dark theme itself - a raised token plus the
+ground-scoped restatement (`.bg-surface-2`, `.bg-elevated`, `.bg-accent-wash`) - taking
+it from 2.44:1 to 4.59:1 on the wash and 3.36:1 to 4.71:1 on the surface, verified live
+across 12 routes at 375/390/430. The AA remedy `contrast` existed to provide is now
+built into the theme that ships to everyone by default, so removing the escape hatch
+loses no accessibility guarantee - confirmed again here with a fresh `axe-scan.mjs`
+pass and the committed `e2e/a11y.spec.js` color-contrast suite against both remaining
+themes, zero violations.
+
+**What was deleted, file by file.** `lib/theme.js`: `contrast` out of `THEMES`, its
+entry out of `THEME_CHROME` and `THEME_META`, and the header comment's framing of
+"the other two" rewritten - light is now the one reason a light/dark toggle exists in
+any app, not a survivor of a three-way split. `app/globals.css`: the entire
+`:root[data-theme="contrast"]` token block (surfaces, ink, the retuned semantic hues,
+the `grain-1`/`grain-2: transparent` special case, the TCI ramp) and the
+`:root[data-theme="contrast"] .bg-*` ground-scoped ink restatement, plus `contrast`'s
+entry in the three theme-toggle selection-state selector lists (now two).
+`components/ThemeToggle.jsx`: the `Contrast` icon import and its `ICON` map entry,
+and `grid-cols-3` to `grid-cols-2` - `THEME_META.map` already drives the rendered
+buttons and the description list, so trimming the data was the whole UI fix, exactly
+as the module's own header comment about one shared vocabulary promises. `e2e/a11y.spec.js`:
+the per-theme color-contrast loop drops from `["light", "contrast"]` to `["light"]`.
+`.claude/skills/visual-review/`: `SKILL.md` and `shoot.mjs` updated from three themes
+to two. Comments-only cleanup, no behavior change, in `components/ui.jsx`,
+`components/Brand.jsx`, `lib/chart-colors.js`, and `app/interaction.css`, which
+documented measured contrast ratios against a `contrast` ground that no longer exists.
+
+**The stale-localStorage case is not hypothetical, and it already degrades correctly.**
+Anyone who set `parquet:theme` to `"contrast"` before this change keeps that value in
+their browser; nothing in this reversal touches their storage. `parseTheme` and the
+inline boot script both gate on `THEMES.includes(...)`, so a value the array no longer
+contains takes the exact same path as any other unknown string - `sepia`, a typo, a
+future theme this app never ships - falling through to `DEFAULT_THEME` ("dark") rather
+than leaving `<html>` in a `data-theme="contrast"` state no CSS block matches. This was
+true before this change too (the reader was already written to distrust storage); D64
+adds a test (`lib/theme.test.js`, "degrades a stale 'contrast' value from before D64 to
+the default") pinning it, because a value this specific - one this app itself shipped
+and then retired - deserved a named case rather than living only inside the generic
+"anything else" assertions.
+
+**Kept, deliberately.** The light/dark toggle itself - the owner was explicit this is
+the standard pattern and stays. The one-accent-color restraint (D47/D48/D61) and the
+graceful-degradation ethos - this is a subtraction of a design, not a redesign; no
+token, no component, and no other preference changed. `DESIGN.md` now carries a short
+factual `## Themes` section (it previously documented none), naming exactly the two
+that ship and pointing at `lib/theme.js` as the single owner of the vocabulary.
+
+Rejected: keeping `contrast` in the codebase as a dead-but-selectable option, or
+quietly aliasing it to `dark` so old links or scripts referencing it "still work" -
+either would keep the exact complexity ("an alternative UI you can switch to") the
+owner asked to be rid of, just moved one layer down instead of actually gone.
