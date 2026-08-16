@@ -23,6 +23,7 @@ import {
 import { MetricGloss } from "@/components/MetricGloss";
 import { AwardBadge, GROUP_TONE, iconForAward } from "@/components/AwardBadge";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { photosEnabled } from "@/lib/photos";
 import { fmtValue } from "@/lib/ui";
 import { Onward } from "@/components/Onward";
 export const dynamic = "force-dynamic";
@@ -168,11 +169,17 @@ export default async function RecapPage() {
           <ul className="divide-y divide-border">
             {notableDecisions.map((d) => (
               <li key={d.transactionId} className="px-2.5 py-1.5">
-                <div className="flex items-baseline gap-2">
-                  <span className="w-9 shrink-0 figure text-meta text-secondary">
+                {/* `d.description` is a full transaction sentence (`describeTransaction`),
+                    the same string /commissioner's audit log prints - and the same reason
+                    it does not get `truncate`: a one-line cap was cutting real decisions
+                    mid-word ("Parquet Kings claimed Rashad Petrov ($25), d...", "You
+                    acquired Khris Middleton for Cam Thoma...", screenshotted live). The
+                    row has no fixed height, so it wraps instead of losing the sentence. */}
+                <div className="flex items-start gap-2">
+                  <span className="mt-0.5 w-9 shrink-0 figure text-meta text-secondary">
                     wk {d.week}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">
+                  <span className="min-w-0 flex-1 text-[12.5px] leading-snug text-ink">
                     {d.description}
                   </span>
                 </div>
@@ -201,11 +208,11 @@ export default async function RecapPage() {
           <ul className="disclosure-body divide-y divide-border border-t border-border">
             {routineDecisions.map((d) => (
               <li key={d.transactionId} className="px-2.5 py-1.5">
-                <div className="flex items-baseline gap-2">
-                  <span className="w-9 shrink-0 figure text-meta text-secondary">
+                <div className="flex items-start gap-2">
+                  <span className="mt-0.5 w-9 shrink-0 figure text-meta text-secondary">
                     wk {d.week}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[12.5px] text-ink">
+                  <span className="min-w-0 flex-1 text-[12.5px] leading-snug text-ink">
                     {d.description}
                   </span>
                 </div>
@@ -235,12 +242,21 @@ export default async function RecapPage() {
               href={`/drafts/${season}`}
               className="flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 transition-colors hover:bg-surface-2"
             >
-              <PlayerAvatar name={p.playerName} team={null} size="sm" />
+              {/* Same D73 gate as ValueAssetRow and /rank: a monogram disc repeated
+                  identically across every resolved pick (31 on a real trade-heavy
+                  season here) is decoration, not signal, so it renders only when this
+                  deploy has real photos on. */}
+              {photosEnabled() && (
+                <PlayerAvatar name={p.playerName} team={null} size="sm" />
+              )}
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
                   {p.playerName}
                 </span>
-                <span className="block truncate text-meta leading-tight text-secondary">
+                {/* Was `truncate`: label + position + owner on one line clipped real
+                    team names on this real league ("...Giddler on the Ro...",
+                    "...Sweet Home Wembanyama) · SF · Ol...", screenshotted live). */}
+                <span className="block text-meta leading-snug text-secondary line-clamp-2">
                   {p.label}
                   {p.position ? ` · ${p.position}` : ""}
                   {" · "}

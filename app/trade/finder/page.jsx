@@ -113,8 +113,15 @@ export default async function TradeFinderPage({ searchParams }) {
                     {/* WHEN they pay off, beside how they behave. The board is still
                         ordered on mutual fit alone - this is printed, never scored,
                         because "their window is opposite yours" is why a deal is
-                        possible rather than a rating of this one (D6). */}
-                    <span className="mt-0.5 block truncate figure text-micro leading-tight text-faint">
+                        possible rather than a rating of this one (D6). Was `truncate`:
+                        the window plus every behaviour tag on one line clipped mid-word
+                        on nearly every real card ("...Name chaser · R...", "...Pick
+                        hoarder · N...", "...Never tra...", "...High-vol..."),
+                        screenshotted live - the same shape of bug D72 fixed elsewhere,
+                        just on a line this page's own comment had already reasoned
+                        should print every tag rather than rank them. `line-clamp-2`
+                        keeps every tag instead of losing whichever ones land last. */}
+                    <span className="mt-0.5 block figure text-micro leading-snug text-faint line-clamp-2">
                       {r.valueWindow}
                       {r.sharesYourWindow === true && " · shares your window"}
                       {r.tags.length > 0 && ` · ${r.tags.join(" · ")}`}

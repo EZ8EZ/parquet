@@ -15,6 +15,7 @@ import {
 } from "@/components/ui";
 import { ExperimentBadge } from "@/components/ExperimentBadge";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { photosEnabled } from "@/lib/photos";
 import { fmtValue } from "@/lib/ui";
 export const dynamic = "force-dynamic";
 export const metadata = {
@@ -133,7 +134,13 @@ function Column({
 function PlayerLine({ p }) {
   return (
     <li className="flex items-center gap-2.5 border-b border-border py-1.5 last:border-0">
-      <PlayerAvatar name={p.name} playerId={p.playerId} size="sm" />
+      {/* Same D73 gate as ValueAssetRow, /rank and the drafts board: a monogram disc
+          repeated identically down every roster row (up to c.rosterSlots here) is
+          decoration duplicating the name already printed beside it, so it only
+          renders when this deploy has real photos on. */}
+      {photosEnabled() && (
+        <PlayerAvatar name={p.name} playerId={p.playerId} size="sm" />
+      )}
       <span className="min-w-0 flex-1">
         <span className="block truncate text-note font-semibold leading-tight text-ink">
           {p.name}

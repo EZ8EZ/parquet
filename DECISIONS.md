@@ -3416,3 +3416,187 @@ more skeptical statistical treatment overrule the historical measurement either
 (both were weighed as real, current dynasty-theory voices on opposite sides of the
 same question, used only to confirm the SHAPE of the claim is a genuine, live debate
 worth encoding rather than a settled consensus copied wholesale).
+
+## D75. THE SAME DENSITY PASS, ON THE PAGES D72 NEVER GOT TO - seven more real truncation bugs, two more monotonous avatar columns, and three pages confirmed clean a second time
+
+D72 fixed six list-heavy pages the owner's own complaint was actually about, and named
+the ones it had checked and found clean. This round did the pages that round did not
+reach, or reached before D73's photo-column and D74's age-curve work landed on top of
+them: `/recap`, `/about`, `/methodology`, `/trade`, `/trade/finder`, `/analyst`,
+`/lab` and its three real sub-pages (`/lab/counterfactual`, `/lab/regret`,
+`/lab/leverage` - the last one shipped this session and had never had a density pass
+at all), `/managers/compare`, an individual `/managers/[rosterId]` dossier, an
+individual `/drafts/[season]` board, and a fresh re-check of `/drafts`,
+`/drafts/grades` and `/deals` now that today's theme removal, tab bar, provenance
+rework and age curve have all landed on top of them. Same method as D72: screenshot
+every page at 390px first, against the real live league (NSL Fantasy Hoops) where the
+fixture provider's shorter synthetic names would not have surfaced the real bugs -
+several of these only clip on the league's OWN longest real names ("Sweet Home
+Wembanyama", "The Terror Twins", "Giddler on the Roof") and would have looked clean
+against the fixture alone.
+
+**REAL BUGS, FOUND AND FIXED, WITH THE EVIDENCE.**
+
+**`/recap` (`app/recap/page.jsx`).** Two truncating lines, both `d.description` -
+the exact same full-sentence string `describeTransaction` builds that D72 already
+fixed once on `/commissioner`'s audit log, independently re-broken here because this
+is a different render of the same data. Screenshotted clipping mid-word on the live
+league: "Parquet Kings claimed Rashad Petrov ($25), d...", "You acquired Khris
+Middleton for Cam Thoma...". Fixed the same way D72 fixed `/commissioner`: drop
+`truncate`, let the sentence wrap (the row was already a flexible height, not fixed).
+A second, separate truncation on the same page: the "Traded picks that became
+players" row's meta line (pick label + position + owner name) clipped real team names
+once tested against the live league's actual longest names - "...Giddler on the
+Ro...", "...Sweet Home Wembanyama) · SF · Ol...". Fixed with `line-clamp-2`. A third
+finding on the same page, not a truncation but the D72/D73 monotony pattern: that same
+row rendered a `PlayerAvatar` monogram on all 31 resolved picks on a real trade-heavy
+season, unconditionally - never gated behind `photosEnabled()` the way D73 gated
+`ValueAssetRow` and the `/rank` board. Fixed by gating it the same way.
+
+**`/trade` (`app/trade/page.jsx`).** The "Most motivated partners" row's meta line
+(TCI + value duration + now/later split) truncated real facts on a `truncate` line -
+the identical shape of bug D72 fixed on `/league`'s own window/TCI/RFI/posture line.
+Fixed with `line-clamp-2`. A second bug on the same row, found only once tested
+against the live league's real team names: the team name itself, sharing its line
+with a `PostureTag` chip, clipped to "Sweet Home Wembanya..." - the same shape D72
+fixed on `/managers`' card (a long name losing a fight with a fixed-width sibling for
+line space). Fixed with `line-clamp-2`.
+
+**`/trade/finder` (`app/trade/finder/page.jsx`).** The worst instance found this
+round: the partner board's behaviour-tag line (value window + shared-window flag +
+every behaviour tag + trade count) truncated on NEARLY EVERY CARD on the live league -
+"...Name chaser · R...", "...Pick hoarder · N...", "...Never tra...",
+"...High-vol...", "...Name c...". The file's own adjacent comment had already
+reasoned that a package name deserves two lines rather than one truncated line
+(`r.bestIdea`, already fixed); the tag line one span below it had not gotten the same
+treatment. Fixed with `line-clamp-2`.
+
+**`/managers/[rosterId]` (`app/managers/[rosterId]/page.jsx`), and the identical bug
+in `/managers/former/[ownerId]/page.jsx`.** The most severe finding of the round: the
+page's own h1 masthead - a manager's freely-chosen team name, via `PageHeader`'s
+`truncateTitle` prop - clipped to "Sweet Home Wem..." for "Sweet Home Wembanyama" on a
+real dossier. This is backward from `/roster`'s own established use of the same prop:
+`/roster` truncates `a.ownerName` (a short, bounded Sleeper username) and demotes the
+longer, unbounded team name to the smaller kicker line underneath - the safer of the
+two strings to risk clipping. This page had it the other way around: the long,
+user-chosen string was the one forced onto one line. Fixed by dropping
+`truncateTitle` entirely and letting the h1 wrap, matching how every other page title
+in this app already behaves. Same defect, same component misuse, found in
+`/managers/former/[ownerId]/page.jsx` too (not on the audit's original page list, but
+byte-identical `PageHeader` usage) - fixed there as well rather than left
+inconsistent. Second bug on `/managers/[rosterId]`: "Picks they bought back"'s line
+("Their own {label}, back from {fromName}") truncated real partner team names on FIVE
+separate dossiers screenshotted live - "...back from The Terror Twi...", "...back
+from Giddler on the...", "...back from kd...". Fixed with `line-clamp-2`. A third,
+UNRELATED pre-existing finding surfaced by this round's own verification requirement
+(axe-core clean on every page touched): the "Posture by season" chips' `opacity-80` on
+an already-muted text token failed axe's `color-contrast` rule in both themes,
+confirmed present even with every other fix in this entry reverted (`git stash`),
+i.e. not caused by anything above. Fixed by dropping the redundant `opacity-80` (the
+glyph and the word already carry the visual distinction from the season number; the
+extra dimming was pushing an already-muted token below its own contrast budget for no
+purpose the glyph doesn't already serve) - fixed identically in the former-manager
+dossier, which carries the same chip.
+
+**`/drafts/[season]` (`app/drafts/parts.jsx`, `BoardPickRow`) - never audited before,
+found two real problems.** First, the D72/D73 monotony pattern, present here because
+this component predates D73's fix and was never touched by it: `PlayerAvatar` on
+every one of a season's 42 picks, unconditionally, the same near-invisible
+monogram-disc decoration D72 removed from `/values` and D73 restored only behind
+`photosEnabled()`. Fixed by gating it the same way. Second, a genuine truncation bug
+this row already had before today, surfaced once tested against the live league: the
+right-aligned "used by / via" column truncated real team names -
+"Sweet Home We...", "The Terror Tw...", "Giddler on the...". The 34%-width cap on that
+column is deliberate (it protects the player-name column, the row's actual subject),
+but a clipped team name is lost information regardless of how the width was budgeted.
+Fixed with `line-clamp-2` on both lines within the same width cap.
+
+**`/lab/counterfactual` (`app/lab/counterfactual/page.jsx`) - gated for consistency,
+not because it was independently caught clipping.** Screenshotted first, honestly:
+every real name on this page's ~16-19 roster rows rendered in full, no visible
+truncation, so this is not a repeat of the recap/drafts truncation bugs above. But the
+same `PlayerAvatar` monogram rendered unconditionally down every row, which is the
+exact decoration-with-no-signal D72/D73 already ruled on - once two more unguarded
+instances turned up elsewhere this round (`/recap`, `/drafts/[season]`), leaving this
+third one as the only ungated `PlayerAvatar` list left in the app would have been the
+inconsistency, not the fix. Gated behind `photosEnabled()`.
+
+**A NEW SHARED MODULE WAS REQUIRED, NOT OPTIONAL: `lib/photos.js`.** Gating three
+Server Component pages behind `photosEnabled()` immediately broke all three -
+`components/PlayerAvatar.jsx` is `"use client"`, and Next.js refuses to invoke ANY
+export of a client module from server-side code, even a plain function with no
+client-only API in it ("Attempted to call photosEnabled() from the server but
+photosEnabled is on the client"). `ValuesList` and `RankingBoard` (D73's original two
+callers) never hit this because both are themselves client components. Fixed by
+extracting `photosEnabled()` into `lib/photos.js` (a plain, server-safe module) and
+having `PlayerAvatar.jsx` re-export it, so the two existing client callers needed no
+change and the three new Server Component callers (`app/recap/page.jsx`,
+`app/drafts/parts.jsx`, `app/lab/counterfactual/page.jsx`) import it from the
+server-safe location directly.
+
+**A FALSE POSITIVE, CAUGHT AND RULED OUT RATHER THAN FIXED ON A GUESS.** A
+full-page screenshot of an individual `/trade/finder` package view appeared to render
+only 1 of 3 "you send" assets under a "3 assets" header - looked exactly like a
+missing-row bug. Checked against the raw server-rendered HTML (not just the
+screenshot) before touching anything: all three `<li>` rows were genuinely present in
+the DOM. The apparent gap was a Playwright full-page-screenshot compositing artifact
+where this app's sticky bottom bar (the team switcher + Desk tab row) gets rendered
+into the composited image at more than one scroll position, visually occluding real
+content underneath it without removing it from the page. Confirmed the same artifact
+recurred on a `/trade/finder` board row later in the same session. No code changed for
+this one - screenshotting first caught it before it became a wasted fix.
+
+**PAGES CHECKED AND FOUND CLEAN, NOT SKIPPED.** `/about`: long-form editorial prose
+with headers, not stacked bordered cards - D72's Home-fold pattern does not apply to a
+page that was never a stack of same-weight boxes. `/methodology`: already uses the
+established numbered-disclosure fold (1 through 8, including a new closed "2a ·
+star-tier adjustment (D74)" section that integrated into the existing pattern without
+help), no truncation anywhere in the table or curve illustrations. `/analyst`: a small
+number of distinct prompt cards, no repeated decoration, no truncation - already the
+kind of "empty state that teaches its own intent" DESIGN.md asks for. `/lab` (index):
+three substantial, richly-differentiated cards; the repeated `FlaskConical` icon is a
+small category marker that costs no width and causes no truncation, not the
+D72 pattern. `/lab/regret`: the fixture provider reports zero scored weeks for every
+season (a fixture-data limitation, not a page bug - `last_scored_leg` is simply never
+set by the synthetic generator), so this page's actual populated state was verified
+against the real live league instead; clean, no truncation, the weekly bars carry real
+per-week signal rather than decoration. `/lab/leverage`: the brand-new page from this
+session's Positional Leverage Index work already had a real density pass baked in from
+its own construction - bounded label lengths, no monotonous decoration, no
+truncation. `/managers/compare`: a real two-column stat comparison with a disclosure
+link for the metric glossary, no truncation, no repeated decoration. `/drafts`,
+`/drafts/grades`, `/deals`: re-screenshotted fresh, specifically to check for
+regressions from everything else that shipped today (contrast-theme removal, the Desk
+tab row, the provenance rework, the age curve) - all three remain exactly as clean as
+D72 found them; nothing on any of the three needed a change.
+
+**Reused, not invented.** Every truncation fix above is `line-clamp-2` in place of
+`truncate` (D72's own established remedy for a real fact being cut, not a label) or,
+for the two full-sentence cases that already had D72's own `/commissioner` precedent,
+dropping `truncate` entirely and letting the sentence wrap. Every monotony fix is the
+identical `photosEnabled()` gate D73 already established, applied to the two places it
+had not yet reached. No new colour, no new disclosure mechanism, no new row shape.
+
+**Verified.** `pnpm lint` clean. `pnpm test`: **1028 passed (61 files)**, unchanged
+(no test files touched - every fix here is markup, not logic). `pnpm build` succeeds.
+Full `pnpm e2e` (`rm -rf .next` first, the known Turbopack dev-cache staleness gotcha
+this file has warned about before): **78 passed**, zero failures. `axe-scan` clean in
+both dark and light on every page changed (`/recap`, `/trade`, `/trade/finder`,
+`/managers/[rosterId]` on four different real rosters, `/managers/former/[ownerId]`,
+`/drafts/[season]`, `/lab/counterfactual`) and on every page checked and left alone
+(`/about`, `/methodology`, `/analyst`, `/lab`, `/lab/leverage`, `/lab/regret`,
+`/managers/compare`, `/drafts`, `/drafts/grades`, `/deals`). Screenshotted at 390px
+in both themes on every changed page, plus 375px and 430px spot-checks confirming no
+new horizontal overflow at either edge of the app's supported width range - all
+against the real live league, since several of the bugs above only clip on real names
+longer than the fixture's synthetic ones.
+
+Rejected: fixing `/lab/counterfactual`'s roster-row avatar because it looked
+independently broken (it did not - screenshotted first, gated only for consistency
+with D73's own rule, stated as such rather than invented as a new finding); treating
+the `/trade/finder` "only 1 of 3 assets" screenshot as a real bug without checking the
+underlying HTML first (would have been a wasted, wrong fix); fixing `/roster`'s own
+`truncateTitle` usage on `a.ownerName` to match this round's `/managers/[rosterId]`
+change - `/roster` was not on this round's page list, and its existing choice (risk
+the shorter, bounded string, not the longer one) is already the correct pattern this
+round copied elsewhere, not a bug to touch.
