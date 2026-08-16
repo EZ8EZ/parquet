@@ -129,10 +129,21 @@ export default async function TradePage() {
                       size="sm"
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-body font-semibold leading-tight text-ink">
+                      {/* Was `truncate`: this row's own PostureTag chip sits beside the
+                          name, so the longest real team name in the league clipped
+                          ("Sweet Home Wembanya...", screenshotted live) the same way
+                          /managers' card did before D72 gave the team name its own
+                          full-width line. `line-clamp-2` keeps the whole name instead. */}
+                      <span className="block text-body font-semibold leading-snug text-ink line-clamp-2">
                         {t.teamName ?? t.ownerName}
                       </span>
-                      <span className="block truncate figure text-meta leading-tight text-secondary">
+                      {/* Was `truncate`: this line's four facts (TCI, value duration,
+                          now/later split) were clipping mid-percentage on real rows
+                          ("...% now / 2..." for "24% now / 22% later"), the same shape of
+                          bug D72 fixed on /league's own window/TCI/RFI/posture line -
+                          real information cut, not a label. `line-clamp-2` keeps every
+                          fact instead of losing whichever one lands last. */}
+                      <span className="block figure text-meta leading-snug text-secondary line-clamp-2">
                         TCI {t.tci} · value ~{t.rosterDuration.toFixed(1)}s out
                         · {Math.round(t.nowShare * 100)}% now /{" "}
                         {Math.round(t.laterShare * 100)}% later

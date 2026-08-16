@@ -124,7 +124,17 @@ export default async function ManagerDetailPage({ params }) {
         }
         kicker={isMe ? "Your own file" : "Dossier"}
         title={p.teamName ?? p.displayName}
-        truncateTitle
+        /* NOT `truncateTitle`: a manager's freely-chosen team name is the whole
+           masthead of this page, and `truncate` was clipping it mid-word on a
+           real roster ("Sweet Home Wem..." for "Sweet Home Wembanyama",
+           screenshotted live) - the one thing a reader landing on this dossier
+           came here to read. `/roster`'s own PageHeader keeps `truncateTitle`
+           deliberately, but on `a.ownerName` (a short Sleeper username) with the
+           longer team name demoted to the smaller kicker line underneath - the
+           safer of the two strings to risk clipping. This page had it backwards:
+           the long, unbounded string was the one forced onto one line. Letting
+           the h1 wrap costs nothing structurally; every other page title in this
+           app already wraps rather than truncates. */
       >
         <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
           <span className="truncate">{p.displayName}</span>
@@ -197,7 +207,15 @@ export default async function ManagerDetailPage({ params }) {
             {buybacks.map((b, i) => {
               const body = (
                 <>
-                  <span className="block truncate figure text-body font-semibold leading-tight text-ink">
+                  {/* Was `truncate`: "Their own {label}, back from {fromName}" clipped
+                      mid-word on every real roster with a longer partner name
+                      ("...back from The Terror Twi...", "...back from Giddler on
+                      the...", "...back from kd...", screenshotted on five different
+                      dossiers live) - the exact shape of bug D72 found, just on a
+                      sentence this section exists specifically to state in full.
+                      `line-clamp-2` keeps the whole fact instead of losing whichever
+                      team name happens to be longer. */}
+                  <span className="block figure text-body font-semibold leading-snug text-ink line-clamp-2">
                     Their own {b.label}, back from {b.fromName}
                   </span>
                   <span className="block truncate text-meta leading-tight text-secondary">
@@ -376,7 +394,14 @@ export default async function ManagerDetailPage({ params }) {
                 )}
               >
                 {s.season}
-                <span className="inline-flex items-baseline gap-1 text-meta font-medium not-italic opacity-80">
+                {/* Was `opacity-80` on top of an already-muted token - axe's own
+                    color-contrast check (run as part of this round's verification,
+                    pre-existing and unrelated to the truncation/density fixes above)
+                    failed it against `bg-elevated` in both themes. The glyph and the
+                    word already carry the visual distinction from the season number;
+                    dimming it further past the token's own contrast budget wasn't
+                    doing anything the glyph doesn't already do. */}
+                <span className="inline-flex items-baseline gap-1 text-meta font-medium not-italic">
                   <PostureGlyph posture={s.posture} />
                   {s.posture}
                 </span>

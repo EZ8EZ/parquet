@@ -94,7 +94,8 @@ export default async function FormerManagerDetailPage({ params }) {
         }
         kicker="Dossier · former manager"
         title={p.teamName ?? p.displayName}
-        truncateTitle
+        /* Same fix as `/managers/[rosterId]`, same shared PageHeader misuse: NOT
+           `truncateTitle` on a freeform team name (see that file's own note). */
       >
         <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
           <span className="truncate">{p.displayName}</span>
@@ -204,7 +205,9 @@ export default async function FormerManagerDetailPage({ params }) {
                 )}
               >
                 {s.season}
-                <span className="inline-flex items-baseline gap-1 text-meta font-medium not-italic opacity-80">
+                {/* Same pre-existing color-contrast fix as `/managers/[rosterId]` -
+                    see that file's own note. */}
+                <span className="inline-flex items-baseline gap-1 text-meta font-medium not-italic">
                   <PostureGlyph posture={s.posture} />
                   {s.posture}
                 </span>
