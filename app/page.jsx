@@ -237,11 +237,13 @@ export default async function HomePage() {
             state for a weekly visitor was ~190px of labelled empty box, second element
             on the front page - which is the anti-information D40 already ruled against
             in StreakPanel and then let back in here.
-  
-            The beacon below renders nothing. It keeps the marker advancing so the fact
-            survives even though the panel does not: `homeNext` still reads whether
-            anything moved, and a panel revived against a live marker starts with
-            something to say. */}
+
+            The beacon below renders nothing. It posts on every mount so the marker CAN
+            advance, but `shouldAdvanceMarker` (lib/digest) now floors how often it
+            actually does - the fix SHELVED.md named as the condition for a revival.
+            `homeNext` still reads whether anything moved off the same marker, and the
+            full league-wide diff - not just yours - now has its own page at
+            /lab/pulse, which the floor is what makes worth visiting twice. */}
       <DigestBeacon metrics={digest.nextMetrics} />
 
       {/* YOUR SEASON, in figures. Four numbers in one card's worth of height rather
