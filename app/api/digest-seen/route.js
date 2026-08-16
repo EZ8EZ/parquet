@@ -4,6 +4,8 @@ import {
   digestCookieName,
   encodeMarker,
   MAX_TRACKED_ROSTERS,
+  readMarker,
+  shouldAdvanceMarker,
 } from "@/lib/digest";
 import { readMarkerIdentity } from "@/lib/auth/server";
 export const dynamic = "force-dynamic";
@@ -20,7 +22,9 @@ const Body = z.object({
     .max(MAX_TRACKED_ROSTERS),
 });
 /**
- * Advance the "last seen" marker. Same cookie mechanics as `viewing-as`: readable,
+ * Advance the "last seen" marker - but only when `shouldAdvanceMarker` says the floor
+ * has actually elapsed (see lib/digest's own header for why the floor exists at all:
+ * SHELVED.md S2's revival condition). Same cookie mechanics as `viewing-as`: readable,
  * lax, one year, so every server component picks it up on the next render.
  *
  * The timestamp is taken HERE rather than accepted from the caller, because a marker the
@@ -48,13 +52,24 @@ export async function POST(req) {
     return NextResponse.json({ error: "invalid metrics" }, { status: 400 });
   }
   const metrics = parsed.data.metrics;
-  const seenAt = Date.now();
-  const res = NextResponse.json({ ok: true, seenAt });
+  const now = Date.now();
+  const existing = await readMarker();
+  // Under the floor: the beacon still fired (it always does, fire-and-forget), but the
+  // marker itself does not move, so a reader who reloads twice in the same sitting keeps
+  // diffing against the SAME baseline instead of resetting it to "just now" each time.
+  if (!shouldAdvanceMarker(existing, now)) {
+    return NextResponse.json({
+      ok: true,
+      advanced: false,
+      seenAt: existing?.seenAt ?? null,
+    });
+  }
+  const res = NextResponse.json({ ok: true, advanced: true, seenAt: now });
   // Filed under the reader's own identity (seat, else lens), so switching who you
   // are looking at can no longer stamp "seen" on someone else's behalf - see
   // `digestCookieName`. Cookie-derived, so this stays a corpus-free write.
   const name = digestCookieName(await readMarkerIdentity());
-  res.cookies.set(name, encodeMarker({ seenAt, metrics }), {
+  res.cookies.set(name, encodeMarker({ seenAt: now, metrics }), {
     httpOnly: false,
     sameSite: "lax",
     path: "/",

@@ -3416,3 +3416,124 @@ more skeptical statistical treatment overrule the historical measurement either
 (both were weighed as real, current dynasty-theory voices on opposite sides of the
 same question, used only to confirm the SHAPE of the claim is a genuine, live debate
 worth encoding rather than a settled consensus copied wholesale).
+
+## D75. THE PULSE - S2's own revival condition, finally met, and why nothing else researched cleared the step-change bar
+
+The owner's ask for this round was explicit and different in kind from the rest of
+this session: not another polish pass, a genuine step change - something a manager
+could not see at all today, researched against what Sleeper and the dedicated dynasty
+tools actually do, and held to this app's own restraint rather than imitated wholesale.
+
+**WHAT WAS RESEARCHED, AND WHAT IT ACTUALLY FOUND.** Three real Sleeper differentiators
+(trade block, activity feed, waiver/FAAB UX) and the dedicated dynasty-value-consensus
+space, checked live rather than assumed. The single most load-bearing finding: **every
+crowd-consensus dynasty tool named as a candidate - KeepTradeCut, FantasyCalc,
+DynastyProcess - is a fantasy FOOTBALL tool.** FantasyCalc's undocumented
+`api.fantasycalc.com/values/current` endpoint is real and reachable, and KeepTradeCut
+confirms in its own FAQ that it has no API and its own terms forbid scraping - but
+both price NFL players, not NBA ones, so neither is usable here regardless. The
+NBA-specific equivalents that do exist (Dynatyze, Court Consensus, OneNumberHoops,
+DynastyDaily, Hashtag Basketball) were the ones actually worth weighing, and D70
+already put Hashtag Basketball's own reachability to the test three days earlier and
+got HTTP 403 on every attempt - unchanged this round. Building a live "your model vs.
+the market" surface on any of these would mean a scraper against an undocumented,
+unlicensed, un-uptime-guaranteed third party - exactly the maintenance risk SHELVED.md's
+S1 got shelved for, on a feature this app does not otherwise have anywhere. D70's own
+audit already did the honest version of this comparison once, by hand, as a point-in-
+time finding (the sophomore-pedigree cohort: Harper, Edgecombe, Bailey, all running well
+behind external consensus for a named, undisclosed-to-the-data reason). Turning that
+into a live, permanent surface would either need a data source this environment cannot
+reach reliably or a hand-curated snapshot that goes stale the moment next year's rookie
+class lands - the identical failure `tierOf()` (S6, SHELVED.md) was deleted for: a
+second system quietly drifting out of sync with the one it was supposed to check.
+**Rejected outright, and not revisited**, for that reason.
+
+**THE POSITIONAL LEVERAGE INDEX INTEGRATION WAS REAL BUT TOO SMALL FOR THIS ROUND'S
+BAR.** Surfacing `/lab/leverage`'s own read on `/trade/finder` - "this deal would move
+your leverage at PF from X to Y" - is a genuine, buildable, zero-new-data-source
+integration, and a later round should still do it. It was set aside here specifically
+because it is an extension of a metric this same session already shipped a few hours
+earlier, and the owner's ask was pointedly for something that does NOT read as more of
+today's own arc.
+
+**WHAT ACTUALLY CLEARED THE BAR: `lib/digest` WAS ALREADY BUILT FOR THIS, AND WAS
+SITTING DORMANT FOR ONE PRECISE, NAMED REASON.** SHELVED.md's S2 killed the "since your
+last visit" Home panel for burning its own baseline on the first render: load once and
+it has nothing to compare against, reload thirty seconds later and it has "nothing has
+moved since just now." The entry names its own revival condition in so many words - "the
+baseline is anchored to something other than 'last page view' - a stored last-*session*
+timestamp with a floor of, say, twelve hours." Nobody had done that yet. Everything else
+S2 needed already existed and had for two rounds: `buildDigest` computes a genuinely
+LEAGUE-WIDE diff - every trade, every traded pick that resolved into a player, and every
+roster whose TCI or Fragility crossed a five-point threshold, across every roster in the
+league, not just the viewer's own - it was simply never rendered as that, because the
+one page that read it was Home, framed around one identity's own "since you were here."
+
+**THE FIX IS THE ONE NAMED, NOTHING MORE.** `shouldAdvanceMarker` (`lib/digest/index.js`)
+and its `DIGEST_ADVANCE_FLOOR_MS` (twelve hours, the exact figure SHELVED.md itself
+suggested) refuse to move the marker forward until the floor has elapsed since the last
+time it did; a marker that does not exist yet (a genuine first visit) still bootstraps
+immediately, so a reader is never stuck refusing its own first baseline. `/api/digest-
+seen` now reads the existing marker before writing and skips the cookie write entirely
+when the floor has not elapsed - the beacon (`components/DigestBeacon.jsx`) still fires
+on every mount exactly as before, unconditionally, because the floor belongs to the
+route that owns the cookie, not the client that cannot read it. `homeNext()`'s own
+"did anything move" read is unaffected in kind, only in cadence: it now answers against a
+window that actually had time to contain something, which is a strictly more honest
+signal than the one it had.
+
+**`/lab/pulse` IS THE FULL LEAGUE-WIDE VIEW, SHIPPED WHERE AN UNPROVEN PRESENTATION
+BELONGS.** Trades, resolved picks, and TCI/RFI moves, all league-wide, all already
+computed by `buildDigest` - a reader who has never opened a single dossier can now see
+that another manager's TCI or RFI crossed the five-point threshold without visiting
+their dossier directly to notice it, framed
+in this app's own descriptive voice (`describeTransaction`'s existing "Trade - X sent Y;
+Z sent W," not a rewrite) rather than Sleeper's raw event log. **This is deliberately not
+a marketplace, a chat, or an activity feed cloned wholesale** - Sleeper already has all
+three, and duplicating any of them would be exactly the scope creep the owner's framing
+warned against. What it adds instead is what no competitor - Sleeper or the dynasty-
+value sites researched above - does: reading a raw move through this app's own analytical
+lens, past "traded away" to what it did to a roster's revealed shape. Every metric move
+is printed as a number and a direction only, never colored green or red and never called
+good or bad on its own - the identical discipline D61 already fixed everywhere else in
+the app (`fragilityTone`: a number is a conditioned alarm about a specific risk, never a
+grade on a category) and this page inherits it rather than reinventing a verdict.
+Registered once in `lib/lab/index.js`'s `EXPERIMENTS`, reachable only from `/lab`,
+matching D54's and D68's own standard: the floor mechanic and this presentation have not
+been lived with across a season, so promotion is a later round's decision, earned the
+same way TCI and RFI earned theirs, not assumed here.
+
+**A REAL BUG CAUGHT BEFORE SHIPPING, THE SAME WAY D71 CAUGHT ITS OWN NORMALIZATION
+MISTAKE.** The first cut put each list inside a padded `Card` with per-row bottom
+borders. `/deals` already solved exactly this list shape - a `divide-y` bordered
+container of `<li><Link>` rows at `min-h-11` - and reusing it instead is what this page
+now does; the padded-Card draft is not in the shipped file. Separately, axe-core caught a
+real `heading-order` violation live: `PageHeader` renders an `h1` and `EmptyState` an
+`h3`, and the first-visit and quiet states had nothing in between - the identical latent
+defect axe found, unprompted, on `/lab/regret`'s own empty state during this same
+verification pass (pre-existing there, left alone - out of scope for this round to fix
+elsewhere). Fixed on this page with a plain `SectionHeader` ("What changed," an `h2`)
+ahead of every state, which also reads as a real label rather than a pure accessibility
+patch.
+
+**Verified**: `pnpm lint` clean; `pnpm test` 1033/61 (+5, all in `lib/digest/digest.test.js`
+against `shouldAdvanceMarker`, none of them synthetic - each one pins a real floor
+boundary: the instant after, the instant of, and the instant past `DIGEST_ADVANCE_FLOOR_MS`,
+plus the null-marker bootstrap and a clock running backwards); `pnpm build` succeeds after
+`rm -rf .next`; full e2e suite (78 specs) green from a clean Turbopack cache; axe-core
+clean on `/lab/pulse` in both the first-visit and changes states, both themes, after the
+heading-order fix above; screenshots at 390px in dark and light confirm the empty state,
+the trade/pick/move lists, and the overflow captions all render as intended.
+
+**Rejected**: a live scrape of any NBA dynasty-consensus site (no NBA-specific site with a
+documented API exists, and the football ones that do have undocumented endpoints price
+the wrong sport entirely - see above); a hand-curated "market says" snapshot standing in
+for one (the identical decaying-second-system failure `tierOf()` was deleted for);
+surfacing Positional Leverage on `/trade/finder` this round (real and worth doing, just
+too close to today's own already-shipped arc to read as the asked-for step change);
+promoting `/lab/pulse` straight to Home or the primary nav (the floor mechanic and this
+presentation have not earned that the way TCI and RFI did - D54's bar, applied here on
+purpose rather than skipped because the underlying diff engine is old); fixing
+`/lab/regret`'s own latent heading-order defect in this pass (real, but a different
+page's bug, found as a side effect of verifying this one - named here so the next round
+does not have to rediscover it, not silently folded into an unrelated diff).
