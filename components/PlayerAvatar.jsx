@@ -102,16 +102,15 @@ function initials(name) {
 }
 const SIZES = { sm: 32, md: 40, lg: 56 };
 /**
- * Whether this deploy renders real photos rather than monograms. Exported so a
- * dense list (many identical avatars at once, e.g. `/values`, `/rank`) can decide
- * whether to render the avatar column AT ALL: a real photo repeated 60 times is
- * recognition value, a generic monogram repeated 60 times is the exact "same
- * decoration with no information" clutter a density pass correctly strips out.
- * Same env var PlayerAvatar itself reads, kept in one place rather than two.
+ * Re-exported from `lib/photos.js` (a plain, server-safe module) rather than
+ * defined here: this file is `"use client"`, and Next.js refuses to call ANY
+ * export of a client module from server-side code - a Server Component that needs
+ * this check (app/drafts/parts.jsx, app/lab/counterfactual/page.jsx,
+ * app/recap/page.jsx) has to import it from lib/photos.js directly instead. Kept
+ * importable from here too so the two existing client callers (`ValuesList`,
+ * `RankingBoard`) don't need to change.
  */
-export function photosEnabled() {
-  return process.env.NEXT_PUBLIC_USE_PLAYER_PHOTOS === "true";
-}
+export { photosEnabled } from "@/lib/photos";
 export function PlayerAvatar({
   name,
   team,

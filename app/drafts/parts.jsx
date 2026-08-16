@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ChevronRight, Hourglass, MoveRight } from "lucide-react";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { photosEnabled } from "@/lib/photos";
 import { Tag } from "@/components/ui";
 import { cn } from "@/lib/ui";
 import { pickKey } from "@/lib/tradegraph";
@@ -181,12 +182,21 @@ export function BoardPickRow({ p, highlighted }) {
         </span>
       </span>
 
-      <PlayerAvatar
-        name={p.playerName ?? "?"}
-        team={p.team}
-        playerId={p.playerId}
-        size="sm"
-      />
+      {/* Same call as D73 made for ValueAssetRow and the /rank board: a monogram disc
+          repeated across all 42 picks on a season board is pure decoration duplicating
+          the name printed beside it (D72's own finding), so it only renders when this
+          deploy has real photos on - a real, different face per pick is recognition,
+          not decoration, and earns its place. This row never had the fix applied when
+          D72/D73 shipped - it renders through a separate component from ValuesList's
+          and RankingBoard's. */}
+      {photosEnabled() && (
+        <PlayerAvatar
+          name={p.playerName ?? "?"}
+          team={p.team}
+          playerId={p.playerId}
+          size="sm"
+        />
+      )}
 
       <span className="min-w-0 flex-1">
         <span className="block truncate text-body font-semibold leading-tight text-ink">
@@ -199,17 +209,23 @@ export function BoardPickRow({ p, highlighted }) {
         </span>
       </span>
 
+      {/* Was `truncate` on both lines: real team names clip on the live league
+          ("Sweet Home We...", "The Terror Tw...", "Giddler on the...",
+          screenshotted on a real 42-pick board) - the 34% cap is deliberate (it
+          protects the player name column, the row's actual subject) but a clipped
+          team name is still lost information, not saved space. `line-clamp-2` on
+          each line keeps the whole name within the same width budget. */}
       <span className="max-w-[34%] shrink-0 text-right">
         <span
           className={cn(
-            "block truncate text-meta leading-tight",
+            "block leading-snug line-clamp-2",
             p.isMine ? "font-semibold text-accent-text" : "text-muted",
           )}
         >
           {p.usedByName ?? "-"}
         </span>
         {p.wasTraded && (
-          <span className="block truncate text-meta leading-tight text-info">
+          <span className="block leading-snug text-info line-clamp-2">
             via {p.originalRosterName}
           </span>
         )}
