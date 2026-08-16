@@ -39,6 +39,7 @@ import {
   syncCustomOrder,
 } from "@/lib/rankings/customOrder";
 import { Card, DeltaValue, EmptyState, SectionHeader } from "@/components/ui";
+import { PlayerAvatar, photosEnabled } from "@/components/PlayerAvatar";
 import { cn, fmtValue } from "@/lib/ui";
 // Row pitch: 64px row (h-16) + 4px gap (gap-1). The drag math below assumes
 // every row is exactly this tall, so if the row markup's height classes ever
@@ -414,14 +415,30 @@ export function RankingBoard({ players, scoring }) {
                 {i + 1}
               </span>
               {/*
-                  NO AVATAR DISC HERE ANY MORE. Every row already carries a drag
-                  handle, a rank number and a value+tier column of fixed width - a
-                  32px monogram circle on top of that was the single biggest fixed
-                  cost left in the row, and it duplicated the name printed right
-                  beside it. Freeing that width (plus the tier fix below) is what
-                  actually stops names and the "cons #NN" meta from truncating,
-                  not shrinking either one further.
+                  NO MONOGRAM DISC HERE. Every row already carries a drag handle, a
+                  rank number and a value+tier column of fixed width - a 32px
+                  monogram circle on top of that was the single biggest fixed cost
+                  left in the row, and it duplicated the name printed right beside
+                  it. Freeing that width (plus the tier fix below) is what actually
+                  stops names and the "cons #NN" meta from truncating, not shrinking
+                  either one further.
+
+                  A REAL PHOTO IS DIFFERENT, so it is not gone unconditionally: see
+                  `photosEnabled` (components/PlayerAvatar.jsx). Off (the default,
+                  D39), this stays exactly the monogram-free row above. On, a real
+                  face is recognition value a reader uses, not decoration repeating
+                  the name - so it renders, at the same 32px this row's height
+                  arithmetic already has room for.
                 */}
+              {photosEnabled() && (
+                <PlayerAvatar
+                  name={p.fullName}
+                  team={p.team}
+                  playerId={p.playerId}
+                  size="sm"
+                  className="shrink-0"
+                />
+              )}
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5">
                   <span className="truncate text-[13px] font-semibold leading-tight text-ink">
