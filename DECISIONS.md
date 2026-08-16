@@ -3721,3 +3721,120 @@ underlying HTML first (would have been a wasted, wrong fix); fixing `/roster`'s 
 change - `/roster` was not on this round's page list, and its existing choice (risk
 the shorter, bounded string, not the longer one) is already the correct pattern this
 round copied elsewhere, not a bug to touch.
+
+## D77. THE INTEGRATION D75 NAMED AND SET ASIDE - Positional Leverage now reads on
+/trade/finder, scoped to the one roster the page is actually about
+
+D75 researched a genuine step change, found one (`/lab/pulse`), and named a second,
+smaller idea it declined to build in the same round: surfacing the Positional Leverage
+Index's (D68) own read directly on a suggested package - "this deal would move your
+leverage at PF from X to Y... real and buildable... a later round should still do it."
+It was set aside there specifically because it was an extension of a metric that same
+session had shipped a few hours earlier, not because it was unbuildable. This round is
+that later round, and the integration is exactly as clean as D75 assumed - the honest
+finding here is about SCOPE and FORMAT, not about a hidden obstacle.
+
+**WHAT IT COMPUTES.** For a suggested package on `/trade/finder`, the viewer's own
+Positional Leverage score (`buildLeverageProfile`, unchanged) is read twice: once
+against the roster as it stands, once against the same roster with the package's
+`give` assets subtracted and `get` assets added at whichever position(s) they carry.
+Both reads are the identical function `/lab/leverage` itself calls - no new formula,
+no new calibration constant, nothing invented. The line printed is a plain before ->
+after on that one existing 0-100 scale, e.g. real output against the fixture league's
+"Draft Vault" partner: **`LeBron James + Julius Randle + Scottie Barnes for Trae Young
++ Kyrie Irving` moves the viewer's Positional Leverage from 71 to 49, at PG, SF and
+PF** - a real, three-position swing on a real three-for-two package, not a synthetic
+example.
+
+**WHY THE LEAGUE'S OWN POOLS NEVER NEED RECOMPUTING PER PACKAGE**, which is what keeps
+this cheap on a page that can render several packages at once. `leaguePositionPools`
+totals every rostered asset's value BY POSITION, LEAGUE-WIDE. A trade between two
+rosters already in this league moves who OWNS value at a position; it does not create
+or destroy value at that position leaguewide. So `leagueSharePos`, `scarcityByPos`,
+`replacementByPos` and `topByPos` are IDENTICAL before and after any package this
+finder proposes - the only thing that can move is the viewer's own `ownShare`, which
+is five numbers' worth of arithmetic. `lib/tradefinder/leverage.js` is the whole
+implementation: `applyPackageToByPosition` adjusts the viewer's `byPosition` mix
+by the package's give/get, `leverageShiftFor` is the pure before/after comparison
+(mirrors `fragilityNoteFor`'s shape one file over), and `packageLeverageShift` wires
+the two together. `findTrades` computes the league pools ONCE per request and attaches
+`leverageShift` to every package alongside the existing `fragility` field - the same
+place, the same pattern, no new page-level plumbing.
+
+**ONE GENUINE SHARED-COMPUTATION TOUCH TO `/lab/leverage`'s OWN MODULE**, the kind D68
+reserved room for: `leaguePositionPools(h)` gained a second, optional parameter -
+`leaguePositionPools(h, analyses = leagueValueRanking(h))` - so a caller that already
+paid for a `leagueValueRanking` pass (`findTrades`'s own `board(h)`, two lines above
+where the pools are now built) can hand it in rather than pay for the identical
+league-wide ranking a second time. The pool math itself is untouched; `/lab/leverage`
+itself still calls the function with no second argument and gets the exact behaviour
+it always had. No other line on `/lab/leverage` changed.
+
+**SCOPED TO THE VIEWER'S OWN ROSTER, ON PURPOSE - D75's explicit instruction, followed
+rather than reinterpreted.** `partnerBoard` (the `/trade/finder` root, ranking all
+fourteen leaguemates by room) was deliberately left untouched. That view already
+compresses each leaguemate to one `line-clamp-2` headline - the exact density D72 and
+D76 spent a full day fixing - and it has no per-package detail to compute a leverage
+delta FROM in the first place (`partnerBoard` skips `evaluateTrade` and never expands
+past one best idea per row, by its own existing design). The integration lives only on
+the per-partner package list and the expanded package detail, where a package's give
+and get are already fully in hand.
+
+**WHY THE LINE IS THE EXISTING 0-100 SCORE, NOT A NEW PER-POSITION ONE.** D75's own
+phrasing ("leverage at PF from X to Y") reads as if a single position could carry its
+own 0-100 number, but no such figure exists anywhere in this codebase - only the
+whole-roster score `buildLeverageProfile` already computes and calibrates against
+`LEVERAGE_REF`. Inventing a second, position-scoped 0-100 scale to match the letter of
+that phrasing would be exactly the "new invented format" this round was told not to
+ship, and it would need its own calibration argument (D68's own bar for shipping a
+number at all) that nothing here has done the work to earn. The roster's own score,
+read twice, at the position(s) the trade actually touches, says the same thing D75
+meant without a second scale nobody has calibrated.
+
+**THE THRESHOLD IS BORROWED, NOT INVENTED.** `LEVERAGE_SHIFT_MIN = 1` - the smallest
+unit the existing 0-100 scale can show - suppresses the line whenever a package would
+not even move what `/lab/leverage` itself would print. This is the identical role
+`SPOF_SHIFT_MIN` already plays for the Fragility note one file over, at the value
+appropriate to THIS scale rather than copied verbatim from that one. A pick-for-pick
+swap, or any package that touches no player at all, reports `null` and prints nothing
+- an omitted line is honest; a "no change" line on every package would be exactly the
+clutter this app spent the previous round removing.
+
+**NEVER A VERDICT (D6, D19), THE SAME DISCIPLINE `FragilityLine` NEXT TO IT ALREADY
+KEEPS.** The line states a number and the position(s) it moved at - "Positional
+Leverage: 71 to 49, at PG, SF and PF" - and nothing about whether that move helps.
+Gaining leverage at a position nobody in this league wants to deal with you about is
+not obviously a win, and losing it at a position you were never trading from anyway is
+not obviously a cost; this is a supply-side shape read, not a grade, and the wording
+and the (lack of) colour both say so. `leverageShiftFor` is tested against the same
+banned-word list `fragilityNoteFor`'s own suite already checks.
+
+**Verified.** `pnpm lint` clean. `pnpm test`: baseline was 1033 passed (61 files);
+now **1045 passed (62 files)** - the +12 are `lib/tradefinder/leverage.test.js`,
+covering the pure comparison (position ordering, the `LEVERAGE_SHIFT_MIN` floor, both
+missing-score guards, the banned-verdict-word check) and the roster arithmetic against
+the real fixture league (a pure pick swap touches nothing; a multi-piece package
+names every position it actually moves; `findTrades` attaches either a real shift or
+an explicit `null` to every package, and recomputing independently lands on the exact
+same note). `pnpm build` succeeds after `rm -rf .next`. Full `pnpm e2e` (`rm -rf
+.next` first, the known Turbopack dev-cache staleness gotcha): **78 passed**, zero
+failures. `axe-scan` clean in both dark and light on `/trade/finder?with=<partner>`
+(package list) and `/trade/finder?with=<partner>&pkg=<id>` (expanded detail).
+Screenshotted at 390px in both themes against the real fixture league's own "Draft
+Vault" partner, confirming the line renders identically in each theme with no second
+accent colour introduced (D47, D61, D64) - the one link this integration adds
+(`Positional Leverage`, on the expanded detail view only) uses the same
+`text-accent-text` treatment every other in-body link on this page already uses.
+
+**Rejected:** a per-position 0-100 leverage score, decomposed from the existing
+formula, to match D75's phrasing more literally (a new invented number this round was
+explicitly told not to ship - see above); recomputing `leaguePositionPools` fresh
+inside `packageLeverageShift` per package (unnecessary - the pools are invariant under
+a two-roster trade, so one league-wide pass per page request is exactly enough, the
+same reasoning `replacementValue` and `conviction` already apply one function above
+this one); surfacing a leverage delta on `partnerBoard`'s fourteen-row list (no
+per-package detail to compute FROM there, and the row is already at its density
+ceiling per D72/D76); showing every one of a viewer's fourteen leaguemates' OWN
+leverage change from a package aimed at only one of them (D75's instruction was
+explicit - this is a page about the trade in front of the viewer, not a league-wide
+pass nobody asked this screen to run).
