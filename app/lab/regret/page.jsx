@@ -391,6 +391,10 @@ export default async function RegretPage({ searchParams }) {
     return (
       <div>
         {header}
+        {/* A real h2 before the empty state - EmptyState's own heading is an h3,
+            and skipping straight from PageHeader's h1 to it is the same
+            heading-order gap axe-core caught on /lab/pulse (D75). */}
+        <SectionHeader title="Slot par" />
         <EmptyState title="No season to read">
           This league has no scored weeks on record yet.
         </EmptyState>
@@ -405,6 +409,7 @@ export default async function RegretPage({ searchParams }) {
           seasons={options.map((o) => o.season)}
           active={chosen.season}
         />
+        <SectionHeader title="Slot par" />
         <EmptyState title={`${chosen.season} has not been played`}>
           The league reports no scored weeks for this season, so there are no
           lineups to read. Nothing here is estimated to fill the gap.
