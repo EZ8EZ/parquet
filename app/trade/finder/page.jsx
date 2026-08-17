@@ -343,6 +343,7 @@ export default async function TradeFinderPage({ searchParams }) {
                   )}
                   <ConvictionLine notes={p.conviction} />
                   <FragilityLine note={p.fragility} />
+                  <LeverageLine shift={p.leverageShift} />
                 </Link>
               </li>
             ))}
@@ -420,6 +421,32 @@ function FragilityLine({ note }) {
       </span>
       {note.after.name} at {share}% of startable value afterwards, from{" "}
       {Math.round(note.before.damageShare * 100)}% on {note.before.name} today.
+    </p>
+  );
+}
+/**
+ * The one Positional Leverage fact a package can honestly state (D75): what accepting
+ * it would do to the viewer's OWN score, at whichever position(s) it actually moves -
+ * never the other thirteen rosters', and never printed at all when the package leaves
+ * the score exactly where /lab/leverage already reads it (see `LEVERAGE_SHIFT_MIN`).
+ *
+ * A number and the position(s) it moved at, nothing about whether that move is good -
+ * the same discipline `FragilityLine` above already keeps (D6, D19). Up and down get
+ * identical neutral treatment for the identical reason: this is a supply-side shape
+ * read, not a grade, and gaining leverage at a position nobody wants to deal with you
+ * about is not obviously a win any more than losing it at one you were never trading
+ * from is obviously a cost.
+ */
+function LeverageLine({ shift }) {
+  if (!shift) return null;
+  const posList =
+    shift.positions.length > 1
+      ? `${shift.positions.slice(0, -1).join(", ")} and ${shift.positions.at(-1)}`
+      : shift.positions[0];
+  return (
+    <p className="mt-1.5 text-note leading-snug text-muted">
+      <span className="font-semibold text-ink">Positional Leverage: </span>
+      {shift.before} to {shift.after}, at {posList}.
     </p>
   );
 }
@@ -599,7 +626,35 @@ function PackageDetail({ pkg, hasRanking }) {
             text={pkg.fragility.text}
           />
         )}
+        {pkg.leverageShift && (
+          <Read
+            label="Positional leverage"
+            text={<LeverageShiftText shift={pkg.leverageShift} />}
+          />
+        )}
       </div>
+    </>
+  );
+}
+/**
+ * The expanded-view wording for the same fact `LeverageLine` states on the card - the
+ * link to `/lab/leverage` earns its place here rather than on the card, since this is
+ * the one screen a reader can actually stop on to read the rest of the metric's own
+ * caveats before deciding what the number means for this package.
+ */
+function LeverageShiftText({ shift }) {
+  const posList =
+    shift.positions.length > 1
+      ? `${shift.positions.slice(0, -1).join(", ")} and ${shift.positions.at(-1)}`
+      : shift.positions[0];
+  return (
+    <>
+      This deal would move your{" "}
+      <Link href="/lab/leverage" className="text-accent-text underline">
+        Positional Leverage
+      </Link>{" "}
+      from {shift.before} to {shift.after}, at {posList} - where your own value sits
+      relative to the league&apos;s own mix there, not a read on the deal itself.
     </>
   );
 }
