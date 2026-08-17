@@ -3838,3 +3838,160 @@ ceiling per D72/D76); showing every one of a viewer's fourteen leaguemates' OWN
 leverage change from a package aimed at only one of them (D75's instruction was
 explicit - this is a page about the trade in front of the viewer, not a league-wide
 pass nobody asked this screen to run).
+
+## D78. "YOUR TEAM & DECISIONS" AUDITED AGAINST REAL DYNASTY PAIN, AND THE ONE REAL GAP: `/trade`'S OWN EVALUATOR HAD NEITHER OF THE TWO SHAPE-OF-THE-DEAL READS THE FINDER ALREADY EARNED
+
+A direction from the owner, not a bug report: stop asking whether this cluster (`/`,
+`/roster`, `/plan`, `/ledger`, `/trade`, `/trade/finder`, `/values`, `/rank`) looks
+right and start asking whether each page answers a question a real dynasty manager
+actually has, said in a way that hands them the next move rather than more homework.
+
+**THE RESEARCH, VERIFIED RATHER THAN ASSUMED.** Dynasty basketball/football strategy
+writing and trade-calculator FAQs converge on a short, consistent list, and this round
+checked it against this app's own feature set rather than treating it as a checklist to
+re-derive from scratch: knowing whether you are rebuilding or contending - and the
+specific failure of being stuck in the middle, "too good to get top picks, not good
+enough to win," which multiple independent sources name as the single worst place in a
+dynasty league to sit; valuing draft picks against known players, which every trade-
+calculator vendor's own material flags as the hardest input because a pick's worth
+depends on who you already are (a rebuilder should price a pick above a redraft chart,
+a contender below it); judging whether a trade is fair, which is the literal first
+thing every dynasty trade-calculator FAQ exists to answer, with the standing caveat
+(found on more than one vendor's own site) that a market-value number is a guide, not a
+verdict, because it cannot see roster fit or timeline; remembering WHY a trade was made
+once a season has passed judgment on it; telling a genuinely weak roster spot from one
+that only looks weak because the depth chart is thin; the "perpetual rebuild" failure
+mode - a manager who announced a rebuild years ago, still holds all the youth, and is
+now shopping his best young piece because it "doesn't fit the timeline" it never
+actually had an exit condition for; and selling an aging asset before, not after, the
+decline shows up in the numbers. All eight are dynasty-specific in the way the prompt
+asked to verify - every one of them turns on the multi-year horizon a redraft league
+never has to reason about.
+
+**WHAT THE AUDIT FOUND: seven of eight pages in this cluster already answer their
+question well, several of them after rounds of work earlier today (D72, D73, D74, D75,
+D77) this round did not need to redo.**
+
+- **`/` (Home)** answers "what changed and what should I do about it" with the
+  revealed-vs-stated headline first, contradictions surfaced in red only when real,
+  and a three-step `Onward` rather than a menu (D52). Not touched.
+- **`/roster`** answers "which of my spots are actually weak" with the SPOF name and
+  damage share plus `depthBeyondStarters` stated as a sentence ("3 bodies short of
+  filling your 9 slots"), not just a bar chart a reader has to interpret themselves -
+  exactly the "real vs. cosmetic weakness" question from the research, already solved.
+  Not touched.
+- **`/plan`** answers "am I stuck in the middle" directly: `windowSynthesis` prints
+  the number of rosters sharing your value window, and the Timeline Check names a
+  `straddling` roster in red with the sentence "your assets do not agree about when you
+  win" - the stuck-in-the-middle failure named above, read from data rather than
+  asserted. `buildGamePlan`'s REBUILD-path move ("Sell the veterans while they still
+  have value... declining assets only get cheaper") is the aging-star-timing answer,
+  and the ASCEND-path move ("Hold the picks. Don't cash them yet... the classic error
+  from this position is spending them a year early") is this app's own answer to
+  perpetual-rebuild's mirror image - selling out too early rather than never selling at
+  all. Not touched.
+- **`/ledger`** answers "remember why" with one pinned card per visit (D58) rather than
+  the twenty-nine-question exam it used to be, and Home's contradiction card is the
+  other half of the same question - whether the reasoning held up. Not touched.
+- **`/values`** and **`/rank`** each state plainly, in their own copy, what they are
+  FOR (`/values`: "a transparent, tunable model, not a scraped market"; `/rank`: the
+  banner stating that whatever is saved here is what the Trade Finder actually prices
+  against) - the exact "is this reachable and does it say what it's for" bar D51 set.
+  Not touched.
+- **`/trade/finder`** is the pick-valuation and trade-fairness answer at its most
+  complete: dossier-driven partner reads, TCI/RFI printed at the point a trade is
+  actually being weighed rather than only on a page admired in isolation, and - as of
+  today's earlier D75/D77 - both the Fragility note and the Positional Leverage shift
+  on every suggested package. Not touched.
+
+**THE ONE REAL GAP: `/trade` - the page where a manager evaluates a SPECIFIC deal,
+most often one someone else proposed to them, which the research above found is the
+single most common real request a dynasty trade tool gets - carried the thesis (D6)
+but neither of the two shape-of-the-deal reads its sibling page already had.**
+`evaluateTrade` (`lib/trade/index.js`) has always returned `yourBet`/`theirBet`/
+`keyAssumption`/`historyCheck`/`consolidationNote`/`agencyNotes`, and `/trade/finder`'s
+`PackageDetail` reuses that exact function so a hand-built deal and a suggested one
+read identically (the comment on that component says so explicitly). But `findTrades`
+(`lib/tradefinder/index.js`) layers TWO more reads on top of every suggested package
+before it reaches the finder - `packageFragilityNote` (does this deal make the season
+lean on fewer names or more) and `packageLeverageShift` (D77, today) - and neither
+layer ever touched `evaluateTrade` itself. So a manager who typed their OWN proposed
+deal into `/trade` got a full thesis and no answer to "does this concentrate my season
+onto one man" or "what does this do to my positional depth," while the exact same deal
+priced through the finder's suggestion path got both. The two reads existed, were
+already proven safe (D6/D19-compliant, real fixture-league tests, shipped hours
+earlier), and simply never reached the page a manager is most likely to open with a
+real trade already in hand.
+
+**THE FIX, and why it cost no new derivation.** `valueSide()` (the function that turns
+a give/get side into priced assets) already builds exactly the `{kind, id, value}`
+shape both `packageFragilityNote` and `packageLeverageShift` want; it was one line short
+- `position` was never carried onto a player asset, because nothing had needed it
+before. Added, read-only, from the same player record `age` already reads. With that,
+`evaluateTrade` calls both functions directly on its own already-computed
+`give.assets`/`get.assets` and attaches `fragility`/`leverageShift` to its return value,
+mirroring `buildAgencyNotes`'s existing guard (`h.me.rosterId == null` -> both `null`) -
+the identical pattern this file already uses one function below. `components/
+TradeBuilder.jsx` renders them exactly as `/trade/finder`'s `PackageDetail` already
+does - the same title wording ("What it takes off one man" / "What it puts on one
+man"), the same `Positional Leverage` link to `/lab/leverage`, no new color, no new
+component pattern. `null` on both when the shift is too small to clear either metric's
+own noise floor (the same `SPOF_SHIFT_MIN`/`LEVERAGE_SHIFT_MIN` thresholds, unchanged) -
+an omitted block is honest; a "no change" block on a page that already runs one
+Evaluate click per look would be exactly the clutter this app keeps refusing to ship.
+
+**WHY THIS NEVER TOUCHED `app/api/`, respecting this round's own boundary.**
+`/trade`'s evaluation is a client component (`TradeBuilder.jsx`) that posts to
+`POST /api/trade`, which does nothing but `NextResponse.json(evaluateTrade(h,
+parsed.data))` - the whole returned object, no field allowlist. Every field this round
+added to `evaluateTrade`'s return value therefore reaches the client through that route
+completely unchanged, with zero edits to `app/api/trade/route.js` or anything else
+under `app/api/`. The two functions reused (`packageFragilityNote`, `packageLeverageShift`)
+live in `lib/tradefinder/`, not `lib/db.js`, not `lib/history.js`'s caching, not
+Prisma - none of the ground the parallel backend-audit round owns. Both cost one
+league-wide pass each (`leagueReplacementValue`, `leaguePositionPools`), which is the
+identical cost class `buildHistoryCheck` already pays one line above inside the same
+function (a `leagueTimelines` pass) and the identical cost class D75/D77 already
+accepted on the finder side - not a new tier of expense, one more pass of the same one.
+
+**Considered and rejected:** editing `app/api/trade/route.js` to shape the response -
+unnecessary once the fields live on `evaluateTrade`'s own return value, and out of
+scope for this round regardless; a NEW `/trade`-specific derivation of either read -
+would be the exact "second answer to a question the app already answered" failure
+SHELVED.md's S6 entry documents, for a fact two existing pure functions already state
+correctly; surfacing an "asset hoarding" warning as a new labelled feature - the
+research's perpetual-rebuild failure mode is already answered by `/plan`'s ASCEND-path
+"don't cash picks early" move and REBUILD-path "sell veterans while they still have
+value" move, which name the SAME failure from both ends without needing a new signal
+invented to restate it.
+
+**Verified.** `pnpm lint` clean. `pnpm test`: baseline was 1045 passed (62 files); now
+**1051 passed (62 files)** - the +6 are in `lib/trade/trade.test.js`, covering the new
+fields always being present (`toHaveProperty`) rather than absent, the real fixture-
+league fragility direction in both directions (selling the SPOF relieves it, a
+three-for-one consolidation creates one), the position(s) named on a real multi-piece
+leverage-touching package, an explicit `null` on both for a pure pick-for-pick swap,
+and the banned-verdict-word check (D6, D19) - reusing the exact player names and
+directions `lib/tradefinder/fragility.test.js`/`leverage.test.js` already pinned against
+this fixture, deliberately, rather than re-deriving new fixture assertions for
+arithmetic already proven elsewhere. `pnpm build` succeeds after `rm -rf .next`. Full
+`pnpm e2e` (`rm -rf .next` first): **78 passed**, zero failures. Screenshotted at 390px
+in both themes against `/trade?give=p1&get=p24,p23` (Luka Doncic out, De'Aaron Fox +
+Darius Garland in - the real fixture-league SPOF-relief case) after clicking "Evaluate
+trade," confirming both new blocks render with no second accent colour (D47, D61,
+D64) - the one link either block adds (`Positional Leverage`) uses the same
+`text-accent-text` treatment the finder's own version already uses. `axe-core` clean
+in both themes against the same evaluated state, which sits outside `ALL_SURFACES`'s
+static-route sweep (the blocks render only after a client-side Evaluate click), so this
+round scanned that state directly rather than relying on the registry-driven CI sweep
+to reach it.
+
+**A backend-shaped note for the parallel audit, not acted on here.** `/trade`'s
+evaluation round-trips through `POST /api/trade` on every Evaluate click, re-pricing
+every asset and re-running two league-wide passes from a cold `getLeagueHistory()` call
+each time - `/trade/finder`, by contrast, computes everything once per server-rendered
+page load with no client round trip at all. Both were within this round's own
+boundary; the round trip's cost profile is not - it touches `app/api/` and whatever
+`getLeagueHistory()`'s own caching does under repeated calls, which is exactly the
+ground the parallel backend/architecture round owns this same day. Named here rather
+than touched.
