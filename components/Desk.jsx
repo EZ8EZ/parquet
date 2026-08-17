@@ -548,7 +548,7 @@ export function Desk({ data }) {
 
             {/* --------------------------------------------------- the context row */}
             <div className="relative flex h-[44px] items-center gap-2 px-3.5">
-              {data ? (
+              {data?.seat ? (
                 <>
                   <button
                     type="button"
@@ -609,6 +609,31 @@ export function Desk({ data }) {
                     />
                   </Link>
                 </>
+              ) : data ? (
+                // NO LENS YET (lib/desk.ts: `{ seat: null, status: null }`) - a stranger
+                // on one of the handful of pages that must work before a choice exists
+                // (/teams, /about, /claim/invalid). `h.me` would happily hand back the
+                // deploy owner's own identity here, which is the exact leak D35's
+                // middleware exists to prevent one layer up, in page content - so this
+                // row asks for a choice instead of presenting one nobody made. No seat
+                // chip (there is no team to put in it), and the one link this row can
+                // honestly offer.
+                <>
+                  <span className="flex shrink-0 items-center rounded-full border border-border bg-surface px-3 py-1.5 text-note font-medium text-faint">
+                    No team picked yet
+                  </span>
+                  <Link
+                    href="/teams"
+                    className="flex min-w-0 flex-1 items-center justify-end gap-1 self-stretch truncate text-meta font-semibold text-accent-text transition-colors hover:text-ink"
+                  >
+                    <span className="truncate">Pick your team</span>
+                    <ChevronRight
+                      size={13}
+                      aria-hidden="true"
+                      className="shrink-0"
+                    />
+                  </Link>
+                </>
               ) : (
                 // The corpus could not be read (lib/desk.ts returns null and says so in
                 // the server log). Navigation is registry-driven and does not depend on
@@ -618,7 +643,7 @@ export function Desk({ data }) {
                 </span>
               )}
 
-              {seatMenu && data && (
+              {seatMenu && data?.seat && (
                 <div
                   id={seatMenuId}
                   className="absolute bottom-[calc(100%+6px)] left-3 z-10 w-56 overflow-hidden rounded-[--radius-sm] border border-border-strong bg-elevated shadow-lg"

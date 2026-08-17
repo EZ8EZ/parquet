@@ -50,7 +50,7 @@ export default async function TeamsPage({ searchParams }) {
       <PageHeader
         kicker={h.currentLeague.name}
         title="Whose team are you?"
-        subtitle="Pick a team to run the whole app as that manager - their roster, their revealed strategy, their game plan, their read on everyone else."
+        subtitle="Pick a team to run the whole app as that manager - their roster, their revealed strategy, their game plan, their read on everyone else. Nothing here is permanent: tap your team's name at the bottom of any page to switch to a different one later."
       />
       {/* Empty on purpose: there is no per-visitor stored username to reflect (the
             "viewing as" cookie stores a rosterId, not a Sleeper handle - see

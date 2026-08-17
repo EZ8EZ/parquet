@@ -3838,3 +3838,132 @@ ceiling per D72/D76); showing every one of a viewer's fourteen leaguemates' OWN
 leverage change from a package aimed at only one of them (D75's instruction was
 explicit - this is a page about the trade in front of the viewer, not a league-wide
 pass nobody asked this screen to run).
+
+## D78. THE DESK REOPENED THE LEAK D35 SEALED - a stranger's first screen was showing the deploy owner's identity again, one layer of chrome over
+
+The owner asked every feature to be re-examined against one question: does this solve
+a real problem a dynasty manager actually hits, shown in the most intuitive way? This
+round's assignment was the one surface that question matters most for and gets tested
+least, because nobody who already knows the app ever sees it again after their first
+visit: `/teams`, `/claim`, `/claim/invalid`, `/more`, and the Desk's own chrome on a
+session that has picked nobody yet.
+
+**WHAT A FIRST-TIME VISITOR ACTUALLY EXPERIENCES TODAY, WALKED THROUGH.** A stranger
+opens the deployed link with a completely fresh browser - no cookies at all.
+Middleware (`lib/auth/entry.ts`, D35) reads that there is no `parquet_roster` cookie
+and bounces them to `/teams` before any other page can render, deep link preserved.
+`/teams` greets them with "Whose team are you?", a one-line explanation of what
+picking a team actually does, a "your Sleeper username" box for a real leaguemate, a
+search box and a scrollable list of all fourteen teams - each row already showing a
+name, owner, live record, one of three plain-English roster-window words
+(win-now/rebuilding/balanced), up to three dossier tags and a total value, so this is
+not fourteen anonymous options; a returning visitor's own row is checkmarked, a
+stranger's is not. Below the list, "New to Parquet?" links to `/about`, which explains
+the app's whole vocabulary in plain language and states outright that "switching
+chairs is public and free." Tapping a team POSTs the choice, sets the lens cookie and
+returns to whatever page they were actually headed for. All of this was already
+correct and is UNCHANGED by this round - it was screenshotted and re-verified, not
+assumed, and none of the "14 unlabeled options" or "assumes context you don't have"
+failure modes this brief warned about were actually present.
+
+**THE REAL GAP was one level of chrome below the page content, in the one component
+that was never in front of D35 when it shipped.** `getDeskData()` (`lib/desk.ts`), the
+Desk's persistent bottom bar shown on literally every route including the three that
+must render with NO lens at all (`/teams`, `/about`, `/claim/invalid` - the open
+prefixes `needsEntryPick` carves out), calls `getLeagueHistory()` and reads `h.me`
+unconditionally. `h.me` falls back to the DEPLOY OWNER'S own roster whenever there is
+no lens cookie to read (`resolveMe`, `lib/history.ts`) - which is exactly the leak D35
+was written to stop, for page content. The Desk did not exist when D35 shipped; it
+arrived later, across D41/D52/D53/D65, and nobody re-ran D35's own reasoning against
+it. Curled with a genuinely cookieless request and confirmed by screenshot: `/teams` -
+the one page whose entire job is asking "whose team are you?" - rendered a persistent
+chip at the bottom of that same screen reading the deploy owner's real team name
+("Parquet Kings" in the shipped fixture, "5-Year Plan" against one internal fixture
+variant), with his actual record and league standing ("5-15 · 2025 final · 12th of
+14") printed as fact, plus a "Switch team"/"Open my team in Sleeper" menu behind it -
+full chrome for an identity nobody in the conversation had chosen yet, one screen
+below a headline asking them to choose one. The exact bug D35's own writeup describes
+("a browser with no lens cookie was silently rendered the deploy owner's seat - his
+headline, his record"), reopened by a component that inherited the same fallback
+without inheriting the guard.
+
+**THE SECOND, SMALLER GAP: reversibility was true and undiscoverable.** Switching
+teams later is real and reversible - `TeamPicker.choose()` is a plain POST that can be
+called again from anywhere, any number of times, and the Desk's seat-chip popover
+(`Switch team` -> `/teams`) is the mechanism, already built. But nothing on `/teams`
+itself said so; a first-time picker had to already know that popover existed (which
+requires having picked a team once, i.e. having already made the choice) or click
+through to `/about` to read "switching chairs is public and free" before ever seeing
+that reassurance next to the actual decision. The one moment this mattered most - a
+stranger staring at fourteen options, unsure if this is a one-shot commitment - was
+the one place it wasn't said.
+
+**THE FIX, both scoped to exactly what was broken.**
+
+1. `lib/desk.ts`: `getDeskData()` now asks the identical question
+   `needsEntryPick` already asks - `readLensRosterId()`, a cookie read, no corpus
+   involved - BEFORE calling `getLeagueHistory()` at all, and returns
+   `{ seat: null, status: null }` when there is no lens yet. Not merely "hide the
+   identity after fetching it" - the corpus is never touched, so a stranger's neutral
+   chrome does not even depend on the league provider being reachable.
+2. `components/Desk.tsx`: the context row now has three states instead of two -
+   `data.seat` present (unchanged: the real seat chip and status link), `data` present
+   but `data.seat` null (new: a plain "No team picked yet" label, no avatar, no fake
+   name, and one honest link - "Pick your team" -> `/teams`, using the same
+   `text-accent-text` treatment every other in-body CTA already uses, no new colour),
+   and `data` null (unchanged: the existing quiet "Parquet" fallback for a corpus
+   outage). The seat-chip popover trigger and its contents are both gated on
+   `data?.seat` now, since "Switch team"/"Open my team in Sleeper"/Settings behind a
+   chip presenting nobody's identity was the same leak restated as a menu.
+3. `app/teams/page.jsx`: the picker's own subtitle now says the thing that was
+   previously only on `/about` - "Nothing here is permanent: tap your team's name at
+   the bottom of any page to switch to a different one later" - stated at the moment
+   the choice is actually being made, not one click removed from it.
+
+**WHAT WAS CHECKED AND LEFT ALONE, because it was already right.** `/claim`'s one GET
+route: signs and verifies a seat token, sets the seat cookie and the lens together
+(best-effort on the lens, so a corpus hiccup never loses the unforgeable half), and
+redirects home or to `/teams` - a real, understandable job with no confusing extra
+step, and legacy (no `AUTH_SECRET`) deployments correctly skip the whole notion rather
+than erroring. `/claim/invalid` states plainly that the link did not verify, refuses
+to guess WHY (expired vs. tampered vs. old secret - D19's discipline, applied to a
+copy string rather than a metric), offers a fresh-link path and an explore-without-one
+path, and needed no changes. `/more`: reachable from the Desk drawer's own "See
+everything on one page" link, correctly redirects through `/teams` first for a lens-
+less visitor with the deep link preserved (confirmed by screenshot - `/more` bounces
+to `/teams?next=%2Fmore` and returns to `/more` once a team is picked), and its
+no-JS/crawler role (stated in its own page comment) is intact. None of D6 (no
+verdicts) or D19 (no speculation beyond data) needed enforcing here - this cluster's
+copy was already either factual or, per the one gap above, simply missing; no
+judgment language was ever present to strip out.
+
+**Verified.** `pnpm lint` clean. `pnpm test`: baseline was 1045 passed (62 files); now
+**1048 passed (63 files)** - the +3 are `lib/desk.test.js`, pinning that a missing or
+garbage lens cookie returns `{ seat: null, status: null }` and never calls
+`getLeagueHistory` at all (the load-bearing half - not just a masked identity, no
+corpus dependency), and that a real lens cookie still reads the chosen roster's own
+identity through the unchanged path. `pnpm build` succeeds. Full `pnpm e2e` (`rm -rf
+.next` first): **78 passed**, zero failures - `primeLens` cookie-primes every other
+spec in the suite, so none of them touch the branch this round changed, and that
+blast-radius assumption was verified rather than trusted. `axe-scan` clean in both
+themes on `/teams`, `/about`, `/claim/invalid` and `/more`, scanned with a genuinely
+cookie-less browser context (not the usual `primeLens`-style helper, which would have
+hidden the exact bug this round found). Screenshotted at 390px in both themes against
+a fresh context with zero cookies: the Desk now reads "No team picked yet · Pick your
+team" on all three lens-less pages in both themes, and a returning visitor's normal
+seat chip ("Parquet Kings · 1 new decision to capture") is confirmed unchanged.
+
+**Rejected:** hiding the seat chip's CONTENT while still calling `getLeagueHistory`
+for it (the corpus dependency itself was part of the bug - a lens-less render should
+not need the league provider to be reachable at all, and D35's own fix for page
+content didn't need it either); a toast or banner on Home confirming "seat claimed"
+after `/claim` succeeds (Home is outside this round's cluster, and landing on your own
+revealed strategy and record is already a strong, wordless confirmation that the link
+worked - the two are not the same problem); redesigning `/teams`' team-row density or
+adding photos/avatars to the picker (explicitly out of scope - this round changes
+clarity of what a choice DOES and WHETHER it's reversible, not how the rows look, and
+the existing rows already carry name/record/window/tags/value, which the brief's
+assumed failure mode of "14 unlabeled options" turned out not to describe); moving the
+reversibility sentence into `/more` or the Desk drawer instead of onto `/teams`
+itself (the moment it needs to land is the moment of the choice, not one tap away from
+it - `/about` already had it and that placement was exactly the problem).
