@@ -3838,3 +3838,122 @@ ceiling per D72/D76); showing every one of a viewer's fourteen leaguemates' OWN
 leverage change from a package aimed at only one of them (D75's instruction was
 explicit - this is a page about the trade in front of the viewer, not a league-wide
 pass nobody asked this screen to run).
+
+## D78. AN AUDIT OF THE LEAGUE-AND-CONTEXT CLUSTER AGAINST REAL DYNASTY PROBLEMS - one
+real gap found and fixed, the rest holds up
+
+The owner's directive this round was a different lens than the day's earlier density
+passes: not "does this look clean" but "does this solve a problem a dynasty basketball
+manager actually has, and is the answer immediately usable." Scope: `/league`,
+`/managers` and its three sub-pages, `/awards`, `/commissioner`, `/drafts` and its two
+sub-pages, `/recap`, `/analyst`, all four `/lab` experiments, `/settings`, `/about` and
+`/methodology` - the "league and other managers" half of the app. `/`, `/roster`,
+`/plan`, `/ledger`, `/trade(/finder)`, `/values` and `/rank` are a sibling round's.
+
+**WHAT WAS RESEARCHED, AND VERIFIED RATHER THAN ASSUMED.** Real dynasty-community and
+commissioner-guide content (WebSearch; Reddit itself is unreachable from this
+environment per D70's own finding, unchanged) on the four questions this cluster is
+actually about: how a manager decides who to approach for a trade (the consensus is
+behavioral - contending-vs-rebuilding read, historical tendencies - not roster
+inspection alone); how a rebuild is judged as "on pace" (always relative to the rest of
+the league, never in isolation); what a draft-pick evaluation argument actually turns
+on (pedigree vs. proven role/usage for rookies, and for future picks: the CURRENT
+strength of the team that owes it, not a fixed round-based price - "the 1.01 and the
+1.12 are wildly different assets"); and what a commissioner/league-health check needs
+to catch (real guides name inactivity and specific collusion PATTERNS - trades that
+come back to the same manager, one-sided value - while also warning that most trades
+should be allowed through absent real evidence, i.e. a health tool should surface facts
+a human can weigh, not render an accusation).
+
+**MOST OF THIS CLUSTER ALREADY CLEARS THAT BAR, AND IS RECORDED HERE RATHER THAN
+SILENTLY LEFT ALONE**, because "checked and found already solving a real problem well"
+is as real a finding as a gap:
+
+- `/managers` is titled "Scout the managers - how they act, not what they hold," and
+  `lib/dossier`'s tag/read/tip derivation (Name chaser, Pick hoarder, Deadline
+  buyer/seller, Reactive after losses, Responder) is exactly the behavioral-tendency
+  read the research says a real trade decision turns on, with a concrete "how to
+  approach them" action tied to each tell - not a roster dump.
+- `/managers/[rosterId]` layers "Picks they bought back" (a real, dated fact - not an
+  inference) and a schedule-luck read on top of the same behavioral dossier, and
+  `/managers/compare` and `/managers/former/[ownerId]` extend the identical read
+  correctly (former managers scoped to their own tenure, not blended with a successor).
+- `/league`'s single toggled board (window map / TCI-RFI quadrant) plus the power
+  ranking answers "how does my rebuild compare to the rest of the league" directly,
+  league-relative by construction rather than a number in isolation.
+- `/awards`' superlatives are behavioral pattern-spotting, not bragging trivia dressed
+  up as awards - The Scout/The Steal/The Reach grade draft-pick decisions against the
+  board and against slot (pedigree vs. production, exactly the research finding), Name
+  Brand Buyer and Panic Button and Hot Potato are real tendency reads, and every one
+  states its own honest limit in its subtitle rather than pretending to certainty.
+- `/analyst`'s system prompt is a genuinely adversarial, evidence-grounded auditor
+  (leads with the disconfirming case, quotes the user's own annotated reasoning back at
+  them, refuses to invent a pattern from thin data) with a deterministic
+  no-API-key fallback that is equally adversarial rather than a degraded stub.
+- All four `/lab` experiments answer a real, specific question at D54's own bar:
+  Positional Leverage answers "where can I actually deal from" (the exact blind spot
+  D67 found in RFI), the Pulse answers "what changed across the league since I last
+  looked" league-wide, the Counterfactual answers "did my own trading actually help
+  me," and Slot Par on the regret ledger answers "what has a lineup slot been worth in
+  this league" - none reads as a verdict, and each names its own real limits.
+- `/methodology`'s pick-value section already states the real answer to "how much is a
+  future pick worth" in the terms the research surfaces: priced off the CURRENT
+  strength of the team that owes it, a lottery spread rather than a fixed slot, and an
+  explicit now-vs-2-years-out example - not a flat round-based chart.
+
+**THE ONE REAL GAP: `/commissioner` HAD NO DOORWAY TO THE ONE PATTERN COMMISSIONER
+GUIDES NAME FIRST.** The page already runs two real health checks - stale rosters
+(inactivity, matching the research directly) and picks that can't resolve (data
+integrity) - but had nothing about a pick returning to whoever traded it away, which is
+the concrete, commonly-cited collusion-ADJACENT pattern in every commissioner guide
+surveyed ("trades with an agreement to trade back later"). The computation already
+existed: `leagueBuybacks` (`lib/agency/index.js`) was built for `/deals#buybacks` (D51)
+and is fully tested, but nothing on the one page whose entire job is "what should a
+commissioner check" pointed at it - a reader would have had to already know to look on
+`/deals` to find it. This is D51's own pattern (surface a buried computation at the
+actual decision moment) applied to the actual decision-maker's own page.
+
+**THE FIX IS A DOORWAY, NOT A NEW VERDICT.** `app/commissioner/page.jsx` gained one
+section, "Round-trip picks," between Stale rosters and Picks that can't resolve
+(grouping the two manager-behavior checks ahead of the one data-integrity check): the
+same `leagueBuybacks(h)` call `/deals` already makes, a neutral count tag (never
+warn/negative - a round trip is not evidence of anything on its own, and research is
+explicit that over-flagging ordinary trades is itself the failure mode to avoid), the
+same "a fact worth knowing, not evidence of anything... a pick can come home as a
+throw-in as easily as on purpose" framing `/deals#buybacks` already uses, and a link to
+the full record rather than a second render of it. Zero new derivation, zero new test
+surface (the underlying function's 15+ existing cases in `lib/agency/agency.test.js`
+are untouched and still govern its behavior); D6 (no verdicts) and D19 (never
+speculate beyond the data) are both satisfied by construction because the section says
+exactly what D51's section already says, from the page a commissioner actually opens
+to check league health rather than the page that happens to host the trade record.
+
+**WHAT WAS DELIBERATELY NOT BUILT.** A lopsided-trade / value-imbalance detector
+("2:1 threshold") that some commissioner tools ship: real guides warn this produces
+false positives on ordinary win-now-for-picks trades this app's own D6/D23 already
+treat as legitimate strategy, not a defect, and computing one honestly would need
+research and calibration this round did not do (D54's bar for shipping a new metric at
+all). A "stalled rebuild" alert: the signal a reader would need - posture read the same
+way for several seasons running - is already visible without a new computation on
+every dossier's existing "Posture by season" chips; inventing a threshold for when a
+rebuild counts as "stalled" is exactly the unearned precision D19 forbids, and no
+dynasty-community source surveyed offered a specific one to check against.
+
+Verified: `pnpm lint` clean. `pnpm test`: baseline 1045 passed (62 files) - unchanged,
+since the fix touches only `app/commissioner/page.jsx` and adds no new logic beyond a
+call to an already-tested function. `pnpm build` succeeds after `rm -rf .next`. Full
+`pnpm e2e` (`rm -rf .next` first): **78 passed**, zero failures - including
+`/commissioner renders cleanly` and its color-contrast pass in both themes.
+`axe-scan` clean on `/commissioner` in dark and light. Screenshotted at 390px in both
+themes against the live fixture league, confirming the new section renders between
+Stale rosters and Picks that can't resolve exactly as designed, with the real fixture
+round trip ("1 pick has returned... across 1 of 14 rosters") printing correctly.
+
+Rejected: inventing a collusion-detection heuristic beyond stating the round-trip fact
+(the research itself warns this is the wrong shape - most trades should be allowed
+through absent real evidence, so the tool's job is facts a human weighs, not a
+verdict); a value-imbalance/lopsided-trade check (no calibration work done this round,
+and D6/D23 already treat asymmetric-looking trades as legitimate strategy rather than
+a defect to flag); touching any page outside this cluster's explicit list, including
+`/deals` itself (only linked to, never edited) and every page the sibling round already
+covers.
