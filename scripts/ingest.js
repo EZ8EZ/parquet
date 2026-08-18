@@ -2,9 +2,9 @@
  * `pnpm ingest` — full historical pull, idempotent. Safe to re-run.
  * Usage: pnpm ingest [leagueId]
  */
-import "./_env";
+import "./_env.js";
 async function main() {
-  const { ingestAll } = await import("../lib/ingest");
+  const { ingestAll } = await import("../lib/ingest.js");
   const leagueId = process.argv[2];
   const started = Date.now();
   const summary = await ingestAll({

@@ -17,7 +17,7 @@
     "seed": "node scripts/seed.js",
     "claim-links": "node scripts/claim-links.js",
     "gen:icons": "node scripts/gen-icons.js",
-    "setup": "prisma db push && pnpm seed"
+    "bootstrap": "prisma db push && pnpm seed"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",

@@ -1,14 +1,18 @@
 # Parquet - Dynasty Memory
 
+Your league has a group chat with a bad memory. Parquet is the one with a good one.
+
 A mobile-first dynasty **fantasy basketball** companion, built for one real 14-team
 Sleeper league (NSL Fantasy Hoops) and the people who actually play in it - not a
 product pitched at the dynasty-fantasy market in general. It defaults to the owner's
 own team and that league's real history, and any other manager in the league can open
 `/teams` and run the whole app as themselves instead.
 
-Most fantasy tools sell _information_ (rankings, grades). Parquet sells **memory and
-self-knowledge**: it remembers the reasoning behind your decisions, audits your
-stated strategy against what you actually did, and scouts how your leaguemates behave.
+Most fantasy tools sell _information_ (rankings, grades, a number with a vibe attached).
+Parquet sells something rarer: **memory and self-knowledge**. It remembers the reasoning
+behind your decisions, catches you when what you say and what you actually did don't
+match, and quietly keeps a book on how everyone else in your league behaves under
+pressure - who folds after a loss, who never answers a text about a trade.
 
 **The house rule, stated plainly rather than left as a footnote: Parquet shows the
 data, never a verdict.** The trade evaluator's output is a thesis - what each side is
@@ -28,8 +32,9 @@ with zero setup.
 ## What makes it different
 
 Table-stakes features (roster view, asset values, trade evaluator, league view)
-exist because the product isn't credible without them. The reason to use it is the
-four things **no competitor builds** (see [RESEARCH.md](RESEARCH.md)):
+exist because the product isn't credible without them - the boring floor, not the
+pitch. The actual pitch is the five things **no competitor builds** (see
+[RESEARCH.md](RESEARCH.md)):
 
 1. **Decision Ledger** - capture your reasoning at the moment of conviction. New
    transactions surface as an "unannotated decisions" badge; two taps from badge to
@@ -113,17 +118,16 @@ pnpm dev          # a deterministic, realistic 5-season synthetic league
 The fixture provider ships one Decision Ledger annotation seeded directly in code
 (`FIXTURE_SEED_ANNOTATIONS` in `lib/history.js`), so the revealed-vs-stated
 contradiction has something to show on the very first load - still true with no
-database configured at all. `pnpm run seed` (below) only matters once you want
-that same annotation persisted to a real Postgres instead of held in code, or
-want your own notes to survive a restart - and **it currently doesn't run**; see
-the note under [Scripts](#scripts).
+database configured at all. `pnpm seed` only matters once you want that same
+annotation persisted to a real Postgres instead of held in code, or want your own
+notes to survive a restart.
 
-**Use `pnpm run setup`, not bare `pnpm setup`,** if you do reach for it. `setup`
-is pnpm's own reserved subcommand (it configures your global pnpm home, not this
-project) and it silently shadows a same-named script in `package.json` - verified
-directly: bare `pnpm setup` exits 0 having touched `~/.bashrc` and never having
-called Prisma at all. No other script in this project collides with a pnpm
-builtin, so `pnpm run` is only load-bearing for this one name.
+**One collision worth knowing:** `pnpm setup` used to be the one-command bootstrap
+(`db:push` + `seed`) - except `setup` is pnpm's OWN reserved subcommand (it
+provisions your global pnpm home, not this project), and it silently shadows a
+same-named script in `package.json`. Rather than tell everyone to remember `pnpm
+run setup` forever, the script is just named `pnpm bootstrap` now - no builtin to
+collide with, nothing to remember.
 
 ### Point it at a different real Sleeper league
 
@@ -139,8 +143,8 @@ SLEEPER_LEAGUE_ID=1347007735815766016   # NSL Fantasy Hoops (resolved; see API_N
 
 `pnpm dev` alone already shows the current season live. Pulling the full
 multi-season history into the database (`pnpm ingest`, which walks
-`previous_league_id` back to the start) is the one thing that currently doesn't
-run - see the note under [Scripts](#scripts) before reaching for it.
+`previous_league_id` back to the start) is purely optional archival persistence -
+the live app never depends on it to render correctly.
 
 ### Enable the conversational analyst (optional, free / open-source)
 
@@ -194,25 +198,13 @@ All documented in [`.env.example`](.env.example):
 | `pnpm e2e` | Playwright smoke suite (`playwright.config.mjs`) |
 | `pnpm db:push` | apply the Prisma schema to the Postgres in `DATABASE_URL` |
 | `pnpm db:generate` | regenerate the Prisma client after a schema change |
-| `pnpm run setup` (currently broken) | `db:push` + `seed` in one step - the quick-start path above. Must be `pnpm run setup`, not bare `pnpm setup` (see Quick start) |
-| `pnpm ingest [leagueId]` (currently broken) | full historical pull, idempotent upserts (purely archival - see Architecture) |
-| `pnpm seed` (currently broken) | seed the demo ledger annotation to a real Postgres (fixture only) |
-| `pnpm claim-links [origin]` (currently broken) | print one seat-claim link per manager, once `AUTH_SECRET` is set |
+| `pnpm bootstrap` | `db:push` + `seed` in one step - the quick-start path above |
+| `pnpm ingest [leagueId]` | full historical pull, idempotent upserts (purely archival - see Architecture) |
+| `pnpm seed` | seed the demo ledger annotation to a real Postgres (fixture only) |
+| `pnpm claim-links [origin]` | print one seat-claim link per manager, once `AUTH_SECRET` is set |
 | `pnpm gen:icons` | regenerate the PWA icon set from `public/icon.svg` |
 
 There is no `typecheck` script - see [Stack](#stack) below on why.
-
-**As committed, the four scripts marked "currently broken" above fail
-immediately, on any Node version, before doing any real work.** Verified
-directly (`node scripts/seed.js`, same for the other two): each does
-`import "./_env"` at its top, and Node's ESM loader - unlike a bundler, and
-unlike CommonJS `require` - does not fill in a missing `.js` on a relative
-specifier, so it throws `ERR_MODULE_NOT_FOUND` for `scripts/_env` before the
-script body ever runs. `pnpm dev`, `pnpm build`, `pnpm test`, `pnpm lint`, and
-`pnpm db:push`/`db:generate` are unaffected - none of them go through
-`scripts/_env.js`. Left unfixed here since this pass is documentation-only; the
-fix, when someone picks it up, is the one-word `import "./_env.js"` in each of
-the three files.
 
 ## Architecture
 
