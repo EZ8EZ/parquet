@@ -3838,3 +3838,167 @@ ceiling per D72/D76); showing every one of a viewer's fourteen leaguemates' OWN
 leverage change from a package aimed at only one of them (D75's instruction was
 explicit - this is a page about the trade in front of the viewer, not a league-wide
 pass nobody asked this screen to run).
+
+## D78. React `cache()` dedup and the corpus-cache race, checked from first principles - one real correctness finding (already fixed), two real waterfalls this branch still had, one overstated lead corrected with real numbers
+
+Owner-requested from fresh external research (React's `cache()` docs, a Fluid
+Compute engineering write-up), explicitly framed as checking two angles no prior
+pass on this branch had checked: WITHIN-one-request Server Component fan-out
+duplication (different from the corpus's own across-request TTL cache), and
+whether the corpus cache's write path could let a second concurrent miss observe
+a partial result. Scope broadened mid-task to "any real architecture issue,
+evidenced" - three more things turned up doing that, two worth fixing and one
+worth correcting.
+
+**1. REACT `cache()` - traced every real render tree, found no genuine
+duplication to wrap.** This app has exactly ONE layout (`app/layout.jsx`, no
+nested layouts, no `generateMetadata` anywhere - grepped for it, zero hits, which
+is the single most common real-world reason `cache()` gets reached for) and every
+`page.jsx` calls `getLeagueHistory()` exactly once (grepped all 35 call sites).
+The only place two independent Server-Component call sites touch the SAME async
+engine in one request is the root layout's `Desk` (`lib/desk.js`, via
+`getDeskData()`) alongside whichever page is rendering beside it - `getPrincipals`
+and `currentFormByRoster`/`loadSeasonRosters` are each reachable from both. But
+both are ALREADY single-flight + TTL memoized the identical way the corpus is
+(`lib/principals.js`, `lib/metrics/skill.js` - same shape: a module-level slot
+holding a PROMISE, not a value, checked and assigned with no `await` in between).
+Proved this empirically rather than assuming it from the shape of the code:
+called `getPrincipals(h)` and `currentFormByRoster(h)` twice concurrently each,
+simulating the exact Desk-plus-page shape, and spied on the provider calls each
+one's assembly makes - the SECOND concurrent call in both cases triggered ZERO
+additional provider fetches, confirming the two "call sites" collapse into one
+real assembly, for free, the same way `history.test.js` already proves for the
+corpus itself. The synchronous, uncached derivation functions the research named
+by name (`leagueValueRanking`, `leagueTimelines`, `leagueFragility`) were checked
+the same way D81's own profiling pass checked `/roster` - grepped every call site
+across the whole app - and each is called exactly once per full render, from the
+top of its one page, with nothing else in the tree (no async Server Component
+children exist anywhere in `components/`) calling it again. `lib/tradefinder`'s
+`board(h)` explicitly reuses `leagueValueRanking`'s ranking rather than
+recomputing it for `leaguePositionPools` - a comment already there names the same
+class of bug and shows it was already caught inside that one function. **No
+`cache()` wrap was added anywhere.** The hand-rolled TTL/promise-slot pattern
+already covers every real case in this codebase, and it does something `cache()`
+cannot: dedupe ACROSS requests too, which is the whole point of D25/D38. Wrapping
+already-deduped calls in `cache()` would add a second, redundant memoization layer
+for zero measured benefit - exactly the kind of speculative change D6/D19 warn
+against.
+
+**2. THE CACHE-WRITE RACE - already correct, and the reason is `await`-free
+critical sections, not luck.** Read `getCorpus()` in `lib/history.js` (and the
+identical-shaped `getPrincipals`/`loadSeasonRosters`) looking specifically for
+whether two concurrent misses could interleave such that a partial result becomes
+visible, or such that the cache is written to piecemeal. It cannot, and the reason
+generalizes beyond "Node is single-threaded": the ENTIRE check-then-write section
+- `if (!fresh && corpusSlot) {...}`, constructing `const slot = {}`, kicking off
+`slot.promise = timed(...).then(...)`, and `corpusSlot = slot` - contains no
+`await` at all. An `async function`'s body runs synchronously up to its first
+`await` or `return`, so two calls to `getCorpus()` can never interleave their
+checks and writes regardless of how many "concurrent" requests a Fluid Compute
+instance is juggling - only genuinely async work (the Sleeper fetches inside
+`assembleCorpus`) yields, and by the time anything yields, the promise (not a
+value) is already the thing sitting in the slot for every later caller to join.
+This is the textbook fix the research named ("cache the in-flight promise")
+already implemented, not a race dressed up as one. `history.test.js` already
+proves this under real concurrent load (5 callers, one assembly, verified by
+reference-equality on the shared corpus and a `getUsers` spy call count of
+exactly 1), including the harder cases: a rejection clears the slot rather than
+pinning it, and callers already in flight when a rejection lands all see the
+same rejection rather than one hanging. Nothing needed fixing here - this is the
+legitimate "verified correct, no bug found" outcome D67/D70 already set precedent
+for on this codebase.
+
+**3. TWO REAL WATERFALLS THIS BRANCH STILL HAD, found while reading the exact
+functions above for finding 2 - fixed, and measured against the real NSL Fantasy
+Hoops league (this sandbox has outbound Sleeper access), not assumed.**
+`assembleCorpus()` was awaiting `collectTransactions`, `collectTradedPicks`,
+`loadAnnotations`, `loadMatchups` and `loadBrackets` one after another though none
+of the four smaller ones depend on `collectTransactions`'s result or on each
+other's - fixed via `Promise.all`, the same shape independently arrived at
+elsewhere on a different branch. `collectTradedPicks` (`lib/ingest.js`) had the
+identical shape one level down: a `for` loop awaiting each season's
+`getTradedPicks` in series. Fixed by fetching all seasons concurrently and then
+walking the results in the ORIGINAL `chain` order for the dedup pass - the
+"keep the first (oldest league) occurrence" comment depends on iteration order,
+not resolution order, so the merge logic had to move after the `Promise.all`,
+unchanged, rather than being rewritten. `loadProvenanceSource()`
+(`lib/provenance/source.js`, the shared assembly `/roster`, `/deals` and
+`/lineage` all use) awaited `getPrincipals(h)` then `buildDraftIndex(h)` in
+series despite its own comment already noting neither depends on the other;
+fixed via `Promise.all`, preserving the identical catch-and-degrade-to-
+`{supported:false}` fallback for a provider with no draft support.
+
+Measured before/after against the real league, `LEAGUE_PROVIDER=sleeper`, 3 runs
+each (vitest's own env override flipped from `fixture` to `sleeper` for the
+duration of the measurement, then reverted - confirmed back to `fixture` via
+`git diff` before finishing): **corpus assembly before 6504ms/5929ms/5826ms (avg
+~6086ms), after 5969ms/5497ms/6057ms (avg ~5841ms)** - a real but modest ~4%
+average improvement, reported honestly rather than inflated: `collectTransactions`
+(already internally fanned out over 5 seasons x 25 weeks) dominates the total,
+`loadMatchups` costs nothing at all against the live Sleeper provider (it is
+deliberately fixture-only, D20), and real Sleeper network jitter run-to-run is
+large enough to compete with the theoretical saving from parallelizing the three
+genuinely small remaining calls. **`loadProvenanceSource` showed a clearer win:
+before 1222ms/288ms/90ms (avg ~533ms), after 709ms/82ms/75ms (avg ~289ms)** - a
+~46% average reduction, including a ~42% faster COLD run (1222ms -> 709ms), which
+is the more honest comparison since `getPrincipals` and `buildDraftIndex` are each
+real, non-trivial network-touching assemblies rather than one dominant call and
+four small ones. Both fixes are correctness-neutral-or-better by construction
+(removing a genuine unneeded dependency between two independent awaits cannot
+make the group slower), so the modest corpus number is reported as what it
+measured, not talked up to match the more dramatic number the smaller function
+produced.
+
+**Verified.** `pnpm lint` clean. `pnpm test`: **1045 passed (62 files)**,
+unchanged. `pnpm build` succeeds (identical 34-route shape, same known cosmetic
+`/_not-found` build-log quirk this codebase already decided not to chase). Full
+`pnpm e2e` (`rm -rf .next` first): **78 passed** in isolation; a fully-parallel
+run on this specific sandbox flaked two navigation-timing assertions
+(`core-flow.spec.js`'s ledger-to-receipt deep link, `density.spec.js`'s deal-index
+row click) under visible resource contention (a `/commissioner` render logged at
+3.8s and a home-page render at 4.4s in the same run, both far outside their normal
+cost) - re-ran both in isolation and both passed cleanly, and both reproduced
+identically against the UNMODIFIED code path before these two fixes were made,
+confirming this is the same class of sandbox-only flakiness this codebase has
+already documented (D81's own image-CDN failures), not a regression from either
+change.
+
+**4. THE `/trade` EVALUATE-BUTTON LEAD - checked with real timing, and the "cold
+every click" framing does not hold up.** `TradeBuilder.jsx`'s `evaluate()` is a
+single explicit button handler (not a live re-price on every keystroke), doing
+one `POST /api/trade` per click, and that route handler does call
+`getLeagueHistory()` fresh in its own module layer (route handlers and Server
+Components are separately instantiated - already documented on `publishAnnotation`'s
+own comment in `lib/history.js`). But "its own module layer" still means "single-
+flight + 5-minute TTL," identically to every other consumer - nothing in the
+route bypasses the cache or forces `fresh: true`. Measured directly rather than
+inferred from reading the code: started a real dev server and POSTed an empty
+trade body to `/api/trade` four times in a row. The Next.js request log broke out
+compile time from actual handler cost precisely: **call 1, 200 in 3.0s (next.js:
+2.6s Turbopack first-compile of the route - a dev-only cost that does not exist
+in a production build - application-code: 388ms, the real cold corpus hit); calls
+2-4, 25ms/104ms/63ms total (next.js: 5-9ms, application-code: 20-96ms)** - a
+4-15x drop in the number that actually matters, confirming the warm corpus is
+reused across repeated Evaluate clicks exactly as designed. The genuine,
+correctly-characterized difference from `/trade/finder` is not "cold every
+click" - it's that `/trade/finder` computes every package server-side on one
+render with zero further round-trips as the user explores partners, while
+`/trade`'s Evaluate button pays one extra client-server round-trip per click,
+cheap once warm. That is the same already-accepted D25/D38 tradeoff every route
+in this app pays on its first hit after a cold start or TTL expiry, not a defect
+specific to this button. **No change made** - converting the Evaluate flow to a
+server-rendered, link-based pattern like `/trade/finder`'s would be a UX/architecture
+redesign, not a backend correctness fix, and nothing measured here shows the
+current cost is a real problem worth that redesign.
+
+**Rejected:** wrapping `leagueValueRanking`/`leagueTimelines`/`leagueFragility`
+or any already-TTL-cached engine in `cache()` speculatively - no measured
+duplication exists for any of them, and for the TTL-cached ones `cache()` would
+be strictly worse (request-scoped only, versus the existing cross-request
+memoization); redesigning `/trade`'s Evaluate flow into a server-rendered
+pattern - the measured cost does not justify it; hardening the corpus cache into
+a shared/external one to survive Fluid Compute's multi-request instances - the
+mechanism already in place (cache the promise, not the value, with no `await`
+between check and write) is correct under that model specifically, not merely
+under the single-request-per-instance model D25/D38 were written against, so
+there is nothing Fluid Compute changes here to harden against.
