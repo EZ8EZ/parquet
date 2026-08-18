@@ -49,8 +49,14 @@ jobs:
       - name: Test
         run: pnpm test
 
+      # Genuinely non-blocking, not just labeled that way: V8 coverage
+      # instrumentation adds real per-test overhead, enough to push at least
+      # one already-expensive test (lib/tradefinder) past its 5s default
+      # timeout under coverage but not under plain `pnpm test` - a coverage
+      # run failing to finish cleanly is not a reason to block a merge on a
+      # step whose whole point is "informational."
       - name: Coverage (informational)
-        run: pnpm test:coverage
+        run: pnpm test:coverage || true
 
       - name: Upload coverage report
         if: ${{ !cancelled() }}
