@@ -1,0 +1,26 @@
+version: 2
+updates:
+  # pnpm audit found real transitive vulnerabilities inside next/prisma's own
+  # dependency trees (postcss, sharp, nanoid, deepmerge-ts) that this project
+  # can't patch directly - they're bundled by next/prisma, not pinned here.
+  # The actual fix is an upstream next/prisma point release; this is what
+  # picks that up automatically instead of relying on someone remembering to
+  # re-run `pnpm audit` by hand.
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    groups:
+      # Grouped so a routine week of patch bumps is one PR to review, not ten.
+      # A major-version bump (next, react, prisma) still gets its own PR -
+      # excluded from the group on purpose, since those need real attention.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

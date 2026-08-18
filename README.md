@@ -1,9 +1,27 @@
 # Parquet - Dynasty Memory
 
-A mobile-first dynasty **fantasy basketball** companion. Most fantasy tools sell
-_information_ (rankings, grades). Parquet sells **memory and self-knowledge**: it
-remembers the reasoning behind your decisions, audits your stated strategy against
-what you actually did, and scouts how your leaguemates behave.
+Your league has a group chat with a bad memory. Parquet is the one with a good one.
+
+A mobile-first dynasty **fantasy basketball** companion, built for one real 14-team
+Sleeper league (NSL Fantasy Hoops) and the people who actually play in it - not a
+product pitched at the dynasty-fantasy market in general. It defaults to the owner's
+own team and that league's real history, and any other manager in the league can open
+`/teams` and run the whole app as themselves instead.
+
+Most fantasy tools sell _information_ (rankings, grades, a number with a vibe attached).
+Parquet sells something rarer: **memory and self-knowledge**. It remembers the reasoning
+behind your decisions, catches you when what you say and what you actually did don't
+match, and quietly keeps a book on how everyone else in your league behaves under
+pressure - who folds after a loss, who never answers a text about a trade.
+
+**The house rule, stated plainly rather than left as a footnote: Parquet shows the
+data, never a verdict.** The trade evaluator's output is a thesis - what each side is
+betting on, and what your own history says about that kind of bet - never a letter
+grade (D6). And it does not paper over a real gap with a plausible-sounding guess:
+where the record genuinely can't answer a question, the app says so instead of
+speculating past what the data supports (D19). That restraint - not any single
+feature - is the actual point of difference from a generic trade-value tool. See the
+anti-sycophancy callout further down for how far it goes.
 
 > Repo name: **`parquet`** (the Celtics floor + a nod to columnar data). It was
 > available, so the fallbacks `hardwood-ledger` / `glasshouse-hoops` were not used.
@@ -14,8 +32,9 @@ with zero setup.
 ## What makes it different
 
 Table-stakes features (roster view, asset values, trade evaluator, league view)
-exist because the product isn't credible without them. The reason to use it is the
-four things **no competitor builds** (see [RESEARCH.md](RESEARCH.md)):
+exist because the product isn't credible without them - the boring floor, not the
+pitch. The actual pitch is the five things **no competitor builds** (see
+[RESEARCH.md](RESEARCH.md)):
 
 1. **Decision Ledger** - capture your reasoning at the moment of conviction. New
    transactions surface as an "unannotated decisions" badge; two taps from badge to
@@ -44,14 +63,14 @@ leagues, so identity is the platform user account (a **principal**) and history 
 *detected* from each season's own `owner_id`, never inferred, so a manager's drafts and
 trades stay theirs after they hand the team over, and a manager who has left the league
 keeps credit for the seasons they were here. The real league is 15 principals over 14
-rosters, one of them former. See `lib/principals.ts` and DECISIONS D22.
+rosters, one of them former. See `lib/principals.js` and DECISIONS D22.
 
 **Two proprietary metrics, both published rather than hidden:**
-- **Dynasty Duration and the Timeline Coherence Index** (`lib/metrics/duration.ts`) -
+- **Dynasty Duration and the Timeline Coherence Index** (`lib/metrics/duration.js`) -
   Macaulay duration applied to dynasty assets. It answers *when* a roster's value arrives,
   and TCI answers whether the assets agree about it. Coherence is direction-free: a good
   rebuild and a good contender both score high, and the only bad quadrant is straddling.
-- **Roster Fragility Index** (`lib/metrics/fragility.ts`) - the other half of that
+- **Roster Fragility Index** (`lib/metrics/fragility.js`) - the other half of that
   question: *how much of this season is load-bearing on a handful of assets, and what
   breaks first*. Exact leave-one-out damage (delete a player, re-solve the optimal lineup
   with a DP over subsets of lineup slots rather than greedily, so positional eligibility is
@@ -71,35 +90,61 @@ D26 and D27.
 
 > **Anti-sycophancy is the core design constraint.** Every analytical surface is
 > tuned to disagree with you when the record warrants it. See
-> `lib/analyst/system-prompt.ts` - sycophancy is named there as the product's
+> `lib/analyst/system-prompt.js` - sycophancy is named there as the product's
 > primary failure mode.
 
 ## Quick start
 
+**With zero setup, `pnpm install && pnpm dev` loads the real league** - Eric's own
+NSL Fantasy Hoops (`LEAGUE_PROVIDER` defaults to `sleeper`, D21), live from Sleeper's
+public API, reads never touch a database (D18). That is genuinely all it takes:
+
 ```bash
 pnpm install
-pnpm setup        # prisma db push + seed a demo annotation (fixture data)
-pnpm dev          # http://localhost:3000
+pnpm dev          # http://localhost:3000 - the real NSL Fantasy Hoops league
 ```
 
-That's it - the app runs end to end on the **fixture provider** (a deterministic,
-realistic 5-season synthetic league) with **zero external dependencies**. No API
-keys required.
-
-### Point it at your real Sleeper league
+### Try it on synthetic data instead (no real league, no network calls)
 
 ```bash
 # .env.local
-LEAGUE_PROVIDER=sleeper
+LEAGUE_PROVIDER=fixture
+```
+
+```bash
+pnpm dev          # a deterministic, realistic 5-season synthetic league
+```
+
+The fixture provider ships one Decision Ledger annotation seeded directly in code
+(`FIXTURE_SEED_ANNOTATIONS` in `lib/history.js`), so the revealed-vs-stated
+contradiction has something to show on the very first load - still true with no
+database configured at all. `pnpm seed` only matters once you want that same
+annotation persisted to a real Postgres instead of held in code, or want your own
+notes to survive a restart.
+
+**One collision worth knowing:** `pnpm setup` used to be the one-command bootstrap
+(`db:push` + `seed`) - except `setup` is pnpm's OWN reserved subcommand (it
+provisions your global pnpm home, not this project), and it silently shadows a
+same-named script in `package.json`. Rather than tell everyone to remember `pnpm
+run setup` forever, the script is just named `pnpm bootstrap` now - no builtin to
+collide with, nothing to remember.
+
+### Point it at a different real Sleeper league
+
+`LEAGUE_PROVIDER=sleeper` is already the default (D21) - only set it explicitly if
+you're overriding a `.env.local` that changed it. To run the app as a different
+league or user, override the committed defaults instead:
+
+```bash
+# .env.local
 SLEEPER_USERNAME=EZ8
 SLEEPER_LEAGUE_ID=1347007735815766016   # NSL Fantasy Hoops (resolved; see API_NOTES.md)
 ```
 
-Then pull the full multi-season history:
-
-```bash
-pnpm ingest       # walks previous_league_id back to the start; idempotent, re-runnable
-```
+`pnpm dev` alone already shows the current season live. Pulling the full
+multi-season history into the database (`pnpm ingest`, which walks
+`previous_league_id` back to the start) is purely optional archival persistence -
+the live app never depends on it to render correctly.
 
 ### Enable the conversational analyst (optional, free / open-source)
 
@@ -128,7 +173,7 @@ All documented in [`.env.example`](.env.example):
 | `LEAGUE_PROVIDER` | `sleeper` | `fixture` \| `sleeper` \| `csv`. Defaults to the real league so a zero-config deploy is never silently fake (D21) |
 | `DATABASE_URL` | unset | `postgres://` only (`prisma/schema.prisma` is on the postgresql provider). Unset is supported: reads are DB-free and a ledger write says plainly it was not persisted (D18/D36) |
 | `SLEEPER_USERNAME` | `EZ8` | resolves your roster ("you") |
-| `SLEEPER_LEAGUE_ID` | committed constant | current-season league id; falls back to `DEFAULT_SLEEPER_LEAGUE_ID` in `lib/providers/index.ts` (D21) |
+| `SLEEPER_LEAGUE_ID` | committed constant | current-season league id; falls back to `DEFAULT_SLEEPER_LEAGUE_ID` in `lib/providers/index.js` (D21) |
 | `LLM_BASE_URL` | - | OpenAI-compatible endpoint (Groq/OpenRouter/Ollama); enables conversational analyst |
 | `LLM_API_KEY` | - | key for that endpoint (none needed for local Ollama) |
 | `LLM_MODEL` | `llama-3.3-70b-versatile` | analyst model |
@@ -146,65 +191,89 @@ All documented in [`.env.example`](.env.example):
 |---|---|
 | `pnpm dev` | Next dev server |
 | `pnpm build` | `prisma generate` + production build |
-| `pnpm typecheck` | `tsc --noEmit` |
-| `pnpm test` | Vitest (valuation, strategy, dossier, trade, principals, metrics, awards, Sleeper + CSV parsers) |
+| `pnpm start` | run the production build (after `pnpm build`) |
+| `pnpm lint` | ESLint |
+| `pnpm test` | Vitest run - valuation, strategy, dossier, trade, principals, metrics, awards, Sleeper + CSV parsers (1,054 tests, 63 files, all green as of this writing) |
+| `pnpm test:watch` | Vitest in watch mode |
+| `pnpm e2e` | Playwright smoke suite (`playwright.config.mjs`) |
 | `pnpm db:push` | apply the Prisma schema to the Postgres in `DATABASE_URL` |
-| `pnpm ingest [leagueId]` | full historical pull, idempotent upserts |
-| `pnpm seed` | seed the demo ledger annotation (fixture) |
+| `pnpm db:generate` | regenerate the Prisma client after a schema change |
+| `pnpm bootstrap` | `db:push` + `seed` in one step - the quick-start path above |
+| `pnpm ingest [leagueId]` | full historical pull, idempotent upserts (purely archival - see Architecture) |
+| `pnpm seed` | seed the demo ledger annotation to a real Postgres (fixture only) |
+| `pnpm claim-links [origin]` | print one seat-claim link per manager, once `AUTH_SECRET` is set |
 | `pnpm gen:icons` | regenerate the PWA icon set from `public/icon.svg` |
+
+There is no `typecheck` script - see [Stack](#stack) below on why.
 
 ## Architecture
 
+Plain JavaScript throughout (see [Stack](#stack) below) - every path below is `.js`/
+`.jsx`, not `.ts`/`.tsx`.
+
 ```
 app/                      Next.js App Router (all data pages force-dynamic)
-  page.tsx                Home: revealed strategy + contradiction + ledger badge
+  page.jsx                Home: revealed strategy + contradiction + ledger badge
   plan/                   Game Plan: how to improve this team (prescriptive)
   teams/                  Enter a Sleeper username, or run the app as any team
-  roster/ league/ trade/   table-stakes surfaces
-  managers/[rosterId]/    manager dossiers
-  drafts/[season]/        pick lineage + draft boards
-  awards/                 league superlatives
+  roster/ league/ trade/   table-stakes surfaces (trade/finder/ = auto-suggested deals)
+  managers/[rosterId]/    manager dossiers; managers/compare/ + managers/former/
+  drafts/[season]/        pick lineage + draft boards; drafts/grades/ = report cards
+  awards/                 league superlatives ("House of Cards" and friends)
   deals/                  every deal, and one receipt page per trade
   lineage/                one asset's provenance rail
-  ledger/ analyst/ values/ methodology/
-  api/{annotations,analyst,trade,viewing-as,resolve-user}/route.ts
+  ledger/ analyst/ values/ rank/ recap/ methodology/ commissioner/ settings/ more/
+  lab/                    experiments not promoted to the main flow (see below)
+  api/{annotations,analyst,trade,custom-rank,search,digest-seen,viewing-as,
+      resolve-user}/route.js
 
 lib/
   providers/              PLATFORM-AGNOSTIC data layer
-    types.ts              LeagueProvider + StatsProvider interfaces, domain model
-    sleeper/              real provider - Zod-validated (schemas.ts)
+    types.js              LeagueProvider + StatsProvider interfaces, domain model
+    sleeper/              real provider - Zod-validated (schemas.js)
     csv/                  documented CSV importer (no-API platforms)
-    fixture/              deterministic 5-season synthetic corpus (the default)
-  valuation/              transparent model; every weight in config.ts
-  picks.ts                draft-pick capital: full holdings, valued as assets
-  principals.ts           managers as principals + tenures; succession detection
+    fixture/              deterministic 5-season synthetic corpus (opt-in demo)
+  valuation/              transparent model; every weight in config.js
+  picks.js                draft-pick capital: full holdings, valued as assets
+  principals.js           managers as principals + tenures; succession detection
   metrics/
-    duration.ts           Dynasty Duration + Timeline Coherence Index
-    fragility.ts          Roster Fragility Index (leave-one-out, HHI, exposure)
-    skill.ts              start rate, draft capture, trade value added
+    duration.js           Dynasty Duration + Timeline Coherence Index
+    fragility.js          Roster Fragility Index (leave-one-out, HHI, exposure)
+    skill.js              start rate, draft capture, trade value added
   gameplan/               diagnosis + concrete prescribed moves
   lineage/                traded pick -> the player it actually became
   superlatives/           league awards (behavioural + "On the merits")
-  sleeperLinks.ts         verified deep links back into the Sleeper app
+  sleeperLinks.js         verified deep links back into the Sleeper app
   derive/                 per-manager behavioral derivation, descriptions, and
-                          coalesce.ts (rebuilds commissioner-executed trades)
+                          coalesce.js (rebuilds commissioner-executed trades)
   strategy/               revealed-vs-stated engine (contradiction detection)
   dossier/                manager dossiers
-  trade/                  trade evaluator (thesis, not a grade)
-  analyst/                system-prompt.ts (adversarial) + corpus builder + runner
-  history.ts              LeagueHistory: the corpus object every engine consumes
-  ingest.ts               chain walk + idempotent persistence + ensureIngested()
-  ledger.ts  roster.ts    ledger + roster/league analysis
+  trade/  tradefinder/  tradegraph/   trade evaluator, deal finder, deal graph
+  lab/                    THE LAB - registry of experiments (counterfactual roster,
+                          the regret ledger, Positional Leverage, the Pulse). Each
+                          is a claim the app is testing, not one it has settled -
+                          `/lab`'s own copy says so, and none of them is promoted to
+                          the primary nav (see `lib/lab/index.js`'s header comment)
+  analyst/                system-prompt.js (adversarial) + corpus builder + runner
+  history.js              LeagueHistory: the corpus object every engine consumes
+  ingest.js               chain walk + idempotent archival persistence (optional)
+  ledger.js  roster.js    ledger + roster/league analysis
 prisma/schema.prisma      Postgres-portable (no SQLite-only types)
-scripts/                  ingest, seed, gen-icons
+scripts/                  ingest, seed, claim-links, gen-icons
 ```
 
-**Data flow.** A provider normalizes any platform into the domain model. `ingest`
-walks the `previous_league_id` chain to assemble the full multi-season corpus and
-upserts it to the DB (idempotent). Pages build a `LeagueHistory` (transactions +
-annotations from the DB, current league state live from the provider) and the pure
-derivation engines run over it. `ensureIngested()` lazily populates the DB on first
-read, so a fresh clone works with no manual ingest against fixtures.
+**Data flow.** Reads are DB-free by construction. A provider normalizes any
+platform into the domain model, and every request assembles the full corpus
+(chain, rosters, players, transactions) **live** from that provider - no lazy
+on-first-read database populate step exists anymore (`lib/ingest.js`'s own header
+comment is explicit that it once did and no longer does). Pages build a
+`LeagueHistory` (`lib/history.js`) over that live corpus, plus whatever
+annotations the DB happens to hold - best-effort, since the DB is optional. The
+pure derivation engines (strategy, dossier, valuation, metrics, superlatives) run
+over that one object. `ingest`/`seed` are the only two callers of `ingestAll()`,
+and both are now purely an **optional archival persistence** of raw transaction
+payloads and a player cache - a convenience for later, not something the live app
+depends on to render correctly.
 
 **The Analyst is a prompt over a text corpus - not fine-tuning, not a vector DB.**
 ~20-40 transactions/season × a few seasons of annotated history fits comfortably in
@@ -215,8 +284,24 @@ and a pitch from /plan or a manager dossier, both end at a one-tap link to your
 league's trade centre - you carry the thesis over yourself from there.
 
 ## Stack
-Next.js 16 (App Router, TS strict) · Tailwind v4 · Prisma 6 (Postgres, optional) ·
+Next.js 16 (App Router, plain JavaScript) · Tailwind v4 · Prisma 6 (Postgres, optional) ·
 Zod 4 · Vitest · any OpenAI-compatible LLM endpoint (D17) · deployable to Vercel · installable PWA.
+
+**Plain JavaScript, not TypeScript - by owner request, not by default.** The app
+shipped on TypeScript strict through most of its build; D63 mechanically converted
+all 249 `.ts`/`.tsx` files to `.js`/`.jsx` (a scripted `ts.transpileModule` + Prettier
+pass, not a hand rewrite, to rule out transcription error at that size) and dropped
+`typescript`/`@types/*` from `package.json`. There is no `tsconfig.json` - only the
+`@/*` path alias survives, carried into `jsconfig.json`. If you're used to reading
+this stack with a type layer, there isn't one here; JSDoc-with-`@ts-check` and an
+AltJS frontend language were both considered and both declined for the same reason
+the removal happened - see D63.
+
+Two themes, not more: **dark** (the default identity) and **light** ("Paper" in the
+`/settings` toggle) - the ordinary light/dark pattern, not a second design to choose
+between. A high-contrast third theme shipped once and was later removed by owner
+request (D69) once dark's own contrast was fixed at the token level, so the toggle
+stays a two-way switch. Full tokens in [DESIGN.md](DESIGN.md).
 
 ## Deploy (Vercel)
 **Zero configuration required for live league data.** No database, no environment
@@ -261,8 +346,8 @@ conversational analyst.
 
 ## Current state
 v1 is feature-complete and runs end to end on fixtures with zero external deps.
-Build, typecheck, lint, and **260 tests across 15 files** are green. See PROGRESS.md for
-the honest what-works / what's-stubbed / next-steps rundown.
+Build, lint, and **1,054 tests across 63 files** are green (`pnpm test`). See
+PROGRESS.md for the honest what-works / what's-stubbed / next-steps rundown.
 
 Known gap worth naming here: **principals are threaded through the awards surface only.**
 Dossiers, trade partners, the deal record and the strategy engine are still roster-keyed, so

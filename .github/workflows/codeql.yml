@@ -1,0 +1,35 @@
+name: CodeQL
+
+# Static analysis for real vulnerability classes (injection, XSS, unsafe
+# regex, etc.) across the actual app code - separate from `pnpm audit`, which
+# only checks known CVEs in dependencies. Runs on its own schedule plus every
+# PR, and is informational: it reports to the repo's Security tab rather than
+# blocking a merge, since triaging a static-analysis finding is a judgment
+# call the gate jobs in ci.yml shouldn't be making automatically.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  schedule:
+    - cron: "0 7 * * 1"
+
+jobs:
+  analyze:
+    name: Analyze
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+      contents: read
+    strategy:
+      matrix:
+        language: ["javascript-typescript"]
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"

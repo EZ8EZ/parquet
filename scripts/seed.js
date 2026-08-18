@@ -3,15 +3,15 @@
  * feature has signal on first run. Only applies to the fixture corpus (the trade
  * id is fixture-specific). Idempotent. Safe to skip for real Sleeper data.
  */
-import "./_env";
+import "./_env.js";
 async function main() {
-  const { providerName } = await import("../lib/providers");
+  const { providerName } = await import("../lib/providers/index.js");
   if (providerName() !== "fixture") {
     console.log("Seed skipped: only seeds the fixture corpus.");
     return;
   }
-  const { ingestAll } = await import("../lib/ingest");
-  const { prisma } = await import("../lib/db");
+  const { ingestAll } = await import("../lib/ingest.js");
+  const { prisma } = await import("../lib/db.js");
   await ingestAll({ log: () => {} });
   // The 2022 rebuild trade — user's STATED strategy at the moment of conviction.
   // Authored by "u1", the fixture's own EZ8 seat (see providers/fixture/generate.ts

@@ -12,9 +12,9 @@
  * stored - the links are derived from (ownerId, AUTH_SECRET) every time, so running
  * it twice prints the same links and losing the output costs nothing.
  */
-import "./_env";
-import { claimUrl, authSecret } from "../lib/auth/seat";
-import { activeLeagueId, getLeagueProvider } from "../lib/providers";
+import "./_env.js";
+import { claimUrl, authSecret } from "../lib/auth/seat.js";
+import { activeLeagueId, getLeagueProvider } from "../lib/providers/index.js";
 async function main() {
   const secret = authSecret();
   if (!secret) {

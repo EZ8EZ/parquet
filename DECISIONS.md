@@ -4284,3 +4284,300 @@ One minor, NOT fixed, build-time-only oddity, documented rather than chased: bui
 **VERIFIED.** `pnpm lint` clean. `pnpm test`: **1045 passed (62 files)** - unchanged from D77's own baseline, confirming none of the above introduced a regression. `pnpm build` succeeds (route/bundle numbers above). Full `pnpm e2e` (`rm -rf .next` first, the known Turbopack dev-cache staleness gotcha): **73 passed, 5 failed** - every failure is `net::ERR_CONNECTION_RESET` on an image request to `sleepercdn.com` (`/avatars/thumbs/...`, `/images/team_logos/nba/nyk.png` - confirmed by reading the Playwright trace's network log directly), which `expectNoConsoleErrors` correctly treats as a page error in a normal environment. Verified this is a property of THIS SANDBOX, not of the changes in this entry: stashed every change here, reran the identical failing test (`/roster renders cleanly`) against the unmodified, already-merged codebase, and it failed identically. This sandbox's outbound network reaches Sleeper's JSON API but not its image CDN (a restriction the environment itself documents); a real deploy or a less restricted sandbox would not see this. Database layer changes verified against a REAL local Postgres 16 instance (spun up in this sandbox), not by inspection alone - see area 3 above for the exact commands and results.
 
 **Rejected:** hardening the corpus cache into a shared/external one (Redis, etc.) to survive serverless cold starts - D25/D38 already made this call deliberately, and nothing in this pass found a real cost the current design fails to bound; adding rate-limiting middleware across all routes - the deployment model (private league, ~14 users) does not call for it, and every route with real per-request cost is already bounded by an existing memoized cache; chasing the `/_not-found` build-log noise into Next 16's internals without being able to verify the exact signal convention first; converting more `"use client"` components after finding only one genuine false positive among nineteen - the other eighteen earned their boundary and re-litigating them would be inventing a problem to justify touching working code.
+
+## D82. CI/PROFESSIONAL BASELINE - dependency scanning, response security headers, CodeQL, and informational coverage, added after real measurement of what was actually missing
+
+The owner asked directly what other CI gates or best practices a professional would add to a web app like this. Rather than list generic advice, measured what this repo actually had and actually lacked.
+
+**Real finding: `pnpm audit --prod` reports 7 live vulnerabilities** (5 high, 2 moderate) in `postcss`, `sharp`, `nanoid`, and `deepmerge-ts` - every one of them a transitive dependency bundled INSIDE `next@16.2.12`'s and `prisma@6.19.3`'s own dependency trees, not independently upgradable by bumping anything in this repo's own `package.json`. Checked each for real exploitability in how THIS app actually uses these libraries rather than treating the CVE severity label as the final word: the PostCSS XSS/path-traversal advisories require processing untrusted, user-submitted CSS and re-embedding it - this app only ever runs PostCSS over its own authored Tailwind source at build time, never on end-user input. The sharp/libvips advisories require processing untrusted images through Next's `/_next/image` optimization pipeline - grepped the entire app for `next/image` and found zero usages anywhere (player photos and team logos are both plain `<img>` elements, see D39/PlayerAvatar.jsx), so that code path is never exercised. deepmerge-ts's stack-exhaustion bug lives inside Prisma's own CLI config-merging, a dev/build-time tool. Forcing a `pnpm.overrides` to patch versions next.js/prisma haven't shipped yet would risk breaking their internal build/image pipelines to fix a vulnerability class with no real exploit path here - a worse trade than leaving it to the real fix (an upstream next/prisma point release).
+
+**What shipped instead:**
+- `.github/dependabot.yml` - weekly npm + github-actions updates, minor/patch grouped into one PR so a routine week is one review, not ten; major bumps (next, react, prisma) stay ungrouped since those need real attention. This is what will actually pick up the real fix for the vulnerabilities above the moment next/prisma release it, instead of relying on someone remembering to re-run `pnpm audit` by hand.
+- `next.config.mjs` `headers()` - `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: strict-origin-when-cross-origin`, `Permissions-Policy` disabling camera/mic/geolocation. Verified live against a real running dev server (curled the response, confirmed all four headers present), not just "should work." Deliberately did NOT ship a Content-Security-Policy in the same pass - getting one right without breaking Next's own inline hydration payload and Vercel's preview-comments toolbar needs a dedicated, carefully-tested pass of its own, not a header bolted on alongside four safe ones.
+- `.github/workflows/codeql.yml` - GitHub's CodeQL static analysis for real vulnerability classes (injection, unsafe regex, etc.) in the app's own code, distinct from `pnpm audit`'s dependency-CVE scanning. Runs on push/PR/weekly schedule, reports to the Security tab, deliberately non-blocking - triaging a static-analysis finding is a judgment call, not something the merge gate should decide automatically.
+- `pnpm test:coverage` (new script, `@vitest/coverage-v8` added as a devDependency, `vitest.config.mjs` updated) plus a CI step uploading the HTML report as an artifact. Informational only, no threshold gate: there's no established baseline, and D81 already noted 29 of 32 components carry no unit test by design (the Playwright suite is what actually renders them) - a coverage percentage here is a useful number to glance at, not a merge-blocking target to chase. Real baseline measured this round: 88.7% statements / 89.1% functions across `lib/`.
+- `.github/workflows/ci.yml`'s existing "Dependency audit (informational)" step runs `pnpm audit --prod || true` - visible in every CI log for triage, never blocking, for the same reason the coverage step doesn't gate: this repo can't fix vulnerabilities upstream of its own dependency graph, so a hard gate here would stay red indefinitely over something outside the repo's control.
+
+**Confirmed still open, not fixed this round (owner action, not something reachable via any tool available here):** `ci.yml`'s own header comment documents that GitHub's branch-protection required-status-checks list still references the pre-TypeScript-removal job name ("typecheck / lint / test") instead of its current name ("lint / test"), and has never been updated to require "e2e (Playwright smoke)" either. No branch-protection-read/write tool was available to confirm or fix this directly - it needs one manual visit to Settings → Branches → main → Require status checks, removing the stale name and adding the two live check names.
+
+**VERIFIED.** `pnpm lint` clean. `pnpm test`: 1054 passed (63 files), unchanged. `pnpm build` succeeds. Full `pnpm e2e`: 78/78 passed (three transient failures on the first run traced to CPU contention from concurrently-running background agents on this same 4-core sandbox - confirmed by re-running the same three tests in isolation immediately after, all green, and by checking `uptime`'s load average directly rather than assuming). Response headers verified live via `curl -D -` against a real dev server, not just read from config.
+
+## D83. TWO SLEEPER-RESEARCH LEADS, BOTH ALREADY SHIPPED - tabular numerals and disclosure depth checked directly against the real codebase
+
+External research into data-dense app design (this round's broader Sleeper-inspired UX pass) surfaced two concrete, specific ideas worth checking against reality rather than assuming either was a gap: tabular/lining numerals for numeric-column alignment, and Nielsen Norman Group's finding that progressive disclosure past two levels has measurably low usability.
+
+**Tabular numerals: already built.** `app/globals.css`'s `.figure` class (`font-variant-numeric: tabular-nums slashed-zero`, plus `font-feature-settings`) already exists with a clear usage rule documented directly above it - `.figure` on quantities, `.font-mono` on identifiers only (pick notation, transaction ids), `.font-display` on captured reasoning - and is applied across 47 files including exactly the pages this research would have targeted (`ValuesList.jsx`, `RankingBoard.jsx`, and everywhere else a real number renders). Nothing to add.
+
+**Disclosure depth: already single-level everywhere.** Every `<details>` in the app (`app/page.jsx`, `/methodology`, `/deals`, `/commissioner`, `/roster`, `/ledger`, `/recap`, `/awards`, plus the shared `Disclosure`/`MetricGloss`/`PickAgencyPanel` components) is an independent, top-level disclosure - checked the ones that looked like candidates for nesting directly: `/roster`'s `PickAgencyPanel` (which has its own internal `<details>`) renders as a sibling section after its own `SectionHeader`, never inside `/roster`'s "Every asset, by duration" disclosure; `/deals`'s per-season `<details>` list and its separate "Every round trip" disclosure are two fully independent sections, not one nested inside the other. This matches the established house idiom (D15's closed-by-default Disclosure pattern) being consistently single-level by construction, not by luck. Nothing to flatten.
+
+**A process note, not a design finding:** the agent originally assigned this check ran twice (background-verification loop that never resolved, ~420k tokens combined, zero committed changes across both attempts) without producing a result, so this entry's findings were verified directly rather than through that agent. Its two now-abandoned worktrees were removed.
+
+No code changes this entry - both leads checked out as already-shipped, confirmed via direct inspection of the real source rather than assumed from the research alone.
+
+## D84. React `cache()` dedup and the corpus-cache race, checked from first principles - one real correctness finding (already fixed), two real waterfalls this branch still had, one overstated lead corrected with real numbers
+
+Owner-requested from fresh external research (React's `cache()` docs, a Fluid
+Compute engineering write-up), explicitly framed as checking two angles no prior
+pass on this branch had checked: WITHIN-one-request Server Component fan-out
+duplication (different from the corpus's own across-request TTL cache), and
+whether the corpus cache's write path could let a second concurrent miss observe
+a partial result. Scope broadened mid-task to "any real architecture issue,
+evidenced" - three more things turned up doing that, two worth fixing and one
+worth correcting.
+
+**1. REACT `cache()` - traced every real render tree, found no genuine
+duplication to wrap.** This app has exactly ONE layout (`app/layout.jsx`, no
+nested layouts, no `generateMetadata` anywhere - grepped for it, zero hits, which
+is the single most common real-world reason `cache()` gets reached for) and every
+`page.jsx` calls `getLeagueHistory()` exactly once (grepped all 35 call sites).
+The only place two independent Server-Component call sites touch the SAME async
+engine in one request is the root layout's `Desk` (`lib/desk.js`, via
+`getDeskData()`) alongside whichever page is rendering beside it - `getPrincipals`
+and `currentFormByRoster`/`loadSeasonRosters` are each reachable from both. But
+both are ALREADY single-flight + TTL memoized the identical way the corpus is
+(`lib/principals.js`, `lib/metrics/skill.js` - same shape: a module-level slot
+holding a PROMISE, not a value, checked and assigned with no `await` in between).
+Proved this empirically rather than assuming it from the shape of the code:
+called `getPrincipals(h)` and `currentFormByRoster(h)` twice concurrently each,
+simulating the exact Desk-plus-page shape, and spied on the provider calls each
+one's assembly makes - the SECOND concurrent call in both cases triggered ZERO
+additional provider fetches, confirming the two "call sites" collapse into one
+real assembly, for free, the same way `history.test.js` already proves for the
+corpus itself. The synchronous, uncached derivation functions the research named
+by name (`leagueValueRanking`, `leagueTimelines`, `leagueFragility`) were checked
+the same way D81's own profiling pass checked `/roster` - grepped every call site
+across the whole app - and each is called exactly once per full render, from the
+top of its one page, with nothing else in the tree (no async Server Component
+children exist anywhere in `components/`) calling it again. `lib/tradefinder`'s
+`board(h)` explicitly reuses `leagueValueRanking`'s ranking rather than
+recomputing it for `leaguePositionPools` - a comment already there names the same
+class of bug and shows it was already caught inside that one function. **No
+`cache()` wrap was added anywhere.** The hand-rolled TTL/promise-slot pattern
+already covers every real case in this codebase, and it does something `cache()`
+cannot: dedupe ACROSS requests too, which is the whole point of D25/D38. Wrapping
+already-deduped calls in `cache()` would add a second, redundant memoization layer
+for zero measured benefit - exactly the kind of speculative change D6/D19 warn
+against.
+
+**2. THE CACHE-WRITE RACE - already correct, and the reason is `await`-free
+critical sections, not luck.** Read `getCorpus()` in `lib/history.js` (and the
+identical-shaped `getPrincipals`/`loadSeasonRosters`) looking specifically for
+whether two concurrent misses could interleave such that a partial result becomes
+visible, or such that the cache is written to piecemeal. It cannot, and the reason
+generalizes beyond "Node is single-threaded": the ENTIRE check-then-write section
+- `if (!fresh && corpusSlot) {...}`, constructing `const slot = {}`, kicking off
+`slot.promise = timed(...).then(...)`, and `corpusSlot = slot` - contains no
+`await` at all. An `async function`'s body runs synchronously up to its first
+`await` or `return`, so two calls to `getCorpus()` can never interleave their
+checks and writes regardless of how many "concurrent" requests a Fluid Compute
+instance is juggling - only genuinely async work (the Sleeper fetches inside
+`assembleCorpus`) yields, and by the time anything yields, the promise (not a
+value) is already the thing sitting in the slot for every later caller to join.
+This is the textbook fix the research named ("cache the in-flight promise")
+already implemented, not a race dressed up as one. `history.test.js` already
+proves this under real concurrent load (5 callers, one assembly, verified by
+reference-equality on the shared corpus and a `getUsers` spy call count of
+exactly 1), including the harder cases: a rejection clears the slot rather than
+pinning it, and callers already in flight when a rejection lands all see the
+same rejection rather than one hanging. Nothing needed fixing here - this is the
+legitimate "verified correct, no bug found" outcome D67/D70 already set precedent
+for on this codebase.
+
+**3. TWO REAL WATERFALLS THIS BRANCH STILL HAD, found while reading the exact
+functions above for finding 2 - fixed, and measured against the real NSL Fantasy
+Hoops league (this sandbox has outbound Sleeper access), not assumed.**
+`assembleCorpus()` was awaiting `collectTransactions`, `collectTradedPicks`,
+`loadAnnotations`, `loadMatchups` and `loadBrackets` one after another though none
+of the four smaller ones depend on `collectTransactions`'s result or on each
+other's - fixed via `Promise.all`, the same shape independently arrived at
+elsewhere on a different branch. `collectTradedPicks` (`lib/ingest.js`) had the
+identical shape one level down: a `for` loop awaiting each season's
+`getTradedPicks` in series. Fixed by fetching all seasons concurrently and then
+walking the results in the ORIGINAL `chain` order for the dedup pass - the
+"keep the first (oldest league) occurrence" comment depends on iteration order,
+not resolution order, so the merge logic had to move after the `Promise.all`,
+unchanged, rather than being rewritten. `loadProvenanceSource()`
+(`lib/provenance/source.js`, the shared assembly `/roster`, `/deals` and
+`/lineage` all use) awaited `getPrincipals(h)` then `buildDraftIndex(h)` in
+series despite its own comment already noting neither depends on the other;
+fixed via `Promise.all`, preserving the identical catch-and-degrade-to-
+`{supported:false}` fallback for a provider with no draft support.
+
+Measured before/after against the real league, `LEAGUE_PROVIDER=sleeper`, 3 runs
+each (vitest's own env override flipped from `fixture` to `sleeper` for the
+duration of the measurement, then reverted - confirmed back to `fixture` via
+`git diff` before finishing): **corpus assembly before 6504ms/5929ms/5826ms (avg
+~6086ms), after 5969ms/5497ms/6057ms (avg ~5841ms)** - a real but modest ~4%
+average improvement, reported honestly rather than inflated: `collectTransactions`
+(already internally fanned out over 5 seasons x 25 weeks) dominates the total,
+`loadMatchups` costs nothing at all against the live Sleeper provider (it is
+deliberately fixture-only, D20), and real Sleeper network jitter run-to-run is
+large enough to compete with the theoretical saving from parallelizing the three
+genuinely small remaining calls. **`loadProvenanceSource` showed a clearer win:
+before 1222ms/288ms/90ms (avg ~533ms), after 709ms/82ms/75ms (avg ~289ms)** - a
+~46% average reduction, including a ~42% faster COLD run (1222ms -> 709ms), which
+is the more honest comparison since `getPrincipals` and `buildDraftIndex` are each
+real, non-trivial network-touching assemblies rather than one dominant call and
+four small ones. Both fixes are correctness-neutral-or-better by construction
+(removing a genuine unneeded dependency between two independent awaits cannot
+make the group slower), so the modest corpus number is reported as what it
+measured, not talked up to match the more dramatic number the smaller function
+produced.
+
+**Verified.** `pnpm lint` clean. `pnpm test`: **1045 passed (62 files)**,
+unchanged. `pnpm build` succeeds (identical 34-route shape, same known cosmetic
+`/_not-found` build-log quirk this codebase already decided not to chase). Full
+`pnpm e2e` (`rm -rf .next` first): **78 passed** in isolation; a fully-parallel
+run on this specific sandbox flaked two navigation-timing assertions
+(`core-flow.spec.js`'s ledger-to-receipt deep link, `density.spec.js`'s deal-index
+row click) under visible resource contention (a `/commissioner` render logged at
+3.8s and a home-page render at 4.4s in the same run, both far outside their normal
+cost) - re-ran both in isolation and both passed cleanly, and both reproduced
+identically against the UNMODIFIED code path before these two fixes were made,
+confirming this is the same class of sandbox-only flakiness this codebase has
+already documented (D81's own image-CDN failures), not a regression from either
+change.
+
+**4. THE `/trade` EVALUATE-BUTTON LEAD - checked with real timing, and the "cold
+every click" framing does not hold up.** `TradeBuilder.jsx`'s `evaluate()` is a
+single explicit button handler (not a live re-price on every keystroke), doing
+one `POST /api/trade` per click, and that route handler does call
+`getLeagueHistory()` fresh in its own module layer (route handlers and Server
+Components are separately instantiated - already documented on `publishAnnotation`'s
+own comment in `lib/history.js`). But "its own module layer" still means "single-
+flight + 5-minute TTL," identically to every other consumer - nothing in the
+route bypasses the cache or forces `fresh: true`. Measured directly rather than
+inferred from reading the code: started a real dev server and POSTed an empty
+trade body to `/api/trade` four times in a row. The Next.js request log broke out
+compile time from actual handler cost precisely: **call 1, 200 in 3.0s (next.js:
+2.6s Turbopack first-compile of the route - a dev-only cost that does not exist
+in a production build - application-code: 388ms, the real cold corpus hit); calls
+2-4, 25ms/104ms/63ms total (next.js: 5-9ms, application-code: 20-96ms)** - a
+4-15x drop in the number that actually matters, confirming the warm corpus is
+reused across repeated Evaluate clicks exactly as designed. The genuine,
+correctly-characterized difference from `/trade/finder` is not "cold every
+click" - it's that `/trade/finder` computes every package server-side on one
+render with zero further round-trips as the user explores partners, while
+`/trade`'s Evaluate button pays one extra client-server round-trip per click,
+cheap once warm. That is the same already-accepted D25/D38 tradeoff every route
+in this app pays on its first hit after a cold start or TTL expiry, not a defect
+specific to this button. **No change made** - converting the Evaluate flow to a
+server-rendered, link-based pattern like `/trade/finder`'s would be a UX/architecture
+redesign, not a backend correctness fix, and nothing measured here shows the
+current cost is a real problem worth that redesign.
+
+**Rejected:** wrapping `leagueValueRanking`/`leagueTimelines`/`leagueFragility`
+or any already-TTL-cached engine in `cache()` speculatively - no measured
+duplication exists for any of them, and for the TTL-cached ones `cache()` would
+be strictly worse (request-scoped only, versus the existing cross-request
+memoization); redesigning `/trade`'s Evaluate flow into a server-rendered
+pattern - the measured cost does not justify it; hardening the corpus cache into
+a shared/external one to survive Fluid Compute's multi-request instances - the
+mechanism already in place (cache the promise, not the value, with no `await`
+between check and write) is correct under that model specifically, not merely
+under the single-request-per-instance model D25/D38 were written against, so
+there is nothing Fluid Compute changes here to harden against.
+
+## D85. Systematic touch-target audit, all 34 routes - one real bug, one real fix, one deliberate control genuinely improved
+
+A prior session's Lighthouse spot-check on 4 pages flagged the Desk's drag handle
+(`components/Desk.tsx`, `.desk-handle`) under the 24px `target-size` minimum (WCAG
+2.5.8) and, separately, this round's owner lifted the standing "leave it alone"
+instruction on that specific control mid-session, asking it be genuinely
+reconsidered rather than re-litigated on faith. Both threads are closed here: the
+whole app was swept, one real bug turned up outside the handle, and the handle
+itself turned out to have real headroom the earlier trade-off analysis hadn't used.
+
+**THE SWEEP.** axe-core's `target-size` rule is disabled by default (`enabled:
+false` in 4.13's own rule metadata) and neither `axe-scan.mjs` nor the committed
+`e2e/a11y.spec.js` suite turns it on, so the earlier spot-check's 4-page Lighthouse
+pass was the only place this project had ever actually run this check. It was run
+here, explicitly enabled, against a real fixture-provider dev server, mobile
+viewport (390x844), across all 34 rendered routes - the 24 in `lib/nav.ts`'s
+`ALL_SURFACES` (the committed suite's own coverage) plus the 5 static routes it
+does not list (`/claim/invalid`, and `/lab/counterfactual` / `/leverage` / `/pulse`
+/ `/regret`, which exist only inside `/lab`'s own index) plus the 5 dynamic routes
+reached only from listing pages (`/deals/[transactionId]`, `/drafts/[season]`,
+`/managers/[rosterId]`, `/managers/former/[ownerId]`, `/lineage/[assetKey]`, ids
+harvested by crawling the fixture league's own listing pages rather than guessed).
+Two things flagged. Everything else - every icon button, every close/dismiss
+control, every list-row action link across all 34 pages - already clears 24px with
+real spacing; this is the completely legitimate "swept and found nothing more"
+result D67/D70 set precedent for, for 32 of the 34 routes.
+
+**THE REAL BUG, found only because the sweep was systematic rather than
+4-page-deep: `/analyst`'s composer was rendering almost entirely underneath the
+Desk.** axe's `target-size` flagged the chat `<textarea>` as "partially obscured
+(smallest space 306px by 3.1px)" - not a spacing nitpick but a target reduced to a
+3px sliver. `elementFromPoint` sampling down the textarea's own bounding box
+confirmed it directly: everything below the first ~4px resolved to `.desk-handle`
+or the tab-row links, not the textarea. `components/AnalystChat.tsx`'s fixed
+composer cleared the Desk by a hand-rolled `calc(env(safe-area-inset-bottom) +
+64px)` - 64px being roughly the old single 94pt tab bar's clearance from before
+D65 rebuilt the Desk into today's 116pt three-row stack (handle + context row + tab
+row). `app/layout.tsx`'s own `<main>` padding had already been updated to the
+correct constant for this exact clearance (`8.5rem` = 116pt of Desk + 20pt of air,
+its own comment says as much) - the composer just never got the memo when D65
+shipped, because it manages its own fixed positioning independently of that shared
+padding. Fix: the composer's padding-bottom now reads the same `8.5rem` layout.tsx
+uses, with a comment cross-referencing both files so the two don't drift apart
+again. Confirmed by `elementFromPoint` re-sampling (composer fully clear in both
+themes) and a re-run of the axe scan (`target-size` violation gone on `/analyst`;
+everywhere else unaffected).
+
+**THE HANDLE, reconsidered rather than re-flagged.** The existing rationale (D-era
+comment directly above the button) was sound as far as it went - full-bleed width,
+clear of the iOS home-indicator swipe zone, the More tab as a same-action full-size
+alternative - and none of that was wrong. What it hadn't asked was whether the
+19pt height itself had any slack, given those constraints held constant. It did:
+the constraint is that the handle's BOTTOM edge sit ~97pt above
+`env(safe-area-inset-bottom)` (the context row + tab row's combined 44+53pt below
+it) - nothing requires its TOP edge to stay put. Growing the button's own box
+upward only (padding-top 8px -> 13px, height 19px -> 24px) meets the 24px floor
+exactly, moves the bottom edge by zero pixels, and costs 5pt taken from the 20pt of
+pure "air" `app/layout.tsx` budgets above the resting Desk (now ~15pt - still
+comfortably positive, still enough that page content clears the handle). Width,
+gesture capture (`onPointerDown`/`onPointerMove`, unchanged), the More-tab
+alternative, and the "accelerator, not the only way in" framing are all untouched.
+Stopped at 24px rather than reaching for Material's stricter 48px floor
+deliberately: this control's whole safety net is that a full-size alternative
+sits two rows below it, and doubling the Desk's resting height would spend more of
+the "keeps the resting Desk inside a thumb's reach" budget the three-row arithmetic
+was tuned for than a backstopped control is worth. Verified: axe's `target-size`
+no longer flags `.desk-handle` on any route, in either theme; a scripted click on
+the handle still opens the drawer (`aria-expanded` flips, focus trap and `inert`
+contract unchanged); screenshots at 390px in both themes show the grip's visual
+position unchanged to the eye. Comments updated in three places (`Desk.tsx`'s
+header, the handle's own inline comment, `app/layout.tsx`'s padding comment) so the
+116pt/19pt arithmetic those files used to cross-reference reads 121pt/24pt
+everywhere at once, not just in code.
+
+Verification: `pnpm lint` (clean), `pnpm test` (1045/1045), `rm -rf .next && pnpm
+build` (clean, all 34 routes present in the route manifest), `pnpm e2e` (78/78 -
+two unrelated tests flaked once mid-run on an unrelated timing issue, reproduced as
+passing in isolation against both the pre- and post-change tree, so not attributed
+to this change).
+
+## D86. README PASS: TWO REAL BUGS CAUGHT BY ACTUALLY RUNNING THE COMMANDS, PLUS THREE STALE CLAIMS THE PROSE HAD LEFT BEHIND
+
+A documentation-only pass on README.md (no application code touched), but the brief's own "verify every concrete claim against the actual repository" ground rule turned up two real, reproducible problems in the setup instructions the old README was about to be left carrying forward uncorrected, and three separate spots where the prose had quietly drifted out of sync with a real change made elsewhere in the app. Recorded here because catching a broken command by running it, not by reading it, is exactly the kind of judgment call this file exists to preserve the reasoning behind.
+
+**Finding 1: `pnpm setup`, run literally as the README said, never touches Prisma at all.** `setup` is a reserved pnpm CLI subcommand (it provisions pnpm's own global home directory) that takes priority over a same-named script in `package.json`. Verified directly in a clean shell: `pnpm setup` exits 0 having appended lines to `~/.bashrc` and never having called `prisma db push` or `pnpm seed`, the script the README meant. `pnpm run setup` (or `pnpm run-script setup`) is required to reach the project's own script; no other script name in this `package.json` collides with a pnpm builtin. Fixed by writing `pnpm run setup` everywhere the README references it, with the collision named plainly rather than silently worked around, since a reader who only ever saw the corrected command with no explanation would hit the same trap the moment muscle memory shortened it back to `pnpm setup`.
+
+**Finding 2: `pnpm ingest`, `pnpm seed`, and `pnpm claim-links` currently fail before their bodies ever run, on any Node version.** All three scripts open with `import "./_env"` - no `.js` extension. Node's ESM resolver, unlike Next's own bundler and unlike CommonJS `require`, does not guess extensions on a relative specifier; it throws `ERR_MODULE_NOT_FOUND` for `scripts/_env` immediately. Verified by running all three directly (`node scripts/ingest.js`, `pnpm run seed`, `pnpm run claim-links`) against a clean `pnpm install` - identical failure, same file, every time. `pnpm dev`, `build`, `test`, `lint`, and `db:push`/`db:generate` are unaffected; none of them load `scripts/_env.js`. This is very likely a D63 casualty: a `.ts` script executed through a TypeScript-aware runner tolerates an extensionless relative import; the same file mechanically converted to `.js` and then run directly by plain `node` does not, and nothing in D63's own verification pass exercised these three scripts (its own "no TypeScript leftovers" check was static, not a run of every script). **Not fixed here** - this pass is documentation-only by its own brief, and the fix is a one-word change (`"./_env.js"`) in three files, squarely application code. Documented plainly in the README (a flagged callout under Scripts, pointed to from both places Quick Start recommends these commands) rather than silently presenting broken instructions as working, or silently routing around the finding by pretending the commands were never mentioned.
+
+**Documentation drift, fixed (no app-code claims involved, so fixed directly).** Three stale spots, all dating from real changes elsewhere in the app that the README was never updated to match: (1) every `.ts`/`.tsx` path and "TypeScript strict" claim in the README predates D63's conversion to plain JavaScript - the whole stack was still described as typed six-plus rounds after it stopped being; (2) the Quick Start's own framing ("the app runs end to end on the fixture provider... with zero external dependencies") was written before D21 flipped the default `LEAGUE_PROVIDER` to `sleeper` - followed literally with no env vars set, those three commands load the real live NSL Fantasy Hoops league over the network, not the offline synthetic demo, which is the opposite of what the prose claimed; (3) the Architecture section's "Data flow" paragraph still named `ensureIngested()` as the thing that "lazily populates the DB on first read" - that function doesn't exist in the codebase anymore, and `lib/ingest.js`'s own header comment already says plainly that reads stopped touching the DB at all a while ago. All three corrected against the real source rather than assumed from the old prose.
+
+**Rejected:** fixing the three broken scripts' import statements as a drive-by, since the task scope was explicitly documentation-only and a one-line app-code fix is still an app-code fix; silently rewriting the Quick Start to skip `pnpm ingest`/`pnpm run setup`/`pnpm claim-links` entirely rather than naming why they don't currently work, which would read as the app having fewer scripts than it does rather than one of them having a real, fixable bug.
+
+## D87. THE "ONE-WORD FIX" WASN'T ONE WORD - all three CLI scripts actually fixed, and it took a 108-file mechanical codemod to get there
+
+D86 diagnosed the three broken scripts' failure as a single missing `.js` extension on `import "./_env"` and, correctly for its own documentation-only scope, left the fix for later. Picking it up: the `_env` fix alone was necessary but nowhere near sufficient. `node scripts/seed.js` past that first fix immediately hit a SECOND extensionless import one level deeper (`lib/providers`, a directory with no explicit `/index.js`), and fixing that surfaced a third (`lib/providers/fixture`, another directory), and a fourth (`lib/db`) - the same class of bug recurring at every layer these three scripts transitively import through. This is D63's real signature, exactly as D86 suspected: Next's bundler (and every `.ts`-aware runner before it) has always resolved extensionless and directory imports for free, so 249 files' worth of `.ts`→`.js` conversions never had a reason to write out `.js`/`index.js` explicitly - the only place it was ever going to surface is a bare `node` invocation with no bundler in front of it, which describes exactly these three scripts and nothing else in the app.
+
+**Fixed with one small script, not by hand.** Wrote a ~30-line codemod (`fix_imports_tmp.mjs`, deleted immediately after, never committed) that walked every `.js`/`.jsx` file under `lib/` and `scripts/`, found every relative import (`from "./x"`, `from "../x"`, `import("../x")`) missing a recognized extension, checked the real filesystem for whether `x.js` or `x/index.js` actually exists, and rewrote to whichever resolved - leaving anything it couldn't resolve untouched rather than guessing. This is the SAME category of decision D63 made for its own conversion (mechanical over hand-edited, to rule out transcription error at a size no reviewer can diff by eye): **108 files touched**, entirely by machine, entirely reversible by re-running against the pre-fix tree. Explicit extensions are accepted identically by Next's bundler, so this changes nothing about how the app itself resolves modules - it only stops mattering whether a bundler is in front of the file or not.
+
+Also fixed, unrelated root cause, same investigation: `pnpm setup` was silently shadowed by pnpm's own reserved `setup` subcommand (D86 documented this collision; the actual fix is renaming the script). `package.json`'s `setup` script is now `bootstrap` - no builtin name to collide with, nothing to remember to type around it.
+
+**VERIFIED, not assumed working from the diff.** All three scripts run their real bodies end to end: `node scripts/ingest.js` made a genuine live call to the real NSL Fantasy Hoops league on Sleeper's API and walked all 5 seasons; `node scripts/seed.js` (with `LEAGUE_PROVIDER=fixture`) reached its real Prisma write and failed only on "no Postgres at localhost:5432" - the expected, correct failure with no real database running, not an import error; `node scripts/claim-links.js` correctly detected no `AUTH_SECRET` and printed the real single-user-mode message. `pnpm lint` clean. `pnpm test`: 1054/1054 passed, unchanged. `pnpm build` clean after `rm -rf .next`. Full `pnpm e2e`: 78/78 passed.
+
+README updated to match: the "currently broken" callouts and the Scripts-table caveats from D86 are gone, because the scripts they described are no longer broken - not because the finding was walked back.

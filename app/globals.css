@@ -606,19 +606,27 @@ a[role="button"],
  * setting is usually trying to avoid, and opacity is the one channel it permits.
  */
 /*
- * The one control in the app deliberately under the 44pt minimum the rule above sets
- * for every button, and it has to be stated HERE rather than as a `min-h-0` utility:
+ * The one control in the app still under the 44pt minimum the rule above sets for
+ * every button, and it has to be stated HERE rather than as a `min-h-0` utility:
  * that rule is unlayered, Tailwind's utilities are not, and an unlayered declaration
- * beats every layered one regardless of specificity. The handle is 19pt because the
- * spec's three-row arithmetic (19 + 44 + 53) is what keeps the resting Desk inside a
- * thumb's reach; it is full-bleed wide, it sits ~97pt clear of the home indicator,
- * and the chevron beside it is the same action at full size. It is the accelerator,
- * never the only way in - see components/Desk.tsx.
+ * beats every layered one regardless of specificity.
+ *
+ * 24pt, not 19pt: a Lighthouse/axe `target-size` audit (WCAG 2.5.8) measures this
+ * button's own box, and 19pt failed it outright. The fix grows the box upward only
+ * (padding-top 8px -> 13px) rather than downward or via a wider min-height override,
+ * because upward is the one direction that costs nothing already spoken for: the
+ * handle's BOTTOM edge - the one that sits ~97pt clear of the home indicator's swipe
+ * zone (context row 44 + tab row 53) - never moves, so that clearance is exactly as
+ * documented in components/Desk.tsx still. Only the Desk's total resting height moves,
+ * 116pt -> 121pt, eating 5pt of the 20pt of "air" app/layout.tsx budgets above it
+ * (still comfortably positive - see that file's comment for the updated number).
+ * Full-bleed width is unchanged, and the More tab two rows below remains the
+ * fully-sized alternative for the identical action either way.
  */
 .desk-handle {
   min-height: 0;
-  height: 19px;
-  padding: 8px 0 5px;
+  height: 24px;
+  padding: 13px 0 5px;
 }
 
 @keyframes desk-drawer-in {

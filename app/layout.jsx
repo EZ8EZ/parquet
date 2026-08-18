@@ -79,8 +79,11 @@ export default async function RootLayout({ children }) {
         {/* Mobile-first shell: single centered column, content padded above the Desk.
             Widens gracefully on larger screens.
 
-            8.5rem = the Desk's 116pt of resting chrome plus 20pt of air, so the last
-            line of any page clears the handle rather than tucking under it. It was
+            8.5rem = the Desk's 121pt of resting chrome plus ~15pt of air, so the last
+            line of any page clears the handle rather than tucking under it. (Was
+            116pt/20pt until the handle grew 19pt -> 24pt to clear a `target-size`
+            audit - see components/Desk.tsx's header comment - which is 5pt this
+            number absorbed rather than 8.5rem itself needing to change.) It was
             6rem for the old 94pt tab bar. Still ONE fixed layer to clear, not two:
             round 6 retired the floating search button (it collided with real content
             on every content-heavy page added since round 1, flagged twice) and search
