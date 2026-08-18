@@ -113,10 +113,16 @@ export function AnalystChat() {
         </div>
       )}
 
-      {/* Composer - fixed above the tab bar for thumb reach. */}
+      {/* Composer - fixed above the Desk for thumb reach.
+          8.5rem, matching app/layout.tsx's main padding: the Desk's 116pt of resting
+          chrome plus 20pt of air. This was a stale 64px (the old single 94pt tab
+          bar's clearance, from before D65's three-row Desk) - too little once the
+          Desk grew, which put the send button and most of the textarea underneath
+          the Desk's own z-50 layer: tappable area reduced to a ~3px sliver, an axe
+          target-size violation on top of being invisible. */}
       <div
         className="fixed inset-x-0 bottom-0 z-40 border-t border-border bg-bg/90 backdrop-blur"
-        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 64px)" }}
+        style={{ paddingBottom: "calc(env(safe-area-inset-bottom) + 8.5rem)" }}
       >
         <form
           onSubmit={(e) => {

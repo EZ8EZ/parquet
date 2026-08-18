@@ -4477,3 +4477,83 @@ mechanism already in place (cache the promise, not the value, with no `await`
 between check and write) is correct under that model specifically, not merely
 under the single-request-per-instance model D25/D38 were written against, so
 there is nothing Fluid Compute changes here to harden against.
+
+## D85. Systematic touch-target audit, all 34 routes - one real bug, one real fix, one deliberate control genuinely improved
+
+A prior session's Lighthouse spot-check on 4 pages flagged the Desk's drag handle
+(`components/Desk.tsx`, `.desk-handle`) under the 24px `target-size` minimum (WCAG
+2.5.8) and, separately, this round's owner lifted the standing "leave it alone"
+instruction on that specific control mid-session, asking it be genuinely
+reconsidered rather than re-litigated on faith. Both threads are closed here: the
+whole app was swept, one real bug turned up outside the handle, and the handle
+itself turned out to have real headroom the earlier trade-off analysis hadn't used.
+
+**THE SWEEP.** axe-core's `target-size` rule is disabled by default (`enabled:
+false` in 4.13's own rule metadata) and neither `axe-scan.mjs` nor the committed
+`e2e/a11y.spec.js` suite turns it on, so the earlier spot-check's 4-page Lighthouse
+pass was the only place this project had ever actually run this check. It was run
+here, explicitly enabled, against a real fixture-provider dev server, mobile
+viewport (390x844), across all 34 rendered routes - the 24 in `lib/nav.ts`'s
+`ALL_SURFACES` (the committed suite's own coverage) plus the 5 static routes it
+does not list (`/claim/invalid`, and `/lab/counterfactual` / `/leverage` / `/pulse`
+/ `/regret`, which exist only inside `/lab`'s own index) plus the 5 dynamic routes
+reached only from listing pages (`/deals/[transactionId]`, `/drafts/[season]`,
+`/managers/[rosterId]`, `/managers/former/[ownerId]`, `/lineage/[assetKey]`, ids
+harvested by crawling the fixture league's own listing pages rather than guessed).
+Two things flagged. Everything else - every icon button, every close/dismiss
+control, every list-row action link across all 34 pages - already clears 24px with
+real spacing; this is the completely legitimate "swept and found nothing more"
+result D67/D70 set precedent for, for 32 of the 34 routes.
+
+**THE REAL BUG, found only because the sweep was systematic rather than
+4-page-deep: `/analyst`'s composer was rendering almost entirely underneath the
+Desk.** axe's `target-size` flagged the chat `<textarea>` as "partially obscured
+(smallest space 306px by 3.1px)" - not a spacing nitpick but a target reduced to a
+3px sliver. `elementFromPoint` sampling down the textarea's own bounding box
+confirmed it directly: everything below the first ~4px resolved to `.desk-handle`
+or the tab-row links, not the textarea. `components/AnalystChat.tsx`'s fixed
+composer cleared the Desk by a hand-rolled `calc(env(safe-area-inset-bottom) +
+64px)` - 64px being roughly the old single 94pt tab bar's clearance from before
+D65 rebuilt the Desk into today's 116pt three-row stack (handle + context row + tab
+row). `app/layout.tsx`'s own `<main>` padding had already been updated to the
+correct constant for this exact clearance (`8.5rem` = 116pt of Desk + 20pt of air,
+its own comment says as much) - the composer just never got the memo when D65
+shipped, because it manages its own fixed positioning independently of that shared
+padding. Fix: the composer's padding-bottom now reads the same `8.5rem` layout.tsx
+uses, with a comment cross-referencing both files so the two don't drift apart
+again. Confirmed by `elementFromPoint` re-sampling (composer fully clear in both
+themes) and a re-run of the axe scan (`target-size` violation gone on `/analyst`;
+everywhere else unaffected).
+
+**THE HANDLE, reconsidered rather than re-flagged.** The existing rationale (D-era
+comment directly above the button) was sound as far as it went - full-bleed width,
+clear of the iOS home-indicator swipe zone, the More tab as a same-action full-size
+alternative - and none of that was wrong. What it hadn't asked was whether the
+19pt height itself had any slack, given those constraints held constant. It did:
+the constraint is that the handle's BOTTOM edge sit ~97pt above
+`env(safe-area-inset-bottom)` (the context row + tab row's combined 44+53pt below
+it) - nothing requires its TOP edge to stay put. Growing the button's own box
+upward only (padding-top 8px -> 13px, height 19px -> 24px) meets the 24px floor
+exactly, moves the bottom edge by zero pixels, and costs 5pt taken from the 20pt of
+pure "air" `app/layout.tsx` budgets above the resting Desk (now ~15pt - still
+comfortably positive, still enough that page content clears the handle). Width,
+gesture capture (`onPointerDown`/`onPointerMove`, unchanged), the More-tab
+alternative, and the "accelerator, not the only way in" framing are all untouched.
+Stopped at 24px rather than reaching for Material's stricter 48px floor
+deliberately: this control's whole safety net is that a full-size alternative
+sits two rows below it, and doubling the Desk's resting height would spend more of
+the "keeps the resting Desk inside a thumb's reach" budget the three-row arithmetic
+was tuned for than a backstopped control is worth. Verified: axe's `target-size`
+no longer flags `.desk-handle` on any route, in either theme; a scripted click on
+the handle still opens the drawer (`aria-expanded` flips, focus trap and `inert`
+contract unchanged); screenshots at 390px in both themes show the grip's visual
+position unchanged to the eye. Comments updated in three places (`Desk.tsx`'s
+header, the handle's own inline comment, `app/layout.tsx`'s padding comment) so the
+116pt/19pt arithmetic those files used to cross-reference reads 121pt/24pt
+everywhere at once, not just in code.
+
+Verification: `pnpm lint` (clean), `pnpm test` (1045/1045), `rm -rf .next && pnpm
+build` (clean, all 34 routes present in the route manifest), `pnpm e2e` (78/78 -
+two unrelated tests flaked once mid-run on an unrelated timing issue, reproduced as
+passing in isolation against both the pre- and post-change tree, so not attributed
+to this change).
