@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "db:push": "prisma db push",
     "db:generate": "prisma generate",
@@ -33,6 +34,7 @@
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
     "@vitejs/plugin-react": "^6.0.4",
+    "@vitest/coverage-v8": "^4.1.11",
     "chrome-launcher": "^1.2.1",
     "eslint": "^9",
     "eslint-config-next": "16.2.12",
@@ -41,6 +43,6 @@
     "prisma": "^6.19.3",
     "sharp": "^0.35.3",
     "tailwindcss": "^4",
-    "vitest": "^4.1.10"
+    "vitest": "^4.1.11"
   }
 }

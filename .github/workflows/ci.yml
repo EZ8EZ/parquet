@@ -49,6 +49,29 @@ jobs:
       - name: Test
         run: pnpm test
 
+      - name: Coverage (informational)
+        run: pnpm test:coverage
+
+      - name: Upload coverage report
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage-report
+          path: coverage/
+          retention-days: 7
+
+      # Non-blocking on purpose: at the time this was added, `pnpm audit` found
+      # real transitive vulnerabilities (postcss/sharp/nanoid/deepmerge-ts, all
+      # bundled inside next/prisma's own dependency trees, not independently
+      # upgradable here) with no real exploit path in how this app actually
+      # uses those libraries - see the DECISIONS.md entry from this round.
+      # Dependabot (.github/dependabot.yml) is what catches the real fix (an
+      # upstream next/prisma point release); this step is a visible log entry
+      # for triage, not a gate that would stay permanently red over something
+      # outside this repo's control.
+      - name: Dependency audit (informational)
+        run: pnpm audit --prod || true
+
   build:
     name: build
     runs-on: ubuntu-latest

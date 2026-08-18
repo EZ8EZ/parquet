@@ -30,5 +30,16 @@ export default defineConfig({
       LEAGUE_PROVIDER: "fixture",
       DATABASE_URL: "file:./test-should-not-need-a-db.db",
     },
+    // Informational only - no threshold gate. There's no established baseline yet
+    // (this project has real UI test coverage via e2e instead of unit tests for
+    // components - see D81's own note that 29 of 32 components carry no unit
+    // test on purpose, since the Playwright suite is what actually renders them).
+    // A coverage number here is a useful signal to look at, not a merge gate to
+    // chase for its own sake.
+    coverage: {
+      provider: "v8",
+      reporter: ["text", "html"],
+      exclude: ["node_modules", ".next", "e2e", ".claude", "scripts", "**/*.test.js"],
+    },
   },
 });
