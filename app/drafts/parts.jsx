@@ -6,6 +6,7 @@ import { Tag } from "@/components/ui";
 import { cn } from "@/lib/ui";
 import { pickKey } from "@/lib/tradegraph";
 import { lineageHref } from "@/lib/tradegraph/url";
+import { draftedByName } from "@/lib/lineage";
 /** Deep link straight to a pick on its season board. */
 export function boardHref(season, pickNo) {
   return pickNo
@@ -58,7 +59,7 @@ export function LineageCard({ l, perspective = null }) {
   const p = perspective ? PERSPECTIVE[perspective] : null;
   return (
     <div>
-      <LineageCardBody l={l} p={p} />
+      <LineageCardBody l={l} p={p} perspective={perspective} />
       {/* THE PICK-SHAPED DOOR into provenance. A SIBLING of the card, never nested
             inside it: the card is already one `<Link>`, and an `<a>` inside an `<a>`
             is the exact invalid markup that threw a hydration error the last time this
@@ -76,7 +77,8 @@ export function LineageCard({ l, perspective = null }) {
     </div>
   );
 }
-function LineageCardBody({ l, p }) {
+function LineageCardBody({ l, p, perspective = null }) {
+  const draftedBy = draftedByName(l, perspective);
   return (
     <Link
       href={boardHref(l.season, l.pickNo)}
@@ -116,17 +118,18 @@ function LineageCardBody({ l, p }) {
             <span className="block truncate text-body font-semibold leading-tight text-ink">
               {l.playerName}
             </span>
-            <span className="block truncate text-meta leading-tight text-secondary">
+            <span className="block line-clamp-2 text-meta leading-tight text-secondary">
               {l.position ?? "-"}
               {l.team ? ` · ${l.team}` : ""}
               {l.age != null ? ` · ${l.age}y` : ""}
-              {" · orig. "}
-              {l.originalRosterName}
-              {/* Multi-hop picks can end up somewhere other than the last recorded
-                trade partner - name whoever actually spent it. */}
-              {l.usedByName && l.usedByName !== l.toName
-                ? ` · drafted by ${l.usedByName}`
+              {/* Redundant in the common single-hop case - the hop line above
+                  already named this same team as "from". Only worth a second
+                  mention when the pick changed hands before that, which is the
+                  one case this differs from `l.fromName`. */}
+              {l.originalRosterName !== l.fromName
+                ? ` · orig. ${l.originalRosterName}`
                 : ""}
+              {draftedBy ? ` · drafted by ${draftedBy}` : ""}
             </span>
           </span>
           <span className="shrink-0 figure text-body font-semibold text-accent-text">
