@@ -148,6 +148,16 @@ export default async function DraftsPage() {
               ) : undefined
             }
           />
+          {/* SHELVED.md S3: the question a reader actually has on this page is
+                "which players did other managers take with my old picks", not a
+                truncated sample of somebody else's twelve. This section already IS
+                that data - `getTradedPickLineages` filtered to fromRoster === me -
+                the one-line frame below just says so, since "drafted by" only
+                appears on the card when the last trade partner didn't keep it. */}
+          <p className="-mt-1 mb-1.5 text-meta leading-snug text-muted">
+            Every pick you sent away that has since been used in a draft, and
+            who ended up drafting with it.
+          </p>
           {gaveResolved.length === 0 ? (
             <EmptyState
               icon={<GitBranch size={26} />}
@@ -220,8 +230,11 @@ export default async function DraftsPage() {
                 picks - sat here until 2026-08-10. Shelved (SHELVED.md, S3): a truncated
                 sample with no filter, at the foot of a 5,318px page, that was neither
                 complete nor yours. /drafts/grades answers "how did the class go"
-                properly. The revival condition is a better QUESTION, not a longer list:
-                which players other managers took with YOUR picks. */}
+                properly. Revived (D-next): "Picks you traded away" above already ran
+                the right join (`getTradedPickLineages` filtered to fromRoster === me)
+                and it's complete and yours by construction - it only needed the
+                "drafted by" fact stated plainly on every row instead of just the
+                multi-hop mismatch case, and a line saying what the section answers. */}
         </>
       )}
       <Onward from="/drafts" />
