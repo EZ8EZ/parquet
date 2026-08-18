@@ -6,12 +6,15 @@
  *
  *   tab row      53pt  five always-visible destinations: the four primaries plus More
  *   context row  44pt  what you are looking at, and what is outstanding
- *   handle       19pt  the grip that opens the drawer above all of it
+ *   handle       24pt  the grip that opens the drawer above all of it
  *
- * 116pt plus `env(safe-area-inset-bottom)`, so ~150pt at rest on a device with a home
- * indicator - unchanged arithmetic from the single-button design this replaced,
- * because the root layout's bottom padding is sized to it and belongs to another
- * owner this round.
+ * 121pt plus `env(safe-area-inset-bottom)`, so ~155pt at rest on a device with a home
+ * indicator - was 116pt/19pt for the handle until a `target-size` audit measured that
+ * button's own box against WCAG 2.5.8 and it failed outright; grown to the 24pt floor,
+ * upward only (see the handle's own comment below and app/globals.css), which is the
+ * one direction that doesn't touch the arithmetic the root layout's bottom padding is
+ * sized to and belongs to another owner this round - that padding still clears the
+ * new total with room to spare, just less of it (see app/layout.tsx's comment).
  *
  * D53 SHIPPED THE SINGLE FULL-BLEED "MENU" BUTTON WITH AN OPEN QUESTION ATTACHED: can
  * a reader find the four primaries, or are they visible without an action - and which
@@ -512,14 +515,21 @@ export function Desk({ data }) {
             </div>
 
             {/* ------------------------------------------------------- the handle
-            19pt, and the one control in here that is under the 44pt minimum - which
-            is why `min-h-0` has to override the global rule in globals.css rather
-            than the rule being wrong. It is full-bleed wide, it sits ~97pt above
+            24pt (was 19pt - see app/globals.css's `.desk-handle` comment for the
+            `target-size` finding that grew it), and still the one control in here
+            that is under the 44pt DEFAULT minimum - which is why `min-h-0` has to
+            override the global rule in globals.css rather than the rule being wrong.
+            It is full-bleed wide, its BOTTOM edge sits ~97pt above
             `env(safe-area-inset-bottom)` so it never competes with the iOS home
-            indicator's swipe, and the More tab two rows below is the same action
-            for anyone who wants it. Its name says "drag handle" so that it and the
-            More tab are never two identically-named controls in one list to a
-            screen reader. */}
+            indicator's swipe - unchanged by the height increase, which only grew the
+            box upward, away from that edge - and the More tab two rows below is the
+            same action at a fully compliant size for anyone who wants it (also the
+            reason 24pt was the right floor to stop at rather than Material's 48pt:
+            this is the accelerator, not the only way in, and doubling the Desk's
+            resting height would cost more thumb-reach real estate than a control with
+            a full-size alternative two rows away is worth). Its name says "drag
+            handle" so that it and the More tab are never two identically-named
+            controls in one list to a screen reader. */}
             <button
               ref={handleRef}
               type="button"
