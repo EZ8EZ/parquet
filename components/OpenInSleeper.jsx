@@ -1,4 +1,3 @@
-"use client";
 import { ExternalLink } from "lucide-react";
 import { cn } from "@/lib/ui";
 /**
@@ -11,6 +10,13 @@ import { cn } from "@/lib/ui";
  * null for ids that cannot be real Sleeper ids (e.g. the `fixture` provider's
  * `fx-nba-2025`), so a dead outbound link is structurally impossible instead of
  * something each call site has to guard.
+ *
+ * NOT a Client Component. It was marked `"use client"` with nothing in the file
+ * that needs the client - no hook, no event handler, no browser API - which
+ * forced every Server Component render tree that reached it (both of its
+ * current call sites, `/league` and `/roster`) to cross a client boundary for a
+ * plain `<a>` tag that never changes after paint. Plain markup renders
+ * identically as a Server Component, so it does, and ships zero extra JS.
  */
 export function OpenInSleeper({
   href,

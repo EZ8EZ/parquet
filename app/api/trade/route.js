@@ -13,9 +13,13 @@ const Pick = z.object({
   originalRosterId: z.number().int().optional(),
   slot: z.number().int().optional(),
 });
+// Bounded the same way `custom-rank`'s own order array is (lib/rankings/customOrder.js)
+// - no real trade in a 14-team league ever approaches this, so the cap only exists to
+// stop a hand-crafted body from making `evaluateTrade` walk an arbitrarily large array.
+const MAX_ASSETS_PER_SIDE = 64;
 const Side = z.object({
-  playerIds: z.array(z.string()).default([]),
-  picks: z.array(Pick).default([]),
+  playerIds: z.array(z.string()).max(MAX_ASSETS_PER_SIDE).default([]),
+  picks: z.array(Pick).max(MAX_ASSETS_PER_SIDE).default([]),
 });
 const Body = z.object({ give: Side, get: Side });
 export async function POST(req) {
