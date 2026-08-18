@@ -157,6 +157,14 @@ lineage data already supports it — `getTradedPickLineages` carries `fromRoster
 `usedByName` and `playerName` on every row, which is exactly the join — and the answer
 would be specific to the reader rather than an arbitrary twelve.
 
+**Revived.** `/drafts`' own "Picks you traded away" section — which predates this
+shelving and was never the thing shelved — turned out to already be running that exact
+join: `gave = all.filter(l => l.fromRoster === me)`. Complete (every one of your
+resolved outbound picks, no truncation) and specific to the reader by construction, it
+only lacked the "drafted by" fact stated plainly on every row (it previously surfaced
+only on the rarer multi-hop mismatch) and a line naming what the section answers. See
+`DECISIONS.md` for the entry.
+
 ---
 
 ## S4. `windowForRoster()`
