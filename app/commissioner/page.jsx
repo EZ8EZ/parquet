@@ -9,8 +9,15 @@ import {
 import { getLeagueHistory } from "@/lib/history";
 import { getTradedPickLineages } from "@/lib/lineage";
 import { getAuditLog, getStaleRosters } from "@/lib/commissioner";
+import { leagueBuybacks } from "@/lib/agency";
 import { notableWaiverLabel } from "@/lib/ledger";
-import { EmptyState, PageHeader, SectionHeader, Tag } from "@/components/ui";
+import {
+  Card,
+  EmptyState,
+  PageHeader,
+  SectionHeader,
+  Tag,
+} from "@/components/ui";
 import { Onward } from "@/components/Onward";
 import { fmtValue } from "@/lib/ui";
 import { LineageCard } from "../drafts/parts";
@@ -95,6 +102,14 @@ export default async function CommissionerPage() {
     (l) => l.reason !== "slot-unknown" && l.reason !== "no-player",
   );
   const staleRosters = getStaleRosters(h);
+  // The one pattern every real commissioner guide names first when asked what
+  // "league health" actually means: a pick returning to whoever traded it away.
+  // `leagueBuybacks` already computes this league-wide for /deals#buybacks (D51);
+  // it simply never had a doorway on the one page whose whole job is "what should
+  // a commissioner look at" - a reader would have had to already know to look on
+  // /deals to find it. Same computation, same neutral non-verdict framing, just
+  // reachable from the page that asks the question.
+  const buybacks = leagueBuybacks(h);
   const auditLog = getAuditLog(h);
   const waiverLabel = notableWaiverLabel(h);
   const bySeason = new Map();
@@ -171,6 +186,55 @@ export default async function CommissionerPage() {
             ))}
           </div>
         </>
+      )}
+
+      {/*
+          ROUND-TRIP PICKS. The pattern real commissioner guides name first when
+          asked what a "league health" check actually needs to catch - not because
+          a pick coming home is evidence of anything (it plainly is not: a throw-in
+          comes home the same way a plan does), but because it is the one shape a
+          reader cannot spot by eye across a season of transactions, and the fact
+          itself is worth a commissioner's own two seconds either way. No verdict
+          here, same as everywhere else in this app (D6) - a count and a link to
+          the full record, not an accusation.
+        */}
+      <SectionHeader
+        title="Round-trip picks"
+        action={
+          <Tag tone="neutral">
+            {buybacks.total
+              ? `${buybacks.total} on record`
+              : "none on record"}
+          </Tag>
+        }
+      />
+      {buybacks.total === 0 ? (
+        <EmptyState icon={<ShieldCheck size={26} />} title="No pick has come home">
+          No traded pick has ever returned to the roster that traded it away.
+        </EmptyState>
+      ) : (
+        <Card>
+          <p className="text-body leading-relaxed text-ink">
+            <span className="figure font-semibold text-ink">
+              {buybacks.total}
+            </span>{" "}
+            pick{buybacks.total === 1 ? "" : "s"}{" "}
+            {buybacks.total === 1 ? "has" : "have"} returned to whoever traded{" "}
+            {buybacks.total === 1 ? "it" : "them"} away, across{" "}
+            <span className="figure">{buybacks.byManager.length}</span> of{" "}
+            <span className="figure">{buybacks.rosters}</span> rosters. A fact
+            worth knowing, not evidence of anything: intent is not in the
+            record, and a pick can come home as a throw-in as easily as on
+            purpose.
+          </p>
+          <Link
+            href="/deals#buybacks"
+            className="mt-1.5 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent-text"
+          >
+            Every round trip, league-wide
+            <ChevronRight size={12} aria-hidden="true" />
+          </Link>
+        </Card>
       )}
 
       <SectionHeader

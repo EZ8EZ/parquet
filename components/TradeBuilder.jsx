@@ -19,6 +19,7 @@
  * again, per tap.
  */
 import { useEffect, useMemo, useRef, useState } from "react";
+import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeftRight, Loader2, Plus, X } from "lucide-react";
 import { parseTradeParams, tradeQueryString } from "@/lib/trade/url";
@@ -574,6 +575,35 @@ function TradeResult({ r, leagueId, counterparty }) {
       {r.consolidationNote && (
         <Block title="Consolidation">{r.consolidationNote}</Block>
       )}
+      {/*
+       * THE SAME TWO SHAPE-OF-THE-DEAL READS THE TRADE FINDER ALREADY PRINTS ON EVERY
+       * SUGGESTED PACKAGE (D75, D77) - reused here rather than re-derived (see the
+       * note on `evaluateTrade` in lib/trade/index.js). A deal typed in here is at
+       * least as often someone ELSE'S proposal as it is this app's own idea, and
+       * until now it was the one place in Parquet that priced a trade without saying
+       * whether it leaves the roster leaning on fewer names or more, or moves where
+       * the viewer's own positional depth sits. Never a verdict (D6, D19): a number
+       * and what moved, nothing about whether that movement is good - the identical
+       * discipline the finder's own lines keep. `null` on both fields when the shift
+       * is too small to clear either metric's own noise floor, or the trade touches
+       * no player/position at all - an omitted block is honest; a "no change" block
+       * on every trade would be exactly the clutter this app keeps refusing to ship. */}
+      {r.fragility && (
+        <Block
+          title={
+            r.fragility.direction === "relieves"
+              ? "What it takes off one man"
+              : "What it puts on one man"
+          }
+        >
+          {r.fragility.text}
+        </Block>
+      )}
+      {r.leverageShift && (
+        <Block title="Positional leverage">
+          <LeverageShiftText shift={r.leverageShift} />
+        </Block>
+      )}
       {/* One line per pick in the deal. A list rather than a paragraph because each
             note is about a DIFFERENT pick, and running them together would read as one
             claim about the trade rather than several about its parts. */}
@@ -616,6 +646,30 @@ function TradeResult({ r, leagueId, counterparty }) {
         />
       </div>
     </div>
+  );
+}
+/**
+ * The exact wording `/trade/finder`'s `PackageDetail` already carries for the same
+ * fact (see that page's own `LeverageShiftText`) - a hand-built deal and a suggested
+ * one must read identically, which is only true if neither copies the sentence by
+ * hand. `/lab/leverage` is the one place the rest of this metric's own caveats live,
+ * so the link goes there rather than restating them here.
+ */
+function LeverageShiftText({ shift }) {
+  const posList =
+    shift.positions.length > 1
+      ? `${shift.positions.slice(0, -1).join(", ")} and ${shift.positions.at(-1)}`
+      : shift.positions[0];
+  return (
+    <>
+      This deal would move your{" "}
+      <Link href="/lab/leverage" className="text-accent-text underline">
+        Positional Leverage
+      </Link>{" "}
+      from {shift.before} to {shift.after}, at {posList} - where your own value
+      sits relative to the league&apos;s own mix there, not a read on the deal
+      itself.
+    </>
   );
 }
 function Block({

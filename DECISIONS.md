@@ -3838,3 +3838,449 @@ ceiling per D72/D76); showing every one of a viewer's fourteen leaguemates' OWN
 leverage change from a package aimed at only one of them (D75's instruction was
 explicit - this is a page about the trade in front of the viewer, not a league-wide
 pass nobody asked this screen to run).
+
+## D78. AN AUDIT OF THE LEAGUE-AND-CONTEXT CLUSTER AGAINST REAL DYNASTY PROBLEMS - one
+real gap found and fixed, the rest holds up
+
+The owner's directive this round was a different lens than the day's earlier density
+passes: not "does this look clean" but "does this solve a problem a dynasty basketball
+manager actually has, and is the answer immediately usable." Scope: `/league`,
+`/managers` and its three sub-pages, `/awards`, `/commissioner`, `/drafts` and its two
+sub-pages, `/recap`, `/analyst`, all four `/lab` experiments, `/settings`, `/about` and
+`/methodology` - the "league and other managers" half of the app. `/`, `/roster`,
+`/plan`, `/ledger`, `/trade(/finder)`, `/values` and `/rank` are a sibling round's.
+
+**WHAT WAS RESEARCHED, AND VERIFIED RATHER THAN ASSUMED.** Real dynasty-community and
+commissioner-guide content (WebSearch; Reddit itself is unreachable from this
+environment per D70's own finding, unchanged) on the four questions this cluster is
+actually about: how a manager decides who to approach for a trade (the consensus is
+behavioral - contending-vs-rebuilding read, historical tendencies - not roster
+inspection alone); how a rebuild is judged as "on pace" (always relative to the rest of
+the league, never in isolation); what a draft-pick evaluation argument actually turns
+on (pedigree vs. proven role/usage for rookies, and for future picks: the CURRENT
+strength of the team that owes it, not a fixed round-based price - "the 1.01 and the
+1.12 are wildly different assets"); and what a commissioner/league-health check needs
+to catch (real guides name inactivity and specific collusion PATTERNS - trades that
+come back to the same manager, one-sided value - while also warning that most trades
+should be allowed through absent real evidence, i.e. a health tool should surface facts
+a human can weigh, not render an accusation).
+
+**MOST OF THIS CLUSTER ALREADY CLEARS THAT BAR, AND IS RECORDED HERE RATHER THAN
+SILENTLY LEFT ALONE**, because "checked and found already solving a real problem well"
+is as real a finding as a gap:
+
+- `/managers` is titled "Scout the managers - how they act, not what they hold," and
+  `lib/dossier`'s tag/read/tip derivation (Name chaser, Pick hoarder, Deadline
+  buyer/seller, Reactive after losses, Responder) is exactly the behavioral-tendency
+  read the research says a real trade decision turns on, with a concrete "how to
+  approach them" action tied to each tell - not a roster dump.
+- `/managers/[rosterId]` layers "Picks they bought back" (a real, dated fact - not an
+  inference) and a schedule-luck read on top of the same behavioral dossier, and
+  `/managers/compare` and `/managers/former/[ownerId]` extend the identical read
+  correctly (former managers scoped to their own tenure, not blended with a successor).
+- `/league`'s single toggled board (window map / TCI-RFI quadrant) plus the power
+  ranking answers "how does my rebuild compare to the rest of the league" directly,
+  league-relative by construction rather than a number in isolation.
+- `/awards`' superlatives are behavioral pattern-spotting, not bragging trivia dressed
+  up as awards - The Scout/The Steal/The Reach grade draft-pick decisions against the
+  board and against slot (pedigree vs. production, exactly the research finding), Name
+  Brand Buyer and Panic Button and Hot Potato are real tendency reads, and every one
+  states its own honest limit in its subtitle rather than pretending to certainty.
+- `/analyst`'s system prompt is a genuinely adversarial, evidence-grounded auditor
+  (leads with the disconfirming case, quotes the user's own annotated reasoning back at
+  them, refuses to invent a pattern from thin data) with a deterministic
+  no-API-key fallback that is equally adversarial rather than a degraded stub.
+- All four `/lab` experiments answer a real, specific question at D54's own bar:
+  Positional Leverage answers "where can I actually deal from" (the exact blind spot
+  D67 found in RFI), the Pulse answers "what changed across the league since I last
+  looked" league-wide, the Counterfactual answers "did my own trading actually help
+  me," and Slot Par on the regret ledger answers "what has a lineup slot been worth in
+  this league" - none reads as a verdict, and each names its own real limits.
+- `/methodology`'s pick-value section already states the real answer to "how much is a
+  future pick worth" in the terms the research surfaces: priced off the CURRENT
+  strength of the team that owes it, a lottery spread rather than a fixed slot, and an
+  explicit now-vs-2-years-out example - not a flat round-based chart.
+
+**THE ONE REAL GAP: `/commissioner` HAD NO DOORWAY TO THE ONE PATTERN COMMISSIONER
+GUIDES NAME FIRST.** The page already runs two real health checks - stale rosters
+(inactivity, matching the research directly) and picks that can't resolve (data
+integrity) - but had nothing about a pick returning to whoever traded it away, which is
+the concrete, commonly-cited collusion-ADJACENT pattern in every commissioner guide
+surveyed ("trades with an agreement to trade back later"). The computation already
+existed: `leagueBuybacks` (`lib/agency/index.js`) was built for `/deals#buybacks` (D51)
+and is fully tested, but nothing on the one page whose entire job is "what should a
+commissioner check" pointed at it - a reader would have had to already know to look on
+`/deals` to find it. This is D51's own pattern (surface a buried computation at the
+actual decision moment) applied to the actual decision-maker's own page.
+
+**THE FIX IS A DOORWAY, NOT A NEW VERDICT.** `app/commissioner/page.jsx` gained one
+section, "Round-trip picks," between Stale rosters and Picks that can't resolve
+(grouping the two manager-behavior checks ahead of the one data-integrity check): the
+same `leagueBuybacks(h)` call `/deals` already makes, a neutral count tag (never
+warn/negative - a round trip is not evidence of anything on its own, and research is
+explicit that over-flagging ordinary trades is itself the failure mode to avoid), the
+same "a fact worth knowing, not evidence of anything... a pick can come home as a
+throw-in as easily as on purpose" framing `/deals#buybacks` already uses, and a link to
+the full record rather than a second render of it. Zero new derivation, zero new test
+surface (the underlying function's 15+ existing cases in `lib/agency/agency.test.js`
+are untouched and still govern its behavior); D6 (no verdicts) and D19 (never
+speculate beyond the data) are both satisfied by construction because the section says
+exactly what D51's section already says, from the page a commissioner actually opens
+to check league health rather than the page that happens to host the trade record.
+
+**WHAT WAS DELIBERATELY NOT BUILT.** A lopsided-trade / value-imbalance detector
+("2:1 threshold") that some commissioner tools ship: real guides warn this produces
+false positives on ordinary win-now-for-picks trades this app's own D6/D23 already
+treat as legitimate strategy, not a defect, and computing one honestly would need
+research and calibration this round did not do (D54's bar for shipping a new metric at
+all). A "stalled rebuild" alert: the signal a reader would need - posture read the same
+way for several seasons running - is already visible without a new computation on
+every dossier's existing "Posture by season" chips; inventing a threshold for when a
+rebuild counts as "stalled" is exactly the unearned precision D19 forbids, and no
+dynasty-community source surveyed offered a specific one to check against.
+
+Verified: `pnpm lint` clean. `pnpm test`: baseline 1045 passed (62 files) - unchanged,
+since the fix touches only `app/commissioner/page.jsx` and adds no new logic beyond a
+call to an already-tested function. `pnpm build` succeeds after `rm -rf .next`. Full
+`pnpm e2e` (`rm -rf .next` first): **78 passed**, zero failures - including
+`/commissioner renders cleanly` and its color-contrast pass in both themes.
+`axe-scan` clean on `/commissioner` in dark and light. Screenshotted at 390px in both
+themes against the live fixture league, confirming the new section renders between
+Stale rosters and Picks that can't resolve exactly as designed, with the real fixture
+round trip ("1 pick has returned... across 1 of 14 rosters") printing correctly.
+
+Rejected: inventing a collusion-detection heuristic beyond stating the round-trip fact
+(the research itself warns this is the wrong shape - most trades should be allowed
+through absent real evidence, so the tool's job is facts a human weighs, not a
+verdict); a value-imbalance/lopsided-trade check (no calibration work done this round,
+and D6/D23 already treat asymmetric-looking trades as legitimate strategy rather than
+a defect to flag); touching any page outside this cluster's explicit list, including
+`/deals` itself (only linked to, never edited) and every page the sibling round already
+covers.
+
+## D79. "YOUR TEAM & DECISIONS" AUDITED AGAINST REAL DYNASTY PAIN, AND THE ONE REAL GAP: `/trade`'S OWN EVALUATOR HAD NEITHER OF THE TWO SHAPE-OF-THE-DEAL READS THE FINDER ALREADY EARNED
+
+A direction from the owner, not a bug report: stop asking whether this cluster (`/`,
+`/roster`, `/plan`, `/ledger`, `/trade`, `/trade/finder`, `/values`, `/rank`) looks
+right and start asking whether each page answers a question a real dynasty manager
+actually has, said in a way that hands them the next move rather than more homework.
+
+**THE RESEARCH, VERIFIED RATHER THAN ASSUMED.** Dynasty basketball/football strategy
+writing and trade-calculator FAQs converge on a short, consistent list, and this round
+checked it against this app's own feature set rather than treating it as a checklist to
+re-derive from scratch: knowing whether you are rebuilding or contending - and the
+specific failure of being stuck in the middle, "too good to get top picks, not good
+enough to win," which multiple independent sources name as the single worst place in a
+dynasty league to sit; valuing draft picks against known players, which every trade-
+calculator vendor's own material flags as the hardest input because a pick's worth
+depends on who you already are (a rebuilder should price a pick above a redraft chart,
+a contender below it); judging whether a trade is fair, which is the literal first
+thing every dynasty trade-calculator FAQ exists to answer, with the standing caveat
+(found on more than one vendor's own site) that a market-value number is a guide, not a
+verdict, because it cannot see roster fit or timeline; remembering WHY a trade was made
+once a season has passed judgment on it; telling a genuinely weak roster spot from one
+that only looks weak because the depth chart is thin; the "perpetual rebuild" failure
+mode - a manager who announced a rebuild years ago, still holds all the youth, and is
+now shopping his best young piece because it "doesn't fit the timeline" it never
+actually had an exit condition for; and selling an aging asset before, not after, the
+decline shows up in the numbers. All eight are dynasty-specific in the way the prompt
+asked to verify - every one of them turns on the multi-year horizon a redraft league
+never has to reason about.
+
+**WHAT THE AUDIT FOUND: seven of eight pages in this cluster already answer their
+question well, several of them after rounds of work earlier today (D72, D73, D74, D75,
+D77) this round did not need to redo.**
+
+- **`/` (Home)** answers "what changed and what should I do about it" with the
+  revealed-vs-stated headline first, contradictions surfaced in red only when real,
+  and a three-step `Onward` rather than a menu (D52). Not touched.
+- **`/roster`** answers "which of my spots are actually weak" with the SPOF name and
+  damage share plus `depthBeyondStarters` stated as a sentence ("3 bodies short of
+  filling your 9 slots"), not just a bar chart a reader has to interpret themselves -
+  exactly the "real vs. cosmetic weakness" question from the research, already solved.
+  Not touched.
+- **`/plan`** answers "am I stuck in the middle" directly: `windowSynthesis` prints
+  the number of rosters sharing your value window, and the Timeline Check names a
+  `straddling` roster in red with the sentence "your assets do not agree about when you
+  win" - the stuck-in-the-middle failure named above, read from data rather than
+  asserted. `buildGamePlan`'s REBUILD-path move ("Sell the veterans while they still
+  have value... declining assets only get cheaper") is the aging-star-timing answer,
+  and the ASCEND-path move ("Hold the picks. Don't cash them yet... the classic error
+  from this position is spending them a year early") is this app's own answer to
+  perpetual-rebuild's mirror image - selling out too early rather than never selling at
+  all. Not touched.
+- **`/ledger`** answers "remember why" with one pinned card per visit (D58) rather than
+  the twenty-nine-question exam it used to be, and Home's contradiction card is the
+  other half of the same question - whether the reasoning held up. Not touched.
+- **`/values`** and **`/rank`** each state plainly, in their own copy, what they are
+  FOR (`/values`: "a transparent, tunable model, not a scraped market"; `/rank`: the
+  banner stating that whatever is saved here is what the Trade Finder actually prices
+  against) - the exact "is this reachable and does it say what it's for" bar D51 set.
+  Not touched.
+- **`/trade/finder`** is the pick-valuation and trade-fairness answer at its most
+  complete: dossier-driven partner reads, TCI/RFI printed at the point a trade is
+  actually being weighed rather than only on a page admired in isolation, and - as of
+  today's earlier D75/D77 - both the Fragility note and the Positional Leverage shift
+  on every suggested package. Not touched.
+
+**THE ONE REAL GAP: `/trade` - the page where a manager evaluates a SPECIFIC deal,
+most often one someone else proposed to them, which the research above found is the
+single most common real request a dynasty trade tool gets - carried the thesis (D6)
+but neither of the two shape-of-the-deal reads its sibling page already had.**
+`evaluateTrade` (`lib/trade/index.js`) has always returned `yourBet`/`theirBet`/
+`keyAssumption`/`historyCheck`/`consolidationNote`/`agencyNotes`, and `/trade/finder`'s
+`PackageDetail` reuses that exact function so a hand-built deal and a suggested one
+read identically (the comment on that component says so explicitly). But `findTrades`
+(`lib/tradefinder/index.js`) layers TWO more reads on top of every suggested package
+before it reaches the finder - `packageFragilityNote` (does this deal make the season
+lean on fewer names or more) and `packageLeverageShift` (D77, today) - and neither
+layer ever touched `evaluateTrade` itself. So a manager who typed their OWN proposed
+deal into `/trade` got a full thesis and no answer to "does this concentrate my season
+onto one man" or "what does this do to my positional depth," while the exact same deal
+priced through the finder's suggestion path got both. The two reads existed, were
+already proven safe (D6/D19-compliant, real fixture-league tests, shipped hours
+earlier), and simply never reached the page a manager is most likely to open with a
+real trade already in hand.
+
+**THE FIX, and why it cost no new derivation.** `valueSide()` (the function that turns
+a give/get side into priced assets) already builds exactly the `{kind, id, value}`
+shape both `packageFragilityNote` and `packageLeverageShift` want; it was one line short
+- `position` was never carried onto a player asset, because nothing had needed it
+before. Added, read-only, from the same player record `age` already reads. With that,
+`evaluateTrade` calls both functions directly on its own already-computed
+`give.assets`/`get.assets` and attaches `fragility`/`leverageShift` to its return value,
+mirroring `buildAgencyNotes`'s existing guard (`h.me.rosterId == null` -> both `null`) -
+the identical pattern this file already uses one function below. `components/
+TradeBuilder.jsx` renders them exactly as `/trade/finder`'s `PackageDetail` already
+does - the same title wording ("What it takes off one man" / "What it puts on one
+man"), the same `Positional Leverage` link to `/lab/leverage`, no new color, no new
+component pattern. `null` on both when the shift is too small to clear either metric's
+own noise floor (the same `SPOF_SHIFT_MIN`/`LEVERAGE_SHIFT_MIN` thresholds, unchanged) -
+an omitted block is honest; a "no change" block on a page that already runs one
+Evaluate click per look would be exactly the clutter this app keeps refusing to ship.
+
+**WHY THIS NEVER TOUCHED `app/api/`, respecting this round's own boundary.**
+`/trade`'s evaluation is a client component (`TradeBuilder.jsx`) that posts to
+`POST /api/trade`, which does nothing but `NextResponse.json(evaluateTrade(h,
+parsed.data))` - the whole returned object, no field allowlist. Every field this round
+added to `evaluateTrade`'s return value therefore reaches the client through that route
+completely unchanged, with zero edits to `app/api/trade/route.js` or anything else
+under `app/api/`. The two functions reused (`packageFragilityNote`, `packageLeverageShift`)
+live in `lib/tradefinder/`, not `lib/db.js`, not `lib/history.js`'s caching, not
+Prisma - none of the ground the parallel backend-audit round owns. Both cost one
+league-wide pass each (`leagueReplacementValue`, `leaguePositionPools`), which is the
+identical cost class `buildHistoryCheck` already pays one line above inside the same
+function (a `leagueTimelines` pass) and the identical cost class D75/D77 already
+accepted on the finder side - not a new tier of expense, one more pass of the same one.
+
+**Considered and rejected:** editing `app/api/trade/route.js` to shape the response -
+unnecessary once the fields live on `evaluateTrade`'s own return value, and out of
+scope for this round regardless; a NEW `/trade`-specific derivation of either read -
+would be the exact "second answer to a question the app already answered" failure
+SHELVED.md's S6 entry documents, for a fact two existing pure functions already state
+correctly; surfacing an "asset hoarding" warning as a new labelled feature - the
+research's perpetual-rebuild failure mode is already answered by `/plan`'s ASCEND-path
+"don't cash picks early" move and REBUILD-path "sell veterans while they still have
+value" move, which name the SAME failure from both ends without needing a new signal
+invented to restate it.
+
+**Verified.** `pnpm lint` clean. `pnpm test`: baseline was 1045 passed (62 files); now
+**1051 passed (62 files)** - the +6 are in `lib/trade/trade.test.js`, covering the new
+fields always being present (`toHaveProperty`) rather than absent, the real fixture-
+league fragility direction in both directions (selling the SPOF relieves it, a
+three-for-one consolidation creates one), the position(s) named on a real multi-piece
+leverage-touching package, an explicit `null` on both for a pure pick-for-pick swap,
+and the banned-verdict-word check (D6, D19) - reusing the exact player names and
+directions `lib/tradefinder/fragility.test.js`/`leverage.test.js` already pinned against
+this fixture, deliberately, rather than re-deriving new fixture assertions for
+arithmetic already proven elsewhere. `pnpm build` succeeds after `rm -rf .next`. Full
+`pnpm e2e` (`rm -rf .next` first): **78 passed**, zero failures. Screenshotted at 390px
+in both themes against `/trade?give=p1&get=p24,p23` (Luka Doncic out, De'Aaron Fox +
+Darius Garland in - the real fixture-league SPOF-relief case) after clicking "Evaluate
+trade," confirming both new blocks render with no second accent colour (D47, D61,
+D64) - the one link either block adds (`Positional Leverage`) uses the same
+`text-accent-text` treatment the finder's own version already uses. `axe-core` clean
+in both themes against the same evaluated state, which sits outside `ALL_SURFACES`'s
+static-route sweep (the blocks render only after a client-side Evaluate click), so this
+round scanned that state directly rather than relying on the registry-driven CI sweep
+to reach it.
+
+**A backend-shaped note for the parallel audit, not acted on here.** `/trade`'s
+evaluation round-trips through `POST /api/trade` on every Evaluate click, re-pricing
+every asset and re-running two league-wide passes from a cold `getLeagueHistory()` call
+each time - `/trade/finder`, by contrast, computes everything once per server-rendered
+page load with no client round trip at all. Both were within this round's own
+boundary; the round trip's cost profile is not - it touches `app/api/` and whatever
+`getLeagueHistory()`'s own caching does under repeated calls, which is exactly the
+ground the parallel backend/architecture round owns this same day. Named here rather
+than touched.
+
+## D80. THE DESK REOPENED THE LEAK D35 SEALED - a stranger's first screen was showing the deploy owner's identity again, one layer of chrome over
+
+The owner asked every feature to be re-examined against one question: does this solve
+a real problem a dynasty manager actually hits, shown in the most intuitive way? This
+round's assignment was the one surface that question matters most for and gets tested
+least, because nobody who already knows the app ever sees it again after their first
+visit: `/teams`, `/claim`, `/claim/invalid`, `/more`, and the Desk's own chrome on a
+session that has picked nobody yet.
+
+**WHAT A FIRST-TIME VISITOR ACTUALLY EXPERIENCES TODAY, WALKED THROUGH.** A stranger
+opens the deployed link with a completely fresh browser - no cookies at all.
+Middleware (`lib/auth/entry.ts`, D35) reads that there is no `parquet_roster` cookie
+and bounces them to `/teams` before any other page can render, deep link preserved.
+`/teams` greets them with "Whose team are you?", a one-line explanation of what
+picking a team actually does, a "your Sleeper username" box for a real leaguemate, a
+search box and a scrollable list of all fourteen teams - each row already showing a
+name, owner, live record, one of three plain-English roster-window words
+(win-now/rebuilding/balanced), up to three dossier tags and a total value, so this is
+not fourteen anonymous options; a returning visitor's own row is checkmarked, a
+stranger's is not. Below the list, "New to Parquet?" links to `/about`, which explains
+the app's whole vocabulary in plain language and states outright that "switching
+chairs is public and free." Tapping a team POSTs the choice, sets the lens cookie and
+returns to whatever page they were actually headed for. All of this was already
+correct and is UNCHANGED by this round - it was screenshotted and re-verified, not
+assumed, and none of the "14 unlabeled options" or "assumes context you don't have"
+failure modes this brief warned about were actually present.
+
+**THE REAL GAP was one level of chrome below the page content, in the one component
+that was never in front of D35 when it shipped.** `getDeskData()` (`lib/desk.ts`), the
+Desk's persistent bottom bar shown on literally every route including the three that
+must render with NO lens at all (`/teams`, `/about`, `/claim/invalid` - the open
+prefixes `needsEntryPick` carves out), calls `getLeagueHistory()` and reads `h.me`
+unconditionally. `h.me` falls back to the DEPLOY OWNER'S own roster whenever there is
+no lens cookie to read (`resolveMe`, `lib/history.ts`) - which is exactly the leak D35
+was written to stop, for page content. The Desk did not exist when D35 shipped; it
+arrived later, across D41/D52/D53/D65, and nobody re-ran D35's own reasoning against
+it. Curled with a genuinely cookieless request and confirmed by screenshot: `/teams` -
+the one page whose entire job is asking "whose team are you?" - rendered a persistent
+chip at the bottom of that same screen reading the deploy owner's real team name
+("Parquet Kings" in the shipped fixture, "5-Year Plan" against one internal fixture
+variant), with his actual record and league standing ("5-15 · 2025 final · 12th of
+14") printed as fact, plus a "Switch team"/"Open my team in Sleeper" menu behind it -
+full chrome for an identity nobody in the conversation had chosen yet, one screen
+below a headline asking them to choose one. The exact bug D35's own writeup describes
+("a browser with no lens cookie was silently rendered the deploy owner's seat - his
+headline, his record"), reopened by a component that inherited the same fallback
+without inheriting the guard.
+
+**THE SECOND, SMALLER GAP: reversibility was true and undiscoverable.** Switching
+teams later is real and reversible - `TeamPicker.choose()` is a plain POST that can be
+called again from anywhere, any number of times, and the Desk's seat-chip popover
+(`Switch team` -> `/teams`) is the mechanism, already built. But nothing on `/teams`
+itself said so; a first-time picker had to already know that popover existed (which
+requires having picked a team once, i.e. having already made the choice) or click
+through to `/about` to read "switching chairs is public and free" before ever seeing
+that reassurance next to the actual decision. The one moment this mattered most - a
+stranger staring at fourteen options, unsure if this is a one-shot commitment - was
+the one place it wasn't said.
+
+**THE FIX, both scoped to exactly what was broken.**
+
+1. `lib/desk.ts`: `getDeskData()` now asks the identical question
+   `needsEntryPick` already asks - `readLensRosterId()`, a cookie read, no corpus
+   involved - BEFORE calling `getLeagueHistory()` at all, and returns
+   `{ seat: null, status: null }` when there is no lens yet. Not merely "hide the
+   identity after fetching it" - the corpus is never touched, so a stranger's neutral
+   chrome does not even depend on the league provider being reachable.
+2. `components/Desk.tsx`: the context row now has three states instead of two -
+   `data.seat` present (unchanged: the real seat chip and status link), `data` present
+   but `data.seat` null (new: a plain "No team picked yet" label, no avatar, no fake
+   name, and one honest link - "Pick your team" -> `/teams`, using the same
+   `text-accent-text` treatment every other in-body CTA already uses, no new colour),
+   and `data` null (unchanged: the existing quiet "Parquet" fallback for a corpus
+   outage). The seat-chip popover trigger and its contents are both gated on
+   `data?.seat` now, since "Switch team"/"Open my team in Sleeper"/Settings behind a
+   chip presenting nobody's identity was the same leak restated as a menu.
+3. `app/teams/page.jsx`: the picker's own subtitle now says the thing that was
+   previously only on `/about` - "Nothing here is permanent: tap your team's name at
+   the bottom of any page to switch to a different one later" - stated at the moment
+   the choice is actually being made, not one click removed from it.
+
+**WHAT WAS CHECKED AND LEFT ALONE, because it was already right.** `/claim`'s one GET
+route: signs and verifies a seat token, sets the seat cookie and the lens together
+(best-effort on the lens, so a corpus hiccup never loses the unforgeable half), and
+redirects home or to `/teams` - a real, understandable job with no confusing extra
+step, and legacy (no `AUTH_SECRET`) deployments correctly skip the whole notion rather
+than erroring. `/claim/invalid` states plainly that the link did not verify, refuses
+to guess WHY (expired vs. tampered vs. old secret - D19's discipline, applied to a
+copy string rather than a metric), offers a fresh-link path and an explore-without-one
+path, and needed no changes. `/more`: reachable from the Desk drawer's own "See
+everything on one page" link, correctly redirects through `/teams` first for a lens-
+less visitor with the deep link preserved (confirmed by screenshot - `/more` bounces
+to `/teams?next=%2Fmore` and returns to `/more` once a team is picked), and its
+no-JS/crawler role (stated in its own page comment) is intact. None of D6 (no
+verdicts) or D19 (no speculation beyond data) needed enforcing here - this cluster's
+copy was already either factual or, per the one gap above, simply missing; no
+judgment language was ever present to strip out.
+
+**Verified.** `pnpm lint` clean. `pnpm test`: baseline was 1045 passed (62 files); now
+**1048 passed (63 files)** - the +3 are `lib/desk.test.js`, pinning that a missing or
+garbage lens cookie returns `{ seat: null, status: null }` and never calls
+`getLeagueHistory` at all (the load-bearing half - not just a masked identity, no
+corpus dependency), and that a real lens cookie still reads the chosen roster's own
+identity through the unchanged path. `pnpm build` succeeds. Full `pnpm e2e` (`rm -rf
+.next` first): **78 passed**, zero failures - `primeLens` cookie-primes every other
+spec in the suite, so none of them touch the branch this round changed, and that
+blast-radius assumption was verified rather than trusted. `axe-scan` clean in both
+themes on `/teams`, `/about`, `/claim/invalid` and `/more`, scanned with a genuinely
+cookie-less browser context (not the usual `primeLens`-style helper, which would have
+hidden the exact bug this round found). Screenshotted at 390px in both themes against
+a fresh context with zero cookies: the Desk now reads "No team picked yet · Pick your
+team" on all three lens-less pages in both themes, and a returning visitor's normal
+seat chip ("Parquet Kings · 1 new decision to capture") is confirmed unchanged.
+
+**Rejected:** hiding the seat chip's CONTENT while still calling `getLeagueHistory`
+for it (the corpus dependency itself was part of the bug - a lens-less render should
+not need the league provider to be reachable at all, and D35's own fix for page
+content didn't need it either); a toast or banner on Home confirming "seat claimed"
+after `/claim` succeeds (Home is outside this round's cluster, and landing on your own
+revealed strategy and record is already a strong, wordless confirmation that the link
+worked - the two are not the same problem); redesigning `/teams`' team-row density or
+adding photos/avatars to the picker (explicitly out of scope - this round changes
+clarity of what a choice DOES and WHETHER it's reversible, not how the rows look, and
+the existing rows already carry name/record/window/tags/value, which the brief's
+assumed failure mode of "14 unlabeled options" turned out not to describe); moving the
+reversibility sentence into `/more` or the Desk drawer instead of onto `/teams`
+itself (the moment it needs to land is the moment of the choice, not one tap away from
+it - `/about` already had it and that placement was exactly the problem).
+
+## D81. THE ARCHITECTURE/BACKEND HEALTH CHECK - three real waterfalls, one dead migration history, two unused dependencies, one needless client boundary; everything else checked and already solid
+
+Owner-requested, not feature-driven: "make sure our architecture and back end is optimal, correct it if not," explicitly scoped BROADER (the whole app) and DEEPER (architecture/performance/backend-correctness) than the day's own feature work, which had already passed a clean correctness review. Six areas, each measured against real behavior before anything was touched - the same discipline D67 and D70 already modeled for this codebase (an audit that finds nothing is still worth writing down).
+
+**1. DATA-FETCHING AND CACHING.** `lib/history.js`'s corpus cache (D25, D38) is a single in-process, single-flight, TTL'd slot - deliberately per-process, not shared across serverless instances. Checked against the actual deployment model (Vercel, per D21): this is not a bug, it is the correct shape for "reads are DB-free" (D18) at this app's scale, and D25/D38 already document the tradeoff in full. Left untouched.
+
+What was NOT already measured: how many times the corpus-derived engines recompute inside ONE page render, the exact class of thing today's leverage integration (D77) found and fixed for `leagueValueRanking` inside `findTrades`'s per-package loop. Profiled `/roster`'s three heaviest calls against the real fixture league (14 rosters): `leagueValueRanking` 15ms, `leagueTimelines` 20ms (two full passes, by design - see its own comment), `leagueFragility` 26ms, **total 61ms**. `analyzeRoster` itself - called 14 times by the first and 28 times by the second - costs 0.11ms per roster once warm, because `cachedValuePlayers`'s WeakMap-on-corpus-identity memo (documented in `lib/valuation/index.js`) already ate the one expensive pass (the value model over the whole league). D77's fix mattered because it sat inside a loop over dozens of trade packages, multiplying a real cost; this is a single call per page render, and 61ms total is noise next to the corpus assembly it sits beside. Checked, confirmed NOT the same bug, left alone.
+
+**Two real, measured waterfalls fixed**, both found by tracing every `await` in the corpus-assembly and provenance-loading hot paths for independent calls running in series:
+
+- `assembleCorpus()` (`lib/history.js`) ran `collectTransactions` (already internally fanned out, 5 seasons x 25 weeks concurrent - a prior optimization) then `collectTradedPicks`, `loadAnnotations`, `loadMatchups`, `loadBrackets` ONE AFTER ANOTHER, though none of the four depend on `collectTransactions`'s result or each other's. Instrumented and measured against the REAL NSL Fantasy Hoops league (this sandbox has outbound network to Sleeper): `collectTransactions` 5163ms, `collectTradedPicks` 196ms, `loadAnnotations` 12ms, `matchups+brackets` 52ms - all paid serially on top of the dominant call. `collectTradedPicks` itself (`lib/ingest.js`) also looped its per-season fetches in series instead of fanning out the way `collectTransactions` already does for the identical reason. Fixed: all five run via `Promise.all`, and `collectTradedPicks` fans out its own per-league fetches too. Measured before/after against the real league, three runs each: **before 6670ms / 10633ms / 6829ms (avg ~8044ms, high variance); after 5611ms / 5600ms / 5661ms (avg ~5624ms, tight variance)** - roughly 30% faster on average, and the tight after-numbers matter as much as the average: the old serial chain let any one call's tail latency stack on top of the others', which is exactly the kind of variance a serverless cold-start budget (D25) cannot afford.
+- `loadProvenanceSource()` (`lib/provenance/source.js`, the shared assembly every rail-drawing surface uses - `/roster`, `/deals`, `/lineage`) awaited `getPrincipals(h)` then `buildDraftIndex(h)` in series, though neither depends on the other and both are already single-flight + TTL memoized on their own (`lib/principals.js`, `lib/lineage/index.js` - verified by reading both). Fixed via `Promise.all`, preserving the exact same catch-and-degrade-to-`{supported:false}` fallback for a provider with no draft support.
+
+**2. API ROUTES.** Read all nine (`analyst`, `annotations`, `custom-rank`, `digest-seen`, `resolve-user`, `search`, `trade`, `viewing-as`) plus `app/claim/route.js`. Eight of nine use zod; `search` does not, but its one input (`q`, trimmed and `.slice(0, 64)`, no DB touch) is genuinely safe hand-validated, so zod would add nothing. Every DB-touching path (there is exactly one: `annotations`) already goes through `databaseConfigured()`/`describeDbError()` to the letter of D36 - no route bypasses it. Every write derives its author identity from the signed seat (`lib/auth/seat.js`), never from the lens cookie or a body field - verified by reading every write path, not just the annotations one D36 already covers. No rate-limiting exists anywhere, checked against the actual deployment model (a private league, Vercel, on the order of 14 real users) and correctly judged a non-issue at this scale: the two routes that do real outbound work (`resolve-user` calls Sleeper once per submit, `analyst` calls an LLM) already carry the cost D17/D20-style decisions accepted, and everything else is bounded by the memoized in-process caches audited above.
+
+One real, minor gap found and fixed: `/api/trade`'s `give`/`get` arrays (`playerIds`, `picks`) had no length cap, unlike its sibling `/api/custom-rank`, which already bounds its own array (`MAX_RANKED_IN_COOKIE`). Added `.max(64)` to both arrays in `app/api/trade/route.js`'s zod schema - no real trade approaches this, it exists purely so a hand-crafted body can't make `evaluateTrade` walk an unbounded array.
+
+`lib/auth/seat.js`, `server.js`, `entry.js` read in full: HMAC-SHA256 signed tokens, `timingSafeEqual` comparison, the token version signed INSIDE the payload (not just prefixed, so a future `s2` can't be replayed as `s1`), a safe-charset guard on owner ids, and a carefully hardened open-redirect guard (`safeNextPath` rejects `//`, `/\`, any `://`, and control characters). Solid; nothing changed.
+
+**3. DATABASE/PRISMA LAYER.** Singleton confirmed: `grep`'d the whole tree for `new PrismaClient` - exactly one call site, `lib/db.js`. Every DB-touching file (`lib/history.js`, `lib/ingest.js`, `app/api/annotations/route.js`) imports that singleton.
+
+Real, verified drift found and fixed, using an actual local Postgres 16 instance (this sandbox has `postgresql-16` installed) rather than inspection alone: `prisma/migrations/` held exactly one migration, `20260807171323_annotation_author`, an `ALTER TABLE "Annotation"` that assumes the table already exists. It does, in the real deployed database - but this app's actual deploy path (`db:push`/`setup` in `package.json`) is `prisma db push`, which writes schema directly and never records migration history. Verified: `prisma migrate deploy` against a genuinely empty database failed with `relation "Annotation" does not exist` (SQLSTATE 42P01); `prisma migrate status` against a database `db push` had already brought fully in sync with `schema.prisma` still reported the one migration "not yet applied," permanently, because there was no `_prisma_migrations` bookkeeping to find. A second, independent gap turned up in the same pass: `schema.prisma`'s `@@index([createdAt])` on `Annotation` had never been captured by any migration at all - `prisma migrate diff` against a database built from the two "real" migrations found exactly this one missing index and nothing else.
+
+Fixed with two new migrations rather than by hand: `20260807171300_init` (generated via `prisma migrate diff --from-empty --to-schema-datamodel <reconstructed pre-ownerId schema>`, not hand-written, so its SQL matches Prisma's own conventions and the index name the next migration's `DROP INDEX` already depends on) and `20260817231500_annotation_created_at_index` (the one missing `CREATE INDEX`, likewise machine-generated). Verified end-to-end against the real local Postgres: reset to empty, `prisma migrate deploy` applies all three cleanly, `prisma migrate status` reports "up to date," and `prisma migrate diff` between the deployed-migrations database and `schema.prisma` reports **zero differences**. Also verified the real write path against this instance: a composite-key (`transactionId`, `ownerId`) upsert succeeds, a second author on the same `transactionId` does not collide, and an `ownerId`-scoped lookup returns the right row - confirming both indexes the task asked about (`transactionId`, `ownerId`) are real and correctly shaped, not just declared. `db push` remains the sanctioned deploy path (`package.json` unchanged) - this fix makes the migration HISTORY honest and replayable from empty, in case `migrate deploy` is ever adopted; it does not change how the app deploys today.
+
+**4. BUILD AND BUNDLE HEALTH.** `pnpm build` succeeds: 34 routes, 31 server-dynamic (`ƒ`) + 3 static (`○` - `/about`, `/settings`, `/claim/invalid`, exactly the pages that read no live league data). Total static client JS across all chunks: **1.3MB** (down from 1.4MB after the client-boundary fix below), largest single chunk 224KB - framework/router runtime shared by every route, not page-specific, since this app is almost entirely Server Components. No TypeScript leftovers from D63: no `.ts`/`.tsx`/`.d.ts` files anywhere, no `tsconfig.json`, `jsconfig.json` is the correct D63 replacement. Two dependencies confirmed genuinely unused - zero import sites anywhere in `app`/`components`/`lib`/`scripts` - and removed from `package.json`: `date-fns` and `class-variance-authority`. (`chrome-launcher` and `lighthouse`, which looked similarly suspicious at first grep, are used by `.claude/skills/visual-review`'s own tooling script and were left alone.)
+
+**5. NEXT.JS-SPECIFIC CORRECTNESS.** Audited all "real" `"use client"` directives (19 of the 20 grep hits - the 20th, `lib/photos.js`, was a false positive: the string appears only inside a comment referencing a DIFFERENT file). 18 of 19 are genuinely interactive (a hook, an event handler, or a browser API) or framework-mandated (`app/error.jsx` - Next requires error boundaries to be Client Components). One, `components/OpenInSleeper.jsx`, had none of those - a static `<a>` tag with no state, no effect, no handler - and was needlessly forcing a client boundary onto both of its call sites (`/league`, `/roster`), which are Server Components. Fixed by removing the directive; it renders identically because there was nothing client-only in it to begin with.
+
+`export const dynamic = "force-dynamic"` appears on 31 of 34 pages. Checked whether this is defensive boilerplate or load-bearing: `provider.getPlayers()` (`lib/providers/sleeper/index.js`) is the one Sleeper fetch using `cache: "no-store"` (the payload is 2.3MB, too big for Next's data cache; every OTHER Sleeper fetch uses `next: { revalidate: 3600 }`), and the root layout's `Desk` component awaits the full corpus - which always calls `getPlayers()` - on every route without exception (already documented and measured in `app/layout.jsx`'s own comment, referencing D39). So a no-store fetch already forces every page dynamic regardless of the export; the export is honest, not decorative. The three pages that omit it are exactly the three that need no live league data. Confirmed correct as-is.
+
+Checked the heavier pages (`/roster`, `/league`, `/plan`, `/trade/finder`, `/values`) for accidental sequential-await waterfalls beyond the two fixed above - none found; the remaining independent-looking awaits on those pages are either genuinely cheap (a cookie read) or already correctly ordered.
+
+One minor, NOT fixed, build-time-only oddity, documented rather than chased: building the app logs four "`[desk] context row unavailable`" warnings for the framework's own auto-generated `/_not-found` route, each wrapping "Sleeper request failed after 4 attempts" - which is actually Next's internal no-store/dynamic-usage bailout signal, misread by `getJson()`'s generic retry loop as a transient network failure and retried three times before being correctly swallowed by `getDeskData()`'s own catch (the D25-style graceful degradation working exactly as designed - the build still succeeds, every page still renders). This wastes a few seconds of build time and produces alarming-but-harmless log noise on a route real users never see rendered as such. Did not chase a fix: the specific internal signal/digest convention Next 16 uses for this could not be located in this version's bundled source in the time available, and special-casing a retry loop against an unverified framework internal is exactly the kind of speculative change this audit's own ground rule warns against. Left as a known, low-severity, cosmetic build-log quirk.
+
+**6. SECURITY BASICS.** Exactly one `NEXT_PUBLIC_*` variable exists (`NEXT_PUBLIC_USE_PLAYER_PHOTOS`, a boolean feature flag, D21/D39) - grepped for all others and found none. Every secret-shaped variable (`AUTH_SECRET`, `DATABASE_URL`, `LLM_API_KEY`, `LANGSMITH_API_KEY`) is read only in server-only files, none of which carry `"use client"`, and none is ever passed as a prop into one of the 19 real client components (checked in the course of area 5's audit). `lib/observability/trace.js`'s LangSmith key is used only as an outbound HTTP header value, never logged. The annotation write path (`app/api/annotations/route.js`) was already re-verified in area 2: the `ownerId` stamp comes from the signed seat exclusively, never from the lens or a body field, so one user's write path cannot be tricked into writing under another user's identity.
+
+**VERIFIED.** `pnpm lint` clean. `pnpm test`: **1045 passed (62 files)** - unchanged from D77's own baseline, confirming none of the above introduced a regression. `pnpm build` succeeds (route/bundle numbers above). Full `pnpm e2e` (`rm -rf .next` first, the known Turbopack dev-cache staleness gotcha): **73 passed, 5 failed** - every failure is `net::ERR_CONNECTION_RESET` on an image request to `sleepercdn.com` (`/avatars/thumbs/...`, `/images/team_logos/nba/nyk.png` - confirmed by reading the Playwright trace's network log directly), which `expectNoConsoleErrors` correctly treats as a page error in a normal environment. Verified this is a property of THIS SANDBOX, not of the changes in this entry: stashed every change here, reran the identical failing test (`/roster renders cleanly`) against the unmodified, already-merged codebase, and it failed identically. This sandbox's outbound network reaches Sleeper's JSON API but not its image CDN (a restriction the environment itself documents); a real deploy or a less restricted sandbox would not see this. Database layer changes verified against a REAL local Postgres 16 instance (spun up in this sandbox), not by inspection alone - see area 3 above for the exact commands and results.
+
+**Rejected:** hardening the corpus cache into a shared/external one (Redis, etc.) to survive serverless cold starts - D25/D38 already made this call deliberately, and nothing in this pass found a real cost the current design fails to bound; adding rate-limiting middleware across all routes - the deployment model (private league, ~14 users) does not call for it, and every route with real per-request cost is already bounded by an existing memoized cache; chasing the `/_not-found` build-log noise into Next 16's internals without being able to verify the exact signal convention first; converting more `"use client"` components after finding only one genuine false positive among nineteen - the other eighteen earned their boundary and re-litigating them would be inventing a problem to justify touching working code.
