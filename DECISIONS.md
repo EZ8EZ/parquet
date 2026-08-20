@@ -4811,3 +4811,109 @@ protection outright rather than answering it; gating on `VERCEL_GIT_REPO_OWNER` 
 renders); and mapping the flag through `next.config.mjs`'s `env` key to compute it at build
 time, which works but adds indirection for no gain now that the `NEXT_PUBLIC_VERCEL_*`
 counterpart is confirmed to exist.
+## D91. THE AI/SUBJECTIVE COMPONENT IS SHELVED - `/analyst` and `lib/analyst/` out, no rescue from `rulesFallback` because every finding in it already renders on a page that survives
+Owner decision, not a committee finding: *"lets shelve the ai subjective component and
+focus more on this statistical call and other intuitive nuance feature set."* The
+arguments live in `SHELVED.md` S7 and S8 and are **not** repeated here, per D59 - this
+entry records the event, the scope, and the two judgment calls a reader might otherwise
+have to reconstruct from the diff.
+
+**What came out of the live app.** 605 lines: `app/analyst/page.jsx`,
+`components/AnalystChat.jsx`, `app/api/analyst/route.js`, and all of `lib/analyst/`
+(`index.js`, `system-prompt.js`, `analyst.test.js`). Plus, as dead code the shelve
+created: `lib/observability/trace.js` in full (`lib/analyst/index.js` was its only
+caller and `tracingEnabled()` had none even before that), the `LLM_BASE_URL` /
+`LLM_API_KEY` pins in `playwright.config.mjs`'s hermetic webServer env, and
+`"/analyst": MessageSquareText` in `components/nav-icons.jsx`. **Parquet now makes no
+outbound model call from any code path**, which is a stronger privacy guarantee about
+the ledger's captured reasoning than the opt-in default ever was: previously not
+configured, now not possible.
+
+**JUDGMENT CALL ONE: `rulesFallback` was NOT rescued, and that is the finding rather
+than an omission.** S1 rescued slot par out of the shelved start line, so the question
+had to be asked seriously here: the deterministic audit is not the AI half at all, and
+a rules-based read over derived findings is exactly the direction the owner is moving
+toward. **Checked `/plan`, `/managers/[rosterId]`, `/recap` and Home before
+concluding, and every single thing it computed already renders on a surviving surface,
+most of them more completely.** Contradictions: Home renders two full cards above the
+fold with said/did tags, `lib/gameplan` leads `/plan`'s caveats with the same gap, and
+`lib/trade` puts it on the `/trade` receipt - against the fallback's one line.
+Posture-by-season: `/managers/[rosterId]` and `/managers/former/[ownerId]` render every
+season as its own chip. `report.findings`: Home's "What your record shows" fold renders
+all of them untruncated. A named manager's read and approach tips: four surfaces. The
+annotation-count nudge: Home's quiet branch and the capture badge. The only thing unique
+to the fallback was the question ROUTING - type a name, get that manager - which is a
+chat affordance, and the Desk's search already resolves a manager's name to their
+dossier anyway. **Re-homing it would have been thoroughness for its own sake, and the
+honest conclusion is that `rulesFallback` was always a shadow of the real surfaces
+rather than a feature** - which is also why `buildCorpus` had a test and it never did.
+
+**JUDGMENT CALL TWO: the two inbound links were re-aimed, not deleted, and the test
+that would have caught leaving them was missing.** `/ledger`'s third onward step and
+`homeNext`'s `contradicted` branch both pointed at `/analyst`. `/ledger` is one of the
+four pinned surfaces and dropping it to two ways out would have been a real loss, so
+both now point at `/plan` - not as a shrug, but because `/plan` is the page that already
+opens its caveats with the stated-vs-revealed gap, so it is where the argument the
+Analyst led with actually lives. `contradicted` therefore now changes the REASON on a
+step the reader was taking anyway rather than adding a fourth destination, and
+`lib/nav.test.js` pins that it buys a different reason (delete the branch and the test
+fails; point it somewhere with nothing new to say and it also fails).
+
+The gap worth recording: **nothing in the suite could have caught a forgotten one of
+those links.** `resolveSteps()` falls back to the raw href when a destination is
+neither registered nor given an explicit `label`, so a dangling step to a removed
+surface renders as a link captioned "/analyst" and every existing nav test stays green -
+including the one that checks labels come from the registry, which only checks
+destinations that ARE registered. A test now pins that an onward destination is either
+registered or explicitly labelled; the two deliberate unregistered targets
+(`/lab/counterfactual`, `/lab/regret`) carry their own labels and are unaffected. That
+is the distinction: unregistered is allowed, unnamed is not.
+
+**Everything the module consumed was verified still-used by grep and left untouched**,
+because `lib/analyst/` was a pure consumer of the app's engines and never a producer
+for them: `getStrategyReport` (three remaining callers), `getAllDossiers`
+(`/managers`, with six more modules on `buildDossier`), `lib/principals` (40
+importers), `lib/derive/describe` (20), `lib/valuation` (19),
+`lib/rankings/leagueTiers` (three, still the single tier entry point S6 made it),
+`lib/history` (everything). Removal is a subtraction, not a refactor.
+
+**Docs.** `.env.example` now says out loud that `LLM_BASE_URL`, `LLM_API_KEY`,
+`LLM_MODEL`, `LANGSMITH_API_KEY` and `LANGSMITH_PROJECT` have no consumer, rather than
+continuing to document them as working - an operator with them already set in a real
+`.env` or in Vercel's project settings needs to learn why they stopped mattering
+instead of assuming a bug. Nothing was touched in any actual `.env` (gitignored, the
+operator's). README's differentiator list drops from five to four and says where the
+fifth went; its anti-sycophancy blockquote now points at the STRUCTURE that enforces it
+(Home leading with the contradiction, `/plan`'s first caveat, `/trade`'s receipt, no
+grades anywhere) rather than at a deleted system prompt, which is the harder and better
+place for that constraint to live: a prompt can be softened by an edit, a page that puts
+the disconfirming case above the fold cannot be. Three stale header comments naming the
+analyst as a consumer (`lib/history.js` x3, `lib/derive/describe.js`,
+`lib/strategy/index.js`) were corrected. `DESIGN.md`'s two references (the safe-area
+rule's second fixed-bottom control, the analyst empty state) were corrected.
+`PROGRESS.md`, `QUESTIONS.md`, `BRAINSTORM.md` and `RESEARCH.md` were deliberately NOT
+touched: they are dated logs of what was true or asked at a point in time, and the prior
+shelve (`e337f36`) treated them the same way. D7 and D17 likewise stand as written - a
+decision record that gets edited when the decision is reversed stops being a record.
+
+**Verification.** `pnpm lint`: clean. `pnpm test`: 1059/1059 in 62 files (was 1059 in
+63 - `analyst.test.js`'s two annotation-privacy tests out, two nav tests in). `pnpm
+build`: clean, 41 routes where `origin/main` builds 43, and neither `/analyst` nor
+`/api/analyst` is among them. `pnpm e2e`:
+75/75 (was 78 - the smoke and both a11y passes for `/analyst` are generated from
+`ALL_SURFACES`, so removing the registry entry removed all three; no e2e file mentioned
+the route by name, which is the registry-driven design working as intended).
+`pnpm typecheck`: 355 errors, down from 357 on `origin/main` @ `4e71e51` - it does not
+pass and did not pass before this change (it is not in CI; the `gate` job runs lint and
+test only, see `.github/workflows/ci.yml`), and the two-error drop is `lib/analyst/`
+leaving with its own.
+
+**Rejected:** keeping `/analyst` behind a feature flag or unregistering it while leaving
+the route reachable, which is a bin dressed as a shelf - git history is the shelf, and a
+route that no surface links to but that still answers is the worst of both; re-homing
+`rulesFallback` onto `/plan` or `/managers` to look thorough, when the evidence above
+says every one of its outputs is already there; leaving `lib/observability/trace.js` in
+place as a spare for a future LLM call, which is S4's exact failure mode and would have
+contradicted the rule D59 set in the same breath; deleting the LLM env vars from
+`.env.example` silently, which would leave an operator with a stale real `.env` no way
+to find out why nothing happens.

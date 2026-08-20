@@ -17,6 +17,13 @@ that shipped it, and the entries name the files so `git log --` finds them.
 Shelved by committee review, 2026-08-10, against `main` @ `5e8dd02`. Executed in the
 same pass; see `DECISIONS.md` for the decision record.
 
+S7 and S8 were added 2026-08-19 against `main` @ `4e71e51`, by owner decision rather
+than by committee: *"lets shelve the ai subjective component and focus more on this
+statistical call and other intuitive nuance feature set."* They are the only two
+entries here that record a change of **direction** rather than a defect. Everything
+above them went because it was wrong; the Analyst went because the app turned out to
+be a different kind of thing than the one that wanted it.
+
 ---
 
 ## S1. The start line — the nightly board and the ten-game log
@@ -243,6 +250,186 @@ should find it in the same place as the rest.
 **What would bring it back.** Nothing. If a surface needs a tier label it calls
 `leagueTierLabel(h)`. A future absolute threshold on a rescalable scale should be
 treated as a defect on sight.
+
+---
+
+## S7. The Analyst - the app's whole AI/subjective component
+
+**What it was.** `/analyst`, and the module behind it. A 20-line page over a chat
+surface (`components/AnalystChat.jsx`, 161 lines) over an API route
+(`app/api/analyst/route.js`, 37 lines, zod-validated, `maxDuration = 60`) over
+`lib/analyst/` - 269 lines of corpus builder and runner in `index.js`, a 36-line
+`system-prompt.js`, and 82 lines of test. 605 lines all told, plus a registry entry, an
+icon, its own three-step onward block, one inbound onward step from `/ledger`, and one
+branch of `homeNext`.
+
+What made it interesting is worth restating precisely, because it was not a wrapper.
+`buildCorpus()` compiled the viewer's revealed strategy, their stated-vs-revealed
+contradictions, every transaction they had personally annotated **with their own
+recorded reasoning quoted verbatim**, their last 25 trades, their twelve most valuable
+players priced on the same league-derived tiers `/values` uses, and a one-line
+behavioral read on all thirteen leaguemates - into one text block, on the D7 premise
+that three-plus seasons of a fourteen-team dynasty league fits in one context window
+and therefore needs neither fine-tuning nor a vector database. That premise was
+correct. `system-prompt.js` then named sycophancy as the product's primary failure
+mode in a comment addressed to whoever might later soften it, and instructed the model
+to lead with the disconfirming case. Per D17 it spoke plain OpenAI-compatible HTTP over
+`fetch`, so it ran against Groq, OpenRouter or a local Ollama with no SDK and no vendor
+lock-in, and with `LLM_BASE_URL` unset it fell back to a deterministic audit
+(`rulesFallback`) rather than to an error.
+
+**Why it was shelved.** Not because any of that was wrong. Because the app it belonged
+to no longer wants it. Parquet's direction is a statistical call derived from **this
+league's own real history**, plus the intuitive nuance that history supports, and the
+Analyst was the one surface whose output was neither: it was prose *about* the
+derivations, generated somewhere else, by something with no access to the league beyond
+the paragraph Parquet handed it.
+
+Three consequences of keeping it that the direction makes unacceptable rather than
+merely awkward:
+
+- **It was the only non-deterministic surface in the app.** Every other page is a pure
+  function of the corpus: same history, same page, forever. `/analyst` at
+  `temperature: 0.4` could answer the same question two ways on the same afternoon, and
+  the app's entire claim on a reader's trust is that its numbers are reproducible and
+  its methodology is published.
+- **It was the only outbound dependency other than the league provider itself** - the
+  only one that needed a key, the only one with a 45-second timeout in the request
+  path, and the only one whose being down produced prose rather than an error.
+- **It was the app's only privacy exposure of the one genuinely private thing it
+  holds.** Every other number Parquet shows is league data the whole league can already
+  read. The ledger annotations are not, and the corpus quoted them verbatim into a
+  third-party request body. `lib/analyst/index.js` carried a five-line comment guarding
+  exactly one leak in that (a trade partner's note on a shared `transactionId`) with a
+  test pinning it, which is the right amount of care and also a standing tax that the
+  removal now settles permanently. Not-configured-by-default is a weaker guarantee than
+  not-possible, and the app now has the stronger one.
+
+**The rescue question, and the answer: nothing needed re-homing.** `rulesFallback()` is
+the half of this module that arguably belonged to the new direction rather than the old
+one. It is not an LLM at all: it is a rules-based audit over `getStrategyReport` and
+`getAllDossiers` that routes a typed question to a manager's read, or to a
+posture-by-season line, and otherwise leads with the reader's first contradiction. S1's
+precedent says to look hard for the slot-par-shaped piece and move it at zero cost.
+**Looked, and there is no such piece here** - every finding it computed already renders
+on a surviving surface, most of them more completely than the fallback rendered them:
+
+| What `rulesFallback` said | Where it already renders, today |
+|---|---|
+| `contradictions[0].narrative`, as "First, the uncomfortable part" | `app/page.jsx` renders **two** contradiction cards above the fold, each with the full narrative plus `said:`/`did:` season tags and a link to the moves. Home leads with them ahead of the four season figures |
+| the same gap, as a caution before acting | `lib/gameplan/index.js` puts it **first** in `/plan`'s caveats: "decide whether the plan changed or you're just chasing" |
+| the same gap, at the moment of a deal | `lib/trade/index.js` puts it on the `/trade` receipt: "don't repeat the pattern blindly" |
+| "you've annotated only N decisions" | Home's quiet branch states the count and links to it; the capture badge above it counts what is outstanding |
+| `postureBySeason`, one line | `/managers/[rosterId]` and `/managers/former/[ownerId]` render every season as its own chip |
+| `report.findings`, as bullets | Home's "What your record shows" fold renders **all** of them, untruncated |
+| a named manager's `read` + `approachTips` | `/managers`, `/managers/[rosterId]`, `/managers/former/[ownerId]`, and `/trade/finder` on the suggested partner |
+
+The one thing genuinely unique to it was the **routing** - type a name, get that
+manager; type "am I rebuilding", get posture. That is a chat affordance, which is to
+say it is the shelved half, and the Desk's search (`app/api/search/route.js`) already
+resolves a manager's name straight to their dossier. Re-homing a router whose every
+destination is one tap away would have been thoroughness for its own sake. **So the
+correct rescue here was none, and a fair reading of this entry is that
+`rulesFallback` was always a *shadow* of the app's real surfaces rather than a feature
+of its own** - which is also why it never got a test of its own while `buildCorpus`
+did.
+
+**What went with it, and is worth knowing.** Three orphans, on S1's rule that dead code
+created by a shelve is part of the shelve:
+
+- `lib/observability/trace.js` in full. It has its own entry below (S8) because its
+  revival condition is not this one's.
+- The `LLM_BASE_URL` / `LLM_API_KEY` pins in `playwright.config.mjs`'s hermetic
+  webServer env. They existed to guarantee the suite never dialled an inference
+  endpoint; there is no longer an endpoint to dial.
+- `"/analyst": MessageSquareText` in `components/nav-icons.jsx`. Noted because
+  `iconForSurface()` falls back rather than throwing, so a stale entry there is
+  invisible to every test in the repo.
+
+**What was verified as still used, and left completely untouched.** Everything
+`lib/analyst/` consumed is load-bearing elsewhere, confirmed by grep rather than
+assumed. Counting `import ... from` statements only, after the removal:
+`getStrategyReport` has three remaining callers (Home, `lib/gameplan`, `lib/trade`);
+`getAllDossiers` has one (`/managers`), with six more modules reaching `lib/dossier`
+through `buildDossier` instead (`/managers/[rosterId]`, `/managers/compare`,
+`/managers/former/[ownerId]`, `/teams`, `lib/gameplan`, `lib/tradefinder`);
+`lib/principals` has 40 importers, `lib/derive/describe` 20,
+`lib/valuation` 19; `lib/rankings/leagueTiers` has three (`lib/rankings/tiers`,
+`lib/trade`, `lib/valuation`) and remains the single entry point S6 made it;
+`lib/history` is the corpus every page builds. The module was a **consumer** of the
+app's engines and never a producer for them, which is why its removal is a subtraction
+of 605 lines and not a refactor.
+
+**One thing was moved rather than dropped.** `/ledger`'s third onward step pointed
+here, and `homeNext`'s `contradicted` branch pointed here. Both now point at `/plan`,
+which is not a shrug: `/plan` is the surface that already leads its caveats with the
+stated-vs-revealed gap, so it is where the argument the Analyst opened with actually
+lives now. `lib/nav.test.js` gained the test that would have caught a *forgotten* one
+of those links, which nothing in the suite could do before - `resolveSteps()` falls
+back to the raw href for an unregistered destination, so a dangling step rendered as a
+link captioned "/analyst" and stayed green.
+
+**What would bring it back.** Not a better model and not a cheaper one. Both of these,
+together:
+
+1. **A question the derivations provably cannot answer.** The Analyst's real job was
+   never the summary, which is what `rulesFallback` proved by summarising the same
+   material without a model. It was the *hypothetical*: "if I trade this pick for that
+   player, does that contradict what I said in 2024?" Nothing in the app answers a
+   counterfactual phrased in free text, and `/lab/counterfactual` answers only one
+   fixed counterfactual. If a named, recurring, real question turns out to need free
+   text as its input, that is the shape to rebuild in - narrow, one question, not a
+   chat box.
+2. **The private half stays out of the prompt.** A revived version grounded in the
+   ledger's verbatim reasoning re-creates the exposure above. Either it is grounded in
+   derived findings only, or it runs somewhere the viewer owns end to end (a local
+   endpoint by construction, not by configuration).
+
+Absent both, the honest position is that the statistical surfaces made this one
+redundant, and this entry is the end of it.
+
+---
+
+## S8. `lib/observability/trace.js` - LangSmith tracing for LLM runs
+
+**What it was.** A 56-line, zero-dependency LangSmith tracer: `traceLLMRun()` posted
+one completed run to `https://api.smith.langchain.com/runs` after an LLM call
+resolved, gated on `LANGSMITH_API_KEY`, capped at 3 seconds, and swallowing every
+failure. Deliberately not the `langsmith` SDK, on the reasoning in its own header:
+one traced call site does not justify a dependency. It also exported
+`tracingEnabled()`.
+
+**Why it was shelved.** `lib/analyst/index.js` was its only caller - two call sites,
+the success path and the failure path, and it traced both, which was the right design
+because a traced error without its prompt is the half you cannot debug. With S7
+executed it has **zero callers**, and `tracingEnabled()` had zero callers even before
+that. It is now a tracer of a kind of call the app no longer makes. S4 is this file's
+standing argument about what a zero-caller function is, and leaving a whole zero-caller
+module behind while citing S4 would be incoherent.
+
+Worth recording separately rather than as a footnote to S7, because the careful part of
+it was not the code. `.env.example` carried an eight-line warning above
+`LANGSMITH_API_KEY` explaining that a traced run carries the **full** prompt, that the
+prompt carries the viewer's own captured ledger reasoning, that this is the one
+genuinely private thing in the app, and that turning tracing on therefore hands it to a
+third party. That analysis is the reusable artifact here. It should be re-read, not
+re-derived, by whoever next wires observability into anything that sees a ledger note.
+
+**What would bring it back.** Any second outbound model call anywhere in Parquet, S7's
+revival included. It is a good, small, honest piece of infrastructure and there is no
+argument against the code itself; it is simply an observer with nothing left to
+observe. If it returns, the two things to carry back with it are the awaited (not
+fire-and-forget) POST, because serverless reclaims the instance once the response
+returns and a dangling promise silently drops most traces in production, and the
+privacy warning above.
+
+**Note on the env vars.** `LLM_BASE_URL`, `LLM_API_KEY`, `LLM_MODEL`,
+`LANGSMITH_API_KEY` and `LANGSMITH_PROJECT` now have no consumer anywhere in the
+repository. `.env.example` says so out loud instead of continuing to document them as
+though they worked, because an operator who already has them set in a real `.env` or in
+Vercel's project settings needs to learn why they stopped mattering rather than assume
+a bug. Nothing was removed from any actual `.env`; that file is gitignored and is the
+operator's.
 
 ---
 
