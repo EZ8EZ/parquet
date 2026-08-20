@@ -4627,3 +4627,187 @@ D63 removed TypeScript from this app, deliberately and by owner request, not for
 **Verification.** `pnpm lint`: clean. `pnpm test`: 1054/1054, unchanged (JSDoc comments carry no runtime behavior; the two lines of actual code changed - the `rounds` removal - were re-run through the full suite before and after). `rm -rf .next && pnpm build`: clean, all 34 routes. Full `pnpm e2e`: 78/78, against this sandbox's existing `/opt/pw-browsers/chromium` with no config workaround needed. `pnpm typecheck`: 799 → 360 total repo-wide errors (the drop is almost entirely the `@types/react`/`@types/react-dom`/`@types/node` fix eliminating node_modules noise, not scope-directory fixes, which is why the number does not read as "resolved" - it reads as "no longer drowned out"); zero errors in any of the five priority directories or their test files.
 
 **Rejected:** a single repo-wide annotation pass (explicitly what the brief warned against - a rushed, low-quality pass across 100+ files with no real per-file judgment); suppressing the ~360 remaining errors with `// @ts-nocheck` or a broadened `jsconfig.json` `exclude` to make the number read as zero, which would hide exactly the signal this whole change exists to surface; fixing `lib/lineage/`'s real provider-method mismatch inline, since it is a genuine bug in a file this pass was not asked to own and deserves its own investigation rather than a type-error-driven drive-by.
+
+## D90. THE PHOTO FLAG WAS NEVER REACHING THE BROWSER - a fifth ask, a real root cause in the client bundle, and D39's default reversed while keeping the protection it actually wanted
+
+The owner has asked for player headshots five times. Every previous diagnosis, including
+the one handed to this round, concluded the same thing: `NEXT_PUBLIC_USE_PLAYER_PHOTOS`
+is unset on Vercel, `NEXT_PUBLIC_*` is inlined at BUILD time, so set it in the dashboard
+and redeploy with no cache. The owner was walked through those steps twice and the photos
+were still off. That diagnosis is incomplete, and the missing half is why the fix kept
+not working.
+
+**What the client bundle actually contains.** Built this branch and read the shipped
+chunk rather than trusting the model of the toolchain. Next 16.2.12 builds with
+**Turbopack**, and Turbopack constant-folds `process.env.NEXT_PUBLIC_X` in client code
+only when `X` is **present in the build environment**. With the var set, the entire
+function folds to a literal - the shipped chunk reads `function i(){return!0}`. With the
+var **absent**, there is no folding at all: Turbopack resolves `process` to a bundled
+browser shim and emits a live lookup, `i.default.env.NEXT_PUBLIC_USE_PLAYER_PHOTOS`,
+against a shim whose `env` has no such key. In the browser that expression is
+`undefined`.
+
+Feed that through the old predicate and the outcome is not "the default is off", it is
+"the check cannot pass":
+
+    OLD, unset at build time:  undefined === "true"  ->  false
+    NEW, unset at build time:  fails open            ->  true
+
+Both verified by evaluating the actual shipped function body against an empty `process`
+shim. So the old code had two independent failure modes stacked on each other - an OFF
+default AND a client-side expression that reads `undefined` unless the var exists at
+build time - and every previous round only ever named the first. This also means the
+dashboard-plus-redeploy advice was only ever going to work if the variable was scoped to
+the exact environment being built (Production vs Preview), which is a second silent
+tripwire nobody was told to check.
+
+**D39's default is reversed here, and its reasoning is not being quietly contradicted -
+it is being answered.** D39 flipped this default ON->OFF for a real reason: the repo is
+public, so a fork or somebody else's Vercel deploy that never set the var must not
+silently ship real, unlicensed headshots. That worry stands. What was wrong was the
+implementation charging the entire cost of it to the one person it was never aimed at.
+A default the project's own owner cannot get past, across five requests, is not a safety
+default; it is a bug wearing a safety default's clothes.
+
+So `photosEnabled()` (`lib/photos.js`) is now three branches, and the ORDER is the design:
+
+1. `NEXT_PUBLIC_USE_PLAYER_PHOTOS` set explicitly wins either way - `"false"` is the
+   documented opt-out, `"true"` the documented fork opt-in. `playwright.config.mjs`
+   already pins `"false"`, so the e2e suite stays deterministic and offline unchanged.
+2. Unset, and positively identifiable as SOMEBODY ELSE'S build -> OFF, via
+   `NEXT_PUBLIC_VERCEL_GIT_REPO_OWNER`. Vercel auto-populates this for Next.js projects -
+   checked against Vercel's own framework-environment-variables reference, not assumed.
+   It carries the `NEXT_PUBLIC_` prefix deliberately: it is therefore inlined into the
+   server and client bundles from a single value, and since this function gates whether
+   an element renders at all, a server-runtime read disagreeing with a client build-time
+   read would be a hydration mismatch. That is why the check does not read the bare
+   `VERCEL_GIT_REPO_OWNER`.
+3. Anything else -> ON. Local dev, CI and the canonical repo's own deploys need no
+   configuration whatsoever.
+
+**The asymmetry is the whole point: this FAILS OPEN.** The fork check can only ever turn
+photos off, and only while holding a repo owner that is positively not the canonical one.
+If Vercel's "Enable access to System Environment Variables" setting is off, or the var is
+renamed, or a deploy is not git-connected, the var is absent and photos stay ON rather
+than quietly reverting to monograms. A missing env var silently downgrading the owner's
+own site is the exact failure this must never be able to repeat. The price is that
+automatic fork protection degrades to the documented `.env.example` opt-out - a far
+better trade than a sixth round of "the photos are still not showing up." Fork
+protection is therefore preserved in the case D39 was actually worried about (someone
+else's Vercel deploy, which does carry the var) without holding the owner hostage to it.
+
+**Repo-hosted images were investigated and REJECTED.** The owner raised possibly hosting
+the images locally or in the repo. It is the wrong direction on every axis. Committing NBA
+player headshots into a PUBLIC repository converts a hotlink - a browser fetching a third
+party's bytes from that third party's own CDN, which never touches Parquet's
+infrastructure - into redistribution by Parquet, from Parquet's domain, permanently, in
+git history where a later delete does not remove it. That is a strictly larger licensing
+exposure than the thing D39 was created to avoid, not a mitigation of it. It also costs
+~475 files of permanent repo weight for content that goes stale every time a player
+changes team. Same reason `next/image` is deliberately NOT used here and the
+`no-img-element` lint rule is suppressed instead: `next/image` would route the file
+through this app's own optimizer, making Parquet fetch, re-encode and SERVE the headshot
+itself, which is precisely the "never a copy this app stores or serves" posture that the
+personal-use note in `.env.example` rests on. A plain `<img>` is the licensing-cheapest
+option available and it is what ships. Recorded so a future round does not "fix" the lint
+suppression and silently regress the licensing posture.
+
+**Photo coverage measured, not estimated - and D73's 403 conclusion corrected.** D73
+recorded that this sandbox "does not reach `sleepercdn.com`" and wrote the CDN off as
+untestable from here. That is wrong, and it mattered. The host answers fine: team logos
+and `api.sleeper.app` both return 200. The 403s are S3 `AccessDenied` bodies, complete
+with an S3 `RequestId` - which is what that bucket returns for an object that **does not
+exist**, not a block on the caller. It is purely per-object. So the real hit rate is
+measurable, and was measured, across all 592 active Sleeper NBA players with a team:
+
+- **475/592 (80.2%)** return 200. All 117 failures are 403/no-such-object.
+- Weighted the way a reader actually meets them, by Sleeper's own `search_rank` - roughly
+  "who is rostered and shown on `/values`" - **96% for the top 100, 93% for the top 200.**
+- Every miss inside the top 200 is a 2026 rookie (Cameron Boozer, AJ Dybantsa, Darryn
+  Peterson and that draft class) - a photo Sleeper has not shot yet.
+- **100% of the 200s are PNG bytes** served under an `image/jpeg` header, `hasAlpha: true`,
+  69-75% non-opaque pixels at 250x168. D39's transparency finding re-confirmed
+  independently, and the frame is **landscape**, not the portrait the `object-top` in
+  `PlayerAvatar` implies - which makes `object-cover` correct and `object-top` harmless
+  rather than load-bearing, since cover scales to the box height and crops only the
+  transparent side margin.
+
+The monogram fallback is therefore a real, load-bearing path on a normal page, not a
+theoretical one. A handful of monograms mixed into a list of faces is the CORRECT
+rendering of that list.
+
+**One surface was rendering an avatar that could never be a photo.** `/recap`'s "picks
+that became players" list passed `team={null}` and no `playerId` at all, because
+`resolvedPickTimeline` (`lib/digest/index.js`) dropped `playerId` and `team` from its
+projection even though the lineage carries both (`playerFields`, `lib/lineage/index.js`).
+With photos on, those 31 rows were a column of initials by construction rather than by
+anyone's decision. Both fields are now carried through and passed. This is a data-plumbing
+defect, not a design choice, which is why it is fixed here rather than noted.
+
+**`PlayerAvatar` is confirmed as the single abstraction for player imagery - zero
+bypasses.** Swept every route under `app/` and every file under `components/`: the only
+`<img>` in the repo pointing at a player headshot is the one inside `PlayerAvatar`. The
+two other `<img>` tags are `TeamAvatar` (a manager's avatar) and `TeamLogo` (a crest),
+neither of which is a person's likeness and neither of which is flag-gated, per D49. So
+there is no surface silently hotlinking headshots around the licensing gate, and no second
+implementation to keep in sync. The check itself was duplicated in two files, though -
+`lib/photos.js` and a hand-copied `=== "true"` inside `PlayerAvatar.jsx` - so
+`PlayerAvatar` now calls `photosEnabled()` instead of re-deriving it. Two copies of a
+boolean are two chances to drift, and the server-side call sites gate on the same function.
+
+**Surfaces that name a player but carry no avatar, recorded rather than changed.** Four
+are genuine candidates that already hold a `playerId`: `TradeBuilder`'s player-picker
+modal (the strongest case - a full-screen selection list, where a face is worth most),
+`/trade/finder`'s give/get `AssetTable`, `RankingBoard`'s "where you disagree with
+consensus" sibling list (inconsistent inside one file - the main board rows do render one),
+and `/lab/pulse`'s "picks that became players" (the direct analog of the `/recap` list
+fixed above, and unblocked by the same data fix). Three more would need a data-layer change
+first, since the playerId is discarded upstream: `/league`'s "breaks first" line
+(`lib/metrics/quadrant.js`), `/plan`'s send/target boxes (`lib/gameplan/`, which builds
+name strings only), and `/lab/pulse`. Adding avatar placements is new visual design, and
+the app's visual language is being redesigned in parallel right now, so tuning placement
+against a design system that is about to change would be throwaway work. Left as a list.
+
+Also left alone deliberately: every surface where a player is named mid-sentence - trade
+descriptions (`describeTradeForRoster`, seven call sites), `/lab/regret`'s two seven-row
+`text-micro` columns, `/awards` entrant stats (the row's subject is the MANAGER, already
+carrying a `TeamAvatar`; a player face there would misattribute), and `<dl>` stat-tile
+sub-labels. Avatars have no position in prose, and D39 rejected these for the same reason.
+
+**`loading="lazy"` added to the photo path.** With the default now ON, `/values` renders
+~60 of these and `/rank` up to 120, one per row - the difference between a handful of
+requests and every face on the list at once on a phone. Safe for the fallback: an image
+below the fold simply errors later, and until it resolves the row shows the themed disc,
+which D73 already confirmed is the intended backdrop and does not reflow when the image
+lands.
+
+**The disc still resolves after D61 and D62, and there are TWO themes, not three.** The
+docblock described the monogram disc as `--color-elevated` with a 2px team-hue left edge
+and referred to "any of the three themes." The contrast theme was retired in D64; `THEMES`
+is `["dark", "light"]`. Both define `--color-elevated` (`#2a2f37` / `#e5e1d8`) and
+`--color-border-strong` (`#525b6a` / `#b9b2a4`), so the disc and its ring still resolve in
+both after D61's ground-scoped token work and D62's re-themed mark. Stale wording fixed.
+Aesthetic judgement of how photos sit in a dense row is explicitly deferred to the
+in-flight redesign; the rendering was checked functionally (faces framed correctly inside
+the circle at 32/40/56px in both themes, the cutout sitting on the disc as intended) and
+no treatment was tuned.
+
+**Verification.** `pnpm lint` clean. `pnpm test` **1067/1067** (up from 1059 - eight new
+cases in `lib/photos.test.js` covering all three branches, the fail-open case, casing, and
+"an unrecognised value is not the opt-out"). `pnpm build` clean, all routes present, and
+the built client chunk inspected directly to confirm the flag's shipped behaviour rather
+than inferred from a dev server. Full `pnpm e2e` **78/78**. `pnpm typecheck` reports 357
+errors **both before and after** this change, none of them in any file touched here - it
+is pre-existing and is not a CI gate (D89 left it at ~360 repo-wide, and `ci.yml`'s gate
+job runs `lint` and `test` only, having been renamed away from "typecheck / lint / test").
+
+**Rejected:** committing headshots to the repo or self-hosting them (above - a larger
+licensing exposure than the one D39 guarded, plus permanent repo weight); `next/image`
+(makes this app serve the bytes, breaking the hotlink-only posture, and needs
+`remotePatterns` for a host deliberately not configured); a bare `!== "false"` with no
+fork check at all, which would have been the smallest diff but would have deleted D39's
+protection outright rather than answering it; gating on `VERCEL_GIT_REPO_OWNER` without the
+`NEXT_PUBLIC_` prefix (hydration mismatch, since the gate decides whether an element
+renders); and mapping the flag through `next.config.mjs`'s `env` key to compute it at build
+time, which works but adds indirection for no gain now that the `NEXT_PUBLIC_VERCEL_*`
+counterpart is confirmed to exist.

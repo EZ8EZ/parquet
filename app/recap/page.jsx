@@ -247,7 +247,12 @@ export default async function RecapPage() {
                   season here) is decoration, not signal, so it renders only when this
                   deploy has real photos on. */}
               {photosEnabled() && (
-                <PlayerAvatar name={p.playerName} team={null} size="sm" />
+                <PlayerAvatar
+                  name={p.playerName}
+                  team={p.team}
+                  playerId={p.playerId}
+                  size="sm"
+                />
               )}
               <span className="min-w-0 flex-1">
                 <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
