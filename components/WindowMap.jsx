@@ -50,6 +50,12 @@
  *   two ticks, dotted join  the assets disagree; the seasons between are not a window
  *   a dash at the origin    too few valued assets to read quartiles from at all
  *
+ * The two refused shapes are the SUBORDINATE half of their own reading. Each refused
+ * row carries a code from the closed register (lib/refusal.js) in its data, and that
+ * code is what `rowSentence` reads out and what the list under the chart prints in its
+ * window column. The dotted join and the dash are how the refusal looks; they are not
+ * what it is, because a shape does not survive being exported, grepped or read aloud.
+ *
  * Delete every colour and all three still read, which is the acceptance test. The
  * accent appears exactly twice - the viewer's own row, and the vertical band marking
  * their window across everyone else's - because the one thing a reader came here to
@@ -62,6 +68,8 @@ import {
   CHART_GRID,
   CHART_NEUTRAL,
 } from "@/lib/chart-colors";
+import { windowRefusalCode } from "@/lib/metrics/window";
+import { refusalSentence } from "@/lib/refusal";
 const W = 320;
 const PAD_L = 17;
 const PAD_R = 6;
@@ -70,12 +78,21 @@ const PAD_B = 25;
 const ROW_H = 12.5;
 const BAR_H = 5;
 const r1 = (v) => Math.round(v * 10) / 10;
-/** What a row says out loud, since a span in an SVG says nothing to a screen reader. */
+/**
+ * What a row says out loud, since a span in an SVG says nothing to a screen reader.
+ *
+ * A REFUSED ROW READS ITS CODE. This function used to paraphrase `state` in its own
+ * words, which meant the dotted line at the origin was described one way here, another
+ * way in the sentence underneath the chart, and a third way on /plan - three sentences
+ * for one condition, none of them the same, and a listener with no way to tell that the
+ * dash and the phrase were the same fact. The row's `refusal` carries the code and the
+ * proof already (lib/refusal.js), so this prints them: the code is the part that is
+ * identical everywhere, which is the part that makes it learnable.
+ */
 function rowSentence(r) {
-  if (r.state === "unreadable")
-    return `${r.name}: too few valued assets to place at all.`;
-  if (r.state === "split")
-    return `${r.name}: value spread across ${r.open} to ${r.close}, with the assets disagreeing, so no single span.`;
+  if (r.refusal) return `${r.name}: ${refusalSentence(r.refusal)}`;
+  if (r.state !== "window")
+    return `${r.name}: ${windowRefusalCode(r)}, no single span to place.`;
   return `${r.name}: middle half of their value dated ${r.open} to ${r.close}, heaviest ${r.peak}.`;
 }
 export function WindowMap({ rows, first, last, currentSeason }) {

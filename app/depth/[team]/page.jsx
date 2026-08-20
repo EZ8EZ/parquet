@@ -38,9 +38,11 @@ import { getLeagueHistory } from "@/lib/history";
 import {
   depthChartFor,
   standingFor,
+  standingRefusal,
   teamsPresent,
   normalizeTeam,
 } from "@/lib/depth";
+import { refusalSentence } from "@/lib/refusal";
 import { teamName, teamShortName } from "@/lib/depth/teams";
 import { readAnchorId } from "@/lib/depth/url";
 import { depthOnwardSteps } from "@/lib/depth/onward";
@@ -181,15 +183,16 @@ export default async function DepthChartPage({ params, searchParams }) {
               <h2 className="font-display text-lede leading-tight font-semibold text-ink">
                 {anchor?.fullName ?? "This player"}
               </h2>
-              <p className="mt-1 text-body leading-relaxed text-muted">
-                Sleeper places {chart.chartedCount} of{" "}
-                {teamName(abbr)}&apos;s {chart.rosterCount} players on its depth
-                chart. He is one of the {chart.rosterCount - chart.chartedCount}{" "}
-                it does not, so there is nothing here about where he sits.
-              </p>
+              {/* ONE STATEMENT, from the module that knows the condition. This was a
+                  body paragraph with the counts interpolated here, plus a mark
+                  underneath carrying the caveat - two elements saying one thing, and
+                  the counts and the caveat could be separated by a copy-paste. The
+                  refusal is `SOURCE_GAP` and it comes from lib/depth with its numbers
+                  already in it; the mark is the drawn half of the same object. */}
               <RefusalMark className="mt-2">
-                A missing entry is a gap in the source, not a statement about
-                the player. Roughly one on-team player in five has none.
+                <span className="text-body leading-relaxed text-muted">
+                  {refusalSentence(standingRefusal(chart, anchorId))}
+                </span>
               </RefusalMark>
             </>
           )}
