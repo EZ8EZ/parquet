@@ -122,6 +122,13 @@ export default async function RosterPage() {
   // Where each of these players sits on his REAL team's chart. One index for the
   // whole payload, seventeen O(1) reads off it (lib/depth).
   const charts = depthChartsByTeam(h.players);
+  // One rank scale for this roster's rows, so two open rows are comparable.
+  const rosterRankAxisMax = Math.max(
+    1,
+    ...a.valued.flatMap((v) =>
+      [v.consensusRank, v.pricedRank].filter((n) => typeof n === "number"),
+    ),
+  );
   const ages = a.valued.map((v) => v.age).filter((x) => x != null);
   const posData = a.byPosition.map((p) => ({
     label: p.pos,
@@ -635,6 +642,13 @@ export default async function RosterPage() {
             injuryDetail={v.injuryDetail}
             share={a.playerValue ? v.value / a.playerValue : 0}
             consensusRank={v.consensusRank}
+            pricedRank={v.pricedRank}
+            productionBacked={v.productionBacked}
+            productionRefusal={v.productionRefusal}
+            // The rank scale is shared across this roster's own rows. /values computes
+            // the same thing over its 260, so the two pages scale to their own lists -
+            // which is correct: a dumbbell is only ever compared with the rows beside it.
+            rankAxisMax={rosterRankAxisMax}
             depth={depthRowFor(charts, h.players.get(v.playerId))}
             trajectory={valueTrajectory(v)}
             // Young players' declining trajectory is just the age-curve premium unwinding,
