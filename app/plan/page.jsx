@@ -4,7 +4,7 @@ import { getLeagueHistory } from "@/lib/history";
 import { buildGamePlan } from "@/lib/gameplan";
 import { getPrincipals } from "@/lib/principals";
 import { cachedLeagueTimelines } from "@/lib/metrics/duration";
-import { leagueWindows, windowSynthesis } from "@/lib/metrics/window";
+import { leagueWindows, windowShort } from "@/lib/metrics/window";
 import { PageHeader, Tag } from "@/components/ui";
 import { MetricGloss } from "@/components/MetricGloss";
 import { TeamAvatar } from "@/components/TeamAvatar";
@@ -61,28 +61,38 @@ export default async function PlanPage() {
   const tl = cachedLeagueTimelines(h).find((t) => t.rosterId === rosterId);
   const timelineAgrees = dx.directionBasis === "posture";
   /*
-   * THE SYNTHESIS, and the only genuinely new sentence on this page.
+   * THE WINDOW, AS ONE LINE AND A LINK. /league OWNS THE SYNTHESIS NOW.
    *
-   * Every derivation behind it already existed: the roster's own value window, the
-   * other thirteen, and the arithmetic of which of them intersect (lib/metrics/window.ts).
-   * Nowhere in the app were they ever joined, and the join is the thing a manager
-   * actually does privately and badly - "my window is 2029; who else is bidding for
-   * 2029". /plan is where it belongs because it is the one page whose subject is the
-   * decision rather than the reading.
+   * This page used to render `windowSynthesis` itself, and the two call sites had
+   * DIFFERENT GATES for the same string, which is how one function came to give two
+   * pages two different wrong answers:
    *
-   * COUNTS ONLY. It says how many rosters share the window and how many are dated
-   * away from it; it does not say what to do about either, because that is the moves
-   * list below, and it does not infer that anyone is a seller, because intent is not
-   * something the app can see (D19).
+   *   /league  ungated. A refused roster printed `refusalSentence(...)` as unmarked
+   *            plain text, so a stated refusal arrived looking exactly like a reading -
+   *            the failure lib/refusal.js exists to end.
+   *   /plan    gated on `state === "window"`. A refused roster saw nothing at all, so
+   *            the one page whose subject is the decision silently dropped the fact that
+   *            the decision could not be read.
    *
-   * Rendered ONLY for a roster with a readable single window. When the viewer
-   * straddles, `windowSynthesis` says so - but the timeline check directly above is
-   * already saying exactly that at length, and two paragraphs making one point is the
-   * density this page has repeatedly been cut back from.
+   * One owner fixes both. /league's seat card renders every state this function can
+   * return - window, split, NO_RECORD, INSUFFICIENT_SAMPLE - and routes the refused ones
+   * through `RefusalMark`, which is what they always were. What /plan needs from it is
+   * not the paragraph: it is the one fact that changes a move, which is the span itself,
+   * plus a way to get to the page that reads it properly. So this is the span or its
+   * refusal CODE (D95 - never a dash, which reads as a missing number rather than as a
+   * refusal), and a link.
+   *
+   * The counts are deliberately not restated here. They belong beside the chart that
+   * draws them, and this page has been cut back from density like that repeatedly.
    */
   const windows = leagueWindows(h);
-  const windowLine =
-    windows.me?.state === "window" ? windowSynthesis(windows) : null;
+  const myWindow = windows.me
+    ? {
+        readable: windows.me.state === "window",
+        short: windowShort(windows.me),
+        peak: windows.me.peak,
+      }
+    : null;
   return (
     <div>
       <PageHeader
@@ -207,14 +217,38 @@ export default async function PlanPage() {
                 ? `The ${dir.label.toLowerCase()} call is read off this timeline - value concentrated around ${tl.rosterDuration.toFixed(1)} seasons out, assets agreed about it (that is what "${tl.posture}" means). Protect that alignment: do not add pieces dated far from it.`
                 : `${dx.directionNote} The two answer different questions - when your value arrives, and what your standing argues for - so this is a choice in front of you rather than a contradiction. Each move below is chosen for the ${dir.label.toLowerCase()} call.`}
           </p>
-          {windowLine && (
-            <p className="mt-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
-              {windowLine}{" "}
+          {myWindow && (
+            <p className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
+              <span>
+                {myWindow.readable ? (
+                  <>
+                    The middle half of your value is dated{" "}
+                    <span className="figure font-semibold">
+                      {myWindow.short}
+                    </span>
+                    {myWindow.peak != null && (
+                      <>
+                        , heaviest in{" "}
+                        <span className="figure">{myWindow.peak}</span>
+                      </>
+                    )}
+                    .
+                  </>
+                ) : (
+                  <>
+                    Your window is not readable:{" "}
+                    <span className="figure font-semibold">
+                      {myWindow.short}
+                    </span>
+                    .
+                  </>
+                )}
+              </span>
               <Link
                 href="/league"
                 className="text-meta font-semibold text-accent-text underline-offset-2 hover:underline"
               >
-                see the window map
+                Who is standing in it
               </Link>
             </p>
           )}

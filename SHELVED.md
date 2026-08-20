@@ -614,6 +614,54 @@ signed reasons attached to specific assets, which is the thing `choosePartner` c
 do. If a future round wants a shortlist on `/plan` rather than a link, it should call
 `partnerBoard` — the finder's own prefilter, which already scores every leaguemate over
 real assets — and never re-derive a parallel score from tags.
+## S12. `postureCensus()` - the league's postures as counts, in `TIMELINE_AXIS` order
+
+Shelved 2026-08-20 by owner decision, against `main` @ `f982cb0`. Replaced in the same
+pass; see `DECISIONS.md` D102.
+
+**What it was.** `postureCensus(timelines)` in `lib/metrics/duration.js`: a four-tile
+tally of every roster's timeline posture (`contending` / `ascending` / `rebuilding` /
+`straddling`), read off the same `leagueTimelines` array the board below it read, so the
+census could never disagree with the board it sat above - that guarantee was D40's whole
+point and it held. It led `/league` in the highest slot on the page.
+
+**Why it went.** The guarantee it had was never the problem; the question it answered
+was. Three of its four counts are not readings of the league - they are counts of
+**quartile membership**. `classify` hands out `contending` / `ascending` / `rebuilding`
+by `shortnessPercentile`, taken over the league's own duration distribution, and its own
+header comment already said the consequence out loud: "somebody carries the label in
+every league, however that league is built." A census of a rank is a census of where the
+rank lines fell, not a fact about the teams underneath them.
+
+Worse than tautological, and measured rather than asserted: the quartiles are computed
+over **all fourteen** rosters, while the three labels are only handed to the **seven**
+that clear `COHERENCE_FLOOR` (55). On the fixture league this printed **"1 contending"**
+while three of the four shortest-duration rosters (roster 13 at TCI 43, roster 7 at TCI
+54, roster 4 at TCI 52 - all below the floor) were disqualified for **incoherence**, not
+for timing. A reader took "one team is trying to win now" from a tile that actually meant
+"one team is both shortest-duration-quartile and coherent," and a one-word label has
+nowhere to put that difference.
+
+The fourth count, `straddling`, was the honest one - it comes off the absolute coherence
+floor rather than a quantile, so it is genuinely free to be 0 or 14 on any given league -
+and it was already said twice elsewhere on the same page: the split rows on the window
+map, and `windowRefusalSummary`, which states it in a sentence with its reason attached.
+
+**What replaced it.** `buildQuadrantView().counts`, already computed for the
+coherence/fragility board and now rendered beside the axes it was read from instead of
+floating at the page head. It is an intersection of two independent median splits, which
+is genuinely allowed to come out 0 - a quartile tally's four counts are fixed by
+construction to sum to the roster count and cannot. Measured on the fixture league it is
+not degenerate: 4 of 14 rosters sit below the coherence median and above the fragility
+median, against 4 / 3 / 3 for the other three corners.
+
+**What would bring it back.** A surface that genuinely needs a straight tally of
+`classify`'s four words, read with the quartile-membership caveat stated beside it rather
+than implied - and, separately, a survey of whether any *other* dynasty league's duration
+distribution produces a similarly split census, since this entry's numbers are one
+league's measurement and the defect (percentile-vs-floor mismatch) is structural rather
+than data-dependent. Absent a caveat that actually ships with the number, reviving the
+four-tile tally is reviving the bug.
 
 ---
 

@@ -63,6 +63,52 @@
  * this chart is a magnitude.
  *
  * ---------------------------------------------------------------------------------
+ * SELECTION, AND WHY IT SPENDS NO COLOUR
+ * ---------------------------------------------------------------------------------
+ * A roster can be selected on this chart, and the selection is shared with the
+ * quadrant board and the power ranking through `?roster=` (lib/league/url.js). There
+ * was no hue available to spend on it: the accent is already the viewer's own identity
+ * here and on every other surface in the app, and adding a second one would break the
+ * rule that the moment two things are accent, neither is (lib/chart-colors.js).
+ *
+ * So selection is carried by WEIGHT and by a MARK, in four places, none of them a hue:
+ *
+ *   the bar grows          BAR_H to BAR_SEL_H, and its peak dot with it
+ *   a surface halo         a surface-coloured stroke on the selected mark only, which
+ *                          lifts it off the rows immediately above and below
+ *   everything recedes     every row that is neither the selection nor the viewer
+ *                          drops to DIM. Both of those two stay at full weight, because
+ *                          the intersection below is a claim about the PAIR and dimming
+ *                          half of a pair makes the drawing unreadable.
+ *   an ink rule            in the ordinal gutter, outside the plot, so the selection
+ *                          survives grayscale, a print, and a screenshot pasted into a
+ *                          group chat. Orthogonal, per D96: the 45-degree diagonal is
+ *                          reserved for a refusal and a selection is not one.
+ *
+ * ---------------------------------------------------------------------------------
+ * THE INTERSECTION BLOCK - the one drawing that answers the question twice over
+ * ---------------------------------------------------------------------------------
+ * The accent band says "these are my seasons". A selected roster's bar says "these are
+ * theirs". Two overlapping ranges leave the reader to do the arithmetic by eye, and the
+ * arithmetic is the whole point of the chart: not "where are they" but "HOW MUCH OF MY
+ * WINDOW IS ALSO THEIRS". So the overlap is drawn as its own geometry - a real block at
+ * `[max(opens), min(closes)]`, full plot height, denser accent than the band it sits
+ * inside, with an orthogonal rule down each edge.
+ *
+ * IT IS DRAWN ONLY BETWEEN TWO READABLE SINGLE WINDOWS, and that restraint is the
+ * derivation's, not a rendering convenience. A split roster publishes `open` and `close`
+ * (the chart draws both ends) but `lib/metrics/window.js` refuses the claim that the
+ * seasons between them are a window - so intersecting the viewer's window with a split
+ * roster's two ends would manufacture exactly the agreement the metric just declined to
+ * assert (D19). On the live league seven of fourteen rosters are split, so this is the
+ * common case rather than an edge one, and it renders as no block plus a stated refusal
+ * in the panel under the board rather than as a block nobody should trust.
+ *
+ * Selecting your own roster draws no block either: the intersection of the viewer's
+ * window with itself is the accent band, already on the chart, and painting it twice
+ * would be a second mark making no second claim.
+ *
+ * ---------------------------------------------------------------------------------
  * NO <text> INSIDE A SCALING viewBox. THIS IS A RULE NOW, NOT A PREFERENCE (D96)
  * ---------------------------------------------------------------------------------
  * This chart used to set its own labels in SVG `<text>` at `fontSize="8"` and
@@ -143,11 +189,42 @@ const PAD_T = 4;
 const PAD_B = 4;
 const ROW_H = 12.5;
 const BAR_H = 5;
-/** The ordinal gutter, in CSS px. 24 holds three tabular digits at 10px with the 6px
- *  right padding below, which is one more digit than a fourteen-roster league can
- *  produce - the ordinals are 1-based row numbers, not ids. */
-const GUTTER = 24;
+/**
+ * The selected row's bar. Still well inside ROW_H, so selection never reflows the plot.
+ *
+ * 7.5 rather than 6.5 because the halo is a STROKE, and a stroke straddles the path it
+ * is on: 1.4 of surface centred on the edge spends 0.7 of the bar's own height at each
+ * end, so a 6.5 bar with a halo renders 5.1 of ink against a neighbour's 5 and the
+ * selection reads as nothing. At 7.5 the ink comes out at 6.1 with a 0.7 surface ring
+ * outside it - visibly heavier, and the 8.9 total footprint still clears the 12.5 pitch.
+ */
+const BAR_SEL_H = 7.5;
+/**
+ * What a row recedes to when something else is selected.
+ *
+ * 0.35 rather than something fainter: the receded rows are still the CONTEXT the
+ * selection is being read against - "who else is in these seasons" needs the others to
+ * remain countable - so this is a recession and not a hide. Legibility is not at stake
+ * because position and length carry the reading and the list under the chart prints
+ * every row in text regardless.
+ */
+const DIM = 0.35;
+/** The ordinal gutter, in CSS px. 30 holds the selection rule at the left edge plus
+ *  three tabular digits at 10px with the 6px right padding below, which is one more
+ *  digit than a fourteen-roster league can produce - the ordinals are 1-based row
+ *  numbers, not ids. It was 24 before the rule needed a lane of its own. */
+const GUTTER = 30;
 const r1 = (v) => Math.round(v * 10) / 10;
+/** The seasons two readable spans share, or null. Both ends inclusive. */
+function sharedSeasons(a, b) {
+  if (!a || !b) return null;
+  if (a.state !== "window" || b.state !== "window") return null;
+  if (a.open == null || a.close == null || b.open == null || b.close == null)
+    return null;
+  const lo = Math.max(a.open, b.open);
+  const hi = Math.min(a.close, b.close);
+  return lo <= hi ? { lo, hi } : null;
+}
 /**
  * What a row says out loud, since a span in an SVG says nothing to a screen reader.
  *
@@ -165,7 +242,7 @@ function rowSentence(r) {
     return `${r.name}: ${windowRefusalCode(r)}, no single span to place.`;
   return `${r.name}: middle half of their value dated ${r.open} to ${r.close}, heaviest ${r.peak}.`;
 }
-export function WindowMap({ rows, first, last, currentSeason }) {
+export function WindowMap({ rows, first, last, currentSeason, selectedId }) {
   if (rows.length === 0) return null;
   const bands = Math.max(1, last - first + 1);
   const plotH = Math.round(PAD_T + rows.length * ROW_H + PAD_B);
@@ -189,6 +266,14 @@ export function WindowMap({ rows, first, last, currentSeason }) {
   const labelStep = bands > 8 ? 2 : 1;
   const seasons = Array.from({ length: bands }, (_, i) => first + i);
   const me = rows.find((r) => r.isMe && r.state === "window") ?? null;
+  const sel = rows.find((r) => r.rosterId === selectedId) ?? null;
+  // Null when either side has no readable single window, when they do not overlap, and
+  // when the selection IS the viewer - see the header on all three.
+  const shared = sel && !sel.isMe ? sharedSeasons(me, sel) : null;
+  const anySelected = sel != null;
+  /** Full weight for the pair the intersection is about; everything else recedes. */
+  const weightOf = (row) =>
+    !anySelected || row.isMe || row.rosterId === selectedId ? 1 : DIM;
   return (
     <div
       className="grid select-none"
@@ -201,20 +286,40 @@ export function WindowMap({ rows, first, last, currentSeason }) {
         `-translate-y-1/2` with `leading-none` centres each ordinal on its own row.
       */}
       <div aria-hidden="true" className="relative">
-        {rows.map((row, i) => (
-          <span
-            key={row.rosterId}
-            className={
-              `figure absolute right-1.5 -translate-y-1/2 text-micro leading-none ` +
-              (row.isMe
-                ? "font-bold text-accent-text"
-                : "font-normal text-faint")
-            }
-            style={{ top: `${r1((yOf(i) / plotH) * 100)}%` }}
-          >
-            {row.n}
-          </span>
-        ))}
+        {rows.map((row, i) => {
+          const isSel = row.rosterId === selectedId;
+          return (
+            <span
+              key={row.rosterId}
+              className="absolute inset-x-0 flex -translate-y-1/2 items-center justify-end gap-1 pr-1.5"
+              style={{ top: `${r1((yOf(i) / plotH) * 100)}%` }}
+            >
+              {/* THE SELECTION RULE. Outside the plot, so it overlaps nothing, and a
+                  plain orthogonal bar rather than a caret or a chevron: D96 reserves the
+                  45-degree diagonal for a refusal, and a triangle's edges are the one
+                  shape that reads as one. Ink, because it is the only mark in this
+                  gutter that is a state rather than a label. */}
+              <span
+                className={
+                  `h-2.5 w-[2px] shrink-0 rounded-full ` +
+                  (isSel ? "bg-ink" : "bg-transparent")
+                }
+              />
+              <span
+                className={
+                  `figure text-micro leading-none ` +
+                  (isSel
+                    ? "font-bold text-ink"
+                    : row.isMe
+                      ? "font-bold text-accent-text"
+                      : "font-normal text-faint")
+                }
+              >
+                {row.n}
+              </span>
+            </span>
+          );
+        })}
       </div>
 
       <svg
@@ -225,6 +330,19 @@ export function WindowMap({ rows, first, last, currentSeason }) {
           `Every roster ordered by when its value is dated, ${first} to ${last}. The ` +
           `seasons label a relative ordering inside a narrow band, not a forecast for a ` +
           `named year. ` +
+          // The selection and its arithmetic, first, because it is the thing that just
+          // changed. A listener gets no notification from a bar changing weight, and the
+          // shared-seasons count is the reading the block draws and nothing else states.
+          (sel
+            ? `Selected: ${sel.name}. ` +
+              (shared
+                ? `${shared.hi - shared.lo + 1} of your ${me.close - me.open + 1} ` +
+                  `seasons ${shared.hi === shared.lo ? "is" : "are"} also theirs, ` +
+                  `${shared.hi === shared.lo ? shared.lo : `${shared.lo} to ${shared.hi}`}. `
+                : sel.isMe
+                  ? `This is your own roster. `
+                  : `No shared seasons are drawn for this pair. `)
+            : "") +
           rows.map(rowSentence).join(" ")
         }
       >
@@ -239,6 +357,43 @@ export function WindowMap({ rows, first, last, currentSeason }) {
             fill={CHART_ACCENT}
             opacity={0.09}
           />
+        )}
+
+        {/*
+            THE INTERSECTION BLOCK. A second accent wash INSIDE the band rather than a
+            replacement for it, so the seasons that are shared composite to roughly twice
+            the density of the seasons that are only the viewer's - which is the ordering
+            the drawing needs, in one hue, with no key. The two edge rules are what make
+            it a block with boundaries rather than a gradient: orthogonal marks are data
+            (D96), and where the overlap starts and stops is the datum.
+          */}
+        {shared && (
+          <g>
+            <rect
+              x={xOf(shared.lo)}
+              y={PAD_T - 3}
+              width={r1((shared.hi - shared.lo + 1) * bandW)}
+              height={r1(rows.length * ROW_H + 4)}
+              fill={CHART_ACCENT}
+              // 0.13 on top of the band's own 0.09 composites to about 0.21 - roughly
+              // 2.4x the density of the seasons that are only the viewer's. Checked on
+              // the rendered chart at 390px: at 0.10 the two washes were separable but
+              // not obviously ORDERED, which is the whole job of the second wash.
+              opacity={0.13}
+            />
+            {[shared.lo, shared.hi + 1].map((s) => (
+              <line
+                key={`i${s}`}
+                x1={xOf(s)}
+                y1={PAD_T - 3}
+                x2={xOf(s)}
+                y2={r1(PAD_T + rows.length * ROW_H + 1)}
+                stroke={CHART_ACCENT}
+                strokeWidth={1}
+                opacity={0.7}
+              />
+            ))}
+          </g>
         )}
 
         {/* Season gridlines. The current season's is solid; it is the only line on the
@@ -259,16 +414,23 @@ export function WindowMap({ rows, first, last, currentSeason }) {
         {rows.map((row, i) => {
           const y = yOf(i);
           const ink = row.isMe ? CHART_ACCENT : CHART_NEUTRAL;
+          const isSel = row.rosterId === selectedId;
+          const weight = weightOf(row);
+          // The halo is the selected mark's own, and only the selected mark's: a
+          // surface-coloured stroke around a shape reads as "this one is lifted", and a
+          // second one on the row above would flatten both back down.
+          const halo = isSel ? "var(--color-surface)" : undefined;
+          const barH = isSel ? BAR_SEL_H : BAR_H;
           return (
-            <g key={row.rosterId}>
+            <g key={row.rosterId} opacity={weight}>
               {row.state === "unreadable" && (
                 <line
                   x1={INSET + 1}
                   y1={y}
                   x2={r1(INSET + bandW * 0.5)}
                   y2={y}
-                  stroke={CHART_FAINT}
-                  strokeWidth={1}
+                  stroke={isSel ? CHART_NEUTRAL : CHART_FAINT}
+                  strokeWidth={isSel ? 1.5 : 1}
                   strokeDasharray="1 2"
                 />
               )}
@@ -285,18 +447,21 @@ export function WindowMap({ rows, first, last, currentSeason }) {
                       x2={r1(xOf(row.close) + bandW / 2)}
                       y2={y}
                       stroke={ink}
-                      strokeWidth={1}
+                      strokeWidth={isSel ? 1.5 : 1}
                       strokeDasharray="1.5 2.5"
                     />
                     {[row.open, row.close].map((s, k) => (
                       <line
                         key={k}
                         x1={r1(xOf(s) + bandW / 2)}
-                        y1={r1(y - BAR_H / 2)}
+                        y1={r1(y - barH / 2)}
                         x2={r1(xOf(s) + bandW / 2)}
-                        y2={r1(y + BAR_H / 2)}
+                        y2={r1(y + barH / 2)}
                         stroke={ink}
-                        strokeWidth={2}
+                        strokeWidth={isSel ? 3 : 2}
+                        // The halo on a stroked tick has to be a second, wider stroke
+                        // underneath, which two ticks do not have room for at this pitch.
+                        // The extra width plus the gutter rule carry it instead.
                       />
                     ))}
                   </>
@@ -308,12 +473,14 @@ export function WindowMap({ rows, first, last, currentSeason }) {
                   <>
                     <rect
                       x={r1(xOf(row.open) + 1)}
-                      y={r1(y - BAR_H / 2)}
+                      y={r1(y - barH / 2)}
                       width={r1((row.close - row.open + 1) * bandW - 2)}
-                      height={BAR_H}
+                      height={barH}
                       rx={2.5}
                       fill={ink}
-                      opacity={row.isMe ? 1 : 0.85}
+                      opacity={row.isMe || isSel ? 1 : 0.85}
+                      stroke={halo}
+                      strokeWidth={halo ? 1.4 : undefined}
                     />
                     {row.peak != null && (
                       // The peak season, as a shape rather than a shade: a dot the surface
@@ -321,7 +488,7 @@ export function WindowMap({ rows, first, last, currentSeason }) {
                       <circle
                         cx={r1(xOf(row.peak) + bandW / 2)}
                         cy={y}
-                        r={2.6}
+                        r={isSel ? 3.2 : 2.6}
                         fill={ink}
                         stroke="var(--color-surface)"
                         strokeWidth={1.4}

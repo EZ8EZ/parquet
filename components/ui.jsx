@@ -109,10 +109,33 @@ export function Card({ children, className, as: As = "div" }) {
     </As>
   );
 }
-export function SectionHeader({ title, action, href, cta }) {
+/**
+ * A SECTION HEADER, IN ONE OF TWO REGISTERS.
+ *
+ * The default is the app's standing one: a short uppercase tracked LABEL, which is the
+ * right thing for a section that names a thing ("POWER RANKING", "READ THIS BEFORE YOU
+ * ACT"). It is the wrong thing for a page whose sections are FACETS OF ONE QUESTION,
+ * because uppercase tracked type reads as a taxonomy - five unrelated nouns stacked -
+ * and that is exactly the impression /league's five stacked sections used to give.
+ *
+ * `as="question"` is the second register: sentence case, display face, ink rather than
+ * muted, no tracking. Three of them down a page read as three questions somebody is
+ * asking in order, which is what /league's three acts are. It is a REGISTER and not a
+ * size bump - the type is still a section header, still an `<h2>`, still on the same
+ * scale - so a page may not mix the two registers inside one run of sections, and
+ * nothing enforces that but this sentence.
+ */
+export function SectionHeader({ title, action, href, cta, as = "label" }) {
   return (
     <div className="mb-1.5 mt-4 flex items-center justify-between gap-2">
-      <h2 className="min-w-0 text-note font-semibold uppercase tracking-[0.16em] text-muted">
+      <h2
+        className={cn(
+          "min-w-0",
+          as === "question"
+            ? "font-display text-lede font-semibold leading-tight text-ink"
+            : "text-note font-semibold uppercase tracking-[0.16em] text-muted",
+        )}
+      >
         {title}
       </h2>
       {action}
