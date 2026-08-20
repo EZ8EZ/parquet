@@ -9,6 +9,7 @@
     "lint": "eslint",
     "test": "vitest run",
     "test:watch": "vitest",
+    "typecheck": "tsc --noEmit -p jsconfig.json",
     "test:coverage": "vitest run --coverage",
     "e2e": "playwright test",
     "db:push": "prisma db push",
@@ -17,7 +18,8 @@
     "seed": "node scripts/seed.js",
     "claim-links": "node scripts/claim-links.js",
     "gen:icons": "node scripts/gen-icons.js",
-    "bootstrap": "prisma db push && pnpm seed"
+    "bootstrap": "prisma db push && pnpm seed",
+    "derive:production": "node scripts/derive-production.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.3",
@@ -33,6 +35,9 @@
     "@axe-core/playwright": "^4.13.0",
     "@playwright/test": "^1.62.1",
     "@tailwindcss/postcss": "^4",
+    "@types/node": "^26.2.0",
+    "@types/react": "^19.2.18",
+    "@types/react-dom": "^19.2.4",
     "@vitejs/plugin-react": "^6.0.4",
     "@vitest/coverage-v8": "^4.1.10",
     "chrome-launcher": "^1.2.1",
@@ -43,6 +48,7 @@
     "prisma": "^6.19.3",
     "sharp": "^0.35.3",
     "tailwindcss": "^4",
+    "typescript": "^5.9.3",
     "vitest": "^4.1.10"
   }
 }

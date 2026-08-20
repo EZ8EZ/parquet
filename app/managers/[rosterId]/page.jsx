@@ -10,7 +10,7 @@ import { partnerIdentity } from "@/lib/dossier/partners";
 import { scheduleLuckForRoster } from "@/lib/metrics/scheduleLuck";
 import { windowLabel, windowsByRoster } from "@/lib/metrics/window";
 import { dealHref, managerDealsHref } from "@/lib/tradegraph/url";
-import { buybacksByRoster } from "@/lib/agency";
+import { buybacksByRoster, pickDepartures } from "@/lib/agency";
 import { LocalDate } from "@/components/LocalDate";
 import { Tag, DeltaValue, PageHeader, SectionHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
@@ -89,6 +89,11 @@ export default async function ManagerDetailPage({ params }) {
   // (lib/agency), keyed by the roster that ORIGINALLY owned the pick, which is the
   // only roster for which "bought back" means anything.
   const buybacks = buybacksByRoster(h).get(rosterId) ?? [];
+  // And the denominator, so "5" becomes "5 of 11": a count of returns says nothing
+  // about how freely this manager sends their own picks out in the first place.
+  const departed = [...pickDepartures(h).values()].filter(
+    (original) => original === rosterId,
+  ).length;
   const extras = [];
   if (p.avgHoldingDays != null) extras.push(`avg hold ${p.avgHoldingDays}d`);
   if (p.deadline.buys || p.deadline.sells)
@@ -199,7 +204,7 @@ export default async function ManagerDetailPage({ params }) {
                 /deals answers "who else does", which is the reading a single dossier
                 structurally cannot give and the reason that section exists. */}
           <SectionHeader
-            title={`Picks they bought back - ${buybacks.length}`}
+            title={`Picks they bought back - ${buybacks.length} of ${departed}`}
             href="/deals#buybacks"
             cta="league-wide"
           />
@@ -272,9 +277,13 @@ export default async function ManagerDetailPage({ params }) {
           sub={`${p.tradesInitiated} initiated · ${p.tradesResponded} responded`}
         />
         <Metric
-          label="Pick capital"
+          /* "Picks traded", not "Pick capital": this is a net COUNT of picks moved
+             across a career, while the figure /roster labels pick capital is the VALUE
+             of the picks a roster holds. Same words for two units is how a reader
+             concludes the app is broken. */
+          label="Picks traded"
           value={<DeltaValue n={p.picks.net} />}
-          sub={`${p.picks.firstsAcquired} firsts in · ${p.picks.firstsSpent} out`}
+          sub={`net · ${p.picks.firstsAcquired} firsts in · ${p.picks.firstsSpent} out`}
           tone={p.picks.net >= 0 ? "positive" : "negative"}
         />
         <Metric
@@ -294,7 +303,7 @@ export default async function ManagerDetailPage({ params }) {
       </div>
 
       {/*
-       * "Pick capital +6" is the dossier's sharpest behavioural claim and, on its
+       * "Picks traded +6" is the dossier's sharpest behavioural claim and, on its
        * own, an unreadable one: +6 over five seasons could be the most aggressive
        * pick buyer in the league or an ordinary Tuesday. This is the only SIGNED
        * distribution in the app, so it is the one place the diverging pair does real

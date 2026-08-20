@@ -4,9 +4,10 @@ import { ChevronRight } from "lucide-react";
 import { PostureGlyph } from "@/components/PostureTag";
 import { getLeagueHistory } from "@/lib/history";
 import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
-import { leagueTimelines } from "@/lib/metrics/duration";
+import { cachedLeagueTimelines, postureCensus } from "@/lib/metrics/duration";
 import {
   leagueWindows,
+  windowRefusalSummary,
   windowShort,
   windowSynthesis,
 } from "@/lib/metrics/window";
@@ -21,21 +22,25 @@ import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperLeagueUrl } from "@/lib/sleeperLinks";
 import { Onward } from "@/components/Onward";
 export const dynamic = "force-dynamic";
-const WINDOW_INK = {
-  rebuilding: "text-info",
-  "win-now": "text-accent-text",
-  balanced: "text-muted",
-};
 /**
  * Posture as ink on the TCI figure rather than as a `<Tag>` pill. Same four readings
  * the deleted timelines list carried, at a fraction of the row height, and it keeps
  * the one negative reading (straddling) legible without giving the other three the
  * visual weight of a chip.
+ *
+ * THE CENSUS AND THE BOARD READ ONE FUNCTION. The three tiles at the top used to count
+ * CORE-AGE bands (then spelled `rebuilding` / `balanced` / `win-now`) while the rows
+ * below printed POSTURES, which is how this page came to say "3 REBUILDING" above a
+ * board that printed the word "rebuilding" against four rosters. They were never
+ * counting the same thing and nothing said so. The tiles now count postures via
+ * `postureCensus`, off the same `leagueTimelines` array the rows read, so a
+ * disagreement is no longer possible; the core-age word is still on the row, in the
+ * age vocabulary it earned (lib/metrics/axes.js), beside the age figure it comes from.
  */
 export default async function LeaguePage() {
   const h = await getLeagueHistory();
   const ranked = leagueValueRanking(h);
-  const timelines = leagueTimelines(h);
+  const timelines = cachedLeagueTimelines(h);
   // Same two numbers the deleted duration scatter plotted, read as calendar seasons -
   // see lib/metrics/window.ts. Not a third walk of the league: it is `leagueTimelines`
   // plus quartile arithmetic over the assets those profiles already carry.
@@ -46,9 +51,7 @@ export default async function LeaguePage() {
   // Most of a dynasty league's calendar has the live season sitting at 0-0 in
   // pre-draft, so the whole-league form is worth a callout when nobody has played yet.
   const seasonLive = [...form.values()].some((f) => f.isLive);
-  const contenders = ranked.filter((r) => r.window === "win-now").length;
-  const rebuilders = ranked.filter((r) => r.window === "rebuilding").length;
-  const balanced = ranked.length - contenders - rebuilders;
+  const census = postureCensus(timelines);
   const leaderValue = ranked[0]?.totalValue ?? 1;
   const leagueValue = ranked.reduce((s, r) => s + r.totalValue, 0);
   const median = ranked.length
@@ -110,12 +113,21 @@ export default async function LeaguePage() {
         }
       />
 
-      {/* Window split as one rail rather than three tall cards. */}
-      <div className="grid grid-cols-3 divide-x divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
-        <Split n={contenders} label="win-now" className="text-accent-text" />
-        <Split n={balanced} label="balanced" className="text-ink" />
-        <Split n={rebuilders} label="rebuilding" className="text-info" />
+      {/* The posture split as one rail, the same shape the three core-age tiles had.
+          The labels are lower case and untracked rather than the small caps the old
+          tiles used, for two reasons: "straddling" and "contending" are ten characters
+          in a quarter of a 390px screen, and the board below prints these same four
+          words in exactly this casing - the same word should look like the same word. */}
+      <div className="grid grid-cols-4 divide-x divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
+        {census.map((c) => (
+          <Split key={c.posture} n={c.count} label={c.posture} />
+        ))}
       </div>
+      <p className="mt-1 text-meta leading-snug text-secondary">
+        Counted on timing - when each roster&rsquo;s value pays off (the same
+        reading the board below prints). Core age is a different question and
+        gets a different word on each row.
+      </p>
 
       <p className="mt-1.5 figure text-meta text-secondary">
         league value {fmtValue(leagueValue)} · median {fmtValue(median)}
@@ -159,6 +171,11 @@ export default async function LeaguePage() {
               name: w.teamName ?? w.ownerName,
               isMe: w.isMe,
               state: w.state,
+              // The refused row's own code and proof travel with it. This projection
+              // used to drop them, which meant the chart's screen-reader label and the
+              // sentence under it each had to reconstruct the reason from `state` - the
+              // same word, two guesses at what it meant.
+              refusal: w.refusal ?? null,
               open: w.open,
               peak: w.peak,
               close: w.close,
@@ -167,6 +184,7 @@ export default async function LeaguePage() {
             last: windows.last,
             currentSeason: windows.currentSeason,
             synthesis: windowSynthesis(windows),
+            refusalSummary: windowRefusalSummary(windows.rows),
           }}
           view={board}
         />
@@ -239,7 +257,7 @@ export default async function LeaguePage() {
                     )}
                   </span>
                   {/* Was single-line `truncate`: owner name + record + ordinal
-                        rank + team count + the window word is real content, and
+                        rank + team count + the core-age phrase is real content, and
                         on the live 14-roster board it routinely cut a rank number
                         mid-digit ("2nd of 1...", "1st of 1...", screenshotted live)
                         rather than losing a whole word cleanly. `line-clamp-2`
@@ -257,7 +275,12 @@ export default async function LeaguePage() {
                     ) : (
                       `${r.record.wins}-${r.record.losses} · `
                     )}
-                    <span className={WINDOW_INK[r.window]}>{r.window}</span>
+                    {/* The core-age word, in the neutral tone the posture words wear
+                        for the same reason (see components/PostureTag): an age is not a
+                        grade, and a colour would say otherwise in half a second. */}
+                    <span className="text-muted">
+                      age {r.coreAge ?? "-"}, {r.coreAgeBand}
+                    </span>
                   </span>
                   {/* The line that used to be two separate fourteen-row lists.
                     WINDOW FIRST, NUMBERS NEXT, WORD LAST, and that ordering is the
@@ -311,9 +334,11 @@ export default async function LeaguePage() {
                   <span className="block whitespace-nowrap figure text-meta leading-tight text-secondary">
                     1sts <DeltaValue n={r.picks.extraFirsts} />
                   </span>
-                  <span className="block whitespace-nowrap figure text-meta leading-tight text-secondary">
-                    age {r.coreAge ?? "-"}
-                  </span>
+                  {/* The core age used to be a bare figure here and the core-age WORD
+                      sat three lines away in the record line, where it read as a
+                      strategy label. They are now one phrase in the record line
+                      instead - "age 25, young core" - so the word cannot be read as
+                      anything but a reading of the number beside it. */}
                 </span>
                 <ChevronRight
                   size={14}
@@ -336,17 +361,13 @@ export default async function LeaguePage() {
     </div>
   );
 }
-function Split({ n, label, className }) {
+function Split({ n, label }) {
   return (
-    <div className="px-2.5 py-1.5 text-center">
-      <div
-        className={`figure text-lede font-semibold leading-tight ${className}`}
-      >
+    <div className="px-1.5 py-1.5 text-center">
+      <div className="figure text-lede font-semibold leading-tight text-ink">
         {n}
       </div>
-      <div className="text-meta uppercase tracking-wide text-secondary">
-        {label}
-      </div>
+      <div className="text-meta leading-tight text-secondary">{label}</div>
     </div>
   );
 }

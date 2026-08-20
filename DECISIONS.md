@@ -4581,3 +4581,1272 @@ Also fixed, unrelated root cause, same investigation: `pnpm setup` was silently 
 **VERIFIED, not assumed working from the diff.** All three scripts run their real bodies end to end: `node scripts/ingest.js` made a genuine live call to the real NSL Fantasy Hoops league on Sleeper's API and walked all 5 seasons; `node scripts/seed.js` (with `LEAGUE_PROVIDER=fixture`) reached its real Prisma write and failed only on "no Postgres at localhost:5432" - the expected, correct failure with no real database running, not an import error; `node scripts/claim-links.js` correctly detected no `AUTH_SECRET` and printed the real single-user-mode message. `pnpm lint` clean. `pnpm test`: 1054/1054 passed, unchanged. `pnpm build` clean after `rm -rf .next`. Full `pnpm e2e`: 78/78 passed.
 
 README updated to match: the "currently broken" callouts and the Scripts-table caveats from D86 are gone, because the scripts they described are no longer broken - not because the finding was walked back.
+
+## D88. SHELVED.md's S3 revived - not by rebuilding "Around the league", but by finishing a section `/drafts` already had
+
+S3 named its own revival condition: `getTradedPickLineages` already carries `fromRoster`, `usedByName`, and `playerName` on every row, so the join "which players did other managers take with your old picks" doesn't need new data - only a better question aimed at it than the truncated twelve-of-fifty-six that got shelved. Checked against the live page rather than assumed from the shelve note: `/drafts`' "Picks you traded away" section - `gave = all.filter(l => l.fromRoster === me)` - predates the shelving entirely (`git log -S`, no hit after D63's TypeScript removal) and was never the thing shelved. It already runs exactly that join, is complete by construction (every one of the reader's own resolved outbound picks, no sample, no truncation), and is specific to the reader rather than an arbitrary twelve. The gap was smaller than "revive a feature": the card told you who *held* the pick (the hop arrow's "to" name) but only said who *drafted with it* out loud when a later, un-recorded hand-off made that person someone else - the ordinary single-hop case, the one this page exists to answer, said nothing.
+
+**Fixed in the display layer, not the derivation - draftedByName() names the drafter on every resolved "gave" row.** `lib/lineage/index.js` gained one small pure function, `draftedByName(l, perspective)`: on the `"gave"` perspective it returns `usedByName ?? toName` unconditionally (usedByName is the exception case - a later hop before the draft - so it wins when set); everywhere else (no perspective, `"got"`) it keeps the original behavior of only surfacing a name that disagrees with `toName`, since restating the obvious there would just repeat what the hop arrow already showed for the reader's own acquisitions. `app/drafts/parts.jsx`'s `LineageCard`/`LineageCardBody` now thread `perspective` through to it instead of inlining the mismatch check. Tested directly (`lib/lineage/lineage.test.js`, `describe("draftedByName")`, 5 cases: ordinary single-hop naming, multi-hop `usedByName` preference, silence outside "gave" on agreement, a genuine mismatch still surfacing outside "gave", and no drafter named pre-draft).
+
+**A real truncation bug surfaced by adding the fact, fixed alongside it.** First render (roster 8 in the fixture, screenshotted at 390px) showed `"SF · 37y · drafted by P..."` - the `drafted by` clause pushed a `truncate` (single-line, hard-clip) span past its width, hiding the very fact the row exists to state, on the single-hop case that will be the common one. Two changes, not a wider font: (1) the meta line moved from `truncate` to `line-clamp-2`, wrapping instead of clipping - the same fix D75 already established for this app's other real-name-length truncation bugs; (2) `orig. {name}` is now printed only when it differs from the hop's own `fromName` - in the single-hop case it was restating text already on the line above, and dropping the redundant copy freed the room the new fact needed rather than trading one truncation bug for another.
+
+Also added: a one-line frame above the section ("Every pick you sent away that has since been used in a draft, and who ended up drafting with it") stating the question the section answers, since a reader landing here for the first time otherwise has to infer it from the hop arrow. Plain fact, not a verdict (D6) - no color grading of the outcome, no claim about whether the trade was good or bad, only what happened and who has the receipt now (D19). `SHELVED.md`'s S3 entry now has a "Revived" note pointing back here rather than being edited to pretend the section never existed.
+
+**VERIFIED.** `pnpm lint` clean. `pnpm test`: 1059/1059 passed (5 new, in `describe("draftedByName")`). `rm -rf .next && pnpm build` clean. Full `pnpm e2e`: 78/78 passed, twice (before and after the truncation fix) - real Chromium via a temporary, uncommitted `playwright.config.verify.mjs` pinning `executablePath` to the sandbox's prebuilt browser, deleted before finishing. Screenshotted `/drafts` at 390×844 in both themes against a fixture roster (8) with a real resolved "gave" row, confirming the fix actually renders: `"2024 1st · You gave up · The Process → Parquet Kings"` / `"Isaiah Sato · SF · 37y · drafted by Parquet Kings"`, unclipped, in both dark and paper (light).
+
+## D89. JSDoc + `checkJs` adopted for the Prisma-adjacent data layer and the valuation/trade engines - not reintroducing TypeScript, not touching the build
+
+D63 removed TypeScript from this app, deliberately and by owner request, not for a technical reason. That decision stands. This is a narrower, purely additive move: `checkJs` type-checking over hand-written JSDoc, in the two places research (State of JS 2026, and Svelte's/Turborepo's own public reasoning for keeping type-checking while dropping the TS build step) says a silent type mismatch does real damage - the Prisma-adjacent data layer (`lib/db.js`, `lib/history.js`) and the valuation/trade engines (`lib/valuation/`, `lib/trade/`, `lib/tradefinder/`). Nothing about `pnpm dev`/`build`/`test` changes: `checkJs` is an editor/IDE-only signal, checked here with a new `pnpm typecheck` script that nothing else calls.
+
+**Extended the existing `jsconfig.json`, per D63's own note, rather than creating a competing config file.** D63 already carries the `@/*` path alias forward from the deleted `tsconfig.json` into `jsconfig.json` specifically so Next would keep resolving it with no `tsconfig.json` in the repo. That file now also sets `checkJs: true`, `allowJs: true`, `noEmit: true`, plus `moduleResolution: "bundler"` (matching Next 16/Turbopack's own resolution) and a `lib`/`target` pair modern enough for the app's actual syntax. `typescript` is back as a **devDependency only** (it had been present merely as a transitive peer of `@prisma/client` and `eslint-config-next`, with no `tsc` binary reachable) - alongside `@types/react`, `@types/react-dom`, and `@types/node`, none of which existed post-D63 either. Without those three, `checkJs` doesn't fail loudly; it does something worse - it silently pulls React's and React-DOM's own untyped `.js` implementation files into the program and reports hundreds of errors *inside node_modules* (`react-dom-server.node.production.js` alone contributed 72), which looks like the tool is broken rather than like a missing type package. Verified directly: 799 reported errors before adding the three `@types/*` packages, 360 after, zero of them in `node_modules`.
+
+**Confirmed zero build-step impact on THIS project's exact toolchain, not assumed.** `rm -rf .next && pnpm build` succeeds identically with `checkJs` on (all 34 routes present in the manifest); Turbopack does not read `jsconfig.json`'s `compilerOptions.checkJs` at all - it does not run TypeScript's checker at any point, and `checkJs` is a TS-checker-only flag with no meaning to a bundler. `pnpm test`: 1054/1054, unchanged. `pnpm lint`: clean.
+
+**Verified directly, not assumed, that checkJs does not fail an un-annotated file by default.** Every file in this repo went through `checkJs` the moment the config flag was flipped - not only the ones touched below - and the overwhelming majority of plain, comment-only JS produced nothing: `lib/db.js` and every file in `lib/valuation/`, `lib/trade/`, and `lib/tradefinder/` reported **zero** errors before a single JSDoc annotation was added to any of them. `checkJs` without `strict`/`noImplicitAny` type-checks by *inference*, not by demanding declared types, so plain JS is invisible to it unless the inferred shapes actually collide - which is precisely the "silent type mismatch" this pass exists to surface, not decorate.
+
+**What `checkJs` actually found, once real JSDoc was added to the priority scope, and what was done about it:**
+
+- **A genuinely dead, silently-ignored config field.** `lib/trade/index.js`'s `valueSide` passed a `rounds` key into `pickValue`'s `ctx` object on every single pick priced in a trade evaluation. `pickValue`/`slotDistribution`/`estimateOverallPick` (`lib/valuation/index.js`) never read `ctx.rounds` at all - confirmed by grep, not inference - so the value was computed, passed, and thrown away on every call, for as long as this code has existed. Harmless (no output ever depended on it), but exactly the kind of quiet nothing a type system's excess-property check is supposed to catch and a human reviewer reliably will not. Removed, along with the now-unused local it was built from.
+- **A structural mismatch surfaced by annotating `lib/history.js`'s `loadBrackets`, traced to the untyped provider layer.** Typing the parameter as the full `LeagueProvider` interface failed against `CsvProvider`'s inferred shape (`Transaction.adds`/`drops` as `Record<string, number>` vs. an inferred `{}` from an empty object literal). `CsvProvider`/`SleeperProvider`/`FixtureProvider` are un-annotated JS and out of this pass's scope (see below) - fixing the mismatch there would mean typing three provider implementations neither named in the brief. `loadBrackets` (and `deriveExitWindow` in `lib/valuation/exitWindow.js`, hit by the same class of problem against hand-rolled test fixtures) were instead typed narrowly to only the fields they actually read, which is both the smaller change and the more honest one: neither function needs a full `LeagueHistory`/`LeagueProvider`, and pretending they do is what caused the mismatch. **Not a hidden bug** - `lib/lineage/index.js` independently calling `.getDrafts()`/`.getDraftPicks()` on the provider union (real methods `CsvProvider` genuinely lacks, per its own optional-method contract) surfaced in the same pass and is a real finding, but `lib/lineage/` is outside the named priority scope and was left unannotated and unfixed here.
+- **JSDoc `@returns` type literals silently widening in test helper functions.** Half a dozen test files build minimal `{ kind: "player"|"pick", id, label, ... }` asset fixtures via arrow functions returning object literals (`const asset = (id) => ({ kind: "player", ... })`); with no contextual type, TS infers `kind: string` rather than the literal, so passing them to a newly-annotated function expecting `"player"|"pick"` fails. Fixed with a one-line `@returns` annotation on each helper (`lib/tradefinder/conviction.test.js`, `fragility.test.js`, `leverage.test.js`, `tradefinder.test.js`) - comment-only, zero runtime change, confirmed by the still-1054/1054 suite.
+- **A tuple-vs-array inference gap in one test's `Map` construction**, unrelated to the annotations added but only surfaced once `pkg.give`/`pkg.get` stopped being implicitly-`any`: `new Map([...arr.map(a => [a.id, "x"])])` infers `string[]`, not the `[string, string]` tuple `Map`'s constructor wants. Cast with a one-line `@type` annotation at the call site (`tradefinder.test.js`).
+
+**Restored the `LeagueHistory`/domain-model JSDoc typedefs from git history rather than re-deriving them from scratch.** `lib/providers/types.ts` (pre-D63) was a complete, carefully-commented TypeScript domain model - `Player`, `Transaction`, `LeagueProvider`, `LeagueDetail`, etc. - that D63's mechanical `.ts`→`.js` conversion correctly stripped (interfaces and type aliases have no JS runtime form), leaving `lib/providers/types.js` as a bare `export {};` with only its file-header comment surviving. That emptied-out file is itself a small piece of unfinished business D63 left behind: every consumer of "what shape does a Player have" has had nothing but memory and convention to go on since. `git show` against the pre-D63 commit recovered the original shapes verbatim; they are restored here as JSDoc `@typedef`s in the same file (same names, same field comments, `LeagueProvider` methods as function-type properties instead of interface methods) - not reinvented, and not expanded beyond what already existed. `lib/history.js` similarly gets back its `Annotation`/`Me`/`LeagueHistory`/`HistoryMatchup` typedefs, recovered the same way from `git show 5d734d1^:lib/history.ts`.
+
+**Where the priority-scope annotation actually landed**, made to pass `checkJs` cleanly (`pnpm typecheck` reports zero errors under `lib/db.js`, `lib/history.js`, `lib/valuation/`, `lib/trade/`, `lib/tradefinder/`, including their test files):
+
+- `lib/db.js` - `@returns`/`@param` on `databaseConfigured`/`describeDbError`, a `DbErrorDescription` typedef.
+- `lib/history.js` - the `LeagueHistory`/`Annotation`/`Me`/`HistoryMatchup`/`Corpus` typedefs (recovered, see above), plus `@param`/`@returns` on every exported and module-private function (`annotationKey`, `viewerAuthorId`, `myAnnotation`, `loadAnnotations`, `loadMatchups`, `loadBrackets`, `resolveMe`, `assembleCorpus`, `getCorpus`, `readSelectedRosterId`, `getLeagueHistory`, `invalidateHistory`, `publishAnnotation`).
+- `lib/valuation/config.js` - a `ValuationConfig` typedef (with `InjuryConfig`/`CanonicalLine`/`PickConfig` sub-shapes) covering every field the real `VALUATION_CONFIG` object carries, annotated directly onto the constant.
+- `lib/valuation/injury.js`, `lib/valuation/index.js`, `lib/valuation/ageCurve.js`, `lib/valuation/exitWindow.js` - every exported function typed against `ValuationConfig`/`Player`/`ValuedPlayer`.
+- `lib/trade/index.js`, `lib/trade/url.js` - `TradeAsset`/`TradeSide`/`TradeInput`/`TradePackage` typedefs (the latter matching the Zod schema in `app/api/trade/route.js`, which is this shape's real authority), all exported functions annotated.
+- `lib/tradefinder/conviction.js`, `fragility.js`, `leverage.js`, `index.js` - `Appetite`/`Perceived`/`PricedAsset`/`TradePackageCandidate`/`SpofRead`/`FragilityNote`/`LeverageShift` typedefs, every exported function annotated including the two page-facing entry points (`findTrades`, `partnerBoard`).
+
+**Deliberately left un-annotated, and why - the second option this pass's brief names rather than the first.** Everything outside the five named directories was left alone unless `checkJs` flagged something both real and cheap to fix (the two findings above). Specifically NOT touched: `lib/lineage/`'s real `getDrafts`/`getDraftPicks` mismatch against `CsvProvider` (a genuine finding, but its own investigation and fix, not a drive-by inside this pass); the concrete provider implementations (`lib/providers/sleeper/`, `csv/`, `fixture/`) themselves, which remain un-annotated JS - `LeagueProvider`'s JSDoc shape describes the CONTRACT they're all measured against, not their own internals; every `app/*` page and `components/*` file, several hundred `checkJs` errors deep (mostly JSX prop-shape inference against untyped data, not judged one by one here) and explicitly out of the named scope. None of this was suppressed with `// @ts-nocheck` or excluded from `jsconfig.json`'s `include` - `checkJs` runs across the whole repo on every `pnpm typecheck`, so these files' errors remain visible for whoever picks up the next directory, rather than hidden behind a blanket opt-out that would defeat the point of turning this on at all.
+
+**Verification.** `pnpm lint`: clean. `pnpm test`: 1054/1054, unchanged (JSDoc comments carry no runtime behavior; the two lines of actual code changed - the `rounds` removal - were re-run through the full suite before and after). `rm -rf .next && pnpm build`: clean, all 34 routes. Full `pnpm e2e`: 78/78, against this sandbox's existing `/opt/pw-browsers/chromium` with no config workaround needed. `pnpm typecheck`: 799 → 360 total repo-wide errors (the drop is almost entirely the `@types/react`/`@types/react-dom`/`@types/node` fix eliminating node_modules noise, not scope-directory fixes, which is why the number does not read as "resolved" - it reads as "no longer drowned out"); zero errors in any of the five priority directories or their test files.
+
+**Rejected:** a single repo-wide annotation pass (explicitly what the brief warned against - a rushed, low-quality pass across 100+ files with no real per-file judgment); suppressing the ~360 remaining errors with `// @ts-nocheck` or a broadened `jsconfig.json` `exclude` to make the number read as zero, which would hide exactly the signal this whole change exists to surface; fixing `lib/lineage/`'s real provider-method mismatch inline, since it is a genuine bug in a file this pass was not asked to own and deserves its own investigation rather than a type-error-driven drive-by.
+
+## D90. THE PHOTO FLAG WAS NEVER REACHING THE BROWSER - a fifth ask, a real root cause in the client bundle, and D39's default reversed while keeping the protection it actually wanted
+
+The owner has asked for player headshots five times. Every previous diagnosis, including
+the one handed to this round, concluded the same thing: `NEXT_PUBLIC_USE_PLAYER_PHOTOS`
+is unset on Vercel, `NEXT_PUBLIC_*` is inlined at BUILD time, so set it in the dashboard
+and redeploy with no cache. The owner was walked through those steps twice and the photos
+were still off. That diagnosis is incomplete, and the missing half is why the fix kept
+not working.
+
+**What the client bundle actually contains.** Built this branch and read the shipped
+chunk rather than trusting the model of the toolchain. Next 16.2.12 builds with
+**Turbopack**, and Turbopack constant-folds `process.env.NEXT_PUBLIC_X` in client code
+only when `X` is **present in the build environment**. With the var set, the entire
+function folds to a literal - the shipped chunk reads `function i(){return!0}`. With the
+var **absent**, there is no folding at all: Turbopack resolves `process` to a bundled
+browser shim and emits a live lookup, `i.default.env.NEXT_PUBLIC_USE_PLAYER_PHOTOS`,
+against a shim whose `env` has no such key. In the browser that expression is
+`undefined`.
+
+Feed that through the old predicate and the outcome is not "the default is off", it is
+"the check cannot pass":
+
+    OLD, unset at build time:  undefined === "true"  ->  false
+    NEW, unset at build time:  fails open            ->  true
+
+Both verified by evaluating the actual shipped function body against an empty `process`
+shim. So the old code had two independent failure modes stacked on each other - an OFF
+default AND a client-side expression that reads `undefined` unless the var exists at
+build time - and every previous round only ever named the first. This also means the
+dashboard-plus-redeploy advice was only ever going to work if the variable was scoped to
+the exact environment being built (Production vs Preview), which is a second silent
+tripwire nobody was told to check.
+
+**D39's default is reversed here, and its reasoning is not being quietly contradicted -
+it is being answered.** D39 flipped this default ON->OFF for a real reason: the repo is
+public, so a fork or somebody else's Vercel deploy that never set the var must not
+silently ship real, unlicensed headshots. That worry stands. What was wrong was the
+implementation charging the entire cost of it to the one person it was never aimed at.
+A default the project's own owner cannot get past, across five requests, is not a safety
+default; it is a bug wearing a safety default's clothes.
+
+So `photosEnabled()` (`lib/photos.js`) is now three branches, and the ORDER is the design:
+
+1. `NEXT_PUBLIC_USE_PLAYER_PHOTOS` set explicitly wins either way - `"false"` is the
+   documented opt-out, `"true"` the documented fork opt-in. `playwright.config.mjs`
+   already pins `"false"`, so the e2e suite stays deterministic and offline unchanged.
+2. Unset, and positively identifiable as SOMEBODY ELSE'S build -> OFF, via
+   `NEXT_PUBLIC_VERCEL_GIT_REPO_OWNER`. Vercel auto-populates this for Next.js projects -
+   checked against Vercel's own framework-environment-variables reference, not assumed.
+   It carries the `NEXT_PUBLIC_` prefix deliberately: it is therefore inlined into the
+   server and client bundles from a single value, and since this function gates whether
+   an element renders at all, a server-runtime read disagreeing with a client build-time
+   read would be a hydration mismatch. That is why the check does not read the bare
+   `VERCEL_GIT_REPO_OWNER`.
+3. Anything else -> ON. Local dev, CI and the canonical repo's own deploys need no
+   configuration whatsoever.
+
+**The asymmetry is the whole point: this FAILS OPEN.** The fork check can only ever turn
+photos off, and only while holding a repo owner that is positively not the canonical one.
+If Vercel's "Enable access to System Environment Variables" setting is off, or the var is
+renamed, or a deploy is not git-connected, the var is absent and photos stay ON rather
+than quietly reverting to monograms. A missing env var silently downgrading the owner's
+own site is the exact failure this must never be able to repeat. The price is that
+automatic fork protection degrades to the documented `.env.example` opt-out - a far
+better trade than a sixth round of "the photos are still not showing up." Fork
+protection is therefore preserved in the case D39 was actually worried about (someone
+else's Vercel deploy, which does carry the var) without holding the owner hostage to it.
+
+**Repo-hosted images were investigated and REJECTED.** The owner raised possibly hosting
+the images locally or in the repo. It is the wrong direction on every axis. Committing NBA
+player headshots into a PUBLIC repository converts a hotlink - a browser fetching a third
+party's bytes from that third party's own CDN, which never touches Parquet's
+infrastructure - into redistribution by Parquet, from Parquet's domain, permanently, in
+git history where a later delete does not remove it. That is a strictly larger licensing
+exposure than the thing D39 was created to avoid, not a mitigation of it. It also costs
+~475 files of permanent repo weight for content that goes stale every time a player
+changes team. Same reason `next/image` is deliberately NOT used here and the
+`no-img-element` lint rule is suppressed instead: `next/image` would route the file
+through this app's own optimizer, making Parquet fetch, re-encode and SERVE the headshot
+itself, which is precisely the "never a copy this app stores or serves" posture that the
+personal-use note in `.env.example` rests on. A plain `<img>` is the licensing-cheapest
+option available and it is what ships. Recorded so a future round does not "fix" the lint
+suppression and silently regress the licensing posture.
+
+**Photo coverage measured, not estimated - and D73's 403 conclusion corrected.** D73
+recorded that this sandbox "does not reach `sleepercdn.com`" and wrote the CDN off as
+untestable from here. That is wrong, and it mattered. The host answers fine: team logos
+and `api.sleeper.app` both return 200. The 403s are S3 `AccessDenied` bodies, complete
+with an S3 `RequestId` - which is what that bucket returns for an object that **does not
+exist**, not a block on the caller. It is purely per-object. So the real hit rate is
+measurable, and was measured, across all 592 active Sleeper NBA players with a team:
+
+- **475/592 (80.2%)** return 200. All 117 failures are 403/no-such-object.
+- Weighted the way a reader actually meets them, by Sleeper's own `search_rank` - roughly
+  "who is rostered and shown on `/values`" - **96% for the top 100, 93% for the top 200.**
+- Every miss inside the top 200 is a 2026 rookie (Cameron Boozer, AJ Dybantsa, Darryn
+  Peterson and that draft class) - a photo Sleeper has not shot yet.
+- **100% of the 200s are PNG bytes** served under an `image/jpeg` header, `hasAlpha: true`,
+  69-75% non-opaque pixels at 250x168. D39's transparency finding re-confirmed
+  independently, and the frame is **landscape**, not the portrait the `object-top` in
+  `PlayerAvatar` implies - which makes `object-cover` correct and `object-top` harmless
+  rather than load-bearing, since cover scales to the box height and crops only the
+  transparent side margin.
+
+The monogram fallback is therefore a real, load-bearing path on a normal page, not a
+theoretical one. A handful of monograms mixed into a list of faces is the CORRECT
+rendering of that list.
+
+**One surface was rendering an avatar that could never be a photo.** `/recap`'s "picks
+that became players" list passed `team={null}` and no `playerId` at all, because
+`resolvedPickTimeline` (`lib/digest/index.js`) dropped `playerId` and `team` from its
+projection even though the lineage carries both (`playerFields`, `lib/lineage/index.js`).
+With photos on, those 31 rows were a column of initials by construction rather than by
+anyone's decision. Both fields are now carried through and passed. This is a data-plumbing
+defect, not a design choice, which is why it is fixed here rather than noted.
+
+**`PlayerAvatar` is confirmed as the single abstraction for player imagery - zero
+bypasses.** Swept every route under `app/` and every file under `components/`: the only
+`<img>` in the repo pointing at a player headshot is the one inside `PlayerAvatar`. The
+two other `<img>` tags are `TeamAvatar` (a manager's avatar) and `TeamLogo` (a crest),
+neither of which is a person's likeness and neither of which is flag-gated, per D49. So
+there is no surface silently hotlinking headshots around the licensing gate, and no second
+implementation to keep in sync. The check itself was duplicated in two files, though -
+`lib/photos.js` and a hand-copied `=== "true"` inside `PlayerAvatar.jsx` - so
+`PlayerAvatar` now calls `photosEnabled()` instead of re-deriving it. Two copies of a
+boolean are two chances to drift, and the server-side call sites gate on the same function.
+
+**Surfaces that name a player but carry no avatar, recorded rather than changed.** Four
+are genuine candidates that already hold a `playerId`: `TradeBuilder`'s player-picker
+modal (the strongest case - a full-screen selection list, where a face is worth most),
+`/trade/finder`'s give/get `AssetTable`, `RankingBoard`'s "where you disagree with
+consensus" sibling list (inconsistent inside one file - the main board rows do render one),
+and `/lab/pulse`'s "picks that became players" (the direct analog of the `/recap` list
+fixed above, and unblocked by the same data fix). Three more would need a data-layer change
+first, since the playerId is discarded upstream: `/league`'s "breaks first" line
+(`lib/metrics/quadrant.js`), `/plan`'s send/target boxes (`lib/gameplan/`, which builds
+name strings only), and `/lab/pulse`. Adding avatar placements is new visual design, and
+the app's visual language is being redesigned in parallel right now, so tuning placement
+against a design system that is about to change would be throwaway work. Left as a list.
+
+Also left alone deliberately: every surface where a player is named mid-sentence - trade
+descriptions (`describeTradeForRoster`, seven call sites), `/lab/regret`'s two seven-row
+`text-micro` columns, `/awards` entrant stats (the row's subject is the MANAGER, already
+carrying a `TeamAvatar`; a player face there would misattribute), and `<dl>` stat-tile
+sub-labels. Avatars have no position in prose, and D39 rejected these for the same reason.
+
+**`loading="lazy"` added to the photo path.** With the default now ON, `/values` renders
+~60 of these and `/rank` up to 120, one per row - the difference between a handful of
+requests and every face on the list at once on a phone. Safe for the fallback: an image
+below the fold simply errors later, and until it resolves the row shows the themed disc,
+which D73 already confirmed is the intended backdrop and does not reflow when the image
+lands.
+
+**The disc still resolves after D61 and D62, and there are TWO themes, not three.** The
+docblock described the monogram disc as `--color-elevated` with a 2px team-hue left edge
+and referred to "any of the three themes." The contrast theme was retired in D64; `THEMES`
+is `["dark", "light"]`. Both define `--color-elevated` (`#2a2f37` / `#e5e1d8`) and
+`--color-border-strong` (`#525b6a` / `#b9b2a4`), so the disc and its ring still resolve in
+both after D61's ground-scoped token work and D62's re-themed mark. Stale wording fixed.
+Aesthetic judgement of how photos sit in a dense row is explicitly deferred to the
+in-flight redesign; the rendering was checked functionally (faces framed correctly inside
+the circle at 32/40/56px in both themes, the cutout sitting on the disc as intended) and
+no treatment was tuned.
+
+**Verification.** `pnpm lint` clean. `pnpm test` **1067/1067** (up from 1059 - eight new
+cases in `lib/photos.test.js` covering all three branches, the fail-open case, casing, and
+"an unrecognised value is not the opt-out"). `pnpm build` clean, all routes present, and
+the built client chunk inspected directly to confirm the flag's shipped behaviour rather
+than inferred from a dev server. Full `pnpm e2e` **78/78**. `pnpm typecheck` reports 357
+errors **both before and after** this change, none of them in any file touched here - it
+is pre-existing and is not a CI gate (D89 left it at ~360 repo-wide, and `ci.yml`'s gate
+job runs `lint` and `test` only, having been renamed away from "typecheck / lint / test").
+
+**Rejected:** committing headshots to the repo or self-hosting them (above - a larger
+licensing exposure than the one D39 guarded, plus permanent repo weight); `next/image`
+(makes this app serve the bytes, breaking the hotlink-only posture, and needs
+`remotePatterns` for a host deliberately not configured); a bare `!== "false"` with no
+fork check at all, which would have been the smallest diff but would have deleted D39's
+protection outright rather than answering it; gating on `VERCEL_GIT_REPO_OWNER` without the
+`NEXT_PUBLIC_` prefix (hydration mismatch, since the gate decides whether an element
+renders); and mapping the flag through `next.config.mjs`'s `env` key to compute it at build
+time, which works but adds indirection for no gain now that the `NEXT_PUBLIC_VERCEL_*`
+counterpart is confirmed to exist.
+## D91. THE AI/SUBJECTIVE COMPONENT IS SHELVED - `/analyst` and `lib/analyst/` out, no rescue from `rulesFallback` because every finding in it already renders on a page that survives
+Owner decision, not a committee finding: *"lets shelve the ai subjective component and
+focus more on this statistical call and other intuitive nuance feature set."* The
+arguments live in `SHELVED.md` S7 and S8 and are **not** repeated here, per D59 - this
+entry records the event, the scope, and the two judgment calls a reader might otherwise
+have to reconstruct from the diff.
+
+**What came out of the live app.** 605 lines: `app/analyst/page.jsx`,
+`components/AnalystChat.jsx`, `app/api/analyst/route.js`, and all of `lib/analyst/`
+(`index.js`, `system-prompt.js`, `analyst.test.js`). Plus, as dead code the shelve
+created: `lib/observability/trace.js` in full (`lib/analyst/index.js` was its only
+caller and `tracingEnabled()` had none even before that), the `LLM_BASE_URL` /
+`LLM_API_KEY` pins in `playwright.config.mjs`'s hermetic webServer env, and
+`"/analyst": MessageSquareText` in `components/nav-icons.jsx`. **Parquet now makes no
+outbound model call from any code path**, which is a stronger privacy guarantee about
+the ledger's captured reasoning than the opt-in default ever was: previously not
+configured, now not possible.
+
+**JUDGMENT CALL ONE: `rulesFallback` was NOT rescued, and that is the finding rather
+than an omission.** S1 rescued slot par out of the shelved start line, so the question
+had to be asked seriously here: the deterministic audit is not the AI half at all, and
+a rules-based read over derived findings is exactly the direction the owner is moving
+toward. **Checked `/plan`, `/managers/[rosterId]`, `/recap` and Home before
+concluding, and every single thing it computed already renders on a surviving surface,
+most of them more completely.** Contradictions: Home renders two full cards above the
+fold with said/did tags, `lib/gameplan` leads `/plan`'s caveats with the same gap, and
+`lib/trade` puts it on the `/trade` receipt - against the fallback's one line.
+Posture-by-season: `/managers/[rosterId]` and `/managers/former/[ownerId]` render every
+season as its own chip. `report.findings`: Home's "What your record shows" fold renders
+all of them untruncated. A named manager's read and approach tips: four surfaces. The
+annotation-count nudge: Home's quiet branch and the capture badge. The only thing unique
+to the fallback was the question ROUTING - type a name, get that manager - which is a
+chat affordance, and the Desk's search already resolves a manager's name to their
+dossier anyway. **Re-homing it would have been thoroughness for its own sake, and the
+honest conclusion is that `rulesFallback` was always a shadow of the real surfaces
+rather than a feature** - which is also why `buildCorpus` had a test and it never did.
+
+**JUDGMENT CALL TWO: the two inbound links were re-aimed, not deleted, and the test
+that would have caught leaving them was missing.** `/ledger`'s third onward step and
+`homeNext`'s `contradicted` branch both pointed at `/analyst`. `/ledger` is one of the
+four pinned surfaces and dropping it to two ways out would have been a real loss, so
+both now point at `/plan` - not as a shrug, but because `/plan` is the page that already
+opens its caveats with the stated-vs-revealed gap, so it is where the argument the
+Analyst led with actually lives. `contradicted` therefore now changes the REASON on a
+step the reader was taking anyway rather than adding a fourth destination, and
+`lib/nav.test.js` pins that it buys a different reason (delete the branch and the test
+fails; point it somewhere with nothing new to say and it also fails).
+
+The gap worth recording: **nothing in the suite could have caught a forgotten one of
+those links.** `resolveSteps()` falls back to the raw href when a destination is
+neither registered nor given an explicit `label`, so a dangling step to a removed
+surface renders as a link captioned "/analyst" and every existing nav test stays green -
+including the one that checks labels come from the registry, which only checks
+destinations that ARE registered. A test now pins that an onward destination is either
+registered or explicitly labelled; the two deliberate unregistered targets
+(`/lab/counterfactual`, `/lab/regret`) carry their own labels and are unaffected. That
+is the distinction: unregistered is allowed, unnamed is not.
+
+**Everything the module consumed was verified still-used by grep and left untouched**,
+because `lib/analyst/` was a pure consumer of the app's engines and never a producer
+for them: `getStrategyReport` (three remaining callers), `getAllDossiers`
+(`/managers`, with six more modules on `buildDossier`), `lib/principals` (40
+importers), `lib/derive/describe` (20), `lib/valuation` (19),
+`lib/rankings/leagueTiers` (three, still the single tier entry point S6 made it),
+`lib/history` (everything). Removal is a subtraction, not a refactor.
+
+**Docs.** `.env.example` now says out loud that `LLM_BASE_URL`, `LLM_API_KEY`,
+`LLM_MODEL`, `LANGSMITH_API_KEY` and `LANGSMITH_PROJECT` have no consumer, rather than
+continuing to document them as working - an operator with them already set in a real
+`.env` or in Vercel's project settings needs to learn why they stopped mattering
+instead of assuming a bug. Nothing was touched in any actual `.env` (gitignored, the
+operator's). README's differentiator list drops from five to four and says where the
+fifth went; its anti-sycophancy blockquote now points at the STRUCTURE that enforces it
+(Home leading with the contradiction, `/plan`'s first caveat, `/trade`'s receipt, no
+grades anywhere) rather than at a deleted system prompt, which is the harder and better
+place for that constraint to live: a prompt can be softened by an edit, a page that puts
+the disconfirming case above the fold cannot be. Three stale header comments naming the
+analyst as a consumer (`lib/history.js` x3, `lib/derive/describe.js`,
+`lib/strategy/index.js`) were corrected. `DESIGN.md`'s two references (the safe-area
+rule's second fixed-bottom control, the analyst empty state) were corrected.
+`PROGRESS.md`, `QUESTIONS.md`, `BRAINSTORM.md` and `RESEARCH.md` were deliberately NOT
+touched: they are dated logs of what was true or asked at a point in time, and the prior
+shelve (`e337f36`) treated them the same way. D7 and D17 likewise stand as written - a
+decision record that gets edited when the decision is reversed stops being a record.
+
+**Verification.** `pnpm lint`: clean. `pnpm test`: 1059/1059 in 62 files (was 1059 in
+63 - `analyst.test.js`'s two annotation-privacy tests out, two nav tests in). `pnpm
+build`: clean, 41 routes where `origin/main` builds 43, and neither `/analyst` nor
+`/api/analyst` is among them. `pnpm e2e`:
+75/75 (was 78 - the smoke and both a11y passes for `/analyst` are generated from
+`ALL_SURFACES`, so removing the registry entry removed all three; no e2e file mentioned
+the route by name, which is the registry-driven design working as intended).
+`pnpm typecheck`: 355 errors, down from 357 on `origin/main` @ `4e71e51` - it does not
+pass and did not pass before this change (it is not in CI; the `gate` job runs lint and
+test only, see `.github/workflows/ci.yml`), and the two-error drop is `lib/analyst/`
+leaving with its own.
+
+**Rejected:** keeping `/analyst` behind a feature flag or unregistering it while leaving
+the route reachable, which is a bin dressed as a shelf - git history is the shelf, and a
+route that no surface links to but that still answers is the worst of both; re-homing
+`rulesFallback` onto `/plan` or `/managers` to look thorough, when the evidence above
+says every one of its outputs is already there; leaving `lib/observability/trace.js` in
+place as a spare for a future LLM call, which is S4's exact failure mode and would have
+contradicted the rule D59 set in the same breath; deleting the LLM env vars from
+`.env.example` silently, which would leave an operator with a stale real `.env` no way
+to find out why nothing happens.
+
+---
+
+## D92. THE DEPTH CHART SLEEPER WAS ALREADY SENDING US - one field added, and the surface deliberately keyed to the TEAM rather than the player
+`lib/providers/sleeper/schemas.js` had parsed `depth_chart_order` since the first
+round and never `depth_chart_position`, which made the field it did parse unusable:
+**an order is an order WITHIN a position**, and on one live team in one payload the
+same integer 2 appears at PG, at SG and at C. Adding one string to the schema, the
+mapper and the `Player` typedef turns a number with no referent into a whole feature.
+`news_updated` came with it, because a fact shown without its age invites being read
+as current.
+
+**The measurement first, because every design decision below is downstream of it.**
+Taken against the live `/players/nba` payload on 2026-08-19 and written up in full in
+`API_NOTES.md`: 593 players are on an NBA team, 474 carry both depth fields, 119 carry
+neither, and **zero carry exactly one** - so the two fields are one fact and the app
+had been storing half of it. All 30 teams are covered, 12-19 charted players each.
+
+Then the part that decided the whole design. Across the 149 (team, position) groups:
+
+- **116 are NON-CONTIGUOUS.** LAL's centres are `1, 2, 5`. GSW's power forwards are
+  `1, 5, 6, 7, 8`. DAL's point guards are `1, 3`.
+- **43 contain a DUPLICATE order.** LAL lists two small forwards at `2`. BOS lists two
+  power forwards at `1`. MEM's centres come back `1, 2, 2, 5, 5`.
+- **18 have NO ORDER 1 AT ALL.** LAL's only listed power forward is a `2`.
+- **120 of the 474 charted players - a quarter - are charted away from their listed
+  position.** Bronny James is listed SG and charted PG; Anthony Davis is listed C and
+  charted PF; Jrue Holiday is listed PG and charted SG.
+
+**So the derivation sorts by the order and never indexes by it.** `lib/depth` publishes
+three lists - who is ahead, who is LEVEL (same integer), who is behind - plus a fourth
+for teammates the chart places without an order at all, who can be compared to nobody.
+There is no ordinal anywhere in the module and no page in Parquet says "third string",
+because on 43 groups that word would be a coin flip printed as a datum and on 116 more
+it would be arithmetic on a number that was never a count. This is D19 one layer down
+from where D19 was written: the inference available here is cheap, plausible and wrong,
+so it is refused and the gap is published instead. The tie-break inside a group is
+alphabetical **on purpose** - consensus rank was the obvious alternative and was
+rejected because it would have quietly converted "these two are level" into "the better
+player is listed higher", which the source does not say.
+
+Grouping is by `depthChartPosition`, never by `position`: for a depth chart the chart's
+own position is the answer, and at a quarter of charted players that is not a corner
+case. The listed position rides alongside as a fact worth showing ("listed SG").
+
+Adversarial cases, all tested: a player the payload puts on **two teams** (the fresher
+`news_updated` wins, so he appears on exactly one chart rather than two - a player has
+one team tonight and that is the one thing the source can never say twice); a
+**non-standard** chart position, kept and sorted after the five rather than dropped; a
+lowercase code, normalised at the provider so it cannot split a group; an **empty** team,
+a **one-player** team whose only order is a 2, and a team with no chart at all. 61 unit
+tests, and the fixtures are real reductions of live groups rather than invented tidy
+ones - a suite built on `1, 2, 3` would have passed against every wrong implementation.
+
+### WHERE THE SURFACE LIVES, which is the load-bearing decision in this entry
+`/depth/[team]?player=<id>` - a leaf route keyed by TEAM, with the player as a lens.
+Three placements were live and the other two lost on their merits:
+
+**An in-row expansion on /values and /roster.** `ValueAssetRow` already expands, so
+this was the cheapest option. It fails on arithmetic: a chart is 12-19 names in five
+groups, which at 390px is a row that grows to a screen and a half, and it would destroy
+the one property that expansion exists for - "open three rows and compare" (the
+component's own header has argued that since the multiplier readouts came out). What
+DOES fit in a row is the one-line fact, so that is exactly what went there.
+
+**A new `/player/[playerId]` page.** Tempting, since the app has no player page and
+this would have been the first. Rejected: the app already has a player-anchored page.
+`/lineage/[assetKey]` carries his crest, name, position, age, value and tier in its
+header, and a second page about the same subject is the failure this repo keeps
+recording (D62's one mark everywhere; the /drafts label drift). Worse, it is the wrong
+subject: a depth chart is not a fact about a player, it is a fact about his TEAM that
+mentions him. Keyed by player it would be nineteen pages showing the same fifteen
+names, none of them linkable as "the Lakers' chart".
+
+Keying by team also buys the thing that makes this feature Parquet's rather than a
+Sleeper mirror: **the league's own ownership is joined onto the NBA chart.** Every name
+carries who holds him here (your roster, a rival's team name, or "not held in this
+league") and links to that manager's dossier. An NBA depth chart is public; "two of
+these three centres are held in your league, one by the manager you are mid-trade with"
+is not, and it is a join, not an inference.
+
+**Not registered in `ALL_SURFACES`, and not given an index page nobody asked for.** It
+follows `/lineage/[assetKey]` exactly: a leaf reached from the rows where the question
+occurs. There is no reader question shaped like "show me a list of thirty NBA team
+codes", and the registry cannot hold a parameterised href anyway. What the registry
+DOES hold is a contract - two ways out of every surface, test-enforced - and a dynamic
+route is no excuse to reopen the dead-end bug that rule exists for, so
+`lib/depth/onward.js` computes the steps from what the page knows about its anchored
+player and `onward.test.js` pins the same five properties `lib/nav.test.js` pins on
+registered surfaces (two minimum, no repeats, no self-link, a why in the reader's voice
+with no em dash, and every registered destination's label taken FROM the registry
+rather than retyped). `e2e/depth.spec.js` then pins that they render as links.
+
+**Three entry points, all of them where the question actually occurs.** The row
+expansion on `/values` (260 rows) and `/roster` (17), which is one shared component so
+they cannot drift; and a chip on `/lineage/[assetKey]`, which is the page that has just
+answered "how did I get him" and leaves the reader holding "and what is his role now".
+The row's datum is a COUNT (`PG, 1 ahead`), never an ordinal, for the reason above.
+
+**Its own accessibility sweep, because the registry-driven one cannot see it.**
+`e2e/a11y.spec.js` iterates `ALL_SURFACES`, so an unregistered route gets zero coverage
+from it. Rather than let one surface sit outside the bar every other page is held to,
+`e2e/depth.spec.js` runs the same two passes that file runs (full axe in the default
+theme, contrast-only in light). The position groups are `<ul>`, never `<ol>`: an ordered
+list tells a screen reader these are items 1 through 5, which is precisely the ordinal
+the feature refuses to publish.
+
+### The fixture got real NBA teams, and that surfaced a real finding
+Fixture players carried `team: null` and `depthChartOrder: null`, which would have left
+this surface untestable end to end and invisible in `pnpm dev`. They now carry both,
+with the live data's defects reproduced deterministically: 93 groups, 35 with a tie, 35
+non-contiguous, 21% of players with no entry, 26% charted off-position.
+
+That change moved two existing tests, and neither is cosmetic:
+
+1. `lib/lab/counterfactual/counterfactual.test.js` asserted the fixture models no NBA
+   teams at all. It now builds that case by stripping teams explicitly - it still
+   matters, since the CSV provider's `team` column is optional - and asserts the
+   opposite of the fixture as shipped.
+2. `lib/metrics/fragility.test.js`'s calibration guard went from "at most 2 ties in 14"
+   to "at most 4". **The cause is worth stating precisely, because it is a finding about
+   the valuation model, not about fragility:** `roleMultiplier` in `lib/valuation` reads
+   `depthChartOrder`, every fixture player used to have none, so it returned `unknown`
+   for all 288 and **that code path had never once run in a fixture test**. It runs now.
+   The spread this guard exists to protect is unmoved at 34 points.
+
+**THE REAL FINDING, named and deliberately not fixed here.** `roleMultiplier` prices a
+player as `starter` at order <= 1, `secondary` at 2 and `bench` at 3+ - which is exactly
+the caveat-blind reading of the integer that `lib/depth` spends its header disproving.
+On live data that means LAL's only listed power forward is discounted to `secondary`
+for being a `2` with nobody ahead of him, and every player in the 18 groups that have
+no order 1 is discounted the same way. `depthChartPosition` now makes the correct
+question computable ("is anyone actually listed ahead of him at his charted position"),
+which this PR deliberately does NOT act on: changing it moves every value on every
+surface, and a value-model change does not belong in the same commit as the data layer
+that revealed it. It is the first thing to do next.
+
+**Also verified / rejected.** `pnpm lint`, `pnpm test` (1,132 passing), `pnpm build`
+clean with `/depth/[team]` in the route table, `pnpm e2e` 84/84. `pnpm typecheck` is
+**not** clean and was not clean before (D91 recorded 355 on `origin/main`; it is not in
+CI); this branch adds no error of its own beyond the same JSX-props noise every page in
+the app already produces, and the one real error it did introduce was fixed. No
+horizontal overflow and no clipped leaf text at 375 / 390 / 430 in both themes, measured
+rather than eyeballed. `components/PlayerAvatar.jsx` deliberately untouched (owned by a
+concurrent branch), and nothing here reads `lib/analyst`, which D91 shelved.
+
+**Rejected:** an ordinal anywhere ("2nd on the chart"), for the 43-group reason;
+rendering the raw order integer next to a name, which is the same mistake wearing a
+number instead of a word; a `/depth` index of thirty teams, which is a page shaped like
+the data rather than like a question; inferring anything about minutes, role or value
+from a slot, which is the whole thing D6 and D19 exist to prevent and which the surface
+says out loud that it is not doing; and **contract data**, researched separately and
+genuinely promising (Basketball-Reference's `/contracts/players.html` is fetchable, not
+robots-disallowed, ~462 rows, joins on normalised name at ~75%, ~90% with suffix
+handling) - it is a second source with its own staleness and matching story, and it does
+not belong in the commit that fixes the first source's missing field.
+
+## D93. TWO CLASSIFIERS, ONE VOCABULARY, PRINTED THREE INCHES APART - the age axis loses the strategy words, the census reads the board's own function, and /plan's fourth list stops pretending to be a fifth classification
+
+A product review reported that `window` (core-age quartile, in `lib/roster.js`) and
+`posture` (payoff-timing quartile plus a coherence floor, in `lib/metrics/duration.js`)
+shared the words "rebuilding" and "balanced" while measuring different things, and that
+`/league` printed both on the same row. Measured on the live 14-roster league before
+anything was changed, rather than taken on trust:
+
+| # | roster | core age | `window` | `posture` | TCI | dur |
+|---|---|---|---|---|---|---|
+| 1 | 5-Year Plan | 24.1 | rebuilding | rebuilding | 70 | 5.04 |
+| 2 | Flick the Clint | 28.0 | win-now | straddling | 54 | 4.03 |
+| 3 | Jalen Squadron | 27.7 | balanced | ascending | 64 | 4.07 |
+| 4 | Sweet Home Wembanyama | 26.3 | balanced | straddling | 52 | 4.38 |
+| 5 | The Terror Twins | 25.8 | balanced | ascending | 59 | 4.46 |
+| 6 | eddie house | 28.1 | win-now | contending | 66 | 3.98 |
+| 7 | yagev | 27.8 | balanced | ascending | 68 | 4.08 |
+| 8 | kdewitt4 | 29.4 | win-now | straddling | 47 | 3.81 |
+| 9 | zachgoldy | 25.1 | balanced | ascending | 76 | 4.76 |
+| 10 | 6-Month Plan | 22.6 | rebuilding | rebuilding | 74 | 5.37 |
+| 11 | mjrooney20 | 28.7 | win-now | contending | 57 | 3.75 |
+| 12 | Old Man Ball | 25.0 | balanced | rebuilding | 71 | 4.94 |
+| 13 | nathang21 | 24.7 | rebuilding | rebuilding | 68 | 5.55 |
+| 14 | Giddler on the Roof | 25.3 | balanced | ascending | 67 | 4.59 |
+
+**The report was right on every count.** Different strings on **11 of 14** rosters. The
+census tiles said `4 win-now · 7 balanced · 3 rebuilding` while the board below them
+printed the word "rebuilding" against **four** rosters - the tiles were counting core
+age and the rows were printing posture, and nothing on the page said so. Row 12 is the
+reported row exactly: `balanced ... TCI 71 · RFI 74 · rebuilding`, one roster, two words,
+no explanation.
+
+**THIS IS NOT THE `tierOf` CASE, AND THE DIFFERENCE DECIDES THE FIX.** `tierOf` (SHELVED
+S6) was a second answer to ONE question, so it was deleted. These are two different
+questions and both are worth asking: *how old is this roster's core* is a fact about the
+players on it, and *when does its value pay off* is duration over players AND picks -
+the second includes assets the first cannot see, which is precisely why the app has it.
+So the second system stays. What could not stay is the age axis borrowing the timing
+axis's words, because those words assert something core age cannot see: an old core is
+not evidence that anybody chose to win now, and a young core is not evidence that
+anybody chose to rebuild. That is D19 (refuse unfounded inference) failing quietly for
+however long, and it would have been a defect even if `posture` had never existed.
+
+**What shipped.**
+
+1. **`lib/metrics/axes.js`** - the vocabularies declared in one place, each with the
+   question it answers and the one function allowed to answer it. The age axis is now
+   **young core / mixed-age core / veteran core**: zero words and zero word STEMS shared
+   with contending / ascending / rebuilding / straddling. `analyzeRoster().window` is
+   renamed `coreAgeBand`, which also retires the third meaning of "window" in a codebase
+   that already used it for a season span (`lib/metrics/window.js`) and for the browser
+   global. The league-relative banding argument is unchanged, moved not rewritten.
+2. **`/league`'s tiles and board cannot disagree.** The tiles now count postures through
+   `postureCensus`, off the same `leagueTimelines` array the rows read, with a line under
+   them saying what is being counted. They read `2 contending · 5 ascending · 4
+   rebuilding · 3 straddling` on the live league, and the fourth rebuild that the old
+   tiles hid is now in the count. The core-age word moved next to the age FIGURE it comes
+   from ("age 25.0, mixed-age core"), which also removed a duplicate age on the same row.
+3. **`/plan`'s fourth list was never a third axis - it was the age axis wearing the
+   timing axis's verbs.** contend / ascend / rebuild / retool is a prescription
+   ("recommended direction"), but it was derived from `window`, so /plan's own timeline
+   check told the reader "the plan says X but your value is dated like a Y roster - one
+   of them is wrong" on **8 of 14** rosters for no better reason than that the two labels
+   came off different instruments. `stanceOf` now takes the POSTURE (agreement rises to
+   10 of 14, and `straddling -> retool` is an exact semantic match: duration.js's own
+   straddling copy already said "pick a direction"). The remaining disagreements are the
+   standing/star override, which is a real fact and now says so instead of accusing the
+   roster of a contradiction.
+4. **One `stanceOf`, not two agreeing ones.** `lib/tradefinder` held its own copy with a
+   test asserting the two matched on every roster. Two implementations kept in step by a
+   test is the `tierOf` shape with a tripwire attached; both engines now call the shared
+   function, and the cross-check test stays to catch the other failure (one shared
+   function, two different sets of arguments).
+5. **"Pick capital" named two quantities.** Home showed `PICK CAPITAL 0` over "7 firsts
+   in / 4 out" (a net COUNT of picks traded, from the dossier) while /roster showed
+   `PICK CAPITAL 3,693` (the VALUE of picks held). Four surfaces carried the count under
+   that label; all four now say **Picks traded**, and "pick capital" means value only.
+6. **`lib/metrics/axes.test.js`** - the non-recurrence guard, in the shape
+   `rankings.test.js` uses for tiers. It fails if the two axes ever share a word or a
+   word stem, if any word arrives from two producers on a real league walk, if a
+   posture-keyed map in the app carries a key the classifier cannot return (one did:
+   `PostureTag` had a `balanced` glyph that nothing could ever pass it), if the census
+   stops matching the board's own posture counts, or if `diagnose` and the shared
+   `stanceOf` stop agreeing. Verified by breaking it: pointing the age axis back at
+   "rebuilding" fails five tests.
+
+**Also, because it was measured while doing the above:** `leagueTimelines` is now
+memoized per corpus (`cachedLeagueTimelines`, keyed on `h.players`, the same trick
+`cachedValuePlayers` uses). /league was already walking the league three times for it -
+directly, and again inside `leagueWindows` - before /plan's game plan needed the
+postures too. One walk now serves all of them.
+
+**Not done, deliberately.** The colours on /plan's four direction pills (`retool: warn`)
+are untouched: they label a recommendation rather than a reading, and the visual language
+is being reworked in parallel. `posture` itself keeps its four words - they are earned
+by the instrument that produces them (duration over players and picks) and D6 is served
+by the neutral, glyph-carried treatment `PostureTag` already argued for.
+
+## D94. THE PRICE FINALLY CONTAINS A GAME THAT WAS PLAYED - production earns 23% of the rank prior, on a dynasty horizon, after the one-season test said zero
+Until this entry every value in Parquet descended from `search_rank`: Sleeper's
+**redraft popularity ordinal**, how eagerly people draft a player this year. Age,
+injury, role and position were all multipliers on top of it, so the model had **no
+per-player input about production anywhere** - values, tiers, TCI, RFI, the power
+ranking, the trade evaluator and the trade finder all rested on a number that is not a
+measurement of how anybody played. For an app whose premise is an honest record derived
+from real league history, that was the sharpest gap on the board.
+
+**Two premises behind the brief turned out to be false, and both are load-bearing.**
+First, `players_points` was described as already coming over the wire every week. It is
+not: `lib/history.js`'s `loadMatchups` is deliberately fixture-only (measured at ~110
+requests and ~15s), and `lib/lab/regret/source.js` fetches the matchups endpoint but its
+`RawMatchup` schema never parsed `players_points` at all. So this input could not be
+computed per request even if D25 allowed it - it is derived offline into a committed
+table, exactly the `ageCurve.js` arrangement. Second, `players_points` is **one locked
+game, not a weekly sum** - verified against three players across 23 weeks of 2025, where
+it equalled the week's total in 4-8 weeks and a single game in the rest. That is a
+feature: it is the currency this lock-in league actually pays in, which is why it was
+preferred over `/v1/stats/nba/regular/{season}` (the season-totals blob
+`derive-age-curve.js` already reads, which would cover more players in one request but
+measures NBA production rather than what this league banked).
+
+**THE FIRST MEASUREMENT SAID THE WEIGHT SHOULD BE ZERO, and that nearly ended it.**
+Does past production here predict NEXT season's production better than the consensus
+ordinal? No, and not close: ordinal rho 0.590 against production's 0.420, partial rho of
+production given the ordinal **-0.051** (z -0.73), and every blend weight above zero made
+the forecast monotonically worse across all five candidate metrics. Sleeper's number is a
+live human forecast that already knows about injuries, trades and role changes, and the
+two are largely the same signal anyway (rho 0.76-0.84 between them). A redraft ordinal is
+good at a redraft question.
+
+**But a dynasty value is not a one-season question, and on the right target production
+separates cleanly.** Re-run against the discounted sum of the following THREE seasons,
+counting a season a player did not produce in as a **zero** - the same survivorship rule
+`derive-age-curve.js` uses, and the whole difference between this and an analysis that
+concludes veterans are fine:
+
+| | rho with target | |
+|---|---|---|
+| `search_rank` | 0.889 | |
+| production | 0.664 | |
+| **partial rho (production given `search_rank`)** | **0.412** | n 243, SE 0.065, z 6.4 |
+| R² both | 0.826 | against 0.790 for the ordinal alone |
+
+The standardized OLS weight is **0.233**, used unrounded rather than talked up to a third.
+It is a **floor**, for a reason that has to be stated: the consensus snapshot is from Aug
+2026 and the target window is 2023-25, so the incumbent was scored WITH HINDSIGHT over the
+thing it was predicting and production was not. It is also generous in one direction - a
+season the player was not rostered counts as a zero, and in this league that partly means
+"none of fourteen managers wanted him", so some of what production predicts is retention.
+Both directions are in `lib/valuation/production.js` rather than only the flattering one.
+
+**THE CONSTRUCTION IS A PERMUTATION, AND THAT IS THE ENTIRE ANSWER TO D55.** Production
+is NOT a fifth multiplier, because one folded into `theoreticalMaxMultiplier` would have
+rescaled every price in the product and put every absolute literal on the value scale back
+in play at once - `STAR_VALUE` (3000), `STAR_THRESHOLD` (4500), `DEAD_THRESHOLD` (250), the
+400 and 700 beside them. Instead the two ranks are blended as **percentiles**, the pool is
+re-ordered, and each player is handed the search rank belonging to his **new position in
+that same pool**. The multiset of ranks going in is the multiset coming out, so the
+collection of base values is **bit-for-bit identical** (verified over all 2,108 corpus
+players; base sum 541,765 either way) and only the assignment moves. Production earned a
+claim about ordering and none whatever about dynasty price levels, and the mechanism now
+says exactly that. Setting `productionWeight` to 0 returns every value to what it was,
+which is how the tests pin the old behaviour.
+
+**One constant still moved, and the third measurement is the one that earned its keep.**
+Exposure is value-weighted, so it moves when value moves between older and younger bodies
+even with the scale fixed - and production promotes late-twenties producers (Jamal Murray
++992, Bam Adebayo +850, James Harden at 36 +762) while demoting 23-26s. The worst live
+roster went 0.1251 -> 0.1416, past `EXPOSURE_REF` of 0.14, and clipped at exactly 100 -
+the identical silent failure D55 recorded. Then the fixture league was measured, and **it
+was at 0.1588 already, before and after, unchanged by this work**: the demo and every test
+in `fragility.test.js` have been rendering a clipped exposure component since the 0.14
+revision, in the one league that revision did not think to measure. `EXPOSURE_REF` is now
+**0.18**, fitted against the worse of the two leagues this app actually renders, and
+`fragility.test.js` asserts both that the fixture sits strictly inside it and that the
+pinned live worst clears it. Saturation now fails a test instead of flattening a metric,
+which is what all three previous versions of that constant cost. `LOO_REF` (0.8064 ->
+0.7785) and `CONCENTRATION_REF` (0.2206 -> 0.1933) both moved AWAY from their references
+and `SIGMA_REF` keeps 46% headroom - all re-measured, none reasoned about.
+
+**The majority case, checked rather than asserted.** 225 of 250 rostered players move;
+median |delta| is 70 points, p90 is 497, max is 1,917. Across the 14 rosters: TCI changes
+on 8 (by 1-4 points), the fragility band flips on 4, the window flips on **none**, and
+posture flips on **one** - roster 4, straddling -> contending. That flip is right and it is
+the change working: the straddle rested on value parked in Ja Morant (consensus #47,
+production index 0.85) and Cam Thomas (0.52), both **below** this league's average
+producer, against a later core; moving that value to Julius Randle (1.70) and Myles Turner
+(1.40), who banked well above average, collapses the split. The power ranking reorders 10
+of 14 positions, which is the point of the exercise rather than a side effect.
+
+**The biggest limitation is stated, not smoothed: production overlaps the injury term.**
+A player hurt for eleven weeks banked eleven zeros, so he is charged for an absence
+`injury.js` is also looking at - 12 of the 20 largest drops carry a current injury flag
+against 3.9 expected by chance, mean move -210 for flagged against +46 for unflagged. The
+terms are not redundant (injury prices forward risk and sits near 1.0 for most flags,
+because 110 of 120 are "DTD"), and on real numbers the stacking is usually mild - Franz
+Wagner 0.95, Jalen Williams 0.95, Trae Young 0.98 - but Tyrese Haliburton takes a 0.73
+injury multiplier AND the league's largest production drop for one Achilles rupture. Not
+fixed here: the obvious repair was measured and is worse on both axes (excluding zero
+weeks scores partial rho 0.394 against 0.412 and drops coverage from 269 qualifying
+player-seasons to 234), and folding an untested second change in would make this entire
+before/after unattributable. Same reasoning kept D74's star-tier cohort on the RAW search
+rank even though D74's own derivation defined that cohort by production - re-pointing it
+would change which players it selects without re-measuring the adjustment.
+
+**Coverage, and the refusal (D19).** 325 players indexed; 246 of 250 rostered - 98.4% -
+are priced with a real record. That share is high for a temporary reason stated on the
+page: the 2026 rookie draft has not run, so every roster is still last season's. The four
+who are not (Kris Dunn, Dylan Cardwell, Gui Santos, Oso Ighodaro) keep their search rank
+untouched, `productionBacked` is false, and `/methodology` **names them**. No player is
+given a zero or a league-average guess, because absence from the table is a fact about
+fourteen managers' choices and not about him.
+
+`lib/trade/index.js` also stopped calling `valuePlayer` per player and now reads the
+shared memoized map. That was not tidying: a per-player call cannot see a whole-pool
+permutation, so a trade receipt would have silently priced every asset on the raw
+popularity ordinal while /values priced it on the blend - the `tierOf` drift of D55 in
+another costume, and the file's own comment already said a receipt that disagrees with
+the page is a receipt you cannot trust about anything else.
+
+## D95. A REFUSAL THAT IS ONLY A MARK BECOMES AN EMPTY CELL - the closed refusal register, and the number printed beside its own disproof
+A five-person design panel (three seniors, one mid-career, two early-career, deliberately
+mixed) ran a **multi-round cross-examination** of this app's refusal states - the moments
+it says "not enough to say" rather than guessing. This was not five independent takes
+collated: round one produced a proposal the panel then attacked, round two produced the
+correction, and the finding below survived being reached three separate ways and then
+checked against this repo. Naming that matters, because the panel's **first** proposal
+was wrong and the record should show what killed it.
+
+**Round one drifted straight into designing a new 45-degree hatch texture** for refused
+values. Round two killed it in one line: `components/RefusalMark.jsx` already exists and
+already solves the drawn half correctly - a static dashed circle with a diagonal tick,
+sharing **none** of the three properties of `.skeleton`'s loading animation (rectangular,
+animated, empty-waiting-to-fill), always paired with mandatory text. Read its docstring;
+it is better reasoning than a second glyph would have been. **No new visual mark was
+invented here.** Nothing in this entry adds a CSS texture, touches the type scale, or
+moves a colour token.
+
+**The load-bearing finding, credited to the round-two layer separation: a refusal has to
+carry a real CODE in its data, not merely look refused.** A refusal that exists only as a
+visual mark survives exactly one medium. Export the row, paste it into a group chat, grep
+the derivation for "which rosters could not be read", hand the table to a screen reader,
+serialize the object - in every one of those the mark is gone and what is left is an
+**empty cell, which reads as zero, which is a claim the app just refused to make**. That
+is strictly worse than saying nothing. The layer separation is the whole insight: the
+DATA layer owns the refusal, the drawing is a secondary rendering of something that
+already exists without it.
+
+`lib/refusal.js` is that register, and it is **closed**: six codes, and a seventh means
+editing one file rather than adding a string literal somewhere. `NO_RECORD` (the record
+is empty, nothing was computed at all), `INSUFFICIENT_SAMPLE` (records exist, fewer than
+the statistic needs to separate), `CONCENTRATED_SAMPLE` (enough records, one of them
+carrying the aggregate), `SPLIT_ROSTER` (every part known, the parts disagree too widely
+to be one figure), `SOURCE_GAP` (the provider publishes the surface and has no row for
+this subject), `UNSCHEDULED` (no date exists for anyone to report). Each carries a label
+and a `condition` stating the arithmetic that produces it, which is the contract: a site
+may not widen a code to cover a case it was not written for, and a site may not write its
+own reason string - it picks a code and supplies the numbers.
+
+**What was actually wrong before, at four sites.** `windowShort` returned `"-"` for an
+unreadable roster, sitting in a mono line between two figures on /league and in the
+finder's window column - where a dash is how every other column in this app spells "no
+value here", so a **stated refusal rendered as a missing number**. `state: "unreadable"`
+collapsed two genuinely different facts (a roster with no priced asset at all, and a
+roster with one or two) into one word, so no surface could tell them apart. /league
+hand-wrote two sentences about data sufficiency with the counts interpolated in JSX,
+matching nothing the same conditions said elsewhere and countable by nothing downstream.
+And `deriveExitWindow` has returned a `refusal` string since it was written which
+**nothing ever rendered** - /methodology hand-wrote an equivalent paragraph beside it, and
+the two had already drifted (the paragraph said every bucket fails on concentration; the
+module's own bar fails most of them on count first).
+
+**Two patterns adopted from the panel's "Terminal" direction, unanimous across both
+rounds.** First, **the centroid pairing**: print the number the app declined to publish,
+directly beside the one line proving that publishing it would have been dishonest.
+`windowOf` computes a straddler's value-weighted centre and prints "A single window would
+read 2031, and is not published" next to the reason that season is the centre of a
+disagreement rather than a window - and deliberately does **not** promote it into `peak`,
+where a chart would read it. `deriveExitWindow` computes the age slope this league's
+market would have implied and prints it - on the live fixture league, **+24.2% per year of
+age** against the measured curve's ~2.5% - beside the thickest bucket's concentration.
+"The market cannot calibrate an age curve" is an abstraction until a reader sees *which*
+number was refused; refusing something near the model's own term and refusing something
+absurd are the same sentence and completely different facts. The figure exists only
+inside `refusal.withheld`, never as a field, never in the config.
+
+Second, **the field is deterministic.** No retry affordance anywhere near a refusal, and
+the absence is part of the signal. Every one of the six codes is a standing fact about a
+record that already arrived in full, so `windowRefusalSummary` closes with "each is a
+reading of the record as it stands, and there is nothing to retry". The one place a
+refusal may point at a future is where the bar is genuinely falsifiable, and it says so in
+those terms: `deriveExitWindow` ends with "as this league keeps trading, buckets thicken
+and start passing it on their own", not "try again". A test pins the absence of
+retry/refresh/loading language.
+
+**Which sites got the treatment, and which did not.** Wired: `lib/metrics/window.js`
+(both refused states, with codes and the withheld centroid), `lib/valuation/exitWindow.js`
+(per-bucket **and** section-level, with the withheld slope, plus a `reading` column in
+/methodology's table so the code travels in the row rather than in a paragraph beneath it),
+`lib/depth/index.js` (`standingRefusal`, `SOURCE_GAP`), `lib/valuation/production.js`
+(`productionBackingRefusal`, `NO_RECORD` - the flag was already in the data, the words
+were not). Left alone deliberately: /depth's first `RefusalMark` ("where a player sits is
+not a claim about his minutes") is a **scope disclaimer**, not a data-sufficiency refusal,
+and giving it a code would imply the app tried to read something and could not.
+`ProvenanceRail`'s pending pick already has its own closed register - `REASON_TEXT` in
+`lib/lineage` - which D44 pins verbatim so /drafts and the rail cannot describe one
+unresolved pick two ways; overlaying a second register there would create two names for
+one condition, which is the disease and not the cure.
+
+**One real bug the codes surfaced.** Posture is read from **unrounded** durations, so a
+roster can straddle while its printed quartiles round into a single season - on the
+fixture league one of the two split rosters is exactly that shape. The first draft of the
+sentence said "spread across 1 seasons", which is ungrammatical and, worse, **false**: it
+hands a reader a visible span to disbelieve instead of the actual reason. That branch now
+says the quartiles round into one season while the durations underneath them do not agree.
+
+**The gap, stated rather than papered over: there is no CSV or data export for these
+surfaces.** `lib/providers/csv` is an input provider, not an export. The code being in the
+returned object means an export would carry it for free the day one exists, which was the
+panel's point - but no export was invented here to prove it.
+
+D6 and D19 both constrain the wording and both are pinned by tests. A code names a fact
+about **data sufficiency** and never a judgment of the roster or the manager - so
+`SPLIT_ROSTER` is not "conflicted roster", which would smuggle a finding about a roster
+out of a fact about two quartiles. And no label may sound more certain than the condition
+under it: `SOURCE_GAP` says the provider has no row, not that no such fact exists.
+
+## D96. THE LOGO WAS THE WRONG FLOOR - the reserved diagonal, the corrected parquet, and a chart whose labels were a size nobody chose
+**What this is.** A five-person design panel ran a real tournament over Parquet's visual
+identity: nine independent drafts, team nominations, a mixed-seniority panel of five
+practitioners, then two rounds of cross-examined discussion in which the seniors were
+overruled three times on the record. It converged on one direction, "The Reserved
+Diagonal", and one rule holds the whole thing together:
+
+> **Orthogonal marks are data. The 45-degree diagonal is reserved, everywhere in the
+> product, for a refusal.**
+
+Nothing else is allowed to run at 45 degrees. That is what lets a refusal mark identify
+itself in any theme, at any size, **without a colour and without a caption** - and it
+means a refusal stops being a special box somebody designs later and becomes a channel
+that draws itself. The rule costs nothing from the colour budget, because angle is not a
+colour, so it also survives a third theme by construction.
+
+**Half the rule was already live.** D95 shipped `components/RefusalMark.jsx` and
+`lib/refusal.js`: a static dashed circle with a diagonal tick, in `--color-faint`, always
+paired with real text from a closed register. That half is correct and this entry does not
+touch it. What this entry does is the OTHER half - the part that makes the first half
+legible - which is making sure nothing else in the app runs at 45 degrees.
+
+### The logo was the largest violation, and the correction is not cosmetic
+`public/icon.svg` and `components/Brand.jsx` shipped for nine rounds as six rounded
+planks at `rotate(45)` and `rotate(-45)`: a **herringbone chevron**.
+
+**The Boston Garden floor is not herringbone, and the press consensus that says so is
+wrong.** Flooring sources describe it correctly: a basket-weave block parquet on a SQUARE
+GRID - alternating squares of red oak with the grain rotated 90 degrees between
+neighbours. 247 panels, five feet square, 988 bolts, red oak from northern Tennessee,
+$11,000 in 1946, laid out of post-war SCRAP oak of uneven lengths precisely so a damaged
+panel could be swapped and so the scrap still yielded. Herringbone is diagonal interlocked
+rectangles. It is a different floor in a different building.
+
+So the mark and the grammar could not both be right, and the grammar is worth more than
+the mark. All five panellists made this correction independently. The authentic answer and
+the technically correct answer turn out to be the same answer: a square grid composes with
+a 390px column and with CSS grid, where a diagonal fights every layout, and its encoded
+variable is ORIENTATION - one of Bertin's retinal variables, selective and associative,
+legitimate for categorical data, colour-blind-safe and theme-proof because it encodes
+nothing in colour.
+
+Both files now draw four 168-unit blocks in a 2x2 on a 24-unit gutter, three 44-unit slats
+per block on an 18-unit seam, grain alternating between edge-neighbours so diagonal
+neighbours agree - a checkerboard whose only variable is orientation. Two things were
+dropped with it: the `rx="10"` (oak has hard edges, and so does everything else in this
+direction) and the 0.72 opacity on the outer planks (it was faking depth on a chevron, and
+now that orientation carries the alternation a second varying channel would read as a
+magnitude ramp across a mark that has no magnitude in it). The gradient also stops running
+corner to corner - `x2="0" y2="1"` - which removes the last 45-degree axis of any kind
+from the mark and matches how the rest of the app models light. The PNG set is regenerated
+from the SVG by `pnpm gen:icons`.
+
+`public/icon.svg`'s three colours are still frozen hexes and that is unavoidable rather
+than an oversight: a standalone SVG referenced from a manifest is a separate document and
+never receives a custom property. They are now the DARK theme's own tokens copied rather
+than picked, which also retires a `#262b33` border value the file was still carrying from
+before the contrast pass.
+
+### The second violation was a diamond nobody thought of as a diagonal
+`components/ProvenanceRail.jsx` drew its resolution node as a `rotate(45)` square. It was
+the last mark in the app carrying DATA on the reserved angle, and a resolution node is the
+*opposite* of a refusal - it is the most stated thing on the rail. Dropping the rotation
+costs nothing the mark was using: square against circle is still a shape difference, still
+categorical, still legible with every colour deleted, and it now sits square to the
+orthogonal seams the rail is built from. There are now zero live 45-degree marks in the
+app outside `RefusalMark`.
+
+### The ground: one class, one call site, and the first alpha was wrong
+`.parquet-ground` in `app/globals.css` is the corrected geometry as a ground texture: an
+**alpha-only** 48px mask tile holding four 24px alternating-grain blocks, over a flat
+themed `--parquet-grain`. Mask, do not paint - a data-URI SVG is a separate document, so
+any hex baked into one as PAINT is frozen at the theme it was authored in, while as a
+MASK it cannot carry a hex at all. Integer module throughout (24px block, 48px tile
+derived from it, 2px slat on an 8px pitch that divides 24 exactly), because fractional
+modules land on fractional device pixels and shimmer during scroll at DPR 3.
+
+**The first alpha tried was 3.5% and it was wrong, on this file's own evidence.** 3.5%
+white on `--color-bg` composites to `#131416`, which is +3.06 CIE L\* - the same size of
+step the surfaces block calls "at or below the JND for a large flat field" and then
+deliberately widened so a card would read as a card. A ground texture running at
+card-elevation volume is not a ground texture, and the live render at 390px read as a
+plaid competing with the type. It is now 1.6% on dark (+1.25 L\*) and 1.5% on paper
+(about -1.1 L\*), which is roughly half a JND: felt as surface, never resolved as
+pattern.
+
+It is applied to exactly ONE bounded element - a childless decorative div scoped to the
+app's content column - and never to `body`, never viewport-fixed, and with no
+`mask-composite` anywhere (the spec and `-webkit-` keyword sets for that property are not
+aliases and composing masks is where they diverge). That scope is deliberate: a full-bleed
+masked ground was the one thing the panel named as a risk on its own recommendation, and
+the mitigation is scope rather than a smaller alpha. `-webkit-mask-*` is written first
+because full `mask-*` support starts at iOS 15.4. The opt-out is
+`@media (prefers-contrast: more)`, not `prefers-reduced-transparency`, which Safari does
+not ship on desktop through v27 nor on iOS through 26.6 - the accessibility story cannot
+be built on a query the app's primary browser does not implement.
+
+### The type audit found no drift, which is the finding
+The direction commits to the existing six-step scale and one gold, and the audit says the
+tokens are where D60-D62's passes left them: 10 / 12 / 13 (with `--text-note` still an
+alias of `--text-meta`) / 17 / 30, one accent split by job into fill and text values, the
+measured washes, the ground-scoped ink. **Nothing regressed and nothing new was picked.**
+Every colour in this entry is an existing token copied rather than re-chosen, and the
+three new custom properties (`--parquet-block`, `--parquet-tile`, `--parquet-grain`) are
+geometry and one alpha, not a hue.
+
+### The byproduct: a chart printing type at a size no token could reach
+`components/WindowMap.jsx` set its own labels in SVG `<text>` at `fontSize="8"` and
+`fontSize="7.5"` inside a `viewBox="0 0 320 H"` stretched by `w-full`. A user unit is only
+a real pixel at scale 1 and this chart never renders at scale 1: on a 390pt phone the card
+gives the plot about 338px, so the axis was rendering at roughly **8.4px and 7.9px** -
+under this app's own 10px `--text-micro` floor, off the six-step scale entirely, and
+unreachable by any utility, because the number lives in a presentation attribute measured
+in user units. `vector-effect` fixes strokes, not glyphs. Two panellists diagnosed the
+hazard from first principles without having seen the file; it was real and it was in the
+repo.
+
+There are exactly two clean fixes and this takes the first: **the text moves out to HTML
+siblings.** Stopping the viewBox from scaling would pin the chart at 320px, which
+overflows a 320pt viewport and wastes ~18px on a 390pt one; fluid marks with fixed type is
+the combination actually wanted and it is only available by separating them. The component
+is now a two-column CSS grid - a fixed 24px ordinal gutter, and a plot column whose first
+row is one `<svg>` with **zero `<text>` nodes** and whose second row is the season axis as
+a `repeat(bands, 1fr)` grid, so a label centres in its own band with no coordinate
+arithmetic at all. The ordinals cannot use a column grid, because their pitch is a
+fraction of the SVG's *scaled height*: they are absolutely positioned at `top: y/plotH%`
+inside a gutter grid stretches to exactly the SVG's rendered height, so the percentage
+tracks the scale with no resize listener and no measured height.
+
+What the labels gained beyond size: each is now on the token it should always have been on
+(`--text-micro` is documented as chrome - axis labels and rank ordinals *by name* - and
+`--color-faint` as the ink for exactly those two jobs, so both are finally legal uses of
+the scale rather than exceptions to it); every figure carries `.figure`, which is what
+keeps four-digit years optically identical down a centred axis; and the viewer's own
+ordinal moves from `--color-accent` to `--color-accent-text`, a fill-versus-read
+distinction an SVG `fill` could state but an 8px glyph could not honour. `paint-order:
+stroke fill` is deliberately absent and its absence is the point - no label overlaps a
+mark any more, and haloing an overlapping label is the second-best answer to the same
+problem. The label layers are `aria-hidden`, because the SVG's `aria-label` already reads
+every roster by name and states the season range in a sentence.
+
+The plot also gets the 17 units of former gutter back as chart width, which is the
+highest-ranked encoding channel there is at this size spent on the axis that carries the
+season.
+
+**This is now a rule, enforced in review: no `<text>` inside a scaling viewBox.** It is
+recorded in DESIGN.md. Four other charts still violate it - `CoherenceFragilityQuadrant`
+at 7.5 to 8.5 units, `TradeMatrix` at 6.5, `charts.jsx` and the three `/lab` pages at 9
+to 11 - and they are deliberately not fixed here, because a visual-foundation PR that
+also rewrites five charts is not reviewable.
+
+### Foundation only. A second wave is coming.
+What is deliberately deferred, so the next pass knows what is still open rather than
+inferring it from silence: the dense-list treatment (the divider-as-value-rule, which
+needs a `rosterValueMax` normalised at the data layer before it is safe to draw);
+tier-as-band rather than per-row badge, which needs tier-grouped-then-value-sorted output
+with a pinned sort and a real sticky-offset contract against the Desk; the `<Refused>`
+primitive and `--pattern-refusal` token that would make `RefusalMark` one consumer rather
+than the only place the idea lives, plus the test that fails when a hatched node renders
+with no legend row in the DOM; the avatar leaving the values row; the window map's own
+per-season census and cell-level ordering refusal; the provenance rail's to-scale
+custody stretches; and the label-placement fix for the four remaining charts. None of
+those are visual foundation; all of them build on it.
+
+**What is not deferred, it is refused.** The panel's Home frame prints the reader's rank
+inside a refusal in two of the five drafts, and counting how many rosters are dated before
+you is arithmetically identical to publishing your rank. A refusal that withholds an
+ordering and then prints the count has refused nothing (D6, D19). If the second wave
+brings that back, it is a regression, not a feature.
+
+## D97. A DEPTH CHART IS A PARTIAL ORDER, SO THE PAGE STOPPED DRAWING A LADDER OF ROWS - rungs, a brace for a tie, and the two nothings that were one code
+**What this is.** `/depth/[team]` published Sleeper's own chart as a flat `<ul>`, one
+player per row, with a paragraph under each group explaining that some of those rows were
+actually level with one another. The data underneath was already right - `standingFor` has
+published exactly four relations (ahead, level, behind, incomparable) since D92, and
+`hasTies` was correct - and the page still made a claim the feed does not support, because
+**a stack of equal rows is read top-down as a ranking and no caption survives that.** The
+reader concludes that row one is the starter before reaching the sentence saying they
+cannot know that.
+
+On the live payload the conclusion is wrong constantly rather than occasionally. Measured
+2026-08-20 across the 149 (team, position) groups: **44 put two or more players on the same
+order**, **117 are non-contiguous**, and **18 have no order 1 at all** - MEM's power
+forwards come back 2, 2, 3, so a list of them put a man at the top of the page whom Sleeper
+never called first. "Top row = starter" was not an imprecision on those 18 groups. It was a
+fact the page invented, which is D19's exact prohibition one layer up from where D92
+applied it.
+
+### The fix is a field, not a stylesheet
+`DepthGroup` gained `layers: DepthEntry[][]` - one array per DISTINCT stated order,
+ascending, players sharing an order sharing an array - with `unordered` as a **sibling**
+array rather than the tail of the list. The point is that the shape the surface receives
+can no longer express "kth" at all. Leaving the partial order as a sorted list plus a
+boolean and asking the page to draw it correctly is what had already failed once.
+
+Three geometry rules follow, and each refuses something specific:
+
+- **Rungs are evenly spaced.** Orders 1, 2, 5 draw three rungs, not five with two empty.
+  The integer is a sort key, not a count, so proportional spacing would draw two gaps
+  nobody is missing from and claim a precision the feed has not got.
+- **No rung is styled as first.** No accent on the top rung, no "starter" row, no numbering
+  anywhere. A treatment that is false on 12% of the data is not a treatment with an
+  exception; it is the wrong treatment. `DepthLadder.test.jsx` pins this by asserting every
+  cell in a ladder carries an identical class string.
+- **A tie is drawn as enclosure, not as adjacency.** This is the one thing the first build
+  got wrong and a screenshot caught. Tied cells set side by side read as level - until
+  390px makes two full names wrap into a column, at which point the tied pair is stacked
+  one above the other and the ranking is back. So a shared rung gets a **brace**: a
+  vertical rule spanning the rung with the tick meeting its middle. It holds at any width.
+  The cell basis dropped 10rem -> 8rem so a pair fits side by side at the design viewport,
+  and names now WRAP where the meta line truncates, because `truncate` had turned a tied
+  player into "Malik Dia..." - dropping the one thing the rung exists to carry.
+
+### Four more refusal sites wired, and one 7th code NOT added
+D95 built the register and reached one site here. Four more now use it: the whole-team gap
+and the unplaced section (`SOURCE_GAP`, both replacing hand-written paragraphs), the tie
+prose (deleted outright - it is geometry now), and the "charted but no order" case.
+
+That last one looked like it needed a seventh code, being a genuinely PARTIAL record
+(the provider has an entry and is missing the field that makes it comparable, which is
+neither "no record" nor "absent from the source" as those two are written). **It does not,
+because the condition does not occur.** `depth_chart_position` and `depth_chart_order`
+arrive together or not at all: of 593 on-team players, 474 carry both, 119 carry neither,
+and **zero carry one without the other**, so `unplacedInOrder` is false for every player
+the feed contains. Minting a register entry whose `condition` string could only describe a
+hypothetical would break the one contract that makes the register worth having - each of
+D95's six states arithmetic that really runs. Instead the invariant is named and asserted
+(`PROVIDER_PAIRS_POSITION_AND_ORDER`), and the branch is kept as structure rather than as
+prose: if the provider ever does emit it, the entry lands in the `unordered` sibling and
+renders off the axis under a `SOURCE_GAP`, instead of on the bottom rung. Kept rather than
+deleted because `null` sorts below 1 - an implementation that assumed the invariant would
+put such a player on the TOP rung of the group the day it broke.
+
+### Two different nothings that were one code, kept apart by luck
+`standingRefusal` returned the same `SOURCE_GAP`, carrying this team's placement counts,
+for both "on this team, absent from the chart" and "not on this team at all" - so the
+second produced a sentence claiming Sleeper's chart for this team "does not place" a player
+who was never on it. It never reached a screen only because the page happened to test
+`anchorOnTeam` in an earlier branch. A distinction that survives on caller sequencing is
+not a distinction. It is now `SOURCE_GAP` vs `NO_RECORD`, discriminated off `chart.unplaced`
+with no new field, which is precisely the line those two codes were written to draw:
+"the provider publishes this surface and has no entry" against "nothing was computed at
+all". The e2e test asserts the code rather than the prose.
+
+### And one thing the register was about to assert falsely
+The two new section-level refusals were first built carrying the withheld figure the
+single-player case carries - the share of the team the chart places. Rendered, that printed
+*"Players the source places would read 8 of 10, and is not published"* about 300px under a
+page header reading *"8 of 10 players placed"*. `withheld` means the module computed a
+number and declined to state it, so naming an already-published figure there is a false
+claim inside the one register built to stop the app making them. Both new sites carry
+`withheld: null` and keep the rate in `because`, where it is context. (`standingRefusal`'s
+own withheld figure is untouched - it is D95's, pinned by D95's tests, and out of scope
+here; it has the same tension and is worth a look on its own.)
+
+### Ownership, without a colour scale over people
+Three states and only one is chromatic, all using idioms that already existed. The anchor
+keeps `border-accent-edge bg-accent-wash` plus `aria-current`. The viewer's OTHER players
+get `border-accent-edge bg-surface` - **`app/league/page.jsx`'s own treatment for the
+viewer's row**, chosen there for this exact situation and reasoned about at length: the row
+carries arbitrary child content validated against the default ground, so the border marks
+it and the wash is left alone. Rivals and free agents get nothing chromatic; who holds a
+player is stated in his own meta line in words, where it cannot read as a grade (D6). The
+brief for this round specified `inset 2px 0 0 var(--color-accent)` as an existing idiom; it
+is not one - the repo has no left-inset accent anywhere, and `globals.css` opens by saying
+borders are the app's ONLY depth cue, "there is not one box-shadow in any component". The
+instruction to match the established convention beat the instruction's own example of it.
+
+One graphic was added: a per-group **unit strip**, one mark per charted player, accent fill
+for the viewer, neutral fill for another manager, outline for nobody. A count and not a
+proportion because every group has 1-6 charted players (142 of 149 have 2-6), and at that
+size "3 of 5" is checkable against the five names directly below it where "60%" is not. The
+count is the accessible name, because a strip of marks is not a reading on its own (D47
+rule 1). Fill separates rival from free agent rather than hue, because a hue per ownership
+class would be a three-way colour scale over people.
+
+### Five cuts, recorded as S9
+`contiguous` (computed, exported, read by zero rendering code), the tie paragraph,
+`hasTies` as a separate concept, the duplicated name lists inside the standing sentence,
+the restated provenance paragraph, and the `Him` tag on the anchor. One cause: the rungs
+took over a job the prose was doing badly. The standing **sentence** survives reduced to
+counts - it is the only channel that survives being copied, read aloud, or read before the
+ladder paints, and deleting it would have made the page's whole reading visual.
+
+### Tested against the feed, not against the fixture
+The dev fixture is measurably unrepresentative for this feature: **0%** of its groups have
+the no-order-1 case against 18 of 149 live, and 38% are non-contiguous against 117 of 149.
+A visual pass on the fixture would have confirmed a layout that is wrong on exactly the
+groups this was rebuilt for - and in fact the fixture never produced the wrapped-tie bug at
+all. So five real groups are transcribed off `/players/nba` with real names and orders and
+pinned twice, once as data and once as rendered markup: `LAL C` (1, 2, 5), `MEM PF`
+(2, 2, 3), `CHI C` (1, 1, 2), `MEM C` (1, 2, 2, 5, 5), and `CHA PF` (2, 2, 2, 3), the
+widest rung the payload contains. A pure two-man `1, 1` group is **not** pinned: it does
+not exist live, every tied-at-the-front group carries a third man, and pinning a shape the
+provider does not emit is how a suite ends up validating against a case that cannot happen.
+
+## D98. A RATIO THAT IMPROVED AS YOU GAVE YOUR FUTURE AWAY - the pick-agency split bar shelved for a three-row ledger, settled picks promoted from filtered-out to a group with published slots, and the buyback count given the denominator it never had
+The pick-agency panel on /roster answered one question ("whose season decides the picks
+you hold") with a two-segment bar, and the bar was **arithmetically backwards**. Its
+denominator is the picks you HOLD, so trading your own first away removes it from both
+ends of the fraction while trading somebody else's pick in adds to the denominator alone:
+the accent segment therefore grows as you divest your own future and shrinks as you
+accumulate other people's. It was sold as a reading of how much of your own future you
+still decide and it measured close to the reverse. On the live league, the roster with 4
+of its own 9 picks still at home read **80% yours**; the roster with 7 of 9 still at home
+read **50% yours**. Shelved by owner decision, recorded as `SHELVED.md` S9, along with
+`summary.headline`, which stated the same ratio in prose two lines above it.
+
+**Two premises in the shelving brief did not survive measurement, and the record should
+say so.** The brief carried "9 of 14 real rosters show a degenerate 100%/0% split"; that
+figure is not reproducible against any denominator in the code. Measured across all
+fourteen rosters: 8 of 14 are degenerate on **firsts**, 3 of 14 on **live picks**, and 0
+of 14 on **every held pick**, which is the set the bar actually divided. The brief also
+described `multiHop` and `longestAway` on /deals as "both firing on the same single real
+row"; live data has 17 round trips over 7 managers with 3 multi-hop, so the collision is
+latent rather than active. Both fixes were still correct to make. Neither premise was
+load-bearing: the monotonicity fault above is what killed the bar, and it does not depend
+on either count.
+
+### The replacement is three rows, and the point is that they do not share a denominator
+`summarizeAgency` now returns three real buckets instead of a split: **yours to set and
+yours to hold**, **yours to set and theirs to hold**, **theirs to set and yours to hold**.
+The middle one is new information the panel could never see, because every previous read
+started from the picks you hold. It comes from `awayPicks`, the reciprocal of that list,
+which is just the difference between the two ownership modes `pickCapital` already
+supports: "original" enumerates the picks your own seasons will order, "held" enumerates
+the picks you can draft with, and a pick in the first set but not the second is one whose
+outcome is still yours and whose asset is not. No new data, no new request.
+
+Rows one and two sum to what your seasons decide. Rows one and three sum to what you
+hold. **Row one is in both sums**, which is exactly why no bar can draw this: two
+overlapping sets have no shared denominator, and dividing one anyway is what produced the
+defect above. So the panel prints three counts and one sentence stating the overlap as a
+fact ("6 picks ride on your seasons; you hold 10. The 5 in the first row are both.")
+rather than manufacturing a percentage out of sets that do not nest.
+
+**The rhyming label triplet is the interface, not decoration.** Three lines that scan
+identically ("yours to set, yours to hold" / "yours to set, theirs to hold" / "theirs to
+set, yours to hold") put both axes into one reading pass without a 2x2 grid to decode.
+"yours" is always `accent-text` and "theirs" always `secondary`, the same word in the same
+colour in every row, and the words differ independently of the colour so the rows survive
+greyscale. Firsts lead the left column at 76px fixed width, larger and bolder than the
+pick count, because a dynasty manager counts firsts. A thin accent rail sits on the left
+edge of rows that are yours to set and the right edge of rows that are yours to hold, so
+the overlap row carries both: a Venn diagram expressed as gutters rather than shapes, in
+CSS borders, with no SVG anywhere in the panel. Both borders are always present and only
+the colour changes, so no row shifts against its neighbours.
+
+**A zero-count row is never printed.** The bar's worst reading was a full accent segment
+over an empty one, which looks like a finding and is an absence; empty buckets are dropped
+and the absence is stated in words instead.
+
+**One honesty fix the brief's own wording would have broken.** The specified absence
+sentence was "You have never sent one of your own picks elsewhere, and you hold nothing of
+anybody else's". The ledger counts only LIVE picks, deliberately, because "yours to set"
+is a present-tense claim about a season that can still move. Live roster 14 reaches the
+one-row branch **while one of its own picks really is on another roster** - settled, so it
+sits in the group below rather than in row two. "Never" would have been false two inches
+above its own disproof, which is the same class of error as the bar. The shipped sentence
+is scoped to what it measures: "Every pick still in play is one your own seasons set and
+you still hold. None of your own undecided picks is anywhere else, and you hold none of
+anybody else's." A test pins that it never says "never".
+
+### Settled picks were a filter, and a filter costs a paragraph
+Picks whose ordering season is already over were flagged `settled` and then **dropped from
+the visible list**, which bought a paragraph whose entire job was accounting for the rows
+that had been hidden. They are now the fourth group, and the group header's count is that
+paragraph, deleted. Each row prints the one thing a settled pick knows that a live one
+cannot:
+
+```
+2026 1st via Giddler on the Roof              1,452
+slot 9 of 14 · 9th overall
+```
+
+Sorted by **overall pick number ascending, not by posture**: posture is a reading of a
+season that can still move, and ordering these rows by it would sort them on a fact that
+no longer applies to them. The slot comes from `loadPickSlots`, which reads the `slotOf`
+map the draft index has always built and nobody had used - in this league the 2026 order
+is published (`pre_draft` with a full slot map) even though the draft has not been held,
+which is what makes an exact slot printable at all. **A missing slot stays missing**: no
+slot is derived from arithmetic, and a slotless settled pick sorts after the ones with a
+published slot rather than being given a position it has not earned (D19).
+
+**A muted "est" now follows the value on live rows only.** An exact price and an
+expectation over a lottery spread are not the same number, and the list is the cheapest
+place to show the difference. It is also the legend for the methodology link below it.
+
+### `orderNote` moved to the page it qualifies
+The pick-pricing footnote lived inside the panel and ended in a literal source-file path
+(`lib/valuation slotDistribution`). It qualifies the PRICING MODEL, whose reader is on
+/methodology, so the paragraph now sits in that page's existing picks section with a
+per-season deviation table beside it, and the path is gone. /roster keeps one line, and
+the line is phrased off the real measurement rather than hedged across both cases:
+**checked, this league's draft order is loose** - it has differed from strict reverse
+standings in 4 of 4 drafts on record, by up to 4 places - so the line says so, and a test
+pins the exact-order phrasing for a league where the other branch is true.
+
+That measurement is also why bucket B's sentence says "tends to". The middle row is the
+one place in this module making a claim about a pick the reader does NOT hold, and it had
+to be a sentence the app has never shown: *"Your own seasons set these, and somebody else
+holds them. That inverts the usual reading of a good season: the draft is ordered off the
+standings, so a season that goes well tends to push these picks later in their round. They
+hold the asset; you hold the outcome."* The last clause is deliberately the mirror of the
+existing passenger line ("You hold the asset; they hold the outcome"), and "tends to" is
+not hedging for its own sake: a flat "every win moves it later" would claim a precision
+the fidelity measurement one link away denies. It grades nothing and infers no intent
+(D6, D19); sending a pick away is not called good or bad.
+
+### The deleted block, and why deleting it was the point
+"What the seasons you ride on are doing" listed a posture, a count and the manager names
+for every roster whose season sets a pick you hold. Once bucket C exists that is **the
+third statement of the same information**: the row itself, then this block, then a group
+list naming the same managers with links to their dossiers. The postures and counts fold
+into row three's own sub-line ("2 straddling · 2 ascending · 1 contending"); the manager
+names stay in the groups below where they are already links. Same finding as D40 and D51,
+one level in.
+
+### 17 round trips, and nobody had asked out of how many
+`/deals#buybacks` counted returns and never stated the set they were drawn from, so it
+could not say whether picks come home often or almost never. `pickDepartures` supplies the
+denominator: **17 of 133 own picks that have ever left home have come back**, and per
+manager, "Busiest: 6-Month Plan, 5 of their 11 own picks traded away have come home" -
+counts rather than a rounded percent, because "5 of 11" reads faster and rounds nothing.
+The dossier header gets the same treatment ("Picks they bought back - 5 of 11").
+
+**The scope constraint is the whole correctness story here, and getting it wrong biases
+the rate in one direction rather than adding noise.** `pickBuybacks` counts returns from
+the transaction log AND from the traded-picks snapshots, because a commissioner-executed
+trade records no picks at all and the snapshot is then the only evidence. A denominator
+built from the log alone would miss exactly the same class of move while the numerator
+kept it. Measured: 128 departures are recorded, **133** once snapshot-only ones are
+counted, and 2 of the 17 returns are themselves snapshot-only. The rate's numerator is
+also distinct PICKS rather than round trips, since `pickBuybacks` reports the same pick
+twice when it genuinely came home twice; the live league has no such pick today, so this
+costs nothing now and stops the number reading 2 of 1 the first time it happens.
+
+### The duplicate finding on /deals
+`longestAway` is a superlative and now renders only when `byManager.length > 1`, the guard
+"Busiest" already used. `multiHop` renders whenever it is non-empty, because "it changed
+hands somewhere else before coming home" is a structural fact about a round trip rather
+than a ranking of it and stands at n=1. When both would otherwise fire over one row, the
+duration folds into the multiHop sentence instead of printing a second line. Same defect
+D51 fixed at a different level of this app.
+
+### Gate
+`pnpm lint`, `pnpm test` (1,247 to 1,260 tests), `pnpm e2e` (81) and `pnpm build` all
+clean. Verified visually at 390px in both themes against the live league, and axe-scanned
+clean on /roster, /deals and /methodology in each. `pnpm typecheck` not chased (D89).

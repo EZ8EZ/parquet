@@ -188,6 +188,55 @@ injury_body_part, depth_chart_position, depth_chart_order, search_rank`, plus
 external IDs for other platforms are present but unused by this app (espn_id notably
 for optional headshot CDN behind a flag).
 
+#### The depth chart fields, measured (2026-08-19)
+
+`depth_chart_position` + `depth_chart_order` are a real, live depth chart, and this app
+now reads both (`lib/depth`, surfaced at `/depth/[team]`). Counted over the whole
+payload on that date:
+
+| Fact | Count |
+|---|---|
+| players with a `team` | 593 of 2,108 |
+| of those, carrying BOTH depth fields | 474 |
+| carrying NEITHER | 119 |
+| carrying exactly ONE of the two | **0** |
+| distinct `depth_chart_position` values | exactly `PG SG SF PF C` |
+| teams covered | all 30 (12-19 charted players each) |
+| `news_updated` present | 559 of 593 (freshest hours old, median ~6 weeks, oldest 2023) |
+
+**`depth_chart_order` IS NOT A RANK, and this is the load-bearing caveat.** Across the
+149 (team, position) groups the payload contains:
+
+- **117 are non-contiguous.** LAL's centres are `1, 2, 5`. GSW's power forwards are
+  `1, 5, 6, 7, 8`. DAL's point guards are `1, 3`.
+- **44 contain a duplicate order.** LAC lists two small forwards at `1`; BOS lists two
+  power forwards at `1`; MEM's centres come back `1, 2, 2, 5, 5`; CHA lists three power
+  forwards all at `2`, the widest tie in the payload.
+- **18 have no order 1 at all.** MEM's power forwards come back `2, 2, 3`.
+- Group sizes run 1 to 6, and one team is missing a position entirely.
+- **Distinct stated orders per group run 1 to 5**, against group sizes of 1 to 6: the
+  gap between those two is exactly the tie case, and it is 44 groups wide.
+
+Re-measured 2026-08-20; the first two counts were 116 and 43 on 2026-08-19. They drift by
+a group or two as the provider edits, which is itself the argument against a surface built
+against one night's shape. The third has not moved.
+
+So sort by it; never index by it, and never render an ordinal ("3rd string") computed
+from it. `lib/depth` publishes ahead / level / behind counts instead, which is what a
+sort can actually support - and `DepthGroup.layers` groups the entries by DISTINCT stated
+order so that a surface cannot draw one row per player and thereby imply a rank. A
+`contiguous` boolean used to be computed here too; it was read by no rendering code and
+was removed (SHELVED.md S9), because this table is where that measurement belongs.
+
+**`depth_chart_position` is not `position`.** 120 of the 474 charted players - a
+quarter - are charted somewhere other than where they are listed (Bronny James listed
+`SG`, charted `PG`; Anthony Davis listed `C`, charted `PF`; Jrue Holiday listed `PG`,
+charted `SG`). For a depth chart the chart's own position is the answer.
+
+**`news_updated` is the age of the RECORD, not of the chart.** It moves when anything
+about the player's news moves, so it supports "this record was touched then" and
+nothing stronger. It is still the only freshness signal the payload carries.
+
 ### Matchups - `/league/{league_id}/matchups/{week}`
 Not yet deep-probed; used for after-win/after-loss behavioral signals. Standard
 shape `{ roster_id, matchup_id, points, players, starters, players_points }`.

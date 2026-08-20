@@ -63,7 +63,9 @@ same accessibility need without asking anyone to choose between designs.
 - **Stacked cards, never clipped tables**, on mobile. Rankings/values are rows, not
   a horizontally-scrolling grid.
 - Single centered column, `max-w-2xl`, that widens gracefully on desktop.
-- Safe-area insets respected on the Desk and the analyst composer.
+- Safe-area insets respected on the Desk. (The analyst composer was the other
+  fixed-to-bottom control this rule was written for; that surface is shelved, so the
+  Desk is now the only one. See SHELVED.md, S7.)
 
 ## Components
 - `components/ui.tsx` - PageHeader, Card, SectionHeader, Tag, Stat, DeltaValue,
@@ -76,15 +78,37 @@ same accessibility need without asking anyone to choose between designs.
   (wordmark + inline logo).
 
 ## Logo & icons
-Geometric parquet **herringbone chevron** in gold on a near-black rounded square -
-`public/icon.svg`. The PWA/favicon PNG set is generated from it by
-`pnpm gen:icons` (sharp). No AI-generated raster art.
+**A square grid of alternating-grain oak blocks** in gold on a near-black rounded
+square - `public/icon.svg`, mirrored with themed fills in `components/Brand.jsx`. This
+is the Boston Garden floor as it actually was: a basket-weave block parquet, four blocks
+in a 2x2 with the grain turned 90 degrees between edge-neighbours. It was a herringbone
+chevron until D96, and herringbone is diagonal, which is the one angle this product
+reserves. The PWA/favicon PNG set is generated from the SVG by `pnpm gen:icons` (sharp).
+No AI-generated raster art.
+
+## The reserved diagonal (D96)
+**Orthogonal marks are data. The 45-degree diagonal is reserved, everywhere in the
+product, for a refusal.** Nothing else is allowed to run at 45 degrees, which is what
+lets a refusal mark identify itself in any theme, at any size, without a colour and
+without a caption. `components/RefusalMark.jsx` is the mark; `lib/refusal.js` is the
+closed register of codes it is always paired with (D95). A diagonal carrying data is a
+bug, and there are currently none.
+
+Two consequences worth knowing before adding a mark:
+- **The ground.** `.parquet-ground` in `app/globals.css` is the corrected floor - an
+  alpha-only 48px mask tile of four 24px alternating-grain blocks over a flat themed
+  `--parquet-grain`, held to about half a JND. One class, one call site (the app column
+  in `app/layout.jsx`), deliberately not full-bleed.
+- **Chart labels.** No `<text>` inside a scaling `viewBox`. A user unit is only a real
+  pixel at scale 1, so text inside a `w-full` viewBox renders at a size no token can
+  reach and nobody chose. Either the labels move out to HTML siblings (see
+  `components/WindowMap.jsx`) or the viewBox stops scaling.
 
 ## States
 - **Loading:** skeletons (`.skeleton` shimmer), never spinners, except a small
-  inline spinner on in-flight buttons (evaluate / save / ask).
+  inline spinner on in-flight buttons (evaluate / save).
 - **Empty:** designed as onboarding, not apology - the ledger empty state is a
-  "you're all caught up" and the analyst empty state teaches its adversarial intent.
+  "you're all caught up", not a "no data".
 
 ## Accessibility
 - Visible focus rings (`:focus-visible` → accent outline).

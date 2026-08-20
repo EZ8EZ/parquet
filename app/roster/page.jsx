@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
+import { depthChartsByTeam, depthRowFor } from "@/lib/depth";
 import { leagueTimelines } from "@/lib/metrics/duration";
 import { leagueFragility, lineupSlots } from "@/lib/metrics/fragility";
 import { Card, PageHeader, SectionHeader, Tag } from "@/components/ui";
@@ -21,27 +22,39 @@ import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTeamUrl } from "@/lib/sleeperLinks";
 import { ordinal } from "@/lib/derive/describe";
 import {
+  awayPicks,
   posturesByRoster,
   readPickAgency,
   summarizeAgency,
 } from "@/lib/agency";
-import { loadDraftOrderFidelity } from "@/lib/agency/source";
+import { loadDraftOrderFidelity, loadPickSlots } from "@/lib/agency/source";
 import { PickAgencyPanel } from "@/components/PickAgencyPanel";
 export const dynamic = "force-dynamic";
-const WINDOW_COPY = {
-  rebuilding: {
-    tone: "info",
-    label: "Rebuilding / ascending",
+/*
+ * CORE AGE, SAYING ONLY WHAT IT MEASURES.
+ *
+ * These three used to be labelled "Rebuilding / ascending", "Win-now window" and
+ * "Balanced" - three strategy words for a figure that is the value-weighted age of the
+ * top 8 players and nothing else. Posture, a different classifier on a different input,
+ * used two of the same words for a different question, and /league printed both on one
+ * row. The notes below were always honest about this being an age; only the labels were
+ * not. See lib/metrics/axes.js.
+ *
+ * Neutral tone for all three, for the reason components/PostureTag gives: an age is not
+ * a grade, and a semantic colour hands the reader a verdict the sentence underneath
+ * refuses to give (D6).
+ */
+const CORE_AGE_COPY = {
+  "young core": {
+    label: "Young core",
     note: "Your core skews young - time is on your side.",
   },
-  "win-now": {
-    tone: "accent",
-    label: "Win-now window",
-    note: "Your core is aging - the window is open now, not later.",
+  "veteran core": {
+    label: "Veteran core",
+    note: "Your core is the oldest quarter of the league - production now, less of it later.",
   },
-  balanced: {
-    tone: "positive",
-    label: "Balanced",
+  "mixed-age core": {
+    label: "Mixed-age core",
     note: "A mixed-age core - you can pivot either direction.",
   },
 };
@@ -90,11 +103,12 @@ export default async function RosterPage() {
     return <p className="text-muted">Couldn&apos;t identify your roster.</p>;
   }
   // Pulled from the full league ranking rather than a standalone analyzeRoster call so
-  // `window` is classified against the same league-relative distribution /league uses -
-  // otherwise the same team could read "win-now" on one page and "balanced" on another.
+  // `coreAgeBand` is banded against the same league-relative distribution /league uses -
+  // otherwise the same team could read "veteran core" on one page and "mixed-age core"
+  // on another.
   const ranked = leagueValueRanking(h);
   const a = ranked.find((r) => r.rosterId === rosterId);
-  const win = WINDOW_COPY[a.window];
+  const win = CORE_AGE_COPY[a.coreAgeBand];
   // One chain per rostered player, built from one assembly. `loadProvenanceSource`
   // costs `getPrincipals` and `buildDraftIndex`, both already loaded on demand and
   // memoized for five minutes by their own modules - it is the bill /drafts has always
@@ -105,6 +119,9 @@ export default async function RosterPage() {
     const chain = buildProvenance(ctx, `p:${v.playerId}`);
     if (chain) provenance[v.playerId] = chain;
   }
+  // Where each of these players sits on his REAL team's chart. One index for the
+  // whole payload, seventeen O(1) reads off it (lib/depth).
+  const charts = depthChartsByTeam(h.players);
   const ages = a.valued.map((v) => v.age).filter((x) => x != null);
   const posData = a.byPosition.map((p) => ({
     label: p.pos,
@@ -174,12 +191,28 @@ export default async function RosterPage() {
    * slot, and in this league that mapping is loose. Printing the measurement beside
    * the claim is the honest version of making the claim at all.
    */
-  const agencyInputs = { postures: posturesByRoster(timelines), forms };
+  const [orderFidelity, pickSlots] = await Promise.all([
+    loadDraftOrderFidelity(h),
+    loadPickSlots(h),
+  ]);
+  const agencyInputs = {
+    postures: posturesByRoster(timelines),
+    forms,
+    slots: pickSlots,
+  };
   const agencyReads = a.picks.picks.map((p) =>
     readPickAgency(h, rosterId, p, agencyInputs),
   );
-  const agency = summarizeAgency(agencyReads);
-  const orderFidelity = await loadDraftOrderFidelity(h);
+  /*
+   * THE SECOND HALF OF THE LEDGER. `awayPicks` is the reciprocal of the list above: the
+   * picks this roster's own seasons will order that somebody else is holding. It reads
+   * `pickCapital` in its "original" mode over data already in hand, so it costs one more
+   * pass and no requests, and it is what makes the panel's middle row possible at all.
+   */
+  const agency = summarizeAgency(
+    agencyReads,
+    awayPicks(h, rosterId, a.picks.picks),
+  );
   return (
     <div>
       {/* Identity, record, window and core age in one block - what used to be a
@@ -238,7 +271,7 @@ export default async function RosterPage() {
                   </>
                 )}
               </span>
-              <Tag tone={win.tone}>{win.label}</Tag>
+              <Tag tone="neutral">{win.label}</Tag>
             </div>
             <p className="mt-1 text-note leading-snug text-muted">{win.note}</p>
           </>
@@ -527,7 +560,7 @@ export default async function RosterPage() {
           <PickAgencyPanel
             reads={agencyReads}
             summary={agency}
-            orderNote={orderFidelity.note}
+            orderLine={orderFidelity.panelLine}
           />
         </>
       )}
@@ -602,6 +635,7 @@ export default async function RosterPage() {
             injuryDetail={v.injuryDetail}
             share={a.playerValue ? v.value / a.playerValue : 0}
             consensusRank={v.consensusRank}
+            depth={depthRowFor(charts, h.players.get(v.playerId))}
             trajectory={valueTrajectory(v)}
             // Young players' declining trajectory is just the age-curve premium unwinding,
             // not a warning - show it in muted color instead of red.

@@ -3,11 +3,6 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Check, Loader2, Search } from "lucide-react";
 import { cn, fmtValue } from "@/lib/ui";
-const WINDOW_TONE = {
-  "win-now": "text-accent-text",
-  rebuilding: "text-info",
-  balanced: "text-muted",
-};
 export function TeamPicker({
   teams,
   currentRosterId,
@@ -163,9 +158,10 @@ export function TeamPicker({
                     <span>·</span>
                     <span className="figure">{t.record}</span>
                     <span>·</span>
-                    <span className={WINDOW_TONE[t.window] ?? "text-muted"}>
-                      {t.window}
-                    </span>
+                    {/* Core age, in the neutral tone the whole app now gives it: it is
+                        an age, not a strategy, and it used to be spelled with posture's
+                        words (see lib/metrics/axes.js). */}
+                    <span className="text-muted">{t.coreAgeBand}</span>
                   </div>
                   {t.tags.length > 0 && (
                     <div className="mt-1.5 truncate text-meta text-muted">

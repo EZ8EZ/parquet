@@ -55,6 +55,7 @@ export function ValueAssetRow({
   trajectoryColor,
   focused,
   provenance,
+  depth,
 }) {
   const [open, setOpen] = useState(!!focused);
   const [justArrived, setJustArrived] = useState(!!focused);
@@ -108,11 +109,13 @@ export function ValueAssetRow({
               {rank}
             </span>
           )}
-          {/* Only rendered when this deploy has real photos on (D39, `photosEnabled`).
+          {/* Only rendered when this deploy has real photos on (`photosEnabled`).
               A monogram repeated across sixty rows was removed as pure decoration
               (D72); a real photo repeated sixty times is the opposite - recognition
               a reader actually uses - so the column returns for exactly that case
-              and stays gone otherwise. */}
+              and stays gone otherwise. Photos default ON as of D90, so this is now
+              the normal path rather than the opt-in one; a fork that opts out still
+              gets D72's monogram-free row. */}
           {photosEnabled() && (
             <PlayerAvatar
               name={name}
@@ -244,6 +247,13 @@ export function ValueAssetRow({
             {(injuryDetail ?? injury) && (
               <Fact label="injury" value={injuryDetail ?? injury} />
             )}
+            {/* WHERE HIS REAL TEAM HAS HIM, as one datum among the other facts.
+                Deliberately a COUNT and never an ordinal: Sleeper's depth orders are
+                non-contiguous and duplicated (lib/depth's header has the measurement),
+                so "1 ahead" is a fact and "2nd string" would be a guess. The whole
+                chart is a tap away rather than in this row - fifteen names in five
+                groups is a page, not a row (see app/depth/[team]/page.jsx). */}
+            {depth && <Fact label="depth chart" value={depthFact(depth)} />}
             {age != null && <Fact label="age" value={`${age}`} />}
             {pastFirstCliff(age) && (
               <Fact
@@ -273,6 +283,16 @@ export function ValueAssetRow({
               How this is built
             </Link>
           </p>
+
+          {depth?.href && (
+            <Link
+              href={depth.href}
+              className="mt-2 flex min-h-11 items-center justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 text-meta font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
+            >
+              {`Where he sits on ${depth.team}`}
+              <ChevronRight size={13} aria-hidden="true" />
+            </Link>
+          )}
 
           {/* WHERE HE CAME FROM. Every asset has an answer, including "never traded",
                 which is why this link is unconditional and there is no empty state to
@@ -311,6 +331,21 @@ export function ValueAssetRow({
       )}
     </li>
   );
+}
+/**
+ * The depth-chart datum, in the width of half a row.
+ *
+ * Every branch is a count or a refusal, because those are the only two things the
+ * source supports: a player level with someone on the same order has no ordinal, and a
+ * player the chart places without an order cannot be compared to anyone at all.
+ *
+ * @param {import('@/lib/depth').DepthLine} d
+ */
+function depthFact(d) {
+  if (d.unplacedInOrder) return `${d.position}, no order`;
+  if (d.level > 0) return `${d.position}, level with ${d.level}`;
+  if (d.ahead === 0) return `${d.position}, none ahead`;
+  return `${d.position}, ${d.ahead} ahead`;
 }
 /** One fact about the player. Deliberately not one factor of the model. */
 function Fact({ label, value }) {
@@ -483,6 +518,7 @@ export function ValuesList({ rows }) {
             injuryDetail={r.injuryDetail}
             consensusRank={r.consensusRank}
             meta={r.owner ?? undefined}
+            depth={r.depth}
             focused={r.id === focusId}
           />
         ))}

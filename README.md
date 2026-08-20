@@ -33,7 +33,7 @@ with zero setup.
 
 Table-stakes features (roster view, asset values, trade evaluator, league view)
 exist because the product isn't credible without them - the boring floor, not the
-pitch. The actual pitch is the five things **no competitor builds** (see
+pitch. The actual pitch is the four things **no competitor builds** (see
 [RESEARCH.md](RESEARCH.md)):
 
 1. **Decision Ledger** - capture your reasoning at the moment of conviction. New
@@ -45,13 +45,18 @@ pitch. The actual pitch is the five things **no competitor builds** (see
 3. **Manager Dossiers** - behavioral profiles of every leaguemate (who trades most,
    who panics after losses, who overpays for names, who hoards picks, who never
    responds) with a plain-language read on how to approach them. Private to you.
-4. **The Analyst** - an LLM over your full annotated corpus, prompted to be an
-   **adversarial auditor**, not a cheerleader. It leads with the case against you
-   and cites your own moves. Degrades to a deterministic audit with no API key.
-5. **Game Plan** (`/plan`) - the prescriptive counterpart to all that diagnosis. It
-   reads your window (contend / ascend / rebuild / retool), names your actual
+4. **Game Plan** (`/plan`) - the prescriptive counterpart to all that diagnosis. It
+   reads your timeline posture and turns it into a direction (contend / ascend /
+   rebuild / retool - a prescription, not a fifth classification), names your actual
    structural problem, and proposes specific moves with specific managers, chosen by
    their dossier behavior, each with its honest cost.
+
+There were five. **The fifth was an LLM "Analyst"**, and it is shelved - the app's
+direction is statistical, derived from this league's own real history, rather than
+generated prose over it. Nothing was lost in the removal: every read its offline
+half computed already renders on a page that survives. See
+[SHELVED.md](SHELVED.md) S7 for what it was and what would bring it back. Parquet
+now makes **no outbound LLM call from anywhere** and needs no inference key.
 
 **Draft picks are treated as first-class assets throughout** - valued, counted in
 roster value, tradeable in the evaluator, and traced to the players they became
@@ -89,9 +94,13 @@ draft-steal award is a worked example of a metric caught measuring the wrong thi
 D26 and D27.
 
 > **Anti-sycophancy is the core design constraint.** Every analytical surface is
-> tuned to disagree with you when the record warrants it. See
-> `lib/analyst/system-prompt.js` - sycophancy is named there as the product's
-> primary failure mode.
+> tuned to disagree with you when the record warrants it. It used to be enforced
+> loudest in a system prompt; now it is enforced structurally, which is the harder
+> and better place for it. Home leads with the stated-vs-revealed contradiction
+> rather than with the four numbers, `/plan` opens its caveats with that same gap
+> before it proposes anything, `/trade` says so on the receipt, and no surface
+> anywhere issues a grade. A prompt can be softened by an edit; a page that puts the
+> disconfirming case above the fold cannot be softened without deleting it.
 
 ## Quick start
 
@@ -146,23 +155,10 @@ multi-season history into the database (`pnpm ingest`, which walks
 `previous_league_id` back to the start) is purely optional archival persistence -
 the live app never depends on it to render correctly.
 
-### Enable the conversational analyst (optional, free / open-source)
-
-The Analyst talks to **any OpenAI-compatible chat endpoint** - no paid vendor:
-
-```bash
-# .env.local - pick ONE
-# a) Groq (free hosted open models):
-LLM_BASE_URL=https://api.groq.com/openai/v1
-LLM_API_KEY=gsk_...            # free key from console.groq.com
-LLM_MODEL=llama-3.3-70b-versatile
-# b) Local Ollama (fully offline, no key):
-# LLM_BASE_URL=http://localhost:11434/v1
-# LLM_MODEL=llama3.1
-```
-
-With nothing set, the Analyst still works - it runs a deterministic, still-adversarial
-audit. The rest of the app never needs any key.
+There is **no LLM step to enable.** A section here used to explain how to point
+`LLM_BASE_URL` at Groq, OpenRouter or a local Ollama to turn on a conversational
+analyst; that surface is shelved (SHELVED.md, S7) and the app now makes no outbound
+inference call from any code path. Nothing in Parquet needs a key of any kind.
 
 ## Environment variables
 
@@ -174,14 +170,9 @@ All documented in [`.env.example`](.env.example):
 | `DATABASE_URL` | unset | `postgres://` only (`prisma/schema.prisma` is on the postgresql provider). Unset is supported: reads are DB-free and a ledger write says plainly it was not persisted (D18/D36) |
 | `SLEEPER_USERNAME` | `EZ8` | resolves your roster ("you") |
 | `SLEEPER_LEAGUE_ID` | committed constant | current-season league id; falls back to `DEFAULT_SLEEPER_LEAGUE_ID` in `lib/providers/index.js` (D21) |
-| `LLM_BASE_URL` | - | OpenAI-compatible endpoint (Groq/OpenRouter/Ollama); enables conversational analyst |
-| `LLM_API_KEY` | - | key for that endpoint (none needed for local Ollama) |
-| `LLM_MODEL` | `llama-3.3-70b-versatile` | analyst model |
 | `NEXT_PUBLIC_USE_PLAYER_PHOTOS` | `false` | real NBA headshots, hotlinked from Sleeper's CDN (licensing caveat, see DECISIONS D8/D39) |
 | `CSV_DIR` | - | directory of CSVs when `LEAGUE_PROVIDER=csv` |
 | `AUTH_SECRET` | unset | unset = single-user mode, the default. Set it to require a signed seat for private authorship (D35) |
-| `LANGSMITH_API_KEY` | unset | traces analyst LLM calls to LangSmith. **Sends the full prompt, which contains the viewer's own captured reasoning** - opt-in for that reason |
-| `LANGSMITH_PROJECT` | `default` | LangSmith project the traced runs land in |
 | `PARQUET_DEBUG_TIMINGS` | unset | `1` logs cold-load duration for the two heaviest loaders |
 | `PARQUET_ORIGIN` | `http://localhost:3000` | `pnpm claim-links` only - fallback when the origin isn't passed as a CLI arg |
 
@@ -193,7 +184,7 @@ All documented in [`.env.example`](.env.example):
 | `pnpm build` | `prisma generate` + production build |
 | `pnpm start` | run the production build (after `pnpm build`) |
 | `pnpm lint` | ESLint |
-| `pnpm test` | Vitest run - valuation, strategy, dossier, trade, principals, metrics, awards, Sleeper + CSV parsers (1,054 tests, 63 files, all green as of this writing) |
+| `pnpm test` | Vitest run - valuation, strategy, dossier, trade, principals, metrics, awards, Sleeper + CSV parsers (1,059 tests, 62 files, all green as of this writing) |
 | `pnpm test:watch` | Vitest in watch mode |
 | `pnpm e2e` | Playwright smoke suite (`playwright.config.mjs`) |
 | `pnpm db:push` | apply the Prisma schema to the Postgres in `DATABASE_URL` |
@@ -222,9 +213,10 @@ app/                      Next.js App Router (all data pages force-dynamic)
   awards/                 league superlatives ("House of Cards" and friends)
   deals/                  every deal, and one receipt page per trade
   lineage/                one asset's provenance rail
-  ledger/ analyst/ values/ rank/ recap/ methodology/ commissioner/ settings/ more/
+  depth/[team]/           one NBA team's Sleeper depth chart, anchored on a player
+  ledger/ values/ rank/ recap/ methodology/ commissioner/ settings/ more/
   lab/                    experiments not promoted to the main flow (see below)
-  api/{annotations,analyst,trade,custom-rank,search,digest-seen,viewing-as,
+  api/{annotations,trade,custom-rank,search,digest-seen,viewing-as,
       resolve-user}/route.js
 
 lib/
@@ -242,6 +234,7 @@ lib/
     skill.js              start rate, draft capture, trade value added
   gameplan/               diagnosis + concrete prescribed moves
   lineage/                traded pick -> the player it actually became
+  depth/                  Sleeper's NBA depth chart, sorted and never ranked
   superlatives/           league awards (behavioural + "On the merits")
   sleeperLinks.js         verified deep links back into the Sleeper app
   derive/                 per-manager behavioral derivation, descriptions, and
@@ -254,7 +247,6 @@ lib/
                           is a claim the app is testing, not one it has settled -
                           `/lab`'s own copy says so, and none of them is promoted to
                           the primary nav (see `lib/lab/index.js`'s header comment)
-  analyst/                system-prompt.js (adversarial) + corpus builder + runner
   history.js              LeagueHistory: the corpus object every engine consumes
   ingest.js               chain walk + idempotent archival persistence (optional)
   ledger.js  roster.js    ledger + roster/league analysis
@@ -275,9 +267,12 @@ and both are now purely an **optional archival persistence** of raw transaction
 payloads and a player cache - a convenience for later, not something the live app
 depends on to render correctly.
 
-**The Analyst is a prompt over a text corpus - not fine-tuning, not a vector DB.**
-~20-40 transactions/season × a few seasons of annotated history fits comfortably in
-one context window (see DECISIONS D7).
+**Nothing here calls a model.** Every number and every sentence on every surface is
+computed by a pure function over that one corpus object, in-process, from this
+league's own recorded history. There is no inference dependency, no API key, no
+provider to be down, and no non-determinism: the same corpus renders the same page.
+That was not always true - D7/D17 describe an LLM analyst that was a prompt over
+this same corpus - and SHELVED.md S7 records why it is true now.
 
 **No write access.** Sleeper is read-only; Parquet advises but can't act. A trade,
 and a pitch from /plan or a manager dossier, both end at a one-tap link to your
@@ -285,7 +280,7 @@ league's trade centre - you carry the thesis over yourself from there.
 
 ## Stack
 Next.js 16 (App Router, plain JavaScript) · Tailwind v4 · Prisma 6 (Postgres, optional) ·
-Zod 4 · Vitest · any OpenAI-compatible LLM endpoint (D17) · deployable to Vercel · installable PWA.
+Zod 4 · Vitest · no LLM (SHELVED.md S7) · deployable to Vercel · installable PWA.
 
 **Plain JavaScript, not TypeScript - by owner request, not by default.** The app
 shipped on TypeScript strict through most of its build; D63 mechanically converted
@@ -330,8 +325,8 @@ is fully functional. Note the one case that is NOT graceful on purpose: a
 `DATABASE_URL` that is set but rejects the write answers 500 and "Your note was NOT
 saved", because pretending otherwise once discarded a real note (D36).
 
-Optional: set `LLM_BASE_URL` + `LLM_API_KEY` (e.g. a free Groq key) to turn on the
-conversational analyst.
+A database is the **only** optional dependency left. There is no key to add for
+anything else, and no LLM endpoint to reach.
 
 ## Project docs
 - [RESEARCH.md](RESEARCH.md) - competitor teardown, feature matrix, the "is there a

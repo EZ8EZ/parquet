@@ -165,7 +165,6 @@
   --radius: 12px;
   --radius-lg: 18px;
 
-
   /* The two grain washes on <body>. Tokens rather than literals so a theme can
    * restate them - a gold-on-black wash is wrong on paper.
    *
@@ -186,6 +185,60 @@
   --grain-1: rgba(230, 179, 77, 0.09);
   --grain-2: rgba(90, 169, 255, 0.05);
   --selection: rgba(230, 179, 77, 0.28);
+
+  /*
+   * THE PARQUET GROUND - the corrected Boston Garden geometry (D96).
+   *
+   * The floor is NOT herringbone, and the press consensus that says so is wrong.
+   * Flooring sources describe it correctly: a basket-weave block parquet on a SQUARE
+   * GRID - alternating squares of red oak with the grain rotated 90 degrees between
+   * neighbours. 247 panels, 5ft x 5ft, laid from post-war scrap oak precisely so a
+   * damaged panel could be swapped and so uneven lengths still yielded. Herringbone is
+   * diagonal interlocked rectangles, which is a different floor in a different building.
+   *
+   * WHY THE CORRECTION IS LOAD-BEARING RATHER THAN COSMETIC. This app reserves the
+   * 45-degree diagonal for a REFUSAL - components/RefusalMark.jsx shipped the first
+   * instance of it in D95, and D96 makes it the rule. Orthogonal marks are data; the
+   * diagonal is the one angle that means "we will not say." A herringbone ground runs at
+   * 45 degrees, so the old mark and the grammar could not both be right. A square grid
+   * guarantees by construction that nothing else in the product runs at 45 degrees,
+   * which is what lets a hatched mark identify itself in any theme, at any size,
+   * without a colour and without a caption.
+   *
+   *   --parquet-block  one oak block. 24px: integer CSS px and a multiple of 4, so it
+   *                    lands on whole device pixels at DPR 2 AND 3. A fractional module
+   *                    or one expressed as a percentage of a flexible container shimmers
+   *                    during scroll on a 3x screen, which is the most common way a CSS
+   *                    floor ships as a bug rather than as a floor.
+   *   --parquet-tile   one full period of the ALTERNATION, which is 2x2 blocks and so
+   *                    is DERIVED from the block rather than stated beside it. The
+   *                    block is what a reader sees; the tile is what repeats, and the
+   *                    two cannot drift apart into a half-block phase error.
+   *   --parquet-grain  the only colour, per theme, as a LITERAL rather than a
+   *                    color-mix(): the build constant-folds color-mix() over a theme
+   *                    variable down to the default theme's value, which is the same
+   *                    trap the theme-toggle block further down this file records.
+   *
+   * THE ALPHA IS MEASURED, AND THE FIRST NUMBER TRIED WAS WRONG. 3.5% white on
+   * --color-bg composites to #131416, which is +3.06 CIE L* above the ground - the same
+   * size of step the surfaces block above calls "at or below the JND for a large flat
+   * field" and then deliberately WIDENED so that a card would read as a card. A ground
+   * texture running at card-elevation volume is not a ground texture; the live render at
+   * 390px read as a plaid competing with the type, which is exactly the failure the
+   * research warns a full-bleed pattern ships as.
+   *
+   * So the target is about HALF a JND: felt as surface, never resolved as pattern.
+   *
+   *   dark   1.6% -> #0f1012, +1.25 L*, 1.026:1 against --color-bg
+   *   paper  1.5% -> -1.1 L* against --color-bg, 1.023:1
+   *
+   * Paper carries the larger alpha for the smaller effect: L* is compressed near white,
+   * so a dark grain on a warm near-white moves less per unit of alpha than a light grain
+   * does on near-black. Two numbers, one geometry.
+   */
+  --parquet-block: 24px;
+  --parquet-tile: calc(var(--parquet-block) * 2);
+  --parquet-grain: rgba(243, 245, 248, 0.016);
 
   /*
    * THE GOLD WASH - three tokens replacing THIRTEEN ad-hoc alphas.
@@ -344,6 +397,12 @@
   --grain-1: rgba(122, 88, 16, 0.08);
   --grain-2: rgba(26, 90, 168, 0.05);
   --selection: rgba(122, 88, 16, 0.22);
+  /* The floor inverts on paper: the grain has to be the ink, not the light. Same
+   * geometry, same integer module - only this one value moves, which is the property
+   * that makes the floor theme-proof rather than re-drawn per theme. The alpha is
+   * larger than dark's for a smaller effect, because L* is compressed near white -
+   * see the measurement in the parquet block of the @theme above. */
+  --parquet-grain: rgba(21, 23, 27, 0.015);
   /* Same three jobs, this theme's gold composited over this theme's surface.
    * accent-text on accent-wash = 5.09:1 / APCA Lc 65.9. */
   --color-accent-wash: #eae3d5;
@@ -364,7 +423,8 @@
 
   /* Paper does not need the raised shadow to be as heavy - a near-white page reads
    * depth from a much smaller value, and the dark theme's would look like soot. */
-  --shadow-raised: 0 1px 2px rgb(60 50 30 / 0.1), 0 8px 24px rgb(60 50 30 / 0.09);
+  --shadow-raised:
+    0 1px 2px rgb(60 50 30 / 0.1), 0 8px 24px rgb(60 50 30 / 0.09);
   --edge-hilite: inset 0 1px 0 rgb(255 255 255 / 0.7);
 
   /* Same ramp, same direction, re-stepped for a near-white chart surface: OKLCH L
@@ -448,6 +508,64 @@ body {
     radial-gradient(120% 80% at 50% -10%, var(--grain-1), transparent 60%),
     radial-gradient(100% 60% at 100% 0%, var(--grain-2), transparent 55%);
   background-attachment: fixed;
+}
+
+/*
+ * THE FLOOR, as one class with one call site (app/layout.jsx).
+ *
+ * MASK, DO NOT PAINT. The tile below carries zero colour information - it is an alpha
+ * stencil, and `%23000` in it is opacity, not ink. The only colour is the flat
+ * `background-color` underneath, which is a `var()` and therefore themed. That ordering
+ * is the whole reason this survives two themes and would survive a third: a data-URI
+ * SVG is a separate document and NEVER receives a custom property, so any hex baked
+ * into one as PAINT is frozen at the theme it was authored in. As a MASK it cannot
+ * carry a hex at all.
+ *
+ * THE GEOMETRY, and it is the corrected one. A 48px tile holding four 24px oak blocks,
+ * grain rotated 90 degrees between edge-neighbours, so diagonal neighbours agree and
+ * orthogonal neighbours differ - a checkerboard whose only variable is orientation.
+ * Three slats per block: 2px of ink on an 8px pitch, which divides 24 exactly, so the
+ * phase does not break at a tile boundary. Every number here is an integer.
+ *
+ * NOT FULL-BLEED, DELIBERATELY. This is applied to ONE bounded element - a decorative
+ * div scoped to the app's own content column - and never to `body`, never to a
+ * viewport-fixed layer, and never behind a scroll region that repaints it. A full-bleed
+ * masked ground was the one thing the panel that specified this direction named as a
+ * risk on its own recommendation, and the mitigation is scope rather than a smaller
+ * alpha: bounded, unfixed, no children to mask, and no `mask-composite` anywhere (the
+ * spec and `-webkit-` keyword sets for that property are NOT aliases of each other and
+ * composing masks is where that divergence bites).
+ *
+ * `-webkit-mask-*` is written first because full `mask-*` support starts at iOS 15.4 and
+ * the prefixed properties reach back to 3.2. `repeat`, never `space`: `mask-repeat:
+ * space` is a stale WebKit defect.
+ */
+.parquet-ground {
+  background-color: var(--parquet-grain);
+  --parquet-tile-src: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' shape-rendering='crispEdges'><g fill='%23000'><rect x='0' y='0' width='2' height='24'/><rect x='8' y='0' width='2' height='24'/><rect x='16' y='0' width='2' height='24'/><rect x='24' y='0' width='24' height='2'/><rect x='24' y='8' width='24' height='2'/><rect x='24' y='16' width='24' height='2'/><rect x='0' y='24' width='24' height='2'/><rect x='0' y='32' width='24' height='2'/><rect x='0' y='40' width='24' height='2'/><rect x='24' y='24' width='2' height='24'/><rect x='32' y='24' width='2' height='24'/><rect x='40' y='24' width='2' height='24'/></g></svg>");
+  -webkit-mask-image: var(--parquet-tile-src);
+  mask-image: var(--parquet-tile-src);
+  -webkit-mask-size: var(--parquet-tile) var(--parquet-tile);
+  mask-size: var(--parquet-tile) var(--parquet-tile);
+  -webkit-mask-repeat: repeat;
+  mask-repeat: repeat;
+}
+
+/*
+ * The one honest opt-out. `prefers-reduced-transparency` is NOT supported in Safari
+ * desktop through v27 nor in iOS Safari through 26.6, so building the accessibility
+ * story on it would be building it on a query the app's primary browser does not ship.
+ * `prefers-contrast` IS supported everywhere that matters, and a reader who has asked
+ * for more contrast has asked for less texture. Dropping the colour is enough - the
+ * mask then stencils nothing.
+ *
+ * `prefers-reduced-motion` deliberately does NOT appear here: nothing in this floor
+ * moves, and that query is not a reduce-texture signal.
+ */
+@media (prefers-contrast: more) {
+  .parquet-ground {
+    background-color: transparent;
+  }
 }
 
 /* Typographic primitives */
@@ -538,7 +656,6 @@ a[role="button"],
   min-height: 44px;
 }
 
-
 ::selection {
   background: var(--selection);
 }
@@ -552,8 +669,12 @@ a[role="button"],
 
 /* Skeleton shimmer (loading states are skeletons, never spinners) */
 @keyframes shimmer {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 .skeleton {
   background: linear-gradient(
@@ -581,7 +702,9 @@ a[role="button"],
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .skeleton { animation: none; }
+  .skeleton {
+    animation: none;
+  }
 }
 
 /* Editorial rule */
@@ -630,12 +753,22 @@ a[role="button"],
 }
 
 @keyframes desk-drawer-in {
-  from { opacity: 0; transform: translateY(10px); }
-  to   { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 @keyframes desk-fade-in {
-  from { opacity: 0; }
-  to   { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 /*
  * THE EXITS, which did not exist. The drawer arrived over 180ms and then vanished in a
@@ -649,12 +782,22 @@ a[role="button"],
  * own dismissal.
  */
 @keyframes desk-drawer-out {
-  from { opacity: 1; transform: translateY(0); }
-  to   { opacity: 0; transform: translateY(10px); }
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateY(10px);
+  }
 }
 @keyframes desk-fade-out {
-  from { opacity: 1; }
-  to   { opacity: 0; }
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
 }
 /*
  * The Desk drawer is the ONE thing in this app that genuinely floats above the page,

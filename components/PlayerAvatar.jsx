@@ -2,11 +2,17 @@
 /**
  * PlayerAvatar — the single abstraction for player imagery.
  *
- * Default: generated monogram avatars in team colors (no licensing concern, looks
- * intentional). Real photos are gated behind NEXT_PUBLIC_USE_PLAYER_PHOTOS, which
- * defaults OFF now that this repo is public (see D39) — a fork or a Vercel deploy
- * that never set the var must not silently ship real, unlicensed headshots. Set it
- * to "true" to opt in.
+ * Real photos when this deploy has them on, a generated monogram in the themed disc
+ * otherwise. The on/off rule and the reasoning behind its default now live in ONE
+ * place, `lib/photos.js` (`photosEnabled`), which this file imports and re-exports
+ * rather than re-deriving: the check used to be written out twice, here and there, and
+ * two copies of a boolean are two chances to drift.
+ *
+ * THE DEFAULT IS ON as of D90, revising D39's OFF. Short version: `NEXT_PUBLIC_*` is
+ * inlined at BUILD time, so the dashboard-plus-redeploy dance D39 left the owner with
+ * silently ate four separate requests for this feature. Fork protection is kept, but
+ * moved onto a check that can only fail in the owner's favour - read `lib/photos.js`'s
+ * header for the full three-branch rule, and do not restore an `=== "true"` here.
  *
  * Source: Sleeper's own CDN by player_id
  * (`sleepercdn.com/content/nba/players/thumb/{id}.jpg`). Sleeper's NBA payload
@@ -14,9 +20,26 @@
  * (checked every id Sleeper does send — rotowire_id, sportradar_id, swish_id,
  * fantasy_data_id, kalshi_id, oddsjam_id — none of them is it), so a third-party
  * headshot CDN keyed by a real id isn't reachable (D8, re-verified D39). Not every
- * player has a Sleeper image (some 403/404 — genuinely missing, not blocked; see
- * D39), so `<PlayerAvatar>` is a client component that falls back to the monogram
- * on load error.
+ * player has a Sleeper image, so `<PlayerAvatar>` is a client component that falls
+ * back to the monogram on load error.
+ *
+ * HOW OFTEN THE FALLBACK ACTUALLY FIRES, measured rather than estimated (D90). All 592
+ * active Sleeper NBA players with a team were probed: 475 return 200 (80.2%) and 117
+ * return 403. Weighted the way a reader actually meets them - by Sleeper's own
+ * `search_rank`, i.e. roughly "who is rostered and shown on /values" - it is 96% for
+ * the top 100 and 93% for the top 200. Every miss inside the top 200 is a 2026 rookie
+ * (Cameron Boozer, AJ Dybantsa, Darryn Peterson and the rest of that class), which is
+ * a photo Sleeper has not shot yet, not a photo we are being denied. The monogram
+ * fallback is therefore a real, load-bearing path on a normal page - expect a handful
+ * of monograms mixed into a list of faces, and note that this is the CORRECT rendering
+ * of that list, not a bug to go chase.
+ *
+ * The 403s are S3 `AccessDenied` bodies (`<Code>AccessDenied</Code>` plus an S3
+ * RequestId), which is what that bucket returns for an object that does not exist -
+ * NOT a block on us. Recorded because D73 concluded the opposite from the same 403 and
+ * wrote off the whole CDN as unreachable from a sandbox: the host answers fine, team
+ * logos and `api.sleeper.app` both 200, it is purely per-object. A 403 from this URL
+ * means "no photo for this id", never "we are being rate-limited."
  *
  * Despite the `.jpg` in the URL and an `image/jpeg` response header, the bytes
  * Sleeper actually sends are a PNG with a real alpha channel — a proper cutout, not
@@ -25,8 +48,29 @@
  * rather than trust the extension or header, so this already renders as a
  * transparent cutout with NO extra work. The `background` below is not a fallback
  * hack for that — it's the intentional backdrop the cutout sits on, so a floating
- * head never looks accidental on any of the three themes and there's no risk of a
- * dark hairline vanishing against a dark page.
+ * head never looks accidental on either theme and there's no risk of a dark hairline
+ * vanishing against a dark page. (Either, not "any of the three": the contrast theme
+ * was retired in D64 and `THEMES` is `["dark", "light"]`. Both define
+ * `--color-elevated` and `--color-border-strong`, so the disc below still resolves in
+ * both after D61's token work and D62's re-themed mark - re-checked in D90.)
+ *
+ * THE SOURCE FRAME IS LANDSCAPE, 250x168, not a square and not a portrait - a
+ * head-and-shoulders cutout with the head centred horizontally and transparent margin
+ * either side. That is why `object-cover` is right and why `object-top` is harmless
+ * rather than load-bearing: cover scales to the box HEIGHT here (the tighter
+ * constraint), so the vertical axis already fits exactly and only the transparent side
+ * margin gets cropped. Do not "fix" this to `object-contain` - that would letterbox a
+ * cutout inside a circle and shrink every face.
+ *
+ * DO NOT MIGRATE THIS TO `next/image`. The `no-img-element` lint rule below is
+ * suppressed on purpose, not out of laziness. `next/image` would route the file
+ * through this app's OWN optimizer, which means Parquet would be fetching, re-encoding
+ * and SERVING the headshot from its own domain - precisely the "a copy this app stores
+ * or serves itself" that the personal-use posture in `.env.example` depends on not
+ * doing. A plain `<img>` is a hotlink, the browser talks straight to Sleeper, and the
+ * bytes never touch our infrastructure. The lint suppression is the cheaper half of
+ * that trade; it also means `images.remotePatterns` is deliberately not configured for
+ * this host, so a migration would be a licensing regression AND a build error.
  *
  * WHY THE TEAM COLOURS ARE NOT THE BACKGROUND ANY MORE.
  *
@@ -110,7 +154,8 @@ const SIZES = { sm: 32, md: 40, lg: 56 };
  * importable from here too so the two existing client callers (`ValuesList`,
  * `RankingBoard`) don't need to change.
  */
-export { photosEnabled } from "@/lib/photos";
+import { photosEnabled } from "@/lib/photos";
+export { photosEnabled };
 export function PlayerAvatar({
   name,
   team,
@@ -132,11 +177,11 @@ export function PlayerAvatar({
     height: px,
     background: `linear-gradient(90deg, ${edge} 0 2px, var(--color-elevated) 2px)`,
   };
-  // Defaults to OFF (D39). NEXT_PUBLIC_* is inlined at BUILD time, so this deploy's
-  // own env needs NEXT_PUBLIC_USE_PLAYER_PHOTOS=true set explicitly — the unset case
-  // now means "forked or configured without thinking about licensing," which must
-  // read as monograms, not real headshots.
-  const usePhotos = process.env.NEXT_PUBLIC_USE_PLAYER_PHOTOS === "true";
+  // One implementation of this rule, in lib/photos.js, called rather than copied - the
+  // server-side call sites (`/recap`, `/drafts`, `/lab/counterfactual`) gate on the very
+  // same function, and this component disagreeing with them about the answer is a
+  // hydration mismatch. Defaults ON; see this file's header and D90.
+  const usePhotos = photosEnabled();
   const avatar =
     usePhotos && playerId && !failed ? (
       // Sleeper CDN thumbnail (personal/local use per .env.example). Actually a
@@ -149,6 +194,14 @@ export function PlayerAvatar({
         width={px}
         height={px}
         decoding="async"
+        // `/values` renders ~60 of these and `/rank` up to 120, one per row, which
+        // with the flag now ON by default is the difference between a handful of
+        // requests and every face on the list at once on a phone. Lazy is safe for the
+        // fallback too: an image below the fold simply errors later, and until it
+        // resolves the row shows the themed disc, which is the intended backdrop
+        // rather than a hole (D73 confirmed the layout does not reflow around a
+        // pending image, so nothing shifts when it lands).
+        loading="lazy"
         onError={() => setFailed(true)}
         className={cn(
           "shrink-0 rounded-full object-cover object-top ring-1 ring-border-strong",

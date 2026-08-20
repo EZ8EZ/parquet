@@ -267,10 +267,18 @@ export default async function DealsPage({ searchParams }) {
             cta="dossiers"
           />
           <Card className="p-3">
+            {/* THE RATE, NOT JUST THE COUNT. "17 round trips" cannot say whether
+                picks come home often or almost never; the denominator is every own
+                pick that ever left home, counted over the same scope as the
+                numerator (see `pickDepartures`). */}
             <p className="text-body leading-relaxed text-ink">
               A manager traded away a pick they originally owned, and later got
-              it back. {buybacks.total} round{" "}
-              {buybacks.total === 1 ? "trip" : "trips"} on record, made by{" "}
+              it back. Across the league,{" "}
+              <span className="figure">{buybacks.returnedPicks}</span> of{" "}
+              <span className="figure">{buybacks.departedPicks}</span> own picks
+              that have ever left home have come back, in{" "}
+              {buybacks.total} round{" "}
+              {buybacks.total === 1 ? "trip" : "trips"} made by{" "}
               <span className="figure">{buybacks.byManager.length}</span> of{" "}
               <span className="figure">{buybacks.rosters}</span> rosters. This
               says what happened, not why: intent is not in the record, and a
@@ -286,14 +294,25 @@ export default async function DealsPage({ searchParams }) {
                     {buybacks.byManager[0].rosterName}
                   </span>
                   ,{" "}
-                  <span className="figure">{buybacks.byManager[0].count}</span>{" "}
-                  {buybacks.byManager[0].count === 1
-                    ? "round trip"
-                    : "round trips"}
-                  .
+                  <span className="figure">
+                    {buybacks.byManager[0].returned}
+                  </span>{" "}
+                  of their{" "}
+                  <span className="figure">
+                    {buybacks.byManager[0].departed}
+                  </span>{" "}
+                  own picks traded away have come home.
                 </li>
               )}
-              {buybacks.longestAway && (
+              {/*
+               * D51's defect, one level down: two lines advertising two findings over
+               * the same single row. "Longest away" is a superlative, and a superlative
+               * needs a field - the same guard "Busiest" already uses. "Changed hands
+               * somewhere else" is a structural fact about a round trip rather than a
+               * ranking of it, so it stands at any size, and when it is the only line
+               * left it absorbs the duration the suppressed line would have carried.
+               */}
+              {buybacks.byManager.length > 1 && buybacks.longestAway && (
                 <li>
                   Longest away:{" "}
                   <span className="font-semibold text-ink">
@@ -318,7 +337,19 @@ export default async function DealsPage({ searchParams }) {
                     "It changed hands"
                   )}{" "}
                   somewhere else before coming home, so it was not bought back
-                  from the roster it was sold to.
+                  from the roster it was sold to
+                  {buybacks.byManager.length <= 1 &&
+                  buybacks.multiHop.length === 1 &&
+                  buybacks.multiHop[0].awayDays != null ? (
+                    <>
+                      , after{" "}
+                      <span className="figure">
+                        {buybacks.multiHop[0].awayDays}
+                      </span>{" "}
+                      days gone
+                    </>
+                  ) : null}
+                  .
                 </li>
               )}
               {buybacks.unrecorded > 0 && (

@@ -93,8 +93,26 @@ export default async function RootLayout({ children }) {
             background half of the modal contract lives in components/Desk.tsx. */}
         <div
           id={APP_CONTENT_ID}
-          className="mx-auto flex min-h-dvh w-full max-w-2xl flex-col"
+          className="relative mx-auto flex min-h-dvh w-full max-w-2xl flex-col"
         >
+          {/* THE FLOOR. The corrected parquet - a square grid of alternating-grain oak
+              blocks, not a herringbone - at 3.5% on the ground behind the cards. See
+              `.parquet-ground` in app/globals.css for the geometry, and for why it is a
+              mask over a themed flat colour rather than a painted pattern.
+
+              It is its OWN element and it has no children, which is the whole reason it
+              can be masked at all: a mask applies to an element's entire subtree, so
+              putting this class on the column itself would stencil the app's text. It is
+              absolute rather than fixed so nothing repaints on scroll, and it is scoped
+              to this column rather than to `body`, which is the "not full-bleed"
+              constraint the direction places on its own floor.
+
+              `-z-10` puts it behind every card in `main` while staying above `body`'s
+              radial grain, so the two grounds layer rather than fight. */}
+          <div
+            aria-hidden="true"
+            className="parquet-ground pointer-events-none absolute inset-0 -z-10"
+          />
           <main className="flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+8.5rem)] pt-5 sm:px-6">
             {children}
           </main>
