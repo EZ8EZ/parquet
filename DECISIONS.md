@@ -5171,3 +5171,125 @@ are untouched: they label a recommendation rather than a reading, and the visual
 is being reworked in parallel. `posture` itself keeps its four words - they are earned
 by the instrument that produces them (duration over players and picks) and D6 is served
 by the neutral, glyph-carried treatment `PostureTag` already argued for.
+
+## D94. THE PRICE FINALLY CONTAINS A GAME THAT WAS PLAYED - production earns 23% of the rank prior, on a dynasty horizon, after the one-season test said zero
+Until this entry every value in Parquet descended from `search_rank`: Sleeper's
+**redraft popularity ordinal**, how eagerly people draft a player this year. Age,
+injury, role and position were all multipliers on top of it, so the model had **no
+per-player input about production anywhere** - values, tiers, TCI, RFI, the power
+ranking, the trade evaluator and the trade finder all rested on a number that is not a
+measurement of how anybody played. For an app whose premise is an honest record derived
+from real league history, that was the sharpest gap on the board.
+
+**Two premises behind the brief turned out to be false, and both are load-bearing.**
+First, `players_points` was described as already coming over the wire every week. It is
+not: `lib/history.js`'s `loadMatchups` is deliberately fixture-only (measured at ~110
+requests and ~15s), and `lib/lab/regret/source.js` fetches the matchups endpoint but its
+`RawMatchup` schema never parsed `players_points` at all. So this input could not be
+computed per request even if D25 allowed it - it is derived offline into a committed
+table, exactly the `ageCurve.js` arrangement. Second, `players_points` is **one locked
+game, not a weekly sum** - verified against three players across 23 weeks of 2025, where
+it equalled the week's total in 4-8 weeks and a single game in the rest. That is a
+feature: it is the currency this lock-in league actually pays in, which is why it was
+preferred over `/v1/stats/nba/regular/{season}` (the season-totals blob
+`derive-age-curve.js` already reads, which would cover more players in one request but
+measures NBA production rather than what this league banked).
+
+**THE FIRST MEASUREMENT SAID THE WEIGHT SHOULD BE ZERO, and that nearly ended it.**
+Does past production here predict NEXT season's production better than the consensus
+ordinal? No, and not close: ordinal rho 0.590 against production's 0.420, partial rho of
+production given the ordinal **-0.051** (z -0.73), and every blend weight above zero made
+the forecast monotonically worse across all five candidate metrics. Sleeper's number is a
+live human forecast that already knows about injuries, trades and role changes, and the
+two are largely the same signal anyway (rho 0.76-0.84 between them). A redraft ordinal is
+good at a redraft question.
+
+**But a dynasty value is not a one-season question, and on the right target production
+separates cleanly.** Re-run against the discounted sum of the following THREE seasons,
+counting a season a player did not produce in as a **zero** - the same survivorship rule
+`derive-age-curve.js` uses, and the whole difference between this and an analysis that
+concludes veterans are fine:
+
+| | rho with target | |
+|---|---|---|
+| `search_rank` | 0.889 | |
+| production | 0.664 | |
+| **partial rho (production given `search_rank`)** | **0.412** | n 243, SE 0.065, z 6.4 |
+| R² both | 0.826 | against 0.790 for the ordinal alone |
+
+The standardized OLS weight is **0.233**, used unrounded rather than talked up to a third.
+It is a **floor**, for a reason that has to be stated: the consensus snapshot is from Aug
+2026 and the target window is 2023-25, so the incumbent was scored WITH HINDSIGHT over the
+thing it was predicting and production was not. It is also generous in one direction - a
+season the player was not rostered counts as a zero, and in this league that partly means
+"none of fourteen managers wanted him", so some of what production predicts is retention.
+Both directions are in `lib/valuation/production.js` rather than only the flattering one.
+
+**THE CONSTRUCTION IS A PERMUTATION, AND THAT IS THE ENTIRE ANSWER TO D55.** Production
+is NOT a fifth multiplier, because one folded into `theoreticalMaxMultiplier` would have
+rescaled every price in the product and put every absolute literal on the value scale back
+in play at once - `STAR_VALUE` (3000), `STAR_THRESHOLD` (4500), `DEAD_THRESHOLD` (250), the
+400 and 700 beside them. Instead the two ranks are blended as **percentiles**, the pool is
+re-ordered, and each player is handed the search rank belonging to his **new position in
+that same pool**. The multiset of ranks going in is the multiset coming out, so the
+collection of base values is **bit-for-bit identical** (verified over all 2,108 corpus
+players; base sum 541,765 either way) and only the assignment moves. Production earned a
+claim about ordering and none whatever about dynasty price levels, and the mechanism now
+says exactly that. Setting `productionWeight` to 0 returns every value to what it was,
+which is how the tests pin the old behaviour.
+
+**One constant still moved, and the third measurement is the one that earned its keep.**
+Exposure is value-weighted, so it moves when value moves between older and younger bodies
+even with the scale fixed - and production promotes late-twenties producers (Jamal Murray
++992, Bam Adebayo +850, James Harden at 36 +762) while demoting 23-26s. The worst live
+roster went 0.1251 -> 0.1416, past `EXPOSURE_REF` of 0.14, and clipped at exactly 100 -
+the identical silent failure D55 recorded. Then the fixture league was measured, and **it
+was at 0.1588 already, before and after, unchanged by this work**: the demo and every test
+in `fragility.test.js` have been rendering a clipped exposure component since the 0.14
+revision, in the one league that revision did not think to measure. `EXPOSURE_REF` is now
+**0.18**, fitted against the worse of the two leagues this app actually renders, and
+`fragility.test.js` asserts both that the fixture sits strictly inside it and that the
+pinned live worst clears it. Saturation now fails a test instead of flattening a metric,
+which is what all three previous versions of that constant cost. `LOO_REF` (0.8064 ->
+0.7785) and `CONCENTRATION_REF` (0.2206 -> 0.1933) both moved AWAY from their references
+and `SIGMA_REF` keeps 46% headroom - all re-measured, none reasoned about.
+
+**The majority case, checked rather than asserted.** 225 of 250 rostered players move;
+median |delta| is 70 points, p90 is 497, max is 1,917. Across the 14 rosters: TCI changes
+on 8 (by 1-4 points), the fragility band flips on 4, the window flips on **none**, and
+posture flips on **one** - roster 4, straddling -> contending. That flip is right and it is
+the change working: the straddle rested on value parked in Ja Morant (consensus #47,
+production index 0.85) and Cam Thomas (0.52), both **below** this league's average
+producer, against a later core; moving that value to Julius Randle (1.70) and Myles Turner
+(1.40), who banked well above average, collapses the split. The power ranking reorders 10
+of 14 positions, which is the point of the exercise rather than a side effect.
+
+**The biggest limitation is stated, not smoothed: production overlaps the injury term.**
+A player hurt for eleven weeks banked eleven zeros, so he is charged for an absence
+`injury.js` is also looking at - 12 of the 20 largest drops carry a current injury flag
+against 3.9 expected by chance, mean move -210 for flagged against +46 for unflagged. The
+terms are not redundant (injury prices forward risk and sits near 1.0 for most flags,
+because 110 of 120 are "DTD"), and on real numbers the stacking is usually mild - Franz
+Wagner 0.95, Jalen Williams 0.95, Trae Young 0.98 - but Tyrese Haliburton takes a 0.73
+injury multiplier AND the league's largest production drop for one Achilles rupture. Not
+fixed here: the obvious repair was measured and is worse on both axes (excluding zero
+weeks scores partial rho 0.394 against 0.412 and drops coverage from 269 qualifying
+player-seasons to 234), and folding an untested second change in would make this entire
+before/after unattributable. Same reasoning kept D74's star-tier cohort on the RAW search
+rank even though D74's own derivation defined that cohort by production - re-pointing it
+would change which players it selects without re-measuring the adjustment.
+
+**Coverage, and the refusal (D19).** 325 players indexed; 246 of 250 rostered - 98.4% -
+are priced with a real record. That share is high for a temporary reason stated on the
+page: the 2026 rookie draft has not run, so every roster is still last season's. The four
+who are not (Kris Dunn, Dylan Cardwell, Gui Santos, Oso Ighodaro) keep their search rank
+untouched, `productionBacked` is false, and `/methodology` **names them**. No player is
+given a zero or a league-average guess, because absence from the table is a fact about
+fourteen managers' choices and not about him.
+
+`lib/trade/index.js` also stopped calling `valuePlayer` per player and now reads the
+shared memoized map. That was not tidying: a per-player call cannot see a whole-pool
+permutation, so a trade receipt would have silently priced every asset on the raw
+popularity ordinal while /values priced it on the blend - the `tierOf` drift of D55 in
+another costume, and the file's own comment already said a receipt that disagrees with
+the page is a receipt you cannot trust about anything else.
