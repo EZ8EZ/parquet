@@ -1,4 +1,5 @@
 import { getLeagueHistory } from "@/lib/history";
+import { loadDraftOrderFidelity } from "@/lib/agency/source";
 import { VALUATION_CONFIG } from "@/lib/valuation/config";
 import {
   AGE_CURVE_PROVENANCE,
@@ -79,6 +80,18 @@ function Subsection({ id, title, defaultOpen, children }) {
 }
 export default async function MethodologyPage() {
   const h = await getLeagueHistory();
+  /*
+   * WHETHER THIS LEAGUE'S DRAFT ORDER ACTUALLY IS REVERSE STANDINGS, measured rather than
+   * assumed. This paragraph used to sit inside the pick-agency panel on /roster, which is
+   * the wrong page for it twice over: it qualifies the PRICING MODEL documented in this
+   * section, and it was long enough that the panel spent real vertical space on a footnote
+   * whose reader was already here. /roster keeps one line and a link to it.
+   *
+   * No requests added (D25): `loadDraftOrderFidelity` reads the TTL-memoized draft index
+   * and the per-season rosters, both of which this page's own corpus load already pays
+   * for.
+   */
+  const orderFidelity = await loadDraftOrderFidelity(h);
   const scoring = h.currentLeague.scoringSettings;
   const cfg = VALUATION_CONFIG;
   const posMults = positionMultipliers(scoring);
@@ -1002,6 +1015,57 @@ export default async function MethodologyPage() {
             </div>
           ))}
         </div>
+      </Card>
+
+      {/* MOVED HERE FROM THE /roster PICK PANEL. The claim "a future pick's price
+          tracks the owing roster's rank" rests on the draft actually being ordered by
+          the standings, so the measurement of whether it is belongs beside the model,
+          not beside one page's reading of it. */}
+      <Card className="mt-2">
+        <p className="text-body leading-relaxed font-semibold text-ink">
+          Does this league&apos;s order actually follow reverse standings?
+        </p>
+        <p className="mt-1.5 text-body leading-relaxed text-muted">
+          {orderFidelity.note}
+        </p>
+        {orderFidelity.seasons.length > 0 && (
+          <div className="mt-2 space-y-1">
+            {orderFidelity.seasons.map((s) => (
+              <div
+                key={s.season}
+                className="flex items-baseline justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5"
+              >
+                <span className="min-w-0 truncate figure text-note text-ink">
+                  {s.season} draft
+                  <span className="text-secondary">
+                    {" "}
+                    off {s.fromSeason}
+                  </span>
+                </span>
+                <span className="shrink-0 figure text-note text-muted">
+                  {s.exact ? (
+                    <span className="text-ink">exact</span>
+                  ) : (
+                    <>
+                      <span className="font-semibold text-ink">
+                        {s.deviations}
+                      </span>{" "}
+                      of {s.teams} off · up to {s.maxShift}
+                    </>
+                  )}
+                </span>
+              </div>
+            ))}
+          </div>
+        )}
+        <p className="mt-2 text-note leading-relaxed text-secondary">
+          This is also what the{" "}
+          <span className="figure font-semibold text-ink">est</span> marker in
+          the pick lists means. A pick whose ordering season is over has a
+          published slot and an exact price; a pick whose season has not been
+          played is priced as a spread over the slots it could land on, and
+          carries the marker.
+        </p>
       </Card>
 
       <Card className="mt-2">

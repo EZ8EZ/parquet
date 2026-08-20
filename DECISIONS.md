@@ -5696,3 +5696,157 @@ pinned twice, once as data and once as rendered markup: `LAL C` (1, 2, 5), `MEM 
 widest rung the payload contains. A pure two-man `1, 1` group is **not** pinned: it does
 not exist live, every tied-at-the-front group carries a third man, and pinning a shape the
 provider does not emit is how a suite ends up validating against a case that cannot happen.
+
+## D98. A RATIO THAT IMPROVED AS YOU GAVE YOUR FUTURE AWAY - the pick-agency split bar shelved for a three-row ledger, settled picks promoted from filtered-out to a group with published slots, and the buyback count given the denominator it never had
+The pick-agency panel on /roster answered one question ("whose season decides the picks
+you hold") with a two-segment bar, and the bar was **arithmetically backwards**. Its
+denominator is the picks you HOLD, so trading your own first away removes it from both
+ends of the fraction while trading somebody else's pick in adds to the denominator alone:
+the accent segment therefore grows as you divest your own future and shrinks as you
+accumulate other people's. It was sold as a reading of how much of your own future you
+still decide and it measured close to the reverse. On the live league, the roster with 4
+of its own 9 picks still at home read **80% yours**; the roster with 7 of 9 still at home
+read **50% yours**. Shelved by owner decision, recorded as `SHELVED.md` S9, along with
+`summary.headline`, which stated the same ratio in prose two lines above it.
+
+**Two premises in the shelving brief did not survive measurement, and the record should
+say so.** The brief carried "9 of 14 real rosters show a degenerate 100%/0% split"; that
+figure is not reproducible against any denominator in the code. Measured across all
+fourteen rosters: 8 of 14 are degenerate on **firsts**, 3 of 14 on **live picks**, and 0
+of 14 on **every held pick**, which is the set the bar actually divided. The brief also
+described `multiHop` and `longestAway` on /deals as "both firing on the same single real
+row"; live data has 17 round trips over 7 managers with 3 multi-hop, so the collision is
+latent rather than active. Both fixes were still correct to make. Neither premise was
+load-bearing: the monotonicity fault above is what killed the bar, and it does not depend
+on either count.
+
+### The replacement is three rows, and the point is that they do not share a denominator
+`summarizeAgency` now returns three real buckets instead of a split: **yours to set and
+yours to hold**, **yours to set and theirs to hold**, **theirs to set and yours to hold**.
+The middle one is new information the panel could never see, because every previous read
+started from the picks you hold. It comes from `awayPicks`, the reciprocal of that list,
+which is just the difference between the two ownership modes `pickCapital` already
+supports: "original" enumerates the picks your own seasons will order, "held" enumerates
+the picks you can draft with, and a pick in the first set but not the second is one whose
+outcome is still yours and whose asset is not. No new data, no new request.
+
+Rows one and two sum to what your seasons decide. Rows one and three sum to what you
+hold. **Row one is in both sums**, which is exactly why no bar can draw this: two
+overlapping sets have no shared denominator, and dividing one anyway is what produced the
+defect above. So the panel prints three counts and one sentence stating the overlap as a
+fact ("6 picks ride on your seasons; you hold 10. The 5 in the first row are both.")
+rather than manufacturing a percentage out of sets that do not nest.
+
+**The rhyming label triplet is the interface, not decoration.** Three lines that scan
+identically ("yours to set, yours to hold" / "yours to set, theirs to hold" / "theirs to
+set, yours to hold") put both axes into one reading pass without a 2x2 grid to decode.
+"yours" is always `accent-text` and "theirs" always `secondary`, the same word in the same
+colour in every row, and the words differ independently of the colour so the rows survive
+greyscale. Firsts lead the left column at 76px fixed width, larger and bolder than the
+pick count, because a dynasty manager counts firsts. A thin accent rail sits on the left
+edge of rows that are yours to set and the right edge of rows that are yours to hold, so
+the overlap row carries both: a Venn diagram expressed as gutters rather than shapes, in
+CSS borders, with no SVG anywhere in the panel. Both borders are always present and only
+the colour changes, so no row shifts against its neighbours.
+
+**A zero-count row is never printed.** The bar's worst reading was a full accent segment
+over an empty one, which looks like a finding and is an absence; empty buckets are dropped
+and the absence is stated in words instead.
+
+**One honesty fix the brief's own wording would have broken.** The specified absence
+sentence was "You have never sent one of your own picks elsewhere, and you hold nothing of
+anybody else's". The ledger counts only LIVE picks, deliberately, because "yours to set"
+is a present-tense claim about a season that can still move. Live roster 14 reaches the
+one-row branch **while one of its own picks really is on another roster** - settled, so it
+sits in the group below rather than in row two. "Never" would have been false two inches
+above its own disproof, which is the same class of error as the bar. The shipped sentence
+is scoped to what it measures: "Every pick still in play is one your own seasons set and
+you still hold. None of your own undecided picks is anywhere else, and you hold none of
+anybody else's." A test pins that it never says "never".
+
+### Settled picks were a filter, and a filter costs a paragraph
+Picks whose ordering season is already over were flagged `settled` and then **dropped from
+the visible list**, which bought a paragraph whose entire job was accounting for the rows
+that had been hidden. They are now the fourth group, and the group header's count is that
+paragraph, deleted. Each row prints the one thing a settled pick knows that a live one
+cannot:
+
+```
+2026 1st via Giddler on the Roof              1,452
+slot 9 of 14 · 9th overall
+```
+
+Sorted by **overall pick number ascending, not by posture**: posture is a reading of a
+season that can still move, and ordering these rows by it would sort them on a fact that
+no longer applies to them. The slot comes from `loadPickSlots`, which reads the `slotOf`
+map the draft index has always built and nobody had used - in this league the 2026 order
+is published (`pre_draft` with a full slot map) even though the draft has not been held,
+which is what makes an exact slot printable at all. **A missing slot stays missing**: no
+slot is derived from arithmetic, and a slotless settled pick sorts after the ones with a
+published slot rather than being given a position it has not earned (D19).
+
+**A muted "est" now follows the value on live rows only.** An exact price and an
+expectation over a lottery spread are not the same number, and the list is the cheapest
+place to show the difference. It is also the legend for the methodology link below it.
+
+### `orderNote` moved to the page it qualifies
+The pick-pricing footnote lived inside the panel and ended in a literal source-file path
+(`lib/valuation slotDistribution`). It qualifies the PRICING MODEL, whose reader is on
+/methodology, so the paragraph now sits in that page's existing picks section with a
+per-season deviation table beside it, and the path is gone. /roster keeps one line, and
+the line is phrased off the real measurement rather than hedged across both cases:
+**checked, this league's draft order is loose** - it has differed from strict reverse
+standings in 4 of 4 drafts on record, by up to 4 places - so the line says so, and a test
+pins the exact-order phrasing for a league where the other branch is true.
+
+That measurement is also why bucket B's sentence says "tends to". The middle row is the
+one place in this module making a claim about a pick the reader does NOT hold, and it had
+to be a sentence the app has never shown: *"Your own seasons set these, and somebody else
+holds them. That inverts the usual reading of a good season: the draft is ordered off the
+standings, so a season that goes well tends to push these picks later in their round. They
+hold the asset; you hold the outcome."* The last clause is deliberately the mirror of the
+existing passenger line ("You hold the asset; they hold the outcome"), and "tends to" is
+not hedging for its own sake: a flat "every win moves it later" would claim a precision
+the fidelity measurement one link away denies. It grades nothing and infers no intent
+(D6, D19); sending a pick away is not called good or bad.
+
+### The deleted block, and why deleting it was the point
+"What the seasons you ride on are doing" listed a posture, a count and the manager names
+for every roster whose season sets a pick you hold. Once bucket C exists that is **the
+third statement of the same information**: the row itself, then this block, then a group
+list naming the same managers with links to their dossiers. The postures and counts fold
+into row three's own sub-line ("2 straddling · 2 ascending · 1 contending"); the manager
+names stay in the groups below where they are already links. Same finding as D40 and D51,
+one level in.
+
+### 17 round trips, and nobody had asked out of how many
+`/deals#buybacks` counted returns and never stated the set they were drawn from, so it
+could not say whether picks come home often or almost never. `pickDepartures` supplies the
+denominator: **17 of 133 own picks that have ever left home have come back**, and per
+manager, "Busiest: 6-Month Plan, 5 of their 11 own picks traded away have come home" -
+counts rather than a rounded percent, because "5 of 11" reads faster and rounds nothing.
+The dossier header gets the same treatment ("Picks they bought back - 5 of 11").
+
+**The scope constraint is the whole correctness story here, and getting it wrong biases
+the rate in one direction rather than adding noise.** `pickBuybacks` counts returns from
+the transaction log AND from the traded-picks snapshots, because a commissioner-executed
+trade records no picks at all and the snapshot is then the only evidence. A denominator
+built from the log alone would miss exactly the same class of move while the numerator
+kept it. Measured: 128 departures are recorded, **133** once snapshot-only ones are
+counted, and 2 of the 17 returns are themselves snapshot-only. The rate's numerator is
+also distinct PICKS rather than round trips, since `pickBuybacks` reports the same pick
+twice when it genuinely came home twice; the live league has no such pick today, so this
+costs nothing now and stops the number reading 2 of 1 the first time it happens.
+
+### The duplicate finding on /deals
+`longestAway` is a superlative and now renders only when `byManager.length > 1`, the guard
+"Busiest" already used. `multiHop` renders whenever it is non-empty, because "it changed
+hands somewhere else before coming home" is a structural fact about a round trip rather
+than a ranking of it and stands at n=1. When both would otherwise fire over one row, the
+duration folds into the multiHop sentence instead of printing a second line. Same defect
+D51 fixed at a different level of this app.
+
+### Gate
+`pnpm lint`, `pnpm test` (1,247 to 1,260 tests), `pnpm e2e` (81) and `pnpm build` all
+clean. Verified visually at 390px in both themes against the live league, and axe-scanned
+clean on /roster, /deals and /methodology in each. `pnpm typecheck` not chased (D89).
