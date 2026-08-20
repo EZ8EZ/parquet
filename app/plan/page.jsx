@@ -4,7 +4,7 @@ import { getLeagueHistory } from "@/lib/history";
 import { buildGamePlan } from "@/lib/gameplan";
 import { getPrincipals } from "@/lib/principals";
 import { cachedLeagueTimelines } from "@/lib/metrics/duration";
-import { leagueWindows, windowSynthesis } from "@/lib/metrics/window";
+import { leagueWindows, windowShort } from "@/lib/metrics/window";
 import { PageHeader, Tag } from "@/components/ui";
 import { MetricGloss } from "@/components/MetricGloss";
 import { TeamAvatar } from "@/components/TeamAvatar";
@@ -61,34 +61,38 @@ export default async function PlanPage() {
   const tl = cachedLeagueTimelines(h).find((t) => t.rosterId === rosterId);
   const timelineAgrees = dx.directionBasis === "posture";
   /*
-   * THE SYNTHESIS, and the only genuinely new sentence on this page.
+   * THE WINDOW, AS ONE LINE AND A LINK. /league OWNS THE SYNTHESIS NOW.
    *
-   * Every derivation behind it already existed: the roster's own value window, the
-   * other thirteen, and the arithmetic of which of them intersect (lib/metrics/window.ts).
-   * Nowhere in the app were they ever joined, and the join is the thing a manager
-   * actually does privately and badly - "my window is 2029; who else is bidding for
-   * 2029". /plan is where it belongs because it is the one page whose subject is the
-   * decision rather than the reading.
+   * This page used to render `windowSynthesis` itself, and the two call sites had
+   * DIFFERENT GATES for the same string, which is how one function came to give two
+   * pages two different wrong answers:
    *
-   * COUNTS ONLY. It says how many rosters share the window and how many are dated
-   * away from it; it does not say what to do about either, because that is the moves
-   * list below, and it does not infer that anyone is a seller, because intent is not
-   * something the app can see (D19).
+   *   /league  ungated. A refused roster printed `refusalSentence(...)` as unmarked
+   *            plain text, so a stated refusal arrived looking exactly like a reading -
+   *            the failure lib/refusal.js exists to end.
+   *   /plan    gated on `state === "window"`. A refused roster saw nothing at all, so
+   *            the one page whose subject is the decision silently dropped the fact that
+   *            the decision could not be read.
    *
-   * Rendered ONLY for a roster with a readable single window. When the viewer
-   * straddles, `windowSynthesis` says so - but the timeline check directly above is
-   * already saying exactly that at length, and two paragraphs making one point is the
-   * density this page has repeatedly been cut back from.
+   * One owner fixes both. /league's seat card renders every state this function can
+   * return - window, split, NO_RECORD, INSUFFICIENT_SAMPLE - and routes the refused ones
+   * through `RefusalMark`, which is what they always were. What /plan needs from it is
+   * not the paragraph: it is the one fact that changes a move, which is the span itself,
+   * plus a way to get to the page that reads it properly. So this is the span or its
+   * refusal CODE (D95 - never a dash, which reads as a missing number rather than as a
+   * refusal), and a link.
+   *
+   * The counts are deliberately not restated here. They belong beside the chart that
+   * draws them, and this page has been cut back from density like that repeatedly.
    */
   const windows = leagueWindows(h);
-  const windowLine =
-    windows.me?.state === "window" ? windowSynthesis(windows) : null;
-  /** Team identity for a partner roster, for the target row's logo. */
-  const teamOf = (id) => {
-    const r = h.rostersById.get(id);
-    const u = r?.ownerId ? h.usersById.get(r.ownerId) : undefined;
-    return { name: u?.teamName ?? u?.displayName ?? `Roster ${id}`, user: u };
-  };
+  const myWindow = windows.me
+    ? {
+        readable: windows.me.state === "window",
+        short: windowShort(windows.me),
+        peak: windows.me.peak,
+      }
+    : null;
   return (
     <div>
       <PageHeader
@@ -213,14 +217,66 @@ export default async function PlanPage() {
                 ? `The ${dir.label.toLowerCase()} call is read off this timeline - value concentrated around ${tl.rosterDuration.toFixed(1)} seasons out, assets agreed about it (that is what "${tl.posture}" means). Protect that alignment: do not add pieces dated far from it.`
                 : `${dx.directionNote} The two answer different questions - when your value arrives, and what your standing argues for - so this is a choice in front of you rather than a contradiction. Each move below is chosen for the ${dir.label.toLowerCase()} call.`}
           </p>
-          {windowLine && (
-            <p className="mt-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
-              {windowLine}{" "}
+          {myWindow && (
+            <p className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
+              <span>
+                {myWindow.readable ? (
+                  <>
+                    The middle half of your value is dated{" "}
+                    <span className="figure font-semibold">
+                      {myWindow.short}
+                    </span>
+                    {myWindow.peak != null && (
+                      <>
+                        , heaviest in{" "}
+                        <span className="figure">{myWindow.peak}</span>
+                      </>
+                    )}
+                    .
+                  </>
+                ) : (
+                  <>
+                    Your window is not readable:{" "}
+                    <span className="figure font-semibold">
+                      {myWindow.short}
+                    </span>
+                    .
+                  </>
+                )}
+              </span>
               <Link
                 href="/league"
                 className="text-meta font-semibold text-accent-text underline-offset-2 hover:underline"
               >
-                see the window map
+                Who is standing in it
+              </Link>
+            </p>
+          )}
+          {/*
+           * THE BREAK ASSET WAS COMPUTED HERE ALL ALONG AND NEVER PRINTED.
+           *
+           * `tl.timelineBreak` names the single asset this roster's own timeline is
+           * least able to explain (lib/metrics/duration.js), and /plan has been
+           * fetching it inside `tl` without ever showing it. It is also the asset the
+           * trade finder is STRUCTURALLY LEAST LIKELY to suggest moving, because the
+           * finder's give pool is sorted by what a partner wants most rather than by
+           * what you would most like to be rid of - so the roster's own diagnosed
+           * problem could be invisible to every suggestion the app makes. The link
+           * carries `move=`, which forces this asset into every package the finder
+           * considers.
+           *
+           * Stated as a misfit, never as a mistake: `findTimelineBreak`'s own docstring
+           * is explicit that this is frequently the roster's best player.
+           */}
+          {tl.timelineBreak?.label && (
+            <p className="mt-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
+              One asset does not fit that story: {tl.timelineBreak.label},{" "}
+              {tl.timelineBreak.duration.toFixed(1)} seasons.{" "}
+              <Link
+                href={`/trade/finder?${new URLSearchParams({ move: String(tl.timelineBreak.id) }).toString()}`}
+                className="text-meta font-semibold text-accent-text underline-offset-2 hover:underline"
+              >
+                Find a deal that moves them
               </Link>
             </p>
           )}
@@ -261,8 +317,6 @@ export default async function PlanPage() {
 
       <div className="space-y-2">
         {plan.moves.map((m, i) => {
-          const partner =
-            m.partnerRosterId != null ? teamOf(m.partnerRosterId) : null;
           return (
             <article
               key={m.id}
@@ -303,40 +357,50 @@ export default async function PlanPage() {
                 </div>
               </div>
 
-              {m.partnerName && m.partnerRosterId != null && partner && (
-                <Link
-                  href={`/managers/${m.partnerRosterId}`}
-                  aria-label={`Dossier: ${m.partnerName}`}
-                  className="mt-1.5 flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-info/25 bg-info/[0.06] px-2 py-1.5 transition-colors hover:border-info/50 hover:bg-info/[0.1]"
-                >
-                  <Target
-                    size={13}
-                    aria-hidden="true"
-                    className="shrink-0 text-info"
-                  />
-                  <TeamAvatar
-                    name={partner.name}
-                    avatarId={partner.user?.avatar}
-                    teamLogoUrl={partner.user?.teamLogoUrl}
-                    size="xs"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-note font-semibold text-ink">
-                      Try {m.partnerName}
-                    </span>
-                    {m.partnerRationale && (
-                      <span className="block truncate text-meta leading-tight text-muted">
-                        {m.partnerRationale}
-                      </span>
-                    )}
+              {/*
+               * THE PARTNER SUGGESTION IS NOW A SEARCH, NOT A SECOND OPINION.
+               *
+               * This row used to name one leaguemate picked by `choosePartner` -
+               * shelved, SHELVED.md S11 - which scored dossier tags without ever
+               * checking whether either roster held an asset the other one wanted. It
+               * could therefore send a reader to a manager the trade finder finds
+               * nothing with, from a card on the same page. The finder answers the same
+               * question by searching real assets, and `move=` hands it the one asset
+               * this move actually names so it does not have to guess what you meant.
+               */}
+              <Link
+                href={
+                  m.moveAssetId
+                    ? `/trade/finder?${new URLSearchParams({ move: String(m.moveAssetId) }).toString()}`
+                    : "/trade/finder"
+                }
+                className="mt-1.5 flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-info/25 bg-info/[0.06] px-2 py-1.5 transition-colors hover:border-info/50 hover:bg-info/[0.1]"
+              >
+                <Target
+                  size={13}
+                  aria-hidden="true"
+                  className="shrink-0 text-info"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-note font-semibold text-ink">
+                    {m.moveAssetId
+                      ? `Who would take ${m.give[0]}?`
+                      : "Who has room for this?"}
                   </span>
-                  <ArrowRight
-                    size={13}
-                    aria-hidden="true"
-                    className="shrink-0 text-info"
-                  />
-                </Link>
-              )}
+                  {/* `line-clamp-2`, not `truncate`: this is a sentence, and a
+                        sentence cut mid-word is the bug D72 spent a whole round on. */}
+                  <span className="block text-meta leading-tight text-muted line-clamp-2">
+                    {m.moveAssetId
+                      ? "Searched for packages that include him"
+                      : "Grouped by whose window is opposite yours"}
+                  </span>
+                </span>
+                <ArrowRight
+                  size={13}
+                  aria-hidden="true"
+                  className="shrink-0 text-info"
+                />
+              </Link>
 
               <p className="mt-1.5 flex items-start gap-1.5 text-meta leading-snug text-warn">
                 <AlertTriangle

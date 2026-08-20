@@ -47,6 +47,18 @@ const H = 30;
 const BASE = 26;
 const PAD = 6;
 const r1 = (v) => Math.round(v * 10) / 10;
+/**
+ * `noun` NAMES THE POPULATION, and it defaults to the only one this strip used to have.
+ *
+ * All five original callers compare one roster against the other thirteen, so "rosters"
+ * was written into the spoken sentence and the rank reading. The provenance rail
+ * compares one HOLD against the same manager's other completed holds - same drawing,
+ * same discipline, a different population - and a strip that said "across 23 rosters"
+ * about 23 holds would state something false to exactly the reader who cannot see the
+ * picture. So the noun is a prop rather than a second copy of this component: one
+ * strip, one set of rules, and the sentence stays true wherever it is pointed.
+ * Defaulted, so every existing call site renders byte-identically.
+ */
 export function DistributionStrip({
   label,
   values,
@@ -57,6 +69,7 @@ export function DistributionStrip({
   sub,
   href,
   className,
+  noun = "rosters",
 }) {
   const clean = values.filter((v) => Number.isFinite(v));
   if (clean.length < 3) return null;
@@ -78,7 +91,7 @@ export function DistributionStrip({
       ? betterEnd
         ? `${ordinal(rank)} ${betterEnd === "high" ? "highest" : "lowest"} of ${clean.length}`
         : `${ordinal(rank)} of ${clean.length}`
-      : `${clean.length} rosters`;
+      : `${clean.length} ${noun}`;
   const body = (
     <>
       <div className="flex items-baseline justify-between gap-2">
@@ -105,7 +118,7 @@ export function DistributionStrip({
         role="img"
         aria-label={
           `${label}: ${mine != null ? `yours is ${format(mine)}, ${reading}. ` : ""}` +
-          `Across ${clean.length} rosters the range runs ${format(lo)} to ${format(hi)}, ` +
+          `Across ${clean.length} ${noun} the range runs ${format(lo)} to ${format(hi)}, ` +
           `median ${format(median)}.`
         }
       >

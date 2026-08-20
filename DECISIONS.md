@@ -159,8 +159,10 @@ implemented, tested against the real league, and **rejected**: it attributed six
 unrelated pick hops spanning three seasons to a single 2023 deal, because the only
 available signal ("both parties are in this trade") is far too weak. Fabricating trade
 contents is worse than an acknowledged gap, especially for a product whose entire
-premise is an honest record. Unattributable hops surface separately via
-`unrecordedPickMoves()`.
+premise is an honest record. What IS published is the gap itself, wherever a
+commissioner deal is visible - see D100, which made that one sentence identical on all
+three surfaces that show one and deleted `unrecordedPickMoves()`, the helper this entry
+used to point at for "surfacing them separately". It never had a caller.
 
 **Second pass: the inference engine came back, uncalled, and was deleted again - and
 the "(inferred)" caveat went with it.** A hardened `attachInferredPicks` survived in
@@ -5850,3 +5852,725 @@ D51 fixed at a different level of this app.
 `pnpm lint`, `pnpm test` (1,247 to 1,260 tests), `pnpm e2e` (81) and `pnpm build` all
 clean. Verified visually at 390px in both themes against the live league, and axe-scanned
 clean on /roster, /deals and /methodology in each. `pnpm typecheck` not chased (D89).
+
+## D99. THE NULL RESULT GOT THE SAME INK AS THE FINDING - two panels sharing one axis, a counterfactual that is now the model instead of the algebra, and the coverage number recounted against the board a reader is actually looking at
+
+D94 shipped in-league production into every price and argued the whole case in prose:
+a one-season test that came back null, a three-season test that did not, a 23% weight,
+and an injury overlap named in a footnote. Every number was right. None of them was
+drawn, and the two places the page did draw something - two side-by-side lists of five
+movers - was the one place the drawing was actively misleading.
+
+### The one-season null and the three-season finding are now the same picture
+
+`components/ProductionEvidence.jsx`. Two stacked dot-strip panels, three marks each
+(the consensus ordinal alone, production alone, production's partial correlation once
+the ordinal is already in the model), one shared correlation axis from -0.2 to 1.0, and
+exactly one gridline: zero.
+
+**Small multiples rather than six marks on one axis, and that is the load-bearing
+choice.** The two rows of numbers answer DIFFERENT QUESTIONS against DIFFERENT TARGETS
+with DIFFERENT n - next season alone at n=209, the discounted following three seasons at
+n=243. On one axis, 0.412 sitting to the right of -0.051 reads as "production got better
+at the same job", which is not what happened and not what either number means. Two
+panels with two captions naming two targets make the only legitimate comparison the only
+one the geometry offers: whether the interval clears zero.
+
+**The +/-2 SE whisker is on the partial mark only.** That mark's distance from zero IS
+the finding, so its uncertainty is the thing a reader has to see; the other two are
+context, and giving the incumbent ordinal an identical error bar would imply it was
+measured to the same purpose. Panel one's whisker runs -0.190 to +0.088 and straddles
+the zero line - which is the honest render of a null, and the reason the dot was NOT
+nudged onto zero to make the point look tidier. Panel two's runs 0.283 to 0.541 and
+clears zero by a wide margin.
+
+**The standard error is derived, never stored.** `partialSe(n) = 1/sqrt(n - 3)`, and it
+reproduces both of D94's reported z figures exactly (-0.051/0.0697 = -0.73;
+0.412/0.0645 = 6.38). A hand-copied SE beside the rho it belongs to is how a chart ends
+up drawing an interval nobody computed, so the number the whisker is made of comes from
+n and nothing else. Pinned by test in both directions: panel one's interval must contain
+zero, panel two's must not.
+
+### Two things deliberately NOT drawn, and the notes saying why
+
+**The R-squared lift, 0.790 to 0.826.** A 3.6-point move between two numbers that large
+is visually identical on an honest 0-to-1 axis and only becomes visible on a truncated
+one, so either version misinforms. Stated once in text, and `PRODUCTION_R2`'s own
+docstring carries the refusal so nobody adds the bar later. A test asserts the gap is
+under four points, which is the fact that makes it undrawable.
+
+**The hindsight caveat.** 0.233 is a stated FLOOR with no measured upper bound: the
+consensus snapshot postdates part of the window it is scored over, so the incumbent was
+graded with hindsight on the seasons it is meant to be predicting and production was not.
+That tilts the comparison toward the ordinal - which also means the 0.889 the ordinal
+scores is inflated, so the GAP between the two is overstated as well, a second direction
+the prose had not stated. No error bar, no arrow, no shaded "probably higher" band: an
+unmeasured quantity drawn as a measured one is D19's exact failure, and the page now says
+plainly that the correction is unknown rather than gesturing at its size.
+
+### The movers list stopped being two columns, because two columns hid the asymmetry
+
+`components/ProductionMovers.jsx`. One list, ten rows, sorted by absolute move across
+both directions, dumbbells on one axis anchored to **9,009** - the top price this league
+actually carries, read live off the same map /values ranks, not `cfg.maxValue` (10,000),
+which is `base(1)` before any multiplier and is reached by nobody.
+
+The two five-row columns looked balanced and the data is not: the largest drop is -1,917
+and the largest gain is +992, so each column was implicitly scaled to its own worst case
+and two effects of very different size appeared comparable. On one axis the drops are
+visibly about twice as long, which is a real property of the measurement - production
+penalises absence, and a lost season is what absence looks like.
+
+**A population strip above the ten, on the identical axis.** Every rostered player's move
+as a segment from his counterfactual value to his priced one. The result is deliberately
+anticlimactic and that is the entire point: 225 of 250 moved at all, median 91, p90 513,
+largest 1,917, against a ceiling of 9,009 - so almost every segment is too short to
+resolve, and the named ten are visibly the tail of a distribution that is mostly nothing
+rather than "what production did to this league".
+
+Drawn first on ONE line, which a screenshot caught as a real bug: 250 short segments at
+the same y merge into one continuous bar, and a continuous bar on a value axis reads as
+one enormous move - the exact opposite of the claim. They are now jittered across five
+rows by a hash of the player id. Vertical position carries no data and says so in the
+code; the band comes from a hash rather than an index because an index over a
+value-sorted list would draw a diagonal, which is both a false pattern and a reserved
+mark (D96).
+
+**The injury overlap travels IN the graphic.** 12 of the 20 largest drops carry a current
+injury flag against 3.8 expected by chance (48 of 250 rostered players are flagged), mean
+move -214 for a flagged player against +46 for an unflagged one, and 6 of the ten drawn
+rows carry a flag. All of it captioned directly above the list it qualifies, with the
+body part marked on each row - because a reader shown these ten names who does not learn
+that most of the drops are injuries has been shown a real number and led to a wrong
+conclusion about what it measures. Every figure in those captions is derived from the
+array the chart draws, so a caption cannot disagree with its own marks.
+
+The row marker is the body part in words, NOT the app's injury chip. The chip is
+`bg-negative-wash text-negative`, which inside a chart would make injury the only
+colour-encoded quantity on the page and imply the flag is the bad end of a scale this
+chart does not have. `/depth/[team]` already states injury as a plain `·`-joined fact in
+a secondary meta line; that is the convention borrowed.
+
+### The drawn counterfactual is now the model, not one exponential
+
+/methodology derived the "before" value analytically: every multiplier is identical
+either way, so the two values differ by exactly the ratio of their bases, which is one
+exponential and needs no second pass. The algebra is correct. It is also not what the
+model outputs, because `value` is rounded before the exponential multiplies it and the
+product is rounded again.
+
+Measured against the live league: the shortcut matched the model exactly for 178 of 246
+backed rostered players and differed by at most **2 points** for the other 68, and the
+top ten come out in the same order either way. Comfortably invisible in a sentence like
+"4,006 to 2,089", which is all it was ever asked to support. It stops being invisible
+when the two numbers become the two ends of a drawn mark: a dumbbell asserts its dots sit
+where the model puts them, and "within two points of where the model puts them" is a
+weaker claim. `cachedNoProductionValuePlayers` runs the real thing at
+`productionWeight: 0`, memoized on corpus identity exactly as `cachedValuePlayers` is.
+
+### The permutation guarantee, pinned in BOTH directions
+
+D94's claim is that the blend is a permutation of the pool's own search ranks, so the
+multiset of `base` values is preserved. True, and verified bit-for-bit on the live
+corpus. It is also narrower than it sounds, and the prose could be read as the wider
+claim, so two tests now bracket it: with every multiplier equal, the displayed VALUE
+multiset is preserved too - and once ages vary, it is not, because multipliers travel
+with the player and reordering who holds which base pairs bases with different
+multipliers. `base` survives; what a reader actually sees does not.
+
+### Per-row provenance marks the exception, and only the exception
+
+246 of 250 rostered players are production-backed. The temptation was to badge those,
+which is backwards: a mark present on most rows and absent on some reads as a grade the
+absent rows failed (D6), and it would decorate ~200 rows to carry information about a
+handful. So the mark goes where the claim is WEAKER - three words of plain text,
+`· consensus only`, joining the meta line that already carries position, team and age,
+in the same secondary voice, at zero added row height.
+
+Deliberately NOT a hatch on the value or its bar. These players have real published
+prices; what is missing is the provenance behind the rank, not the number. The value is
+printed exactly as any other.
+
+In the expansion, the value's single `consensus` fact became TWO - `consensus` and
+`priced`, with the places moved - because the row used to print only the ordinal, which
+is the one number the model had already stopped pricing from. Both ranks were on
+`ValuedPlayer` all along. A grey dumbbell puts them on a rank scale shared by every row
+in the list, hollow for consensus and filled for priced, one colour and no arrowhead: an
+arrow claims a trajectory, and these are two present-tense estimates. Drawn only where
+production actually moved him - for an unbacked row the two ranks are the same number by
+construction, and two coincident dots would assert a measurement nobody made. Its caption
+says "1 at the left", not "left is better": rank 1 is the most valuable asset by
+construction, but this app does not tell a reader which end of a scale to want (D6, the
+same discipline that leaves `betterEnd` unset on `DistributionStrip`).
+
+`productionBackingRefusal` reached exactly one site, a page-level card on /methodology,
+and is aggregate by construction - two counts and a league-wide plural sentence. Printing
+that beside one name would say something true about the league and nothing about the
+player next to it, so `productionRowRefusal` is a sibling: same closed `NO_RECORD` code,
+per-player numbers.
+
+**It carries no `withheld` figure, and the first cut's did.** `refusalSentence` renders
+that field as "<label> would read <value>, and is not published", so putting the rostered
+week count there made the sentence say the count was withheld and then publish it in the
+next clause - a contradiction and a duplication. The week count is EVIDENCE FOR the
+refusal, not the declined quantity; the declined quantity is the production index, which
+has no "would read" value because it does not exist, and writing 0.000 to fill the field
+is the invented zero the function exists to refuse. The field stays empty, by test.
+
+The sentence is built on the SERVER and passed in as a finished string. `ValueAssetRow`
+is a client component, and `RefusalMark`'s own contract is that the refusal-to-string
+boundary sits at the call site - a row that writes its own reason string is a row that
+can drift from the flag it is describing.
+
+### `derive-production.js` now keeps the counts it was throwing away
+
+The derivation dropped every sub-floor player-season before it counted anything, which
+is right for the index and lost the one fact a reader wants about an unpriced player: how
+far under. "No eight-week record" and "four rostered weeks against a floor of eight" are
+the same condition, but only the second lets a reader judge the floor. `BELOW_FLOOR_WEEKS`
+is a second committed constant - 64 players this league HAS rostered but never for eight
+weeks in one season - emitted alongside the table, never folded into it, because these
+players have no index and giving them a row would mean inventing one. The four unbacked
+rostered players read: **Gui Santos 6, Dylan Cardwell 6, Oso Ighodaro 4, Kris Dunn 4.**
+
+A player absent from both lists has never been rostered here at all, which is a different
+fact and reads differently: `rosteredWeeksBelowFloor` returns null, not zero, and the
+refusal words it as "has not rostered him at all" rather than printing a count. Null is
+the absence of a measurement; zero would be one.
+
+### The coverage number, recounted against the board a reader is looking at
+
+98.4% is the ROSTERED share, and it is the most flattering denominator available. /values
+ranks the top 260 players by value across the whole 2,108-player corpus, not the 250
+somebody rosters - and **211 of those 260 (81.2%)** rest on a production record. The 49
+that do not are almost entirely incoming prospects this league has never rostered, most
+of whom have not played an NBA game: the coming-rookie gap arriving early, on a page that
+already shows it. Both numbers are now on the page, computed live, with the worse one
+given the emphasis.
+
+The cap moved to a shared `VALUE_ROWS` constant so the disclosure cannot end up
+describing a list nobody renders.
+
+No coverage GEOMETRY, per the standing instruction: no ring, no near-full progress bar.
+Those shapes assert "essentially done", which is about to be false - the 2026 rookie
+draft has not run, so every roster is still last season's roster, and 98.4% falls on its
+own the moment it does. A fraction in text with its caveat cannot go stale silently the
+way a nearly-closed ring can.
+
+### `players_points` is ONE LOCKED GAME, and the page says so
+
+Checked in both files rather than trusted: `lib/valuation/production.js` and
+`scripts/derive-production.js` agree, and the derivation's own verification is quoted -
+three players across 23 weeks of 2025, where the field equalled a single game in most
+weeks and coincided with the week's sum only where the player played once that week. This
+league runs Sleeper's lock-in format, so a slotted player scores the one game that
+locked. The index is denominated in the currency this league actually pays in, and the
+window is the two most recent of FOUR completed seasons - stopping at two because lag-3
+persistence (rho 0.192) rests on n=153 and is inside its own noise.
+
+### One measured colour finding, fixed in the file that owns colour law
+
+`CHART_NEUTRAL` is `--color-border-strong`, and composited on `--color-surface` it is
+**2.59:1 on dark and 2.09:1 on paper**. Both are under 3:1 - the same floor
+`lib/chart-colors.js` already applies to the magnitude ramp, with the same rule attached:
+legitimate where a length or a printed number carries the value independently, not
+legitimate where a mark's own visibility IS the datum. The correlation panels' two
+context dots are exactly that second case; they state their value in position alone.
+
+So `CHART_MARK` (`--color-secondary`, 6.09:1 paper / 5.74:1 dark) joins the vocabulary
+for "a mark whose position is the datum", with the measurements in its docstring and a
+pointer on `CHART_NEUTRAL` saying when not to use it. No new colour was invented -
+`globals.css` already reserves `secondary` BY JOB for "anything carrying a datum" and
+`border-strong` for emphasis borders, so this is the token that was always correct for a
+mark. The borrowed border token merely looked correct on dark, where the gap is smallest.
+Every rho on the panels is now printed as well, so no mark is the only statement of its
+own value.
+
+### Also fixed, found by reading the rendered DOM rather than the source
+
+`predict next season'sproduction` - a missing space that had been live since D94. The JSX
+has one; SWC drops the leading space of the text node following `</span>`, so the RSC
+payload carried `"production better than..."` with nothing in front of it. An explicit
+`{" "}` is the idiom that survives any JSX whitespace implementation, and the line above
+it was already using it.
+
+### Deliberately not done
+
+The rank dumbbell scales to 1..309, which puts a typical 9-place move at about 3% of the
+axis - small, and honestly small, since the printed facts carry the number and the mark
+is the second encoding. A rank axis that expanded the top of the board would read better
+and would need a non-linear scale nobody has argued for here. `charts.jsx` still has five
+D96 violations (`<text>` inside a scaling viewBox) and this branch adds none, but fixes
+none either - the two new components use the WindowMap construction.
+
+### Gate
+
+`pnpm lint`, `pnpm test` (1,305) and `pnpm build` clean; `pnpm e2e` passed with three
+pre-existing flakes that pass on retry and sit on routes this branch does not touch
+(`/deals`' documented hydration race, and two that passed clean on a rerun). Verified
+visually at 390px in both themes against the LIVE league - the fixture provider's
+synthetic ids do not intersect the production table, so on fixtures nothing blends and
+the movers section correctly renders its "no player moved" sentence instead of ten
+zero-length marks. axe-scanned clean on /methodology and /values in both themes.
+`pnpm typecheck` not chased (D89).
+## D100. THE RAIL'S Y-AXIS WAS NOT A TIME AXIS - measured at 8% fidelity on its own headline case, so the floor is gone, and the gap became the object the feature was always about
+The Provenance Rail's whole premise is that the y-axis is TIME: drawing
+`AssetMove.created` is what turns "it sat unresolved for eighteen months" from a
+subtraction into a thing you can see. It was not drawing time. It was drawing
+`max(proportional share, MIN_ROW)`, and the floor did the work.
+
+**MEASURED FIRST, against the real `layoutRows`, on the chain shapes this league
+actually produces.** Not the brief's numbers - the brief said "up to 13x distortion" and
+"7-12% fidelity", and both were checked rather than inherited:
+
+| gaps (days) | drawn (px) | long gap: true share -> drawn | px-per-day disparity |
+|---|---|---|---|
+| 1, 1095 | 92, 268 | 99.9% -> 74.4% | **376x** |
+| 3, 4, 1095 | 92, 92, 356 | 99.4% -> 65.9% | 94x |
+| 1, 1, 2, 1460 | 92, 92, 92, 444 | 99.7% -> 61.7% | 302x |
+| 2, 5, 3, 10, 730 | 92, 92, 92, 92, 512 | 97.3% -> 58.2% | 66x |
+
+The within-rail disparity is 66-376x, not 13x - the brief understated it by an order of
+magnitude. The "7-12% fidelity" figure reproduces under one specific reading (the RATIO
+between two gaps): a 1-month-then-3-year chain has a true ratio of 36.5x and draws it at
+2.9x, which is 8%. Both findings stand; the honest numbers are worse than the ones
+reported.
+
+**The tell is the second column: every short gap is exactly 92.** On real data the row
+height had already collapsed into a near-binary signal - "floored" versus "the long one" -
+and two rows of identical height could be one day apart or forty-four. The axis's own unit
+test made the point without noticing: it fed `[0, 100, 200, 1200]`, a 10x ratio, asserted
+the long row was `> 3x` the short one (it draws 3.87x), and called the test "spaces rows
+proportional to elapsed time".
+
+**THE CALL: content-sized rows, and the proportional claim MOVED rather than deleted.**
+Two options were costed. Gridlines-on-the-existing-layout keeps the "how much bigger is
+this gap" claim and makes the distortion legible; content-sized (`auto`) rows give
+pixel-exact alignment by construction and delete the layout math but give the claim up.
+Neither was taken as offered, because the choice they present is false.
+
+What shipped is `minmax(min-content, <proportional target>)` per row. Where elapsed time
+earns more space than the words need, the row is EXACTLY proportional. Where it does not,
+the row is exactly as tall as its content - no floor, no hand-measured constant. And the
+claim that content-sizing would have destroyed is not destroyed: it is moved to
+`OwnershipStrip`, a horizontal bar above the rail where time is drawn in exact proportion
+because no text competes for the width. **The proportional reading went from 58-74%
+faithful to exact by being moved to a place that could afford it.** The rail keeps
+ordering and approximate scale; the strip keeps proportion; the hairlines say where the
+rail's scale breaks. Nothing left implies a precision it does not have.
+
+Three consequences, and the third is why the row-height bug is closed rather than patched:
+1. **Alignment is by construction.** Every dot now sits in its own grid cell, so rendered
+   text height is the browser's problem - which is the only place it was ever knowable.
+   `MIN_ROW` was 74, then 92, and `HOMECOMING_ROW = 40` was a third patch on top.
+2. **The overlap bug is structurally impossible.** A hop that was BOTH a homecoming and a
+   three-team deal overflowed onto the next row, because only one of its two notes had
+   bought itself a floor. A row that sizes to its content cannot overflow its content.
+   The requested fix was `notes.length x a measured per-note height`; that is the same
+   mistake with better arithmetic, so what shipped instead is `hopNotes()` returning the
+   notes and NOTHING measuring their height. A fourth note needs no constant anywhere.
+3. **The distortion that remains is drawn.** Dashed hairline at every calendar-year
+   boundary, solid at every real draft date - straight from WindowMap, where dashed is a
+   scale and solid is "the only line that is a fact rather than a scale". Three hairlines
+   in one row next to none in the row above states the compression instead of hiding it.
+
+**Deliberately CALENDAR years, not "season boundaries" as briefed.** A league season has
+no single recorded start timestamp in this corpus, so a line labelled as a season boundary
+would be a guess wearing a gridline's clothes. Year labels live in an HTML gutter column
+positioned at `top: <fraction>%`, never in an SVG `<text>` - D96's rule, and the same
+class of bug it was written for.
+
+**THE GAP IS NOW A FIRST-CLASS ROW WITH A THREE-STATE GRAMMAR.** `chainGapActivity` is
+deleted. It reported LEAGUE-WIDE activity in a chain's single longest gap, which for a
+never-traded player is origin-to-today - so every never-traded player sharing a startup
+draft got the same window and therefore byte-identical numbers: one paragraph, 149 pages,
+saying nothing about any of them. `chainGapScenes` asks the question the reader is
+actually on the page for - what did THE HOLDER do during this stretch - and answers it for
+every gap. Measured over the corpus: **153 active, 118 undated, 7 idle.**
+- `active` - a rug of ticks positioned in time, one per move that holder made elsewhere.
+  DistributionStrip's peer-tick discipline: FLAT, never the magnitude ramp, because a
+  tick's position IS its value and ramping fades the sparse end of a rug whose whole job
+  is showing where the moves were not (D48).
+- `idle` - "X made no other move in those 8 months, while the league recorded 11." A true
+  zero is real information (D40) and it is printed with the league's own count beside it,
+  because without a scale a quiet manager and a quiet league are indistinguishable.
+- `undated` - `RefusalMark` + `SOURCE_GAP` (D95). One boundary has no recorded date, so
+  the WINDOW does not exist and there is nothing to have counted. That is a different
+  statement from "nothing happened", and an empty cell would have said the wrong one.
+
+**REPEAT-HOLDER DETECTION GENERALIZED.** `isHomecoming` parsed the original roster out of
+a pick key, so it could only ever fire for picks - a PLAYER traded away and reacquired by
+the same manager, the more human version of the same story, was invisible. `repeatHolders`
+asks whether any holder appears twice in the de-duplicated holder sequence, which subsumes
+the pick case (a pick's origin node carries its original roster) and catches players.
+Measured: **14 of 53 multi-hop chains, 13 of them players** - i.e. 13 real findings the old
+check was structurally incapable of producing. Drawn as
+CoherenceFragilityQuadrant's own ring at its exact geometry (`r=9` on an `r=5` dot,
+`strokeWidth 1`, `opacity 0.75`) on BOTH ends of the pair. One deliberate deviation: that
+chart's ring is accent because it marks the VIEWER, and accent means "you" everywhere in
+this app - a returning holder is a fact about the asset, so the ring is neutral and the
+sentence is muted rather than the old loud `accent-text`.
+
+**HOLD DURATION: BOTH NUMBERS, NO THIRD ONE.** D45 applied exactly - print what this hold
+was and what their others run, and compute no delta, no ratio, no comparative adjective.
+"Shorter than usual" is a verdict about a manager built from two numbers that cannot
+support one: a hold ends when a trade happens, and a trade needs a counterparty, so a short
+hold is at least as much a fact about the rest of the league. Two gates, both of which
+print something rather than nothing: under 5 prior holds renders `INSUFFICIENT_SAMPLE`
+with the count that disqualified it, and an OPEN hold shows no comparison until elapsed
+time already exceeds the median (before that, the passage of time alone would turn a
+"short" hold into a "long" one). `formatDaysPair` fixes the unit from the SMALLER value so
+both numbers are directly comparable - choosing from the larger would print "1 month" for
+41 days, and 41 days is not a month.
+
+**TWO HONESTY BUGS, BOTH LIVE, BOTH FIXED.**
+1. `/lineage` said "Where a pick was reconstructed rather than recorded, the hop says so."
+   Nothing was reconstructed - D19 deleted `attachInferredPicks` - and no hop said
+   anything. Rewritten to what is now true: nothing is reconstructed, and where a hop we
+   DO have came from a commissioner move it says so and names what is missing.
+2. Commissioner-executed hops rendered identically to normal trades, hiding a gap
+   `/deals` has marked since D19. `isCommissionerExecuted()` is now the single reader of
+   the `coalesced-` prefix, the flag rides `AssetMove` onto the hop node exactly as
+   `parties` already did, and the rail prints the receipt's own words verbatim - "Pick
+   record missing." One condition, one sentence, three surfaces.
+
+**Also:** "Read upward" was simply false - the rail renders origin-at-top and every
+caption counts forward, so it reads DOWNWARD; now "Read top to bottom", and it was the
+only prose statement of the axis direction in the app. The deals receipt's
+`border-warn/30 bg-warn/[0.06]` moved to the opaque `border-warn-edge bg-warn-wash` pair.
+`unrecordedPickMoves` is deleted - it had zero callers and zero tests across three rounds
+while `API_NOTES.md`, `DECISIONS.md` (D19) and `lib/history.js` all claimed it "surfaced"
+unattributable hops "separately"; all three claims are corrected rather than left
+pointing at a function that no longer exists. `ORIGIN_TEXT["pre-record"]` is KEPT: it
+fires on nothing in this league but is a legitimate fallback for a shorter-history league,
+and it is what the LaVine chain lands on in the offline corpus.
+
+**One prop added to a shared component, and it is an honesty fix.** `DistributionStrip`
+hardcoded "rosters" into its spoken sentence and its rank reading, because all five
+callers compared one roster against thirteen. Pointed at a population of HOLDS it would
+have said "across 23 rosters" to exactly the reader who cannot see the picture, so `noun`
+is now a prop defaulted to `"rosters"` - one strip, one set of rules, every existing call
+site byte-identical.
+
+**Rejected: separating the two hairline kinds by weight alone.** The first render put the
+year gridlines and the activity rug in the same 20px column, and a dashed 1px line next to
+a solid 2px tick is genuinely hard to tell apart at that size - the rail was drawing "a
+year passed" and "the manager made a trade" as nearly the same mark. Split into two
+channels either side of the spine: LEFT is the scale, and lines up with its own year
+label; RIGHT is what the holder did. Nothing has to be distinguished by weight because
+nothing shares a channel. The legend under the rail is computed from the marks the chain
+actually contains, because listing a mark the drawing does not have is its own small lie.
+
+**Rejected: suppressing the ownership strip whenever any boundary is undated.** That was
+the first implementation and it sounded conservative; measured, 118 gaps carry an undated
+end - almost always the origin - so it deleted the strip from most chains that had
+anything to show. Discarding a measurement you have because a different one is missing is
+not caution. Undated segments are skipped and the omission is stated in the caption.
+
+**Verified by rendering, both themes, at 390px** - not by reading the diff. That is how
+four things above were found: the missing ownership strip, the confusable hairlines, the
+unlabelled solid line, and five ownership segments compositing into one uncountable band
+(fixed with the surface-coloured separator `CoherenceFragilityQuadrant` already uses to
+keep two overlapping dots reading as two dots, and deliberately with NO minimum segment
+width, since widening a two-week hold to be visible is the exact distortion this strip
+exists to avoid).
+
+**Not verified, and stated rather than implied: the real Zach LaVine chain.** The brief
+cited it as a repeat-holder example. `pnpm test` pins `LEAGUE_PROVIDER=fixture` and
+forbids network access, and the real league is only reachable over the Sleeper API, so the
+only LaVine this environment can see is the fixture's - where he is a never-traded player,
+0 hops, an undated origin. The 13-player finding above is real and measured; the
+LaVine-specific claim is untested here and should be checked against live data before
+anyone repeats it.
+## D101. THE BOARD THAT READ AS A LEADERBOARD, AND THE LINK THAT WAS BUILT AND NEVER GIVEN - Trade Finder regrouped, the discarded arithmetic surfaced, and a second answer to "who should I call" shelved
+Two specialists examined `/trade/finder` end to end and converged on the same reading: the
+engine underneath it is genuinely non-verdict, and almost every surface decision on top of
+it was quietly re-imposing one. The list was sorted by mutual room; the top row's figure
+was promoted into a highlighted Stat tile labelled "best room"; the room figure itself was
+printed through `fmtValue` in `text-accent-text`. None of those is a lie about the
+arithmetic. All of them together tell a reader that the app has an opinion about who to
+call first, which it does not have and cannot compute.
+
+**The board is now GROUPED, not ranked.** Four groups off `sharesYourWindow`, a field
+`partnerBoard` already computed and printed as a fragment of one over-loaded line:
+*Opposite timelines*, *Same window as you*, *No window either way*, and *Nothing clears
+the bar* (collapsed). Inside a group: alphabetical, and the subhead says so, because any
+other within-group order smuggles the ranking back in one level down. `partnerBoard`'s own
+`mutual` sort is untouched - the grouping happens in the page, so the tests that pin the
+engine's ordering still pin it. The page title moved from "Who should you call?" (a
+question the app was pretending to answer) to "Where the room is." The highlighted
+"best room" tile is gone, replaced by a two-tile census - *12 of 13 · a package works both
+ways*, *0 of 12 · sit opposite your window* - which is the same correction D93 made to
+/league's three tiles: a count of the search's real output, electing nobody.
+
+**`room` stopped being printed like currency.** It is the smaller of two fit gains, each a
+sum of league values scaled by a clamped preference multiplier (`FIT_CLAMP`), so its units
+are not comparable with anything else on the row and its third digit is noise. Board rows
+now carry a three-band micro-meter - narrow / real / wide - off **terciles of the rooms
+actually present on that board**, which makes every band honestly relative and nothing
+more; `roomBands` returns null below three live values, because two rosters cannot be split
+into three bands. The exact figure survives in exactly one place, the package detail
+footer, with a `~`, an inline definition, no `fmtValue`, and not in the accent colour that
+means "you" everywhere else in the app.
+
+**`tradeHref` had a test suite and zero production callers.** `lib/trade/url.js` existed,
+worked, produced the correct link shape, and every suggested package pointed at a bare
+`/trade` with nothing pre-filled - so "adjust this by hand" meant re-picking six assets
+from scratch, one import away from the module that solved exactly that. The id formats
+already agreed (`assetsOf` and /trade's own pick pool both build
+`<season>-<round>-<originalRoster>`), so this was wiring, not a feature. Every package now
+carries `builderHref`, the detail view has a real button, and the Onward registry's
+"Adjust the package by hand" - which described a link this page did not have - is now
+"Start a package from scratch", which describes the one it does.
+
+**The arithmetic the search computed and threw away.** `price()` returns every asset on
+both rosters, valued through both sides' appetites, sorted by `gap` - how much more the
+other side would pay for it than its owner would - with signed reasons attached.
+`searchPackages` took a ten-item and a six-item slice off the front and `findTrades`
+returned neither, so the most legible output of the entire pass was computed on every
+request and discarded on every request. Both lists now render, stacked (never side by side
+at 390px: a name plus a reason phrase needs the full width), top five each with a
+`<details>` for the rest. **Ranking these is honest where ranking the packages was not**: a
+package ranking is a verdict on a whole hypothetical deal, which is what D6 refuses; a gap
+is one subtraction between two numbers this app already publishes, per asset, making no
+claim about whether to move it. The subhead states the ordering out loud. Rows clamp to two
+lines rather than truncating - D72's finding, and the first draft of this list proved why it
+matters twice over: taking only the FIRST positive reason made five consecutive rows read
+"fills their thinnest spot at SF", because `perceive` emits its tells in a fixed order. All
+of them, joined, is what differs row to row.
+
+**"After this trade" - three pure functions that had never once been run over a proposed
+deal.** `coherenceOf`, `windowOf` and `findTimelineBreak` all take exactly "a bag of dated
+assets" and none of them had ever seen a hypothetical roster from the finder, because there
+was no post-trade asset list to hand them. There were instead **three partial
+reconstructions**, each shaped to one metric: `rosterAfter` in fragility.js (startable
+player ids, picks dropped), `applyPackageToByPosition` in leverage.js (value by position,
+with `valued: []` passed alongside because the caller had no asset list to put there), and
+nothing at all for the timeline. `lib/tradefinder/after.js` now owns all three off one
+partition of the package. They stay separate functions on purpose - fragility's base is the
+startable subset because a pick cannot fill a slot tonight, the timeline's base is every
+priced asset because a pick is the longest-dated thing a roster owns - and collapsing them
+would have quietly changed both numbers to make one signature tidier.
+
+The block prints `TCI 57 → 69` on real before/after numbers, and then the finding both
+specialists rated highest: **whether the asset the package sends is the same asset this
+roster's own timeline already names as its odd one out.** On the fixture league it is -
+LeBron James, 0.0 seasons against a core at 3.8, and the deal that moves him is the deal
+that takes TCI from 57 to 69. That is stated as a **coincidence of two readings, never as a
+fix.** `findTimelineBreak`'s own docstring is explicit that the named asset is very often
+the roster's best player and that holding one while a young core matures is a real strategy
+rather than an error, and copy built on that field is not allowed to contradict it. The
+inverse case - the deal IMPORTS the outlier and TCI falls - gets the identical register,
+identical structure, and no colour-coding of direction, the same discipline `FragilityLine`
+already keeps for a number that moves both ways.
+
+**The graphic, and its arithmetic checked rather than eyeballed.** Two stacked duration
+strips in `AgeStrip`'s existing idiom (one horizontal axis, one dot per asset, a dashed line
+for the weighted centre), with three deliberate differences: x-axis seasons out, dots sized
+by value because the metric is value-weighted, and a translucent ±1σ band behind the dots.
+The band is not an illustration of TCI - it is the same arithmetic. `coherenceOf` computes
+`TCI = 100·(1 - min(1, σ/SIGMA_REF))`, so a band drawn at `mean ± σ` has width `2σ`
+seasons, and therefore `2·SIGMA_REF·(1 - TCI/100)` - exactly `6·(1 - TCI/100)` at the
+shipped SIGMA_REF of 3. **A band that visibly narrows IS the number rising, by identity.**
+`lib/metrics/metrics.test.js` pins that identity against every fixture roster and against
+synthetic bags on both sides of the clamp, so a future recalibration cannot leave the
+drawing quietly lying; above the clamp the identity stops holding in one direction (the
+number is pinned at 0 while the band keeps widening) and the caption prints both figures so
+nobody has to infer one from the other. Verified live in both themes at 390px: ±1.29s at
+TCI 57, ±0.94s at TCI 69.
+
+`windowOf` runs over the same synthetic list, with one honest correction: posture is
+league-relative and cannot be re-derived for a hypothetical roster, but the
+`tci < COHERENCE_FLOOR` test is absolute and reads only the roster's own assets, so a
+package that drops the viewer below the floor has its after-window refused. The residual
+error is one-directional and deliberate - a package that lifts a straddling roster back over
+the floor still inherits "straddling" and still refuses, because what it would then read
+depends on the other thirteen rosters. It under-claims and never over-claims (D19).
+
+**`move=<assetId>`, and why the finder needed a way in.** The give pool is **entirely
+partner-driven** by construction: `price` sorts by gap, so the pool is the ten assets this
+partner wants most. That is the right default with a structural blind spot - the asset the
+VIEWER most wants to move is not necessarily one anybody is asking for, so a roster's own
+diagnosed problem can be **invisible to every suggestion the finder will ever make.**
+`move=` pins an id into the pool and requires it in every package, turning "here is what
+they want" into "here is what they would take for THIS". `/plan`'s Timeline check was
+already computing `tl.timelineBreak` and never printing it; it now prints one line - *"One
+asset does not fit that story: LeBron James, 0.0 seasons. → Find a deal that moves them"* -
+linking with the param set.
+
+Three rules the param carries. It is **never silent**: a persistent chip names the asset and
+carries the link that clears it, and the chip travels with every click through to a partner,
+because dropping it one tap later would silently widen a search a chip had just promised was
+narrowed. It **never invents availability**: an id the roster does not hold searches for
+nothing rather than falling back to an unconstrained search, which would print packages under
+a chip claiming every one of them includes an asset none of them do. And zero results
+produce a **stated refusal**, naming both the partner and the asset - *"Nothing clears the
+bar with [partner] that includes [Name]. That is a real answer"* - because "nothing works
+with them" and "nothing works with them that includes him" are different answers, and the
+second one is the answer to the question the reader actually asked (D19).
+
+**Four cuts, all of them removing a second statement of something already said.**
+
+`choosePartner` is **shelved (SHELVED.md S9)**. It was a second, unpinned answer to "who
+should I call", scored from hand-tuned dossier-tag bonuses (`+8` for `overpaysForAge`, `-20`
+for a Ghost) that **never checked whether either roster held an asset the other one wanted**
+- so `/plan` could say "Try [team]" three taps from a finder that finds nothing with them.
+Same shape as S6's `tierOf`: two implementations of one question with nothing pinning them
+together. `/plan` now links to the search instead, carrying `?move=` when a sell-the-vet
+move names a player. Deleting it also deleted the thirteen-dossier-per-render pass that
+existed only to feed it.
+
+The **four canned stance sentences** appended unconditionally to every package's `theirCase`
+are gone. They state a fact about the PARTNER, so they read identically on all three cards,
+and the same fact was already on that screen three other ways - the stance Tag beside their
+name, the `posture` in the TCI row, and the paragraph under it. Four statements of one fact
+in one scroll. It is now `stanceNote`, printed once, in the card whose subject actually is
+the partner.
+
+The **duplicate "Rank the board" CTA** inside `ConvictionBlock` is gone - a bordered card
+with its own button, two screens above the identical destination the Onward registry already
+prints on the same page. The teaching sentence was the part doing work, so it stays with the
+link folded into it inline.
+
+The board's **over-loaded window line** - already `truncate`, already promoted to
+`line-clamp-2`, still clipping - was carrying four facts on one string: window, whether it
+shares yours, every behaviour tag, and a trade count. It is now a labelled micro-row with a
+hard cap of two tags plus a "+N", and the trade count moved to the partner view, where a
+trade count is a fact about the manager you have already chosen rather than a sort key.
+Structure, not a third clamp.
+
+**What this deliberately does not do.** No new colour token, no new chart type (the strips
+are `AgeStrip`'s convention with a band added), no animation anywhere, and no reordering of
+`partnerBoard`'s own output. The engine's arithmetic is untouched: every number on this
+surface was already being computed before this entry, and most of them were already being
+computed and thrown away.
+## D102. /LEAGUE ANSWERED ITS OWN QUESTION AT THE TOP OF THE PAGE INSTEAD OF ITS READER'S - a seat card, one shared selection, and a fabricated posture caught on the way out
+
+**What this is.** `/league` opened on four posture-census tiles - a league-wide tally that
+was the highest slot on the page - then a single toggled board, then the power ranking.
+None of the three answered the question a manager actually arrives with, which is about
+their own seat: when does *my* value land, and who else is dated into it. The page is
+restructured into three sections that answer that question in order rather than three
+unrelated renderings: **the seat card** ("Where does your value land?"), **the board**
+("How does the league sit around you?"), and **the power ranking** ("Who do you talk
+to?"). `SectionHeader` gained a second register for it (`as="question"`, sentence case,
+ink, no tracking) rather than reusing the app's standing uppercase-tracked label, because
+three sentences read as one enquiry and three all-caps nouns read as a taxonomy.
+
+The three sections now share one piece of state - `?roster=` (`lib/league/url.js`) - so a
+roster selected on the board is the same roster the seat card's comparison chips point at
+and the same row highlighted in the ranking below. That did not exist before this round:
+selection was private `useState` inside `CoherenceFragilityQuadrant`, so switching to the
+window map lost it and the power ranking had no idea a selection existed at all.
+
+### The bug this round caught on the way out: a zero-asset roster read as the strongest negative posture there is
+`getTimelineProfile` (`lib/metrics/duration.js`) returns early for a roster holding no
+priced asset at all - no players, no picks - and that branch returned the literal string
+`"straddling"`, the posture `classify` hands out for the *least* coherent reading it can
+produce. `POSTURE_UNREAD` ("the absence of a reading, which is not a fifth posture")
+already existed in `lib/metrics/axes.js` and was already consumed downstream
+(`POSTURE_ORDER` and the `?? POSTURE_UNREAD` fallbacks in `lib/agency/index.js`), but the
+one function that can produce the condition never emitted it - the register was open and
+nothing could reach it. `getTimelineProfile` now returns `POSTURE_UNREAD` for that branch,
+and a new test builds the condition the way production reaches it (a real fixture roster,
+emptied of players, with every pick it owns reassigned through `h.tradedPicks` rather than
+a hand-rolled shape) and pins that `stanceOf` reaches its own "no reading" branch rather
+than asserting the disagreement `"straddling"` claims.
+
+**This is a latent fix, not an observed-and-corrected one, and the record should say so
+plainly.** Every roster on the live fourteen-roster league holds at least one priced
+asset, so the branch has not fired on real data and no census, tile, or row has actually
+printed a fabricated reading yet. It is recorded anyway because the failure mode is
+exactly the one D19 exists to prevent - the app inferring a reading it does not have - and
+the moment a commissioner-executed move leaves a roster holding nothing priced, this would
+have silently counted that roster as the most incoherent team in the league rather than as
+unread.
+
+### `postureCensus` is shelved (SHELVED.md S11), and the measurement is worse than the shelving brief usually needs
+The four tiles at the top of `/league` counted postures via `postureCensus`. Three of its
+four counts are not readings of the league; they are counts of **quartile membership**.
+`classify` hands out `contending` / `ascending` / `rebuilding` by `shortnessPercentile`
+against the league's own duration distribution, and the quartiles are taken over **all
+fourteen rosters** while the three labels are only handed to the **seven** that clear
+`COHERENCE_FLOOR` (55). Measured directly against the fixture league rather than asserted:
+
+```
+posture counts:        contending 1, ascending 5, rebuilding 1, straddling 7
+4 shortest-duration:    roster 13 (dur 3.28, tci 43) - straddling
+                        roster 7  (dur 3.57, tci 54) - straddling
+                        roster 1  (dur 3.65, tci 57) - contending
+                        roster 4  (dur 3.82, tci 52) - straddling
+```
+
+The tile read "1 contending" while **three of the four shortest-dated rosters were
+disqualified for incoherence, not for timing** - all three sit below the coherence floor
+of 55 (43, 54, 52). A reader took "one team is trying to win now" from a tile that meant
+"one team is both shortest-duration-quartile and coherent," and a one-word label has
+nowhere to put that difference. The fourth count, `straddling`, was the honest one - it
+comes off the absolute coherence floor rather than a quantile, so it is genuinely free to
+be 0 or 14 - and it is already said twice elsewhere on this page: the split rows on the
+window map, and `windowRefusalSummary`.
+
+Its replacement as this page's one league-wide tally is `buildQuadrantView().counts`,
+already computed for the board and now rendered beside the axes it was read from. It is
+an intersection of two independent median splits (coherence and fragility), which is
+genuinely allowed to come out 0 - unlike a quartile tally, whose four counts are fixed by
+construction to sum to the roster count. Measured on the fixture league: 4 of 14 rosters
+sit below the coherence median and above the fragility median (`splitTopHeavy`), against
+`agreedSpread` 4, `agreedTopHeavy` 3, `splitSpread` 3 - 14 in total, and a genuine finding
+rather than a restated quartile line.
+
+### The crossed-boards sentence, and the version of it that was rejected because the arithmetic said so
+The seat card's window-overlap buckets (`overlapFor`) and the quadrant's fragility half
+had never been read against each other, and the obvious crossing - the viewer's shared
+window (`overlapFor(me).shared`) intersected with the quadrant's `splitTopHeavy` corner -
+was tried first and rejected on the arithmetic, not on taste. A roster is only in `shared`
+if it has a readable single window, which requires a posture other than `straddling`,
+which requires TCI at or above the coherence floor of 55; `splitTopHeavy` requires TCI
+*below* the league median. The two sets can only intersect in the gap between 55 and a
+median that happens to exceed it. Measured: `tciMid` is 55.5 on the live league, so the
+gap is `[55, 55.5)` and it is empty - checked, not assumed, and empty on nearly any league
+by the same reasoning.
+
+The fragility half alone has no such dependency on the coherence axis, so the shipped
+sentence crosses `overlapFor(me).shared` with the quadrant's above-median-fragility half
+instead. Measured on the fixture league: `shared` is rosters `{14, 6, 11, 9, 2, 12}`;
+intersected with above-median fragility (`fragilityMid` 49), the result is `{14, 11, 2}` -
+three real rosters, named rather than counted, with the median stated as a median so
+nobody reads it as a bar somebody failed (D6, D19).
+
+### The quadrant chart's own D96 debt, paid
+D96 made "no `<text>` inside a scaling viewBox" a product-wide rule and fixed the window
+map, and named `CoherenceFragilityQuadrant` as one of four charts still violating it
+(labels at 7.5-8.5 SVG units, rendering under this app's own 10px `--text-micro` floor at
+this chart's real rendered width) - deliberately deferred rather than fixed in that round.
+This round pays that debt: every label is now HTML positioned as a percentage of the same
+viewBox coordinates the marks use, the same mechanism D96 used for the window map, so the
+labels track the scale with no resize listener. `PAD_L` (26 -> 34) and `PAD_B` (38 -> 48)
+grew to hold real 10px type where 8.5-unit `<text>` used to fit; the plot loses width to
+gain a legible axis, the same trade D96 already made once.
+
+### Selection gets a mark, deliberately not a colour
+A selected roster's dot on the quadrant gained a solid ink ring (it was dashed and muted;
+dashed reads as provisional, and a selection is chosen, not tentative), concentric with
+the unchanged accent "you" ring - two different facts, two different radii, and neither
+spends a new hue. Colour was rejected outright for this: the accent is already the
+viewer's identity everywhere in the app, and TCI's ramp is already the only colour
+encoding this chart has room for (D96's "the moment two things are accent, neither is").
+The window map marks the same selection by weight (a taller bar), a surface-coloured
+halo, and an ink rule in the ordinal gutter - three marks, still no second hue.
+
+### What else was rejected
+A permanent 44px "open the dossier" link column beside every power-ranking row was the
+first version of keeping the link reachable once the row became a selector (a button
+cannot nest inside a link, so the row's old wrap-the-whole-thing `<Link>` had to go). It
+was rejected for cost: the dossier link now renders only inside the selected row, on its
+own line, so the other thirteen rows spend nothing on a control that is only wanted on one
+row at a time. Advice framing for the crossed-boards sentence ("these rosters are
+vulnerable," "target these managers") was rejected per D6 and D19 - it names rosters and
+states a position, never a recommendation.
+
+### Gate
+`pnpm lint`, `pnpm test` (1,222 tests pre-rebase, 1,292 against the true `main` tip after
+it), `pnpm build`, and `pnpm e2e` (81) all clean, verified both before and after rebasing
+onto the concurrently-merged sibling rounds.
