@@ -6282,3 +6282,165 @@ only LaVine this environment can see is the fixture's - where he is a never-trad
 0 hops, an undated origin. The 13-player finding above is real and measured; the
 LaVine-specific claim is untested here and should be checked against live data before
 anyone repeats it.
+## D101. THE BOARD THAT READ AS A LEADERBOARD, AND THE LINK THAT WAS BUILT AND NEVER GIVEN - Trade Finder regrouped, the discarded arithmetic surfaced, and a second answer to "who should I call" shelved
+Two specialists examined `/trade/finder` end to end and converged on the same reading: the
+engine underneath it is genuinely non-verdict, and almost every surface decision on top of
+it was quietly re-imposing one. The list was sorted by mutual room; the top row's figure
+was promoted into a highlighted Stat tile labelled "best room"; the room figure itself was
+printed through `fmtValue` in `text-accent-text`. None of those is a lie about the
+arithmetic. All of them together tell a reader that the app has an opinion about who to
+call first, which it does not have and cannot compute.
+
+**The board is now GROUPED, not ranked.** Four groups off `sharesYourWindow`, a field
+`partnerBoard` already computed and printed as a fragment of one over-loaded line:
+*Opposite timelines*, *Same window as you*, *No window either way*, and *Nothing clears
+the bar* (collapsed). Inside a group: alphabetical, and the subhead says so, because any
+other within-group order smuggles the ranking back in one level down. `partnerBoard`'s own
+`mutual` sort is untouched - the grouping happens in the page, so the tests that pin the
+engine's ordering still pin it. The page title moved from "Who should you call?" (a
+question the app was pretending to answer) to "Where the room is." The highlighted
+"best room" tile is gone, replaced by a two-tile census - *12 of 13 · a package works both
+ways*, *0 of 12 · sit opposite your window* - which is the same correction D93 made to
+/league's three tiles: a count of the search's real output, electing nobody.
+
+**`room` stopped being printed like currency.** It is the smaller of two fit gains, each a
+sum of league values scaled by a clamped preference multiplier (`FIT_CLAMP`), so its units
+are not comparable with anything else on the row and its third digit is noise. Board rows
+now carry a three-band micro-meter - narrow / real / wide - off **terciles of the rooms
+actually present on that board**, which makes every band honestly relative and nothing
+more; `roomBands` returns null below three live values, because two rosters cannot be split
+into three bands. The exact figure survives in exactly one place, the package detail
+footer, with a `~`, an inline definition, no `fmtValue`, and not in the accent colour that
+means "you" everywhere else in the app.
+
+**`tradeHref` had a test suite and zero production callers.** `lib/trade/url.js` existed,
+worked, produced the correct link shape, and every suggested package pointed at a bare
+`/trade` with nothing pre-filled - so "adjust this by hand" meant re-picking six assets
+from scratch, one import away from the module that solved exactly that. The id formats
+already agreed (`assetsOf` and /trade's own pick pool both build
+`<season>-<round>-<originalRoster>`), so this was wiring, not a feature. Every package now
+carries `builderHref`, the detail view has a real button, and the Onward registry's
+"Adjust the package by hand" - which described a link this page did not have - is now
+"Start a package from scratch", which describes the one it does.
+
+**The arithmetic the search computed and threw away.** `price()` returns every asset on
+both rosters, valued through both sides' appetites, sorted by `gap` - how much more the
+other side would pay for it than its owner would - with signed reasons attached.
+`searchPackages` took a ten-item and a six-item slice off the front and `findTrades`
+returned neither, so the most legible output of the entire pass was computed on every
+request and discarded on every request. Both lists now render, stacked (never side by side
+at 390px: a name plus a reason phrase needs the full width), top five each with a
+`<details>` for the rest. **Ranking these is honest where ranking the packages was not**: a
+package ranking is a verdict on a whole hypothetical deal, which is what D6 refuses; a gap
+is one subtraction between two numbers this app already publishes, per asset, making no
+claim about whether to move it. The subhead states the ordering out loud. Rows clamp to two
+lines rather than truncating - D72's finding, and the first draft of this list proved why it
+matters twice over: taking only the FIRST positive reason made five consecutive rows read
+"fills their thinnest spot at SF", because `perceive` emits its tells in a fixed order. All
+of them, joined, is what differs row to row.
+
+**"After this trade" - three pure functions that had never once been run over a proposed
+deal.** `coherenceOf`, `windowOf` and `findTimelineBreak` all take exactly "a bag of dated
+assets" and none of them had ever seen a hypothetical roster from the finder, because there
+was no post-trade asset list to hand them. There were instead **three partial
+reconstructions**, each shaped to one metric: `rosterAfter` in fragility.js (startable
+player ids, picks dropped), `applyPackageToByPosition` in leverage.js (value by position,
+with `valued: []` passed alongside because the caller had no asset list to put there), and
+nothing at all for the timeline. `lib/tradefinder/after.js` now owns all three off one
+partition of the package. They stay separate functions on purpose - fragility's base is the
+startable subset because a pick cannot fill a slot tonight, the timeline's base is every
+priced asset because a pick is the longest-dated thing a roster owns - and collapsing them
+would have quietly changed both numbers to make one signature tidier.
+
+The block prints `TCI 57 → 69` on real before/after numbers, and then the finding both
+specialists rated highest: **whether the asset the package sends is the same asset this
+roster's own timeline already names as its odd one out.** On the fixture league it is -
+LeBron James, 0.0 seasons against a core at 3.8, and the deal that moves him is the deal
+that takes TCI from 57 to 69. That is stated as a **coincidence of two readings, never as a
+fix.** `findTimelineBreak`'s own docstring is explicit that the named asset is very often
+the roster's best player and that holding one while a young core matures is a real strategy
+rather than an error, and copy built on that field is not allowed to contradict it. The
+inverse case - the deal IMPORTS the outlier and TCI falls - gets the identical register,
+identical structure, and no colour-coding of direction, the same discipline `FragilityLine`
+already keeps for a number that moves both ways.
+
+**The graphic, and its arithmetic checked rather than eyeballed.** Two stacked duration
+strips in `AgeStrip`'s existing idiom (one horizontal axis, one dot per asset, a dashed line
+for the weighted centre), with three deliberate differences: x-axis seasons out, dots sized
+by value because the metric is value-weighted, and a translucent ±1σ band behind the dots.
+The band is not an illustration of TCI - it is the same arithmetic. `coherenceOf` computes
+`TCI = 100·(1 - min(1, σ/SIGMA_REF))`, so a band drawn at `mean ± σ` has width `2σ`
+seasons, and therefore `2·SIGMA_REF·(1 - TCI/100)` - exactly `6·(1 - TCI/100)` at the
+shipped SIGMA_REF of 3. **A band that visibly narrows IS the number rising, by identity.**
+`lib/metrics/metrics.test.js` pins that identity against every fixture roster and against
+synthetic bags on both sides of the clamp, so a future recalibration cannot leave the
+drawing quietly lying; above the clamp the identity stops holding in one direction (the
+number is pinned at 0 while the band keeps widening) and the caption prints both figures so
+nobody has to infer one from the other. Verified live in both themes at 390px: ±1.29s at
+TCI 57, ±0.94s at TCI 69.
+
+`windowOf` runs over the same synthetic list, with one honest correction: posture is
+league-relative and cannot be re-derived for a hypothetical roster, but the
+`tci < COHERENCE_FLOOR` test is absolute and reads only the roster's own assets, so a
+package that drops the viewer below the floor has its after-window refused. The residual
+error is one-directional and deliberate - a package that lifts a straddling roster back over
+the floor still inherits "straddling" and still refuses, because what it would then read
+depends on the other thirteen rosters. It under-claims and never over-claims (D19).
+
+**`move=<assetId>`, and why the finder needed a way in.** The give pool is **entirely
+partner-driven** by construction: `price` sorts by gap, so the pool is the ten assets this
+partner wants most. That is the right default with a structural blind spot - the asset the
+VIEWER most wants to move is not necessarily one anybody is asking for, so a roster's own
+diagnosed problem can be **invisible to every suggestion the finder will ever make.**
+`move=` pins an id into the pool and requires it in every package, turning "here is what
+they want" into "here is what they would take for THIS". `/plan`'s Timeline check was
+already computing `tl.timelineBreak` and never printing it; it now prints one line - *"One
+asset does not fit that story: LeBron James, 0.0 seasons. → Find a deal that moves them"* -
+linking with the param set.
+
+Three rules the param carries. It is **never silent**: a persistent chip names the asset and
+carries the link that clears it, and the chip travels with every click through to a partner,
+because dropping it one tap later would silently widen a search a chip had just promised was
+narrowed. It **never invents availability**: an id the roster does not hold searches for
+nothing rather than falling back to an unconstrained search, which would print packages under
+a chip claiming every one of them includes an asset none of them do. And zero results
+produce a **stated refusal**, naming both the partner and the asset - *"Nothing clears the
+bar with [partner] that includes [Name]. That is a real answer"* - because "nothing works
+with them" and "nothing works with them that includes him" are different answers, and the
+second one is the answer to the question the reader actually asked (D19).
+
+**Four cuts, all of them removing a second statement of something already said.**
+
+`choosePartner` is **shelved (SHELVED.md S9)**. It was a second, unpinned answer to "who
+should I call", scored from hand-tuned dossier-tag bonuses (`+8` for `overpaysForAge`, `-20`
+for a Ghost) that **never checked whether either roster held an asset the other one wanted**
+- so `/plan` could say "Try [team]" three taps from a finder that finds nothing with them.
+Same shape as S6's `tierOf`: two implementations of one question with nothing pinning them
+together. `/plan` now links to the search instead, carrying `?move=` when a sell-the-vet
+move names a player. Deleting it also deleted the thirteen-dossier-per-render pass that
+existed only to feed it.
+
+The **four canned stance sentences** appended unconditionally to every package's `theirCase`
+are gone. They state a fact about the PARTNER, so they read identically on all three cards,
+and the same fact was already on that screen three other ways - the stance Tag beside their
+name, the `posture` in the TCI row, and the paragraph under it. Four statements of one fact
+in one scroll. It is now `stanceNote`, printed once, in the card whose subject actually is
+the partner.
+
+The **duplicate "Rank the board" CTA** inside `ConvictionBlock` is gone - a bordered card
+with its own button, two screens above the identical destination the Onward registry already
+prints on the same page. The teaching sentence was the part doing work, so it stays with the
+link folded into it inline.
+
+The board's **over-loaded window line** - already `truncate`, already promoted to
+`line-clamp-2`, still clipping - was carrying four facts on one string: window, whether it
+shares yours, every behaviour tag, and a trade count. It is now a labelled micro-row with a
+hard cap of two tags plus a "+N", and the trade count moved to the partner view, where a
+trade count is a fact about the manager you have already chosen rather than a sort key.
+Structure, not a third clamp.
+
+**What this deliberately does not do.** No new colour token, no new chart type (the strips
+are `AgeStrip`'s convention with a band added), no animation anywhere, and no reordering of
+`partnerBoard`'s own output. The engine's arithmetic is untouched: every number on this
+surface was already being computed before this entry, and most of them were already being
+computed and thrown away.

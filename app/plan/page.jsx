@@ -83,12 +83,6 @@ export default async function PlanPage() {
   const windows = leagueWindows(h);
   const windowLine =
     windows.me?.state === "window" ? windowSynthesis(windows) : null;
-  /** Team identity for a partner roster, for the target row's logo. */
-  const teamOf = (id) => {
-    const r = h.rostersById.get(id);
-    const u = r?.ownerId ? h.usersById.get(r.ownerId) : undefined;
-    return { name: u?.teamName ?? u?.displayName ?? `Roster ${id}`, user: u };
-  };
   return (
     <div>
       <PageHeader
@@ -224,6 +218,34 @@ export default async function PlanPage() {
               </Link>
             </p>
           )}
+          {/*
+           * THE BREAK ASSET WAS COMPUTED HERE ALL ALONG AND NEVER PRINTED.
+           *
+           * `tl.timelineBreak` names the single asset this roster's own timeline is
+           * least able to explain (lib/metrics/duration.js), and /plan has been
+           * fetching it inside `tl` without ever showing it. It is also the asset the
+           * trade finder is STRUCTURALLY LEAST LIKELY to suggest moving, because the
+           * finder's give pool is sorted by what a partner wants most rather than by
+           * what you would most like to be rid of - so the roster's own diagnosed
+           * problem could be invisible to every suggestion the app makes. The link
+           * carries `move=`, which forces this asset into every package the finder
+           * considers.
+           *
+           * Stated as a misfit, never as a mistake: `findTimelineBreak`'s own docstring
+           * is explicit that this is frequently the roster's best player.
+           */}
+          {tl.timelineBreak?.label && (
+            <p className="mt-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
+              One asset does not fit that story: {tl.timelineBreak.label},{" "}
+              {tl.timelineBreak.duration.toFixed(1)} seasons.{" "}
+              <Link
+                href={`/trade/finder?${new URLSearchParams({ move: String(tl.timelineBreak.id) }).toString()}`}
+                className="text-meta font-semibold text-accent-text underline-offset-2 hover:underline"
+              >
+                Find a deal that moves them
+              </Link>
+            </p>
+          )}
         </div>
       )}
       {/* The index appears here as a bare figure - give a first-time reader the
@@ -261,8 +283,6 @@ export default async function PlanPage() {
 
       <div className="space-y-2">
         {plan.moves.map((m, i) => {
-          const partner =
-            m.partnerRosterId != null ? teamOf(m.partnerRosterId) : null;
           return (
             <article
               key={m.id}
@@ -303,40 +323,50 @@ export default async function PlanPage() {
                 </div>
               </div>
 
-              {m.partnerName && m.partnerRosterId != null && partner && (
-                <Link
-                  href={`/managers/${m.partnerRosterId}`}
-                  aria-label={`Dossier: ${m.partnerName}`}
-                  className="mt-1.5 flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-info/25 bg-info/[0.06] px-2 py-1.5 transition-colors hover:border-info/50 hover:bg-info/[0.1]"
-                >
-                  <Target
-                    size={13}
-                    aria-hidden="true"
-                    className="shrink-0 text-info"
-                  />
-                  <TeamAvatar
-                    name={partner.name}
-                    avatarId={partner.user?.avatar}
-                    teamLogoUrl={partner.user?.teamLogoUrl}
-                    size="xs"
-                  />
-                  <span className="min-w-0 flex-1">
-                    <span className="block truncate text-note font-semibold text-ink">
-                      Try {m.partnerName}
-                    </span>
-                    {m.partnerRationale && (
-                      <span className="block truncate text-meta leading-tight text-muted">
-                        {m.partnerRationale}
-                      </span>
-                    )}
+              {/*
+               * THE PARTNER SUGGESTION IS NOW A SEARCH, NOT A SECOND OPINION.
+               *
+               * This row used to name one leaguemate picked by `choosePartner` -
+               * shelved, SHELVED.md S11 - which scored dossier tags without ever
+               * checking whether either roster held an asset the other one wanted. It
+               * could therefore send a reader to a manager the trade finder finds
+               * nothing with, from a card on the same page. The finder answers the same
+               * question by searching real assets, and `move=` hands it the one asset
+               * this move actually names so it does not have to guess what you meant.
+               */}
+              <Link
+                href={
+                  m.moveAssetId
+                    ? `/trade/finder?${new URLSearchParams({ move: String(m.moveAssetId) }).toString()}`
+                    : "/trade/finder"
+                }
+                className="mt-1.5 flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-info/25 bg-info/[0.06] px-2 py-1.5 transition-colors hover:border-info/50 hover:bg-info/[0.1]"
+              >
+                <Target
+                  size={13}
+                  aria-hidden="true"
+                  className="shrink-0 text-info"
+                />
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate text-note font-semibold text-ink">
+                    {m.moveAssetId
+                      ? `Who would take ${m.give[0]}?`
+                      : "Who has room for this?"}
                   </span>
-                  <ArrowRight
-                    size={13}
-                    aria-hidden="true"
-                    className="shrink-0 text-info"
-                  />
-                </Link>
-              )}
+                  {/* `line-clamp-2`, not `truncate`: this is a sentence, and a
+                        sentence cut mid-word is the bug D72 spent a whole round on. */}
+                  <span className="block text-meta leading-tight text-muted line-clamp-2">
+                    {m.moveAssetId
+                      ? "Searched for packages that include him"
+                      : "Grouped by whose window is opposite yours"}
+                  </span>
+                </span>
+                <ArrowRight
+                  size={13}
+                  aria-hidden="true"
+                  className="shrink-0 text-info"
+                />
+              </Link>
 
               <p className="mt-1.5 flex items-start gap-1.5 text-meta leading-snug text-warn">
                 <AlertTriangle
