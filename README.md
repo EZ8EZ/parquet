@@ -46,7 +46,8 @@ pitch. The actual pitch is the four things **no competitor builds** (see
    who panics after losses, who overpays for names, who hoards picks, who never
    responds) with a plain-language read on how to approach them. Private to you.
 4. **Game Plan** (`/plan`) - the prescriptive counterpart to all that diagnosis. It
-   reads your window (contend / ascend / rebuild / retool), names your actual
+   reads your timeline posture and turns it into a direction (contend / ascend /
+   rebuild / retool - a prescription, not a fifth classification), names your actual
    structural problem, and proposes specific moves with specific managers, chosen by
    their dossier behavior, each with its honest cost.
 

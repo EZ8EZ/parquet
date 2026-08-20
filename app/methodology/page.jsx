@@ -821,9 +821,13 @@ export default async function MethodologyPage() {
             <span className="font-semibold text-ink">
               Posture is league-relative.
             </span>{" "}
-            A 3.8-season roster is win-now in a league of rebuilders and a
-            rebuilder in a league of veterans, so contending / ascending /
-            rebuilding are assigned by within-league percentile of duration.
+            A 3.8-season roster is the shortest-dated in a league of rebuilders
+            and the longest-dated in a league of veterans, so contending /
+            ascending / rebuilding are assigned by within-league percentile of
+            duration. Posture is the only thing in the app that uses those three
+            words; a roster&rsquo;s core AGE is a separate reading with its own
+            vocabulary (young / mixed-age / veteran core), because an old core is
+            not evidence that anybody chose to win now.
           </li>
           <li>
             <span className="font-semibold text-ink">

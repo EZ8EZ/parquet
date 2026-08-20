@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowRight, ChevronRight, Target } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildGamePlan } from "@/lib/gameplan";
 import { getPrincipals } from "@/lib/principals";
-import { leagueTimelines } from "@/lib/metrics/duration";
+import { cachedLeagueTimelines } from "@/lib/metrics/duration";
 import { leagueWindows, windowSynthesis } from "@/lib/metrics/window";
 import { PageHeader, Tag } from "@/components/ui";
 import { MetricGloss } from "@/components/MetricGloss";
@@ -35,17 +35,19 @@ export default async function PlanPage() {
   const dx = plan.diagnosis;
   const dir = DIR_LABEL[dx.direction];
   const myUser = h.usersById.get(h.me.userId);
-  // Timeline check: does the roster's actual value timing agree with the plan?
-  const tl = leagueTimelines(h).find((t) => t.rosterId === rosterId);
-  const DIR_TO_POSTURE = {
-    contend: "contending",
-    ascend: "ascending",
-    rebuild: "rebuilding",
-  };
-  const timelineAgrees =
-    tl != null &&
-    tl.posture !== "straddling" &&
-    (dx.direction === "retool" || DIR_TO_POSTURE[dx.direction] === tl.posture);
+  /*
+   * THE TIMELINE CHECK, WHICH IS NOW A CHECK RATHER THAN A COMPARISON OF INSTRUMENTS.
+   *
+   * The direction used to be derived from the core-age band and this panel compared it
+   * with the posture, so "the plan says X but your value is dated like a Y roster - one
+   * of them is wrong" fired on 8 of 14 rosters on the live league, and on most of them
+   * nothing was wrong except that the two labels came off different instruments.
+   * `diagnose` now reads the posture (lib/metrics/axes.js), so the only thing that can
+   * put the plan and the reading on different feet is the standing override - which is
+   * a fact worth stating, and states itself in `directionNote`.
+   */
+  const tl = cachedLeagueTimelines(h).find((t) => t.rosterId === rosterId);
+  const timelineAgrees = dx.directionBasis === "posture";
   /*
    * THE SYNTHESIS, and the only genuinely new sentence on this page.
    *
@@ -196,8 +198,8 @@ export default async function PlanPage() {
             {tl.posture === "straddling"
               ? `Your assets do not agree about when you win: ${Math.round(tl.nowShare * 100)}% of your value pays off inside two seasons while ${Math.round(tl.laterShare * 100)}% arrives four or more out. Every move below should pull the roster onto ONE timeline - a move that adds value but widens the spread makes this worse.`
               : timelineAgrees
-                ? `Your assets already agree with the ${dir.label.toLowerCase()} call - value is concentrated around ${tl.rosterDuration.toFixed(1)} seasons out. Protect that alignment: do not add pieces dated far from it.`
-                : `The plan says ${dir.label.toLowerCase()}, but your value is dated like a ${tl.posture} roster (${tl.rosterDuration.toFixed(1)} seasons out, TCI ${tl.tci}). One of them is wrong. Each move below should shift the timeline toward the plan, or the plan should change.`}
+                ? `The ${dir.label.toLowerCase()} call is read off this timeline - value concentrated around ${tl.rosterDuration.toFixed(1)} seasons out, assets agreed about it (that is what "${tl.posture}" means). Protect that alignment: do not add pieces dated far from it.`
+                : `${dx.directionNote} The two answer different questions - when your value arrives, and what your standing argues for - so this is a choice in front of you rather than a contradiction. Each move below is chosen for the ${dir.label.toLowerCase()} call.`}
           </p>
           {windowLine && (
             <p className="mt-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">

@@ -41,7 +41,7 @@ export default async function TeamsPage({ searchParams }) {
       ownerName: r.ownerName,
       record,
       totalValue: r.totalValue,
-      window: r.window,
+      coreAgeBand: r.coreAgeBand,
       tags: d.tags,
     };
   });

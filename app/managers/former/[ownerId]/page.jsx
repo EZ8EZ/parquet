@@ -157,9 +157,13 @@ export default async function FormerManagerDetailPage({ params }) {
           sub={`${p.tradesInitiated} initiated · ${p.tradesResponded} responded`}
         />
         <Metric
-          label="Pick capital"
+          /* "Picks traded", not "Pick capital": this is a net COUNT of picks moved
+             across a career, while the figure /roster labels pick capital is the VALUE
+             of the picks a roster holds. Same words for two units is how a reader
+             concludes the app is broken. */
+          label="Picks traded"
           value={<DeltaValue n={p.picks.net} />}
-          sub={`${p.picks.firstsAcquired} firsts in · ${p.picks.firstsSpent} out`}
+          sub={`net · ${p.picks.firstsAcquired} firsts in · ${p.picks.firstsSpent} out`}
           tone={p.picks.net >= 0 ? "positive" : "negative"}
         />
         <Metric
