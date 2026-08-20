@@ -16,7 +16,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
 }
 
 /// The user's captured reasoning for a transaction — the Decision Ledger.
