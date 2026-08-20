@@ -251,6 +251,22 @@ async function main() {
   const seasons = completed.map((c) => c.season);
   const weeksOf = (id) =>
     seasons.reduce((s, y) => s + (bySeason.get(y).get(id)?.weeks ?? 0), 0);
+  // SUB-FLOOR WEEKS, RETAINED. Everything above drops a player-season under the floor
+  // before it is ever counted, which is correct for the index and loses the one fact a
+  // reader of the app actually wants about an unpriced player: HOW FAR under. "No
+  // eight-week record" and "four rostered weeks against a floor of eight" are the same
+  // condition, but only the second one lets a reader judge the floor. Emitted as a
+  // second constant rather than folded into the table above, because these players have
+  // no index - giving them a row in `DERIVED_PRODUCTION` would mean inventing one.
+  const belowFloor = [];
+  for (const id of new Set(seasons.flatMap((y) => [...bySeason.get(y).keys()]))) {
+    const best = Math.max(
+      ...seasons.map((y) => bySeason.get(y).get(id)?.weeks ?? 0),
+    );
+    if (best >= MIN_WEEKS) continue;
+    belowFloor.push({ id, weeks: weeksOf(id) });
+  }
+  belowFloor.sort((a, b) => b.weeks - a.weeks || a.id.localeCompare(b.id));
   /** @type {{ id: string, index: number, weeks: number, seasons: number }[]} */
   const rows = [];
   const everyone = new Set(seasons.flatMap((y) => [...norm.get(y).keys()]));
@@ -288,6 +304,13 @@ async function main() {
       `  ["${r.id}", ${r.index.toFixed(3)}, ${r.weeks}, ${r.seasons}],`,
     );
   }
+  console.log(`];`);
+  console.log(`\n// paste into lib/valuation/production.js`);
+  console.log(
+    `// ${belowFloor.length} players rostered here but never for ${MIN_WEEKS} weeks in one season`,
+  );
+  console.log(`export const BELOW_FLOOR_WEEKS = [`);
+  for (const r of belowFloor) console.log(`  ["${r.id}", ${r.weeks}],`);
   console.log(`];`);
   console.log(`\nplayerSeasons: ${playerSeasons}`);
   console.log(`playerWeeks: ${playerWeeks}`);

@@ -29,6 +29,7 @@ import { cn, fmtValue, fold } from "@/lib/ui";
 import { playerLineageHref } from "@/lib/tradegraph/url";
 import { firstCliffAge, pastFirstCliff } from "@/lib/valuation/ageCurve";
 import { PlayerAvatar, photosEnabled } from "@/components/PlayerAvatar";
+import { RefusalMark } from "@/components/RefusalMark";
 import {
   VALUE_FILTERS,
   parseValuesParams,
@@ -49,6 +50,10 @@ export function ValueAssetRow({
   injury,
   injuryDetail,
   consensusRank,
+  pricedRank,
+  productionBacked,
+  productionRefusal,
+  rankAxisMax,
   meta,
   share,
   trajectory,
@@ -171,6 +176,27 @@ export function ValueAssetRow({
                   <span aria-hidden="true">▾</span> downslope
                 </span>
               ) : null}
+              {/*
+                THE EXCEPTION, MARKED - AND ONLY THE EXCEPTION.
+
+                Most rows here rest on a real in-league production record, and the
+                temptation was to badge those. That is exactly backwards: a mark that
+                is present on most rows and absent on some reads as a grade the absent
+                rows failed (D6), and it would put a decoration on ~200 rows to carry
+                information about ~50.
+
+                So the mark goes on the rows where the claim is WEAKER, it is three
+                words of plain text in the same secondary voice as the position code
+                beside it, and it costs no row height because it joins a line that is
+                already there and already wraps.
+
+                NOT HATCHED, and not drawn as a refusal on the value itself. These
+                players have real published prices; what is missing is the provenance
+                behind the rank, not the number. The full sentence - with his own
+                rostered-week count against the floor - is one tap down in the
+                expansion, which is where there is room to say it properly.
+              */}
+              {productionBacked === false ? " · consensus only" : ""}
               {meta ? ` · ${meta}` : ""}
             </span>
             {share != null && (
@@ -239,9 +265,27 @@ export function ValueAssetRow({
               a bare "×0.73" next to a name where it reads as a property of the player.
             */}
           <dl className="grid grid-cols-2 gap-x-3 gap-y-1">
+            {/* TWO RANKS, NOT ONE. `consensus` is what the market thinks; `priced` is
+                the rank this value was actually computed from, after production
+                reordered the pool. The row used to print only the first, which meant
+                the one number a reader could check was the one the model had already
+                stopped using. The gap between them IS the production term, so both are
+                facts and neither is the model's internals. */}
             <Fact
               label="consensus"
               value={consensusRank != null ? `#${consensusRank}` : "unranked"}
+            />
+            <Fact
+              label="priced"
+              value={
+                pricedRank != null
+                  ? `#${pricedRank}${
+                      productionBacked && consensusRank != null
+                        ? ` · ${pricedRank === consensusRank ? "no move" : `${pricedRank < consensusRank ? "up" : "down"} ${Math.abs(consensusRank - pricedRank)}`}`
+                        : ""
+                    }`
+                  : "-"
+              }
             />
             <Fact label="tier" value={tier ?? "-"} />
             {(injuryDetail ?? injury) && (
@@ -262,6 +306,36 @@ export function ValueAssetRow({
               />
             )}
           </dl>
+          {/* THE TWO RANKS AS A MARK, on a scale shared by every row in the list, so
+              "down 31" is a length a reader can compare across two open rows rather
+              than two numbers he has to subtract. Only drawn where production actually
+              moved him; for an unbacked row the two ranks are the same number by
+              construction and a dumbbell of two coincident dots would assert a
+              measurement that was never made. That case gets the refusal below. */}
+          {productionBacked &&
+            consensusRank != null &&
+            pricedRank != null &&
+            rankAxisMax > 1 && (
+              <RankDumbbell
+                consensusRank={consensusRank}
+                pricedRank={pricedRank}
+                axisMax={rankAxisMax}
+                name={name}
+              />
+            )}
+          {/* THE SECOND FACT, WHEN THERE IS NO SECOND FACT.
+              ARRIVES AS A FINISHED SENTENCE, and deliberately is not built here. The
+              words belong to lib/valuation/production.js, which owns the condition
+              (eight rostered weeks, `productionBacked`) and the rostered-week count
+              behind it - a row that writes its own reason string is a row that can
+              drift from the flag it is describing. It is also RefusalMark's own
+              contract: the refusal-object-to-string boundary sits at the call site,
+              never inside the component. This row is a client component, so building
+              it here would additionally pull the refusal register and the derivation's
+              own tables into the browser to render one line of text. */}
+          {productionBacked === false && productionRefusal && (
+            <RefusalMark className="mt-1.5">{productionRefusal}</RefusalMark>
+          )}
           {/* The marker's whole explanation, in the one place there is room for it.
                 Says what was measured and what it does not claim; no advice (D6). */}
           {pastFirstCliff(age) && (
@@ -347,6 +421,93 @@ function depthFact(d) {
   if (d.ahead === 0) return `${d.position}, none ahead`;
   return `${d.position}, ${d.ahead} ahead`;
 }
+/**
+ * THE TWO RANKS, ON A SHARED SCALE. Hollow is where consensus has him, filled is where
+ * this app prices him, and the bar between them is the production term.
+ *
+ * ONE GREY, NO VALENCE. Moving up the board is not "good" - the model has no opinion
+ * about whether a player should be higher, only a measurement that says he is. A
+ * diverging pair here would state a verdict the derivation does not contain (D6), so
+ * both dots are the same neutral ink and direction is carried by which one is on the
+ * left. Delete the colour and the mark still reads, which is the acceptance test.
+ *
+ * NO ARROWHEAD, deliberately. An arrow says "he is heading there"; this is a comparison
+ * of two present-tense estimates, not a trajectory. The whole point of a dumbbell is
+ * that both ends are real values.
+ *
+ * NO `<text>` (D96): the two ranks are already printed as facts directly above, so the
+ * mark carries no label of its own and the axis is stated once in the caption below it.
+ * The scale is `axisMax`, shared by every row in the list, so two open rows are directly
+ * comparable - a per-row scale would make a 5-place move and a 90-place move the same
+ * length.
+ */
+function RankDumbbell({ consensusRank, pricedRank, axisMax, name }) {
+  const W = 320;
+  const H = 11;
+  const INSET = 3;
+  const r1 = (v) => Math.round(v * 10) / 10;
+  const x = (rank) =>
+    r1(INSET + ((Math.min(rank, axisMax) - 1) / (axisMax - 1)) * (W - INSET * 2));
+  const moved = pricedRank !== consensusRank;
+  return (
+    <div className="mt-1.5">
+      <svg
+        viewBox={`0 0 ${W} ${H}`}
+        className="block w-full"
+        role="img"
+        aria-label={
+          `${name}: consensus ranks him #${consensusRank}, and this app prices him at ` +
+          `#${pricedRank}` +
+          (moved
+            ? `, ${pricedRank < consensusRank ? "up" : "down"} ${Math.abs(consensusRank - pricedRank)} places on his in-league production.`
+            : ` - production did not move him.`)
+        }
+      >
+        <line
+          x1={INSET}
+          y1={H - 1.5}
+          x2={W - INSET}
+          y2={H - 1.5}
+          stroke="var(--color-border)"
+          strokeWidth={1}
+        />
+        {moved && (
+          <line
+            x1={x(Math.min(consensusRank, pricedRank))}
+            y1={H / 2 - 1}
+            x2={x(Math.max(consensusRank, pricedRank))}
+            y2={H / 2 - 1}
+            stroke="var(--color-secondary)"
+            strokeWidth={1.5}
+          />
+        )}
+        <circle
+          cx={x(consensusRank)}
+          cy={H / 2 - 1}
+          r={3}
+          fill="var(--color-surface)"
+          stroke="var(--color-secondary)"
+          strokeWidth={1.5}
+        />
+        <circle
+          cx={x(pricedRank)}
+          cy={H / 2 - 1}
+          r={3.2}
+          fill="var(--color-secondary)"
+        />
+      </svg>
+      {/* "1 at the left", not "left is better". Rank 1 is the most valuable asset by
+          construction, but this app does not tell a reader which end of a scale to
+          want (D6, and the same discipline that leaves `betterEnd` unset on
+          components/DistributionStrip.jsx wherever the direction is not a judgement).
+          The sentence describes the axis; it does not grade a position on it. */}
+      <p className="text-micro leading-snug text-faint">
+        <span aria-hidden="true">○</span> consensus{" "}
+        <span aria-hidden="true">●</span> priced · rank 1 to {axisMax}, 1 at the left
+      </p>
+    </div>
+  );
+}
 /** One fact about the player. Deliberately not one factor of the model. */
 function Fact({ label, value }) {
   return (
@@ -411,6 +572,18 @@ export function ValuesList({ rows }) {
       m[r.position] = (m[r.position] ?? 0) + 1;
     }
     return m;
+  }, [rows]);
+  // ONE RANK SCALE FOR THE WHOLE LIST, off `rows` and never off the filtered subset -
+  // a dumbbell has to mean the same thing in two open rows, and an axis that rescaled
+  // when somebody typed a name into the search box would make the same 30-place move
+  // draw at two different lengths in one session.
+  const rankAxisMax = useMemo(() => {
+    let max = 1;
+    for (const r of rows) {
+      if (typeof r.consensusRank === "number") max = Math.max(max, r.consensusRank);
+      if (typeof r.pricedRank === "number") max = Math.max(max, r.pricedRank);
+    }
+    return max;
   }, [rows]);
   const filtered = useMemo(() => {
     const s = fold(q.trim());
@@ -517,6 +690,10 @@ export function ValuesList({ rows }) {
             injury={r.injury}
             injuryDetail={r.injuryDetail}
             consensusRank={r.consensusRank}
+            pricedRank={r.pricedRank}
+            productionBacked={r.productionBacked}
+            productionRefusal={r.productionRefusal}
+            rankAxisMax={rankAxisMax}
             meta={r.owner ?? undefined}
             depth={r.depth}
             focused={r.id === focusId}

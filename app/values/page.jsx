@@ -4,8 +4,14 @@ import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { depthChartsByTeam, depthRowFor } from "@/lib/depth";
 import { cachedValuePlayers, injuryLabel } from "@/lib/valuation";
+import {
+  productionRowRefusal,
+  rosteredWeeksBelowFloor,
+} from "@/lib/valuation/production";
+import { refusalSentence } from "@/lib/refusal";
 import { leagueTiers, tierResolver } from "@/lib/rankings/tiers";
 import { ValuesList } from "@/components/ValuesList";
+import { VALUE_ROWS } from "@/lib/values/url";
 import { fmtValue } from "@/lib/ui";
 import { Onward } from "@/components/Onward";
 import { PageHeader } from "@/components/ui";
@@ -55,11 +61,29 @@ export default async function ValuesPage({ searchParams }) {
           notes: p.injuryNotes,
         }),
         consensusRank: p.searchRank,
+        // BOTH RANKS, plus whether the second one rests on anything. The row used to
+        // carry only the consensus ordinal, which is the one number the model had
+        // already stopped pricing from - see components/ValuesList.jsx.
+        pricedRank: v.rank,
+        productionBacked: v.productionBacked,
+        // The refusal, built HERE rather than in the row: the row is a client
+        // component, and the words plus the rostered-week count behind them belong to
+        // the module that owns the condition. Null means this league never rostered
+        // him in the window, which `productionRowRefusal` words differently from a
+        // count - it never prints an invented zero.
+        productionRefusal: v.productionBacked
+          ? null
+          : refusalSentence(
+              productionRowRefusal(
+                p.fullName,
+                rosteredWeeksBelowFloor(p.playerId),
+              ),
+            ),
         depth: depthRowFor(charts, p),
       };
     })
     .sort((a, b) => b.value - a.value);
-  let rows = sortedRows.filter((r) => r.value > 0).slice(0, 260);
+  let rows = sortedRows.filter((r) => r.value > 0).slice(0, VALUE_ROWS);
   // A `?focus=` link (search's only deep link for a player - see
   // lib/values/url.ts) must never land on nothing. Most searched players are
   // already inside the top 260, but a deep bench name with real but tiny value

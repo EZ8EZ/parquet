@@ -16,12 +16,19 @@ import {
   firstCliffAge,
   pickValue,
   cachedValuePlayers,
+  cachedNoProductionValuePlayers,
   positionMultipliers,
   slotValue,
 } from "@/lib/valuation";
 import { deriveExitWindow } from "@/lib/valuation/exitWindow";
-import { productionBackingRefusal } from "@/lib/valuation/production";
+import {
+  PRODUCTION_R2,
+  productionBackingRefusal,
+  rosteredWeeksBelowFloor,
+} from "@/lib/valuation/production";
+import { injuryLabel } from "@/lib/valuation/injury";
 import { refusalSentence } from "@/lib/refusal";
+import { VALUE_ROWS } from "@/lib/values/url";
 import { pickDuration, playerDuration } from "@/lib/metrics/duration";
 import {
   W_LOO,
@@ -35,6 +42,8 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Onward } from "@/components/Onward";
 import { RefusalMark } from "@/components/RefusalMark";
+import { ProductionEvidence } from "@/components/ProductionEvidence";
+import { ProductionMovers } from "@/components/ProductionMovers";
 export const dynamic = "force-dynamic";
 /**
  * TEN SECTIONS, EACH A DOOR. This page used to print every subsection's charts,
@@ -114,35 +123,87 @@ export default async function MethodologyPage() {
   const backedPct = priced.length
     ? Math.round((1000 * backed.length) / priced.length) / 10
     : 0;
-  // The largest disagreements in each direction, which is the honest way to show what a
-  // 23% weight buys: not "values changed" in the abstract, but these players, by this
-  // much, for this reason.
+  // The largest disagreements, which is the honest way to show what a 23% weight buys:
+  // not "values changed" in the abstract, but these players, by this much, for this
+  // reason.
+  //
   // Sorted by the change in VALUE, not by the change in rank. Rank movement is a bad
   // illustration here and it is worth saying why: `base` decays exponentially, so the
   // same 80-place move is worth thousands of points at the top of the board and single
   // digits at the bottom - ranking by places moved fills the list with deep-bench
-  // players nobody is pricing. The counterfactual value needs no second pass over the
-  // model: every multiplier is identical either way (the star-tier flag reads the RAW
-  // search rank on purpose), so the two values differ by exactly the ratio of their
-  // bases, which is one exponential.
-  const disagreements = backed
+  // players nobody is pricing.
+  //
+  // THE COUNTERFACTUAL IS NOW THE MODEL, NOT THE ALGEBRA. This used to derive `wasValue`
+  // from one exponential, which is correct to within the rounding and was fine while the
+  // two numbers only ever appeared in a sentence. They are drawn now, and a dumbbell
+  // claims its dots are where the model puts them - so both ends come from a real run.
+  // See `cachedNoProductionValuePlayers`.
+  const withoutProduction = cachedNoProductionValuePlayers(h);
+  const population = priced
     .map((x) => {
-      const wasValue = Math.round(
-        x.v.value * Math.exp(-cfg.rankDecay * ((x.v.searchRank ?? 0) - x.v.rank)),
-      );
+      const was = withoutProduction.get(x.id)?.value ?? x.v.value;
       return {
+        id: x.id,
         name: x.p?.fullName ?? x.id,
-        searchRank: x.v.searchRank,
-        rank: x.v.rank,
-        index: x.v.productionIndex,
-        value: x.v.value,
-        wasValue,
-        move: x.v.value - wasValue,
+        now: x.v.value,
+        was,
+        move: x.v.value - was,
+        injury: injuryLabel(
+          {
+            status: x.p?.injuryStatus,
+            bodyPart: x.p?.injuryBodyPart,
+            notes: x.p?.injuryNotes,
+          },
+          { short: true },
+        ),
       };
-    })
-    .filter((x) => x.searchRank != null);
-  const promoted = [...disagreements].sort((a, b) => b.move - a.move).slice(0, 5);
-  const demoted = [...disagreements].sort((a, b) => a.move - b.move).slice(0, 5);
+    });
+  // `population` IS EVERY ROSTERED PLAYER, with no value filter. A player priced at
+  // zero is still a rostered player who did not move, and dropping him would quietly
+  // shrink the denominator the strip's caption prints - "225 of 246" beside an injury
+  // line reading "48 of 250" is two different populations in one paragraph.
+  //
+  // The named list is ten, across BOTH directions, on one axis - see
+  // components/ProductionMovers.jsx for why this stopped being two lists of five - and
+  // holds only players who ACTUALLY moved. On a corpus whose ids the production table
+  // does not cover (the fixture provider, or any pool under `MIN_BLEND_POOL`) nothing
+  // blends and every move is zero; ten rows of two coincident dots would draw a
+  // comparison that was never made.
+  const movers = [...population]
+    .filter((x) => x.move !== 0)
+    .sort((a, b) => Math.abs(b.move) - Math.abs(a.move))
+    .slice(0, 10);
+  // The ceiling the movers axis is anchored to: the top price this league actually
+  // carries, off the same map /values ranks. Not `cfg.maxValue`, which is `base(1)`
+  // before any multiplier and is reached by nobody.
+  const valueCeiling = Math.max(...[...valued.values()].map((v) => v.value), 0);
+  // WHAT SHARE OF THE BOARD /values ACTUALLY DRAWS rests on production - counted over
+  // the same rows that page renders, not over the rostered set.
+  //
+  // This is a materially worse number than the rostered share and it belongs on the
+  // page for exactly that reason: /values ranks the top VALUE_ROWS of the whole corpus,
+  // so it is full of highly-ranked prospects this league has never rostered and the
+  // table therefore cannot price. Reporting only the rostered 98% while the board a
+  // reader is looking at is nearer 81% would be picking the flattering denominator.
+  const rankedRows = [...valued.values()]
+    .filter((v) => v.value > 0)
+    .sort((a, b) => b.value - a.value)
+    .slice(0, VALUE_ROWS);
+  const rankedBacked = rankedRows.filter((v) => v.productionBacked).length;
+  const rankedPct = rankedRows.length
+    ? Math.round((1000 * rankedBacked) / rankedRows.length) / 10
+    : 0;
+  const flaggedTotal = priced.filter(
+    (x) =>
+      injuryLabel(
+        {
+          status: x.p?.injuryStatus,
+          bodyPart: x.p?.injuryBodyPart,
+          notes: x.p?.injuryNotes,
+        },
+        { short: true },
+      ) != null,
+  ).length;
   const ageExamples = [19, 22, 25, 28, 31, 34, 37];
   const cliff = firstCliffAge();
   const peakAnchor = Math.max(...cfg.ageAnchors.map(([, m]) => m));
@@ -321,8 +382,8 @@ export default async function MethodologyPage() {
         </h3>
         <p className="mt-2 text-body leading-relaxed text-muted">
           Asked the obvious question first: does past production here predict{" "}
-          <span className="text-ink">next season&apos;s</span> production better than the
-          consensus ordinal does? It does not, and it is not close - the ordinal scored
+          <span className="text-ink">next season&apos;s</span>{" "}
+          production better than the consensus ordinal does? It does not, and it is not close - the ordinal scored
           ρ 0.590 against production&apos;s 0.420, and the partial correlation of
           production given the ordinal was −0.05. Sleeper&apos;s number is a live human
           forecast that already knows about injuries, trades and role changes. On a
@@ -332,17 +393,44 @@ export default async function MethodologyPage() {
           But a dynasty value is not a one-season question. Re-run against the discounted
           sum of the <span className="text-ink">following three seasons</span> - counting
           a season a player did not produce in as a zero, the same survivorship rule the
-          age curve uses - and production carries information the ordinal does not:
-          partial ρ <span className="font-mono text-ink">0.412</span> (n 243, z 6.4),
-          lifting R² from 0.790 to 0.826. The standardised weight that falls out is{" "}
+          age curve uses - and production carries information the ordinal does not. Both
+          runs are below, on one scale:
+        </p>
+        <div className="mt-3">
+          <ProductionEvidence />
+        </div>
+        <p className="mt-3 text-body leading-relaxed text-muted">
+          The standardised weight that falls out of the second run is{" "}
           <span className="font-mono text-ink">0.233</span>, and that is the weight used,
-          unrounded.
+          unrounded. R² goes from{" "}
+          <span className="font-mono text-ink">
+            {PRODUCTION_R2.ordinal.toFixed(3)}
+          </span>{" "}
+          to{" "}
+          <span className="font-mono text-ink">
+            {PRODUCTION_R2.withProduction.toFixed(3)}
+          </span>{" "}
+          -
+          stated here and deliberately not drawn, because a{" "}
+          {(
+            (PRODUCTION_R2.withProduction - PRODUCTION_R2.ordinal) *
+            100
+          ).toFixed(1)}
+          -point move between two numbers that large is invisible on an honest axis and
+          only becomes visible on a dishonest one.
         </p>
         <p className="mt-3 text-body leading-relaxed text-muted">
-          It is a floor rather than a best guess, for one reason worth stating: the
-          consensus snapshot is from today and the target window is already over, so the
-          incumbent was scored <span className="text-ink">with hindsight</span> over the
-          thing it was predicting and production was not.
+          <span className="text-ink">
+            Both figures are optimistic, and not by an amount anyone here has measured.
+          </span>{" "}
+          The consensus ordinal is a snapshot taken today, and it postdates part of the
+          window it is being scored over - so it was graded with hindsight on the very
+          seasons it is supposed to be predicting, and production was not. That tilts the
+          comparison toward the ordinal, which makes{" "}
+          <span className="font-mono text-ink">0.233</span> a floor; it also inflates the
+          0.889 the ordinal scores, so the gap between the two is overstated as well. How
+          much on either count is unknown. There is no correction applied here and no
+          range drawn for one, because a bound nobody measured is not a bound.
         </p>
       </Card>
 
@@ -360,43 +448,20 @@ export default async function MethodologyPage() {
           should be ahead of whom, and no claim at all about what a dynasty asset is worth
           in points.
         </p>
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          <div>
-            <p className="text-meta font-semibold uppercase tracking-[0.14em] text-muted">
-              Production says higher
-            </p>
-            <ul className="mt-1 space-y-0.5">
-              {promoted.map((d) => (
-                <li key={d.name} className="text-body text-muted">
-                  <span className="text-ink">{d.name}</span> · #{d.searchRank} →
-                  #{d.rank}
-                  <span className="text-faint">
-                    {" "}
-                    · {d.wasValue.toLocaleString()} →{" "}
-                    {d.value.toLocaleString()} · index {d.index?.toFixed(2)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
-          <div>
-            <p className="text-meta font-semibold uppercase tracking-[0.14em] text-muted">
-              Production says lower
-            </p>
-            <ul className="mt-1 space-y-0.5">
-              {demoted.map((d) => (
-                <li key={d.name} className="text-body text-muted">
-                  <span className="text-ink">{d.name}</span> · #{d.searchRank} →
-                  #{d.rank}
-                  <span className="text-faint">
-                    {" "}
-                    · {d.wasValue.toLocaleString()} →{" "}
-                    {d.value.toLocaleString()} · index {d.index?.toFixed(2)}
-                  </span>
-                </li>
-              ))}
-            </ul>
-          </div>
+      </Card>
+
+      <Card className="mt-2">
+        <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
+          What it moved
+        </h3>
+        <div className="mt-2">
+          <ProductionMovers
+            moves={movers}
+            population={population}
+            ceiling={valueCeiling}
+            flaggedTotal={flaggedTotal}
+            pricedTotal={priced.length}
+          />
         </div>
       </Card>
 
@@ -422,27 +487,62 @@ export default async function MethodologyPage() {
                 )}
               </span>
             </RefusalMark>
+            {/* THE WEEK COUNT, not just the exclusion. "No eight-week record" and
+                "four rostered weeks against a floor of eight" are the same condition,
+                but only the second lets a reader judge whether the floor is the right
+                floor. `BELOW_FLOOR_WEEKS` exists to supply it; a null means this league
+                never rostered him in the window at all, which reads differently and
+                must never be printed as a zero. */}
             <ul className="mt-2 space-y-0.5">
-              {unbacked.map((x) => (
-                <li key={x.id} className="text-body text-muted">
-                  <span className="text-ink">{x.p?.fullName ?? x.id}</span>
-                  <span className="text-faint">
-                    {" "}
-                    · consensus #{x.v.searchRank} · value{" "}
-                    {x.v.value.toLocaleString()}
-                  </span>
-                </li>
-              ))}
+              {unbacked.map((x) => {
+                const weeks = rosteredWeeksBelowFloor(x.id);
+                return (
+                  <li key={x.id} className="text-body text-muted">
+                    <span className="text-ink">{x.p?.fullName ?? x.id}</span>
+                    <span className="text-faint">
+                      {" "}
+                      ·{" "}
+                      {weeks != null
+                        ? `${weeks} rostered ${weeks === 1 ? "week" : "weeks"}, floor is ${PRODUCTION_PROVENANCE.minWeeks}`
+                        : "never rostered here in the window"}{" "}
+                      · consensus #{x.v.searchRank} · value{" "}
+                      {x.v.value.toLocaleString()}
+                    </span>
+                  </li>
+                );
+              })}
             </ul>
           </div>
         ) : null}
         <p className="mt-3 text-body leading-relaxed text-muted">
-          That share is high for a temporary reason: the {h.currentLeague.season} rookie
-          draft has not run yet, so every roster is still last season&apos;s roster. Once
-          it runs, every rookie taken will be a player this table cannot price. Being
-          absent from it says nothing about a player - this league holds around{" "}
-          {h.rosters.length * 19} roster spots against roughly 500 NBA players who play
-          real minutes, so absence is a fact about fourteen managers, not about him.
+          That share is high for a temporary reason, and it is stated as a fraction rather
+          than drawn as a full ring or a near-complete bar on purpose: those shapes assert
+          &ldquo;essentially done&rdquo;, and this one is about to stop being true. The{" "}
+          {h.currentLeague.season} rookie draft has not run yet, so every roster is still
+          last season&apos;s roster. Once it runs, every rookie taken will be a player
+          this table cannot price, and {backedPct}% will fall on its own.
+        </p>
+        <p className="mt-3 text-body leading-relaxed text-muted">
+          <span className="text-ink">
+            And {backedPct}% is the rostered share, which is the most flattering
+            denominator available.
+          </span>{" "}
+          The board on <Link href="/values" className="text-accent-text underline decoration-border underline-offset-2">/values</Link>{" "}
+          ranks the top {rankedRows.length} players by value across the whole{" "}
+          {h.players.size.toLocaleString()}-player corpus, not just the ones somebody
+          rosters - and{" "}
+          <span className="text-ink">
+            {rankedBacked} of those {rankedRows.length} ({rankedPct}%)
+          </span>{" "}
+          rest on a production record. The {rankedRows.length - rankedBacked} that do not are
+          almost entirely incoming prospects who have never been rostered here and, in
+          most cases, have not played an NBA game - which is the same coming-rookie gap
+          arriving early, on a page that already shows it.
+        </p>
+        <p className="mt-3 text-body leading-relaxed text-muted">
+          Being absent from the table says nothing about a player - this league holds
+          around {h.rosters.length * 19} roster spots against roughly 500 NBA players who
+          play real minutes, so absence is a fact about fourteen managers, not about him.
         </p>
       </Card>
 
@@ -471,8 +571,8 @@ export default async function MethodologyPage() {
           <li className="text-body leading-relaxed text-muted">
             <span className="text-ink">Injury, and this one overlaps the injury term.</span>{" "}
             A player hurt for eleven weeks banked eleven zeros, so production charges him
-            for an absence the injury multiplier is also looking at. Measured: 12 of the
-            20 largest drops carry a current injury flag, against 4 expected by chance.
+            for an absence the injury multiplier is also looking at. The counts are above,
+            with the moves they qualify, rather than filed down here away from them.
             The two terms are not measuring the same thing - the injury multiplier prices
             the forward risk in a current flag and sits near 1.0 for most of them, while
             production records output that did not happen - but on an injured player they
