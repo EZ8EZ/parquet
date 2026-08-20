@@ -16,8 +16,10 @@ import { BASE_URL, E2E_PORT } from "./e2e/constants.js";
  *   - DATABASE_URL is a syntactically valid placeholder Prisma never dials at
  *     runtime (annotation reads/writes degrade to "not persisted" without a real
  *     one - see app/api/annotations/route.ts - so the suite never needs a database).
- *   - NEXT_PUBLIC_USE_PLAYER_PHOTOS and LLM_BASE_URL are forced off so nothing in
- *     the suite depends on Sleeper's CDN or an LLM endpoint being reachable.
+ *   - NEXT_PUBLIC_USE_PLAYER_PHOTOS is forced off so nothing in the suite depends on
+ *     Sleeper's CDN. LLM_BASE_URL/LLM_API_KEY were pinned empty here for the same
+ *     reason until /analyst was shelved (SHELVED.md, S7); the app makes no outbound
+ *     LLM call from anywhere now, so there is nothing left to pin off.
  * It runs on its own port (3199), distinct from a developer's own `next dev` on
  * 3000, so this suite never fights a manually-running server for the port.
  */
@@ -53,8 +55,6 @@ export default defineConfig({
       // dials it (see the header comment above).
       DATABASE_URL: "postgresql://ci:ci@localhost:5432/ci",
       NEXT_PUBLIC_USE_PLAYER_PHOTOS: "false",
-      LLM_BASE_URL: "",
-      LLM_API_KEY: "",
     },
   },
 });

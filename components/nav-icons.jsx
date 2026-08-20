@@ -17,7 +17,6 @@ import {
   Home,
   Info,
   ListOrdered,
-  MessageSquareText,
   ScrollText,
   Settings,
   Share2,
@@ -45,7 +44,9 @@ export const NAV_ICONS = {
   "/drafts/grades": GraduationCap,
   "/values": BookText,
   "/rank": ListOrdered,
-  "/analyst": MessageSquareText,
+  // "/analyst": MessageSquareText stood here. The surface is shelved (SHELVED.md,
+  // S7); `iconForSurface` falls back rather than throwing, so a stale entry would
+  // never have been noticed by anything - which is exactly why it goes now.
   "/about": Info,
   "/methodology": FlaskConical,
   "/settings": Settings,

@@ -63,7 +63,9 @@ same accessibility need without asking anyone to choose between designs.
 - **Stacked cards, never clipped tables**, on mobile. Rankings/values are rows, not
   a horizontally-scrolling grid.
 - Single centered column, `max-w-2xl`, that widens gracefully on desktop.
-- Safe-area insets respected on the Desk and the analyst composer.
+- Safe-area insets respected on the Desk. (The analyst composer was the other
+  fixed-to-bottom control this rule was written for; that surface is shelved, so the
+  Desk is now the only one. See SHELVED.md, S7.)
 
 ## Components
 - `components/ui.tsx` - PageHeader, Card, SectionHeader, Tag, Stat, DeltaValue,
@@ -82,9 +84,9 @@ Geometric parquet **herringbone chevron** in gold on a near-black rounded square
 
 ## States
 - **Loading:** skeletons (`.skeleton` shimmer), never spinners, except a small
-  inline spinner on in-flight buttons (evaluate / save / ask).
+  inline spinner on in-flight buttons (evaluate / save).
 - **Empty:** designed as onboarding, not apology - the ledger empty state is a
-  "you're all caught up" and the analyst empty state teaches its adversarial intent.
+  "you're all caught up", not a "no data".
 
 ## Accessibility
 - Visible focus rings (`:focus-visible` → accent outline).
