@@ -28,6 +28,10 @@ entries here that record a change of **direction** rather than a defect. Everyth
 above them went because it was wrong; the Analyst went because the app turned out to
 be a different kind of thing than the one that wanted it.
 
+S9 was added 2026-08-20 during the Trade Finder redesign (D97). It is a defect entry,
+and the second one in this file with the same shape as S6 - a hand-tuned tag-scored
+answer standing beside a searched one, with nothing pinning them together.
+
 ---
 
 ## S1. The start line — the nightly board and the ten-game log
@@ -569,6 +573,47 @@ because the three-row ledger already prints both numbers, and a chart of a ratio
 already state is the duplication D40 and D51 keep finding. If a future round wants a
 picture here, that is the fraction to draw, and it should not be drawn as "controlled vs
 passenger" over held picks again.
+
+---
+
+## S11. `choosePartner()` — the second answer to "who should I call"
+
+**What it was.** A 30-line private function in `lib/gameplan/index.js` that picked one
+leaguemate per move on `/plan`, scored from hand-tuned dossier-tag bonuses: `+8` if the
+manager `overpaysForAge`, `+4` for a "Deadline buyer" tag, `+5` for a negative pick net,
+`+3` for "High-volume trader", `p.trades * 0.5` as an engagement baseline, `-20` for a
+"Ghost" or "Never trades". The winner rendered as a "Try [team]" row on every move card,
+linking to their dossier. It also forced `buildGamePlan` to construct **thirteen full
+dossiers per render** — the only reason that pass existed.
+
+**Why it was shelved.** It was a **second, unpinned implementation of a question this
+app already answers by searching**, which is precisely the shape of failure S6 (`tierOf`)
+exists to document. `/trade/finder` answers "who should I call" by pricing every asset on
+both rosters through both sides' appetites and searching for packages that clear a value
+band and leave both sides better off. `choosePartner` answered it from behavioural tags
+alone, and **never checked whether either roster held an asset the other one wanted.**
+
+Nothing tied the two together, so they could disagree — and the disagreement was visible
+in one flow, on one roster, three taps apart: `/plan` says "Try [team]", the reader taps
+through to that manager, and the finder finds nothing that clears the bar with them. The
+tag score cannot see that, because a manager's habit of paying up for veterans says
+nothing about whether they own a player you want this season. There was no test comparing
+the two, exactly as there was no test comparing `tierOf` against the live distribution.
+
+The fix is the same fix: delete the second system rather than tune it. `/plan`'s move
+cards now link to `/trade/finder` — the search — and carry `?move=<assetId>` when the
+move names a specific player to send, so the finder is asked the constrained question
+("who would take *him*") instead of guessing what the move meant. Dropping the function
+also dropped the thirteen-dossier pass, which nothing else in `buildGamePlan` read.
+
+**What would bring it back.** Nothing in this shape. The useful half of it — "these
+managers behave like buyers of what you are selling" — is a real signal, and it is
+already *in* the finder: `appetiteFor` reads the same dossier (`overpaysForAge`,
+`hoardsPicks`, `buildsYouth`, the reluctance tags) and `perceive` turns those tells into
+signed reasons attached to specific assets, which is the thing `choosePartner` could not
+do. If a future round wants a shortlist on `/plan` rather than a link, it should call
+`partnerBoard` — the finder's own prefilter, which already scores every leaguemate over
+real assets — and never re-derive a parallel score from tags.
 
 ---
 

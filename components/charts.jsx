@@ -349,6 +349,168 @@ export function AgeStrip({ ages, height = 64 }) {
   );
 }
 /**
+ * TWO DURATION STRIPS - the roster's timeline today, and the same timeline after a
+ * proposed package. `AgeStrip`'s idiom (one horizontal axis, one dot per asset, a
+ * dashed line for the weighted centre) with three deliberate differences: the x-axis is
+ * SEASONS OUT rather than age, dots are SIZED BY VALUE because the metric behind this
+ * is value-weighted, and there is a band.
+ *
+ * THE BAND IS THE TCI NUMBER. Not an illustration of it - the same arithmetic.
+ * `coherenceOf` (lib/metrics/duration.js) computes
+ *
+ *     dispersion = sqrt( Σ value·(duration - mean)² / Σ value )      // value-weighted σ
+ *     TCI        = round( 100 · (1 - min(1, dispersion / SIGMA_REF)) )
+ *
+ * so the band drawn here, `mean ± dispersion`, has width `2·dispersion` seasons, and
+ * therefore - for every roster below the clamp - width `2·SIGMA_REF·(1 - TCI/100)`, i.e.
+ * exactly 6·(1 - TCI/100) seasons at the shipped SIGMA_REF of 3. A band that visibly
+ * narrows between the two strips IS the TCI going up, by identity rather than by
+ * analogy, and lib/metrics/metrics.test.js pins that identity so a recalibration of
+ * SIGMA_REF cannot leave this drawing quietly lying.
+ *
+ * Above the clamp (dispersion ≥ SIGMA_REF, TCI pinned at 0) the identity stops holding
+ * in one direction: the band keeps widening while the number cannot fall further. The
+ * caption prints both numbers, so the reader is never asked to infer one from the other.
+ *
+ * NO COLOUR CARRIES DIRECTION. Departing assets are hollow, arriving assets are filled,
+ * and both are the same hue as everything else - a trade that lowers TCI is not being
+ * marked wrong (D6, and the same reasoning `FragilityLine` already keeps for a number
+ * that moves both ways). No animation.
+ */
+export function DurationStrips({ assets, before, after, label }) {
+  const W = 320;
+  const rowH = 58;
+  const H = rowH * 2 + 16;
+  if (!assets.length) return null;
+  const maxValue = Math.max(1, ...assets.map((a) => a.value));
+  const edge = (c) => c.rosterDuration + c.dispersion;
+  const domain = Math.min(
+    12,
+    Math.max(
+      8,
+      Math.ceil(Math.max(...assets.map((a) => a.duration), edge(before), edge(after))),
+    ),
+  );
+  const padL = 8;
+  const padR = 8;
+  const x = (d) =>
+    r2(padL + (Math.max(0, Math.min(domain, d)) / domain) * (W - padL - padR));
+  // Area-proportional within a 2-6px range: a $20,000 core asset should read as
+  // heavier than a $200 bench body without swallowing the strip.
+  const radius = (v) => r2(2 + 4 * Math.sqrt(Math.max(0, v) / maxValue));
+  const ticks = [];
+  for (let t = 0; t <= domain; t += 2) ticks.push(t);
+  const strips = [
+    {
+      title: "today",
+      c: before,
+      dots: assets.filter((a) => a.role !== "arriving"),
+    },
+    { title: "after", c: after, dots: assets },
+  ];
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full" role="img" aria-label={label}>
+      {strips.map((s, si) => {
+        const top = si * rowH;
+        const base = top + 36;
+        const lo = x(s.c.rosterDuration - s.c.dispersion);
+        const hi = x(s.c.rosterDuration + s.c.dispersion);
+        return (
+          <g key={s.title}>
+            <text x={padL} y={top + 11} fontSize="9" fill={MUTED}>
+              {s.title}
+            </text>
+            <text
+              x={W - padR}
+              y={top + 11}
+              textAnchor="end"
+              fontSize="9"
+              fill="var(--color-ink)"
+              className="figure"
+            >
+              TCI {s.c.tci} · ±{s.c.dispersion.toFixed(2)}s
+            </text>
+            {/* The ±1σ band, and the whole point of the drawing. */}
+            <rect
+              x={lo}
+              y={base - 13}
+              width={Math.max(0.75, r2(hi - lo))}
+              height={26}
+              rx={2}
+              fill={ACCENT}
+              fillOpacity={0.13}
+            />
+            {[lo, hi].map((edgeX, i) => (
+              <line
+                key={i}
+                x1={edgeX}
+                y1={base - 13}
+                x2={edgeX}
+                y2={base + 13}
+                stroke={ACCENT}
+                strokeOpacity={0.45}
+                strokeWidth={1}
+              />
+            ))}
+            <line
+              x1={padL}
+              y1={base}
+              x2={W - padR}
+              y2={base}
+              stroke={GRID}
+              strokeWidth={1}
+            />
+            {/* Value-weighted mean duration, the band's own centre. */}
+            <line
+              x1={x(s.c.rosterDuration)}
+              y1={base - 16}
+              x2={x(s.c.rosterDuration)}
+              y2={base + 16}
+              stroke="var(--color-info)"
+              strokeWidth={1.5}
+              strokeDasharray="3 2"
+            />
+            {s.dots.map((a, i) => {
+              // On "today" a departing asset is still here, so it draws normally; on
+              // "after" it is hollow, which is what makes the gap it left visible.
+              const departed = si === 1 && a.role === "leaving";
+              const arriving = si === 1 && a.role === "arriving";
+              return (
+                <circle
+                  key={`${a.id}-${i}`}
+                  cx={x(a.duration)}
+                  cy={base}
+                  r={radius(a.value)}
+                  fill={departed ? "none" : ACCENT}
+                  fillOpacity={arriving ? 1 : 0.5}
+                  stroke={departed ? MUTED : arriving ? "var(--color-bg)" : "none"}
+                  strokeWidth={departed ? 1 : 0.75}
+                  strokeDasharray={departed ? "2 1.5" : undefined}
+                />
+              );
+            })}
+          </g>
+        );
+      })}
+      {ticks.map((t) => (
+        <g key={t}>
+          <line
+            x1={x(t)}
+            y1={H - 15}
+            x2={x(t)}
+            y2={H - 11}
+            stroke={MUTED}
+            strokeWidth={1}
+          />
+          <text x={x(t)} y={H - 3} textAnchor="middle" fontSize="9" fill={MUTED}>
+            {t}
+          </text>
+        </g>
+      ))}
+    </svg>
+  );
+}
+/**
  * Inline trend line with no axes, sized to sit next to a single row rather than
  * stand on its own as a section. Direction is read off the first-vs-last value
  * (rising = positive tint, falling = negative) unless a color is forced by the
