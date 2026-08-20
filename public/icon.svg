@@ -1,21 +1,57 @@
 <svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Parquet">
+  <!--
+    THE CORRECTED PARQUET MARK (D96). Kept in step with components/Brand.jsx's
+    <BrandMark>, which is the same geometry with themed fills instead of frozen ones.
+
+    This used to be six rounded planks at rotate(45)/rotate(-45) - a herringbone
+    chevron - and the Boston Garden floor is not herringbone. It is a basket-weave
+    block parquet on a SQUARE GRID: alternating squares of red oak with the grain
+    turned 90 degrees between neighbours, 247 five-foot panels of post-war scrap laid
+    orthogonal so a damaged panel could be swapped out.
+
+    The correction is load-bearing rather than cosmetic. Parquet reserves the 45-degree
+    diagonal for a REFUSAL - orthogonal is data, diagonal is "we will not say" - so a
+    herringbone logo and that grammar could not both be right. Four 168-unit blocks in
+    a 2x2 on a 24-unit gutter, three 44-unit slats per block on an 18-unit seam, grain
+    alternating between edge-neighbours.
+
+    EVERY COLOUR HERE IS FROZEN, AND THAT IS UNAVOIDABLE RATHER THAN AN OVERSIGHT.
+    A standalone SVG referenced from the manifest is a separate document: it never
+    receives a custom property, so it cannot re-tune itself on the paper theme the way
+    <BrandMark> does. The three values are therefore the DARK theme's own tokens,
+    copied rather than picked - #0b0c0e is color-bg, #3c434f is color-border (which
+    replaces the stale #262b33 this file was still carrying from before the contrast
+    pass), and #edc167 into #e6b34d is color-accent-text into color-accent, the same
+    two golds the rest of the app splits by job, replacing a third gold that matched
+    neither. Regenerate the PNG set with `pnpm gen:icons` after any edit here.
+    (No double hyphens anywhere in this comment: XML forbids them, and sharp's SVG
+    parser rejects the whole file rather than the comment.)
+  -->
   <defs>
-    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
-      <stop offset="0" stop-color="#f0c268"/>
-      <stop offset="1" stop-color="#c9922f"/>
+    <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#edc167"/>
+      <stop offset="1" stop-color="#e6b34d"/>
     </linearGradient>
   </defs>
   <rect width="512" height="512" rx="112" fill="#0b0c0e"/>
-  <rect x="6" y="6" width="500" height="500" rx="106" fill="none" stroke="#262b33" stroke-width="4"/>
-  <!-- Herringbone parquet planks forming a chevron -->
-  <g transform="translate(256 262)">
-    <g fill="url(#g)">
-      <rect x="-150" y="-24" width="150" height="48" rx="10" transform="rotate(45 -75 0)"/>
-      <rect x="0"    y="-24" width="150" height="48" rx="10" transform="rotate(-45 75 0)"/>
-      <rect x="-150" y="-24" width="150" height="48" rx="10" transform="translate(0 -104) rotate(45 -75 0)" opacity="0.72"/>
-      <rect x="0"    y="-24" width="150" height="48" rx="10" transform="translate(0 -104) rotate(-45 75 0)" opacity="0.72"/>
-      <rect x="-150" y="-24" width="150" height="48" rx="10" transform="translate(0 104) rotate(45 -75 0)" opacity="0.72"/>
-      <rect x="0"    y="-24" width="150" height="48" rx="10" transform="translate(0 104) rotate(-45 75 0)" opacity="0.72"/>
-    </g>
+  <rect x="6" y="6" width="500" height="500" rx="106" fill="none" stroke="#3c434f" stroke-width="4"/>
+  <g fill="url(#g)" shape-rendering="crispEdges">
+    <!-- top-left block: grain vertical -->
+    <rect x="76"  y="76"  width="44"  height="168"/>
+    <rect x="138" y="76"  width="44"  height="168"/>
+    <rect x="200" y="76"  width="44"  height="168"/>
+    <!-- top-right block: the same oak, turned 90 degrees -->
+    <rect x="268" y="76"  width="168" height="44"/>
+    <rect x="268" y="138" width="168" height="44"/>
+    <rect x="268" y="200" width="168" height="44"/>
+    <!-- bottom-left: horizontal, disagreeing with the block above it -->
+    <rect x="76"  y="268" width="168" height="44"/>
+    <rect x="76"  y="330" width="168" height="44"/>
+    <rect x="76"  y="392" width="168" height="44"/>
+    <!-- bottom-right: vertical, agreeing with its diagonal neighbour, which is what
+         makes this a checkerboard rather than a stripe -->
+    <rect x="268" y="268" width="44"  height="168"/>
+    <rect x="330" y="268" width="44"  height="168"/>
+    <rect x="392" y="268" width="44"  height="168"/>
   </g>
 </svg>

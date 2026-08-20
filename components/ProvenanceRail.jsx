@@ -186,13 +186,22 @@ export function ProvenanceRail({ chain, showTitle, className, activity }) {
               // The species change gets a different SHAPE, not only a different
               // colour: it is the one node that is a different kind of event, and
               // hue alone would not say so to every reader.
+              //
+              // A SQUARE, NOT A DIAMOND (D96). This was `rotate(45)` - a diamond -
+              // and it was the last mark in the app carrying DATA on the reserved
+              // angle. The diagonal now means one thing everywhere in this product:
+              // a refusal, something Parquet declines to state. A resolution node is
+              // the opposite of a refusal; it is the most stated thing on the rail.
+              // Dropping the rotation costs nothing the mark was using: square
+              // against circle is still a shape difference, still categorical, still
+              // legible with every colour deleted, and it now sits square to the
+              // orthogonal seams the rest of the rail is built from.
               <rect
                 key={i}
                 x={CX - 5}
                 y={y - 5}
                 width={10}
                 height={10}
-                transform={`rotate(45 ${CX} ${y})`}
                 fill={fill}
                 stroke={stroke}
                 strokeWidth={2}
@@ -238,8 +247,8 @@ export function ProvenanceRail({ chain, showTitle, className, activity }) {
           <p>
             While this sat, the league elsewhere recorded{" "}
             {activityParts(activity)}. Not a claim about this asset or anyone
-            holding it - only what else was happening in the league during
-            the same stretch.
+            holding it - only what else was happening in the league during the
+            same stretch.
           </p>
         </Disclosure>
       )}

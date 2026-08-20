@@ -19,12 +19,48 @@ import Link from "next/link";
  * `gradientId` exists because two marks on one page would otherwise both define
  * `<linearGradient id="wm">` and the second would lose. It is a static prop rather
  * than `useId` so the file stays a server component.
+ *
+ * ---------------------------------------------------------------------------------
+ * THE GEOMETRY IS NOW THE FLOOR, AND THE OLD ONE WAS THE WRONG FLOOR (D96)
+ * ---------------------------------------------------------------------------------
+ * This mark shipped for nine rounds as six rounded planks at `rotate(45)` and
+ * `rotate(-45)`: a herringbone chevron. The Boston Garden floor is not herringbone.
+ * It is a basket-weave block parquet on a SQUARE GRID - alternating squares of red
+ * oak with the grain turned 90 degrees between neighbours, 247 five-foot panels of
+ * post-war scrap, laid orthogonal so a damaged panel could be swapped. Herringbone
+ * is diagonal interlocked rectangles, which is a different floor in a different
+ * building.
+ *
+ * And the correction is not cosmetic, because the app now reserves the 45-degree
+ * diagonal for a REFUSAL (D96; components/RefusalMark.jsx shipped the first instance
+ * in D95). Orthogonal is data, diagonal is "we will not say." The logo and the
+ * grammar could not both be right, and the grammar is worth more than the logo:
+ * a square-grid ground is what guarantees nothing else in the product runs at 45
+ * degrees, which is what lets a hatched mark identify itself with no colour and no
+ * caption.
+ *
+ * WHAT IS DRAWN. Four 168-unit blocks in a 2x2 on a 24-unit gutter, three 44-unit
+ * slats per block on an 18-unit seam. Grain alternates between edge-neighbours, so
+ * diagonal neighbours agree and orthogonal ones differ - a checkerboard whose only
+ * variable is orientation. Orientation is one of Bertin's retinal variables and it
+ * owes nothing to colour, which is why the mark keeps reading in every theme.
+ *
+ * TWO THINGS DELIBERATELY DROPPED. The `rx="10"` is gone: oak has hard edges and so
+ * does everything else in this direction. And the old 0.72 opacity on the outer
+ * planks is gone - it was faking depth on a chevron, and now that orientation carries
+ * the alternation, a second varying channel would read as a magnitude ramp across a
+ * mark that has no magnitude in it.
+ *
+ * The gradient also stops running corner-to-corner. `x2="0" y2="1"` is a vertical
+ * axis, which both removes the last 45-degree line of any kind from the mark and
+ * matches how the rest of the app models light (`--edge-hilite` is a top catchlight;
+ * this floor is lit from above too). Same two golds, same tokens, no new colour.
  */
 export function BrandMark({ size = 36, gradientId = "parquet-mark" }) {
   return (
     <svg width={size} height={size} viewBox="0 0 512 512" aria-hidden="true">
       <defs>
-        <linearGradient id={gradientId} x1="0" y1="0" x2="1" y2="1">
+        <linearGradient id={gradientId} x1="0" y1="0" x2="0" y2="1">
           <stop offset="0" style={{ stopColor: "var(--color-accent-text)" }} />
           <stop offset="1" style={{ stopColor: "var(--color-accent)" }} />
         </linearGradient>
@@ -35,59 +71,24 @@ export function BrandMark({ size = 36, gradientId = "parquet-mark" }) {
         rx="112"
         style={{ fill: "var(--color-surface)" }}
       />
-      <g transform="translate(256 262)" fill={`url(#${gradientId})`}>
-        <rect
-          x="-150"
-          y="-24"
-          width="150"
-          height="48"
-          rx="10"
-          transform="rotate(45 -75 0)"
-        />
-        <rect
-          x="0"
-          y="-24"
-          width="150"
-          height="48"
-          rx="10"
-          transform="rotate(-45 75 0)"
-        />
-        <rect
-          x="-150"
-          y="-24"
-          width="150"
-          height="48"
-          rx="10"
-          transform="translate(0 -104) rotate(45 -75 0)"
-          opacity="0.72"
-        />
-        <rect
-          x="0"
-          y="-24"
-          width="150"
-          height="48"
-          rx="10"
-          transform="translate(0 -104) rotate(-45 75 0)"
-          opacity="0.72"
-        />
-        <rect
-          x="-150"
-          y="-24"
-          width="150"
-          height="48"
-          rx="10"
-          transform="translate(0 104) rotate(45 -75 0)"
-          opacity="0.72"
-        />
-        <rect
-          x="0"
-          y="-24"
-          width="150"
-          height="48"
-          rx="10"
-          transform="translate(0 104) rotate(-45 75 0)"
-          opacity="0.72"
-        />
+      <g fill={`url(#${gradientId})`} shapeRendering="crispEdges">
+        {/* Top-left block: grain running vertically. */}
+        <rect x="76" y="76" width="44" height="168" />
+        <rect x="138" y="76" width="44" height="168" />
+        <rect x="200" y="76" width="44" height="168" />
+        {/* Top-right block: the same oak, turned 90 degrees. */}
+        <rect x="268" y="76" width="168" height="44" />
+        <rect x="268" y="138" width="168" height="44" />
+        <rect x="268" y="200" width="168" height="44" />
+        {/* Bottom-left: horizontal, so it disagrees with the block above it. */}
+        <rect x="76" y="268" width="168" height="44" />
+        <rect x="76" y="330" width="168" height="44" />
+        <rect x="76" y="392" width="168" height="44" />
+        {/* Bottom-right: vertical, agreeing with the diagonal neighbour, which is what
+            makes this a checkerboard rather than a stripe. */}
+        <rect x="268" y="268" width="44" height="168" />
+        <rect x="330" y="268" width="44" height="168" />
+        <rect x="392" y="268" width="44" height="168" />
       </g>
     </svg>
   );
