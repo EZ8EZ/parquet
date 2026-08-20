@@ -29,20 +29,31 @@ import {
 import { loadDraftOrderFidelity } from "@/lib/agency/source";
 import { PickAgencyPanel } from "@/components/PickAgencyPanel";
 export const dynamic = "force-dynamic";
-const WINDOW_COPY = {
-  rebuilding: {
-    tone: "info",
-    label: "Rebuilding / ascending",
+/*
+ * CORE AGE, SAYING ONLY WHAT IT MEASURES.
+ *
+ * These three used to be labelled "Rebuilding / ascending", "Win-now window" and
+ * "Balanced" - three strategy words for a figure that is the value-weighted age of the
+ * top 8 players and nothing else. Posture, a different classifier on a different input,
+ * used two of the same words for a different question, and /league printed both on one
+ * row. The notes below were always honest about this being an age; only the labels were
+ * not. See lib/metrics/axes.js.
+ *
+ * Neutral tone for all three, for the reason components/PostureTag gives: an age is not
+ * a grade, and a semantic colour hands the reader a verdict the sentence underneath
+ * refuses to give (D6).
+ */
+const CORE_AGE_COPY = {
+  "young core": {
+    label: "Young core",
     note: "Your core skews young - time is on your side.",
   },
-  "win-now": {
-    tone: "accent",
-    label: "Win-now window",
-    note: "Your core is aging - the window is open now, not later.",
+  "veteran core": {
+    label: "Veteran core",
+    note: "Your core is the oldest quarter of the league - production now, less of it later.",
   },
-  balanced: {
-    tone: "positive",
-    label: "Balanced",
+  "mixed-age core": {
+    label: "Mixed-age core",
     note: "A mixed-age core - you can pivot either direction.",
   },
 };
@@ -91,11 +102,12 @@ export default async function RosterPage() {
     return <p className="text-muted">Couldn&apos;t identify your roster.</p>;
   }
   // Pulled from the full league ranking rather than a standalone analyzeRoster call so
-  // `window` is classified against the same league-relative distribution /league uses -
-  // otherwise the same team could read "win-now" on one page and "balanced" on another.
+  // `coreAgeBand` is banded against the same league-relative distribution /league uses -
+  // otherwise the same team could read "veteran core" on one page and "mixed-age core"
+  // on another.
   const ranked = leagueValueRanking(h);
   const a = ranked.find((r) => r.rosterId === rosterId);
-  const win = WINDOW_COPY[a.window];
+  const win = CORE_AGE_COPY[a.coreAgeBand];
   // One chain per rostered player, built from one assembly. `loadProvenanceSource`
   // costs `getPrincipals` and `buildDraftIndex`, both already loaded on demand and
   // memoized for five minutes by their own modules - it is the bill /drafts has always
@@ -242,7 +254,7 @@ export default async function RosterPage() {
                   </>
                 )}
               </span>
-              <Tag tone={win.tone}>{win.label}</Tag>
+              <Tag tone="neutral">{win.label}</Tag>
             </div>
             <p className="mt-1 text-note leading-snug text-muted">{win.note}</p>
           </>

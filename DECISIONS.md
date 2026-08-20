@@ -5073,3 +5073,101 @@ genuinely promising (Basketball-Reference's `/contracts/players.html` is fetchab
 robots-disallowed, ~462 rows, joins on normalised name at ~75%, ~90% with suffix
 handling) - it is a second source with its own staleness and matching story, and it does
 not belong in the commit that fixes the first source's missing field.
+
+## D93. TWO CLASSIFIERS, ONE VOCABULARY, PRINTED THREE INCHES APART - the age axis loses the strategy words, the census reads the board's own function, and /plan's fourth list stops pretending to be a fifth classification
+
+A product review reported that `window` (core-age quartile, in `lib/roster.js`) and
+`posture` (payoff-timing quartile plus a coherence floor, in `lib/metrics/duration.js`)
+shared the words "rebuilding" and "balanced" while measuring different things, and that
+`/league` printed both on the same row. Measured on the live 14-roster league before
+anything was changed, rather than taken on trust:
+
+| # | roster | core age | `window` | `posture` | TCI | dur |
+|---|---|---|---|---|---|---|
+| 1 | 5-Year Plan | 24.1 | rebuilding | rebuilding | 70 | 5.04 |
+| 2 | Flick the Clint | 28.0 | win-now | straddling | 54 | 4.03 |
+| 3 | Jalen Squadron | 27.7 | balanced | ascending | 64 | 4.07 |
+| 4 | Sweet Home Wembanyama | 26.3 | balanced | straddling | 52 | 4.38 |
+| 5 | The Terror Twins | 25.8 | balanced | ascending | 59 | 4.46 |
+| 6 | eddie house | 28.1 | win-now | contending | 66 | 3.98 |
+| 7 | yagev | 27.8 | balanced | ascending | 68 | 4.08 |
+| 8 | kdewitt4 | 29.4 | win-now | straddling | 47 | 3.81 |
+| 9 | zachgoldy | 25.1 | balanced | ascending | 76 | 4.76 |
+| 10 | 6-Month Plan | 22.6 | rebuilding | rebuilding | 74 | 5.37 |
+| 11 | mjrooney20 | 28.7 | win-now | contending | 57 | 3.75 |
+| 12 | Old Man Ball | 25.0 | balanced | rebuilding | 71 | 4.94 |
+| 13 | nathang21 | 24.7 | rebuilding | rebuilding | 68 | 5.55 |
+| 14 | Giddler on the Roof | 25.3 | balanced | ascending | 67 | 4.59 |
+
+**The report was right on every count.** Different strings on **11 of 14** rosters. The
+census tiles said `4 win-now · 7 balanced · 3 rebuilding` while the board below them
+printed the word "rebuilding" against **four** rosters - the tiles were counting core
+age and the rows were printing posture, and nothing on the page said so. Row 12 is the
+reported row exactly: `balanced ... TCI 71 · RFI 74 · rebuilding`, one roster, two words,
+no explanation.
+
+**THIS IS NOT THE `tierOf` CASE, AND THE DIFFERENCE DECIDES THE FIX.** `tierOf` (SHELVED
+S6) was a second answer to ONE question, so it was deleted. These are two different
+questions and both are worth asking: *how old is this roster's core* is a fact about the
+players on it, and *when does its value pay off* is duration over players AND picks -
+the second includes assets the first cannot see, which is precisely why the app has it.
+So the second system stays. What could not stay is the age axis borrowing the timing
+axis's words, because those words assert something core age cannot see: an old core is
+not evidence that anybody chose to win now, and a young core is not evidence that
+anybody chose to rebuild. That is D19 (refuse unfounded inference) failing quietly for
+however long, and it would have been a defect even if `posture` had never existed.
+
+**What shipped.**
+
+1. **`lib/metrics/axes.js`** - the vocabularies declared in one place, each with the
+   question it answers and the one function allowed to answer it. The age axis is now
+   **young core / mixed-age core / veteran core**: zero words and zero word STEMS shared
+   with contending / ascending / rebuilding / straddling. `analyzeRoster().window` is
+   renamed `coreAgeBand`, which also retires the third meaning of "window" in a codebase
+   that already used it for a season span (`lib/metrics/window.js`) and for the browser
+   global. The league-relative banding argument is unchanged, moved not rewritten.
+2. **`/league`'s tiles and board cannot disagree.** The tiles now count postures through
+   `postureCensus`, off the same `leagueTimelines` array the rows read, with a line under
+   them saying what is being counted. They read `2 contending · 5 ascending · 4
+   rebuilding · 3 straddling` on the live league, and the fourth rebuild that the old
+   tiles hid is now in the count. The core-age word moved next to the age FIGURE it comes
+   from ("age 25.0, mixed-age core"), which also removed a duplicate age on the same row.
+3. **`/plan`'s fourth list was never a third axis - it was the age axis wearing the
+   timing axis's verbs.** contend / ascend / rebuild / retool is a prescription
+   ("recommended direction"), but it was derived from `window`, so /plan's own timeline
+   check told the reader "the plan says X but your value is dated like a Y roster - one
+   of them is wrong" on **8 of 14** rosters for no better reason than that the two labels
+   came off different instruments. `stanceOf` now takes the POSTURE (agreement rises to
+   10 of 14, and `straddling -> retool` is an exact semantic match: duration.js's own
+   straddling copy already said "pick a direction"). The remaining disagreements are the
+   standing/star override, which is a real fact and now says so instead of accusing the
+   roster of a contradiction.
+4. **One `stanceOf`, not two agreeing ones.** `lib/tradefinder` held its own copy with a
+   test asserting the two matched on every roster. Two implementations kept in step by a
+   test is the `tierOf` shape with a tripwire attached; both engines now call the shared
+   function, and the cross-check test stays to catch the other failure (one shared
+   function, two different sets of arguments).
+5. **"Pick capital" named two quantities.** Home showed `PICK CAPITAL 0` over "7 firsts
+   in / 4 out" (a net COUNT of picks traded, from the dossier) while /roster showed
+   `PICK CAPITAL 3,693` (the VALUE of picks held). Four surfaces carried the count under
+   that label; all four now say **Picks traded**, and "pick capital" means value only.
+6. **`lib/metrics/axes.test.js`** - the non-recurrence guard, in the shape
+   `rankings.test.js` uses for tiers. It fails if the two axes ever share a word or a
+   word stem, if any word arrives from two producers on a real league walk, if a
+   posture-keyed map in the app carries a key the classifier cannot return (one did:
+   `PostureTag` had a `balanced` glyph that nothing could ever pass it), if the census
+   stops matching the board's own posture counts, or if `diagnose` and the shared
+   `stanceOf` stop agreeing. Verified by breaking it: pointing the age axis back at
+   "rebuilding" fails five tests.
+
+**Also, because it was measured while doing the above:** `leagueTimelines` is now
+memoized per corpus (`cachedLeagueTimelines`, keyed on `h.players`, the same trick
+`cachedValuePlayers` uses). /league was already walking the league three times for it -
+directly, and again inside `leagueWindows` - before /plan's game plan needed the
+postures too. One walk now serves all of them.
+
+**Not done, deliberately.** The colours on /plan's four direction pills (`retool: warn`)
+are untouched: they label a recommendation rather than a reading, and the visual language
+is being reworked in parallel. `posture` itself keeps its four words - they are earned
+by the instrument that produces them (duration over players and picks) and D6 is served
+by the neutral, glyph-carried treatment `PostureTag` already argued for.

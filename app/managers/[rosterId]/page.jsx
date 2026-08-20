@@ -272,9 +272,13 @@ export default async function ManagerDetailPage({ params }) {
           sub={`${p.tradesInitiated} initiated · ${p.tradesResponded} responded`}
         />
         <Metric
-          label="Pick capital"
+          /* "Picks traded", not "Pick capital": this is a net COUNT of picks moved
+             across a career, while the figure /roster labels pick capital is the VALUE
+             of the picks a roster holds. Same words for two units is how a reader
+             concludes the app is broken. */
+          label="Picks traded"
           value={<DeltaValue n={p.picks.net} />}
-          sub={`${p.picks.firstsAcquired} firsts in · ${p.picks.firstsSpent} out`}
+          sub={`net · ${p.picks.firstsAcquired} firsts in · ${p.picks.firstsSpent} out`}
           tone={p.picks.net >= 0 ? "positive" : "negative"}
         />
         <Metric
@@ -294,7 +298,7 @@ export default async function ManagerDetailPage({ params }) {
       </div>
 
       {/*
-       * "Pick capital +6" is the dossier's sharpest behavioural claim and, on its
+       * "Picks traded +6" is the dossier's sharpest behavioural claim and, on its
        * own, an unreadable one: +6 over five seasons could be the most aggressive
        * pick buyer in the league or an ordinary Tuesday. This is the only SIGNED
        * distribution in the app, so it is the one place the diverging pair does real

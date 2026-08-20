@@ -1,4 +1,4 @@
-import { Circle, Diamond, Hexagon, Square, Triangle } from "lucide-react";
+import { Circle, Diamond, Square, Triangle } from "lucide-react";
 import { Tag } from "./ui";
 import { cn } from "@/lib/ui";
 /*
@@ -34,12 +34,20 @@ import { cn } from "@/lib/ui";
  * no new tokens, so there is nothing new to measure. The neutral tone is the already
  * measured `bg-elevated` / `text-muted` pair.
  */
-const POSTURE_GLYPH = {
+/*
+ * FOUR POSTURES, AND `balanced` IS NOT ONE OF THEM. A fifth entry sat here mapping
+ * `balanced` to a hexagon. Nothing ever passed it - `classify` in lib/metrics/duration
+ * cannot return that word - and it was here because a DIFFERENT classifier (the
+ * core-age band, then spelled `rebuilding` / `balanced` / `win-now`) shared two words
+ * with this one, so the map was quietly widened to cover a vocabulary that was never
+ * posture's. The core-age words are now its own (lib/metrics/axes.js) and
+ * `axes.test.js` fails if these keys and the declared posture vocabulary ever differ.
+ */
+export const POSTURE_GLYPH = {
   contending: Circle,
   ascending: Triangle,
   rebuilding: Square,
   straddling: Diamond,
-  balanced: Hexagon,
 };
 /** The bare glyph, for the places that print the posture word inline without a pill. */
 export function PostureGlyph({ posture, className }) {

@@ -274,9 +274,15 @@ export default async function HomePage() {
         />
         <Figure
           href="/drafts"
-          label="Pick capital"
+          /* WAS "Pick capital", WHICH NAMED A DIFFERENT QUANTITY ON A DIFFERENT PAGE.
+             `picks.net` is a COUNT of picks traded across this manager's history; the
+             figure /roster calls pick capital is the VALUE of the picks they hold right
+             now. Home read "PICK CAPITAL 0" over "7 firsts in / 4 out" while /roster
+             read "PICK CAPITAL 3,693" for the same manager on the same afternoon. One
+             label, one meaning: this is trading behaviour, so it says so. */
+          label="Picks traded"
           value={<DeltaValue n={p.picks.net} />}
-          sub={`${p.picks.firstsAcquired} firsts in / ${p.picks.firstsSpent} out`}
+          sub={`net · ${p.picks.firstsAcquired} firsts in / ${p.picks.firstsSpent} out`}
           className="border-r border-border"
         />
         <Figure

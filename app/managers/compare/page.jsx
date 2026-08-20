@@ -328,7 +328,9 @@ export default async function CompareManagersPage({ searchParams }) {
       },
     },
     {
-      label: "Pick capital",
+      // A net COUNT of picks traded, not the VALUE of picks held - which is what
+      // /roster's "Pick capital" strip measures. One label per quantity.
+      label: "Picks traded",
       a: {
         main: signed(aP.picks.net),
         sub: `${aP.picks.firstsAcquired} firsts in / ${aP.picks.firstsSpent} out`,
