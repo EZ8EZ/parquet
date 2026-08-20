@@ -8,7 +8,7 @@
  * months" from a subtraction the reader has to perform into a gap they can see.
  *
  * ---------------------------------------------------------------------------------
- * THE Y-AXIS USED TO CLAIM MORE THAN IT COULD KEEP. MEASURED, THEN REBUILT (D97)
+ * THE Y-AXIS USED TO CLAIM MORE THAN IT COULD KEEP. MEASURED, THEN REBUILT (D100)
  * ---------------------------------------------------------------------------------
  * The old layout computed every row's height in JS: proportional to elapsed time, then
  * floored at a hand-measured `MIN_ROW = 92` so two events days apart still had room for

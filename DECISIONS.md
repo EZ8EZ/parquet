@@ -160,7 +160,7 @@ unrelated pick hops spanning three seasons to a single 2023 deal, because the on
 available signal ("both parties are in this trade") is far too weak. Fabricating trade
 contents is worse than an acknowledged gap, especially for a product whose entire
 premise is an honest record. What IS published is the gap itself, wherever a
-commissioner deal is visible - see D97, which made that one sentence identical on all
+commissioner deal is visible - see D100, which made that one sentence identical on all
 three surfaces that show one and deleted `unrecordedPickMoves()`, the helper this entry
 used to point at for "surfacing them separately". It never had a caller.
 
@@ -6113,3 +6113,172 @@ synthetic ids do not intersect the production table, so on fixtures nothing blen
 the movers section correctly renders its "no player moved" sentence instead of ten
 zero-length marks. axe-scanned clean on /methodology and /values in both themes.
 `pnpm typecheck` not chased (D89).
+## D100. THE RAIL'S Y-AXIS WAS NOT A TIME AXIS - measured at 8% fidelity on its own headline case, so the floor is gone, and the gap became the object the feature was always about
+The Provenance Rail's whole premise is that the y-axis is TIME: drawing
+`AssetMove.created` is what turns "it sat unresolved for eighteen months" from a
+subtraction into a thing you can see. It was not drawing time. It was drawing
+`max(proportional share, MIN_ROW)`, and the floor did the work.
+
+**MEASURED FIRST, against the real `layoutRows`, on the chain shapes this league
+actually produces.** Not the brief's numbers - the brief said "up to 13x distortion" and
+"7-12% fidelity", and both were checked rather than inherited:
+
+| gaps (days) | drawn (px) | long gap: true share -> drawn | px-per-day disparity |
+|---|---|---|---|
+| 1, 1095 | 92, 268 | 99.9% -> 74.4% | **376x** |
+| 3, 4, 1095 | 92, 92, 356 | 99.4% -> 65.9% | 94x |
+| 1, 1, 2, 1460 | 92, 92, 92, 444 | 99.7% -> 61.7% | 302x |
+| 2, 5, 3, 10, 730 | 92, 92, 92, 92, 512 | 97.3% -> 58.2% | 66x |
+
+The within-rail disparity is 66-376x, not 13x - the brief understated it by an order of
+magnitude. The "7-12% fidelity" figure reproduces under one specific reading (the RATIO
+between two gaps): a 1-month-then-3-year chain has a true ratio of 36.5x and draws it at
+2.9x, which is 8%. Both findings stand; the honest numbers are worse than the ones
+reported.
+
+**The tell is the second column: every short gap is exactly 92.** On real data the row
+height had already collapsed into a near-binary signal - "floored" versus "the long one" -
+and two rows of identical height could be one day apart or forty-four. The axis's own unit
+test made the point without noticing: it fed `[0, 100, 200, 1200]`, a 10x ratio, asserted
+the long row was `> 3x` the short one (it draws 3.87x), and called the test "spaces rows
+proportional to elapsed time".
+
+**THE CALL: content-sized rows, and the proportional claim MOVED rather than deleted.**
+Two options were costed. Gridlines-on-the-existing-layout keeps the "how much bigger is
+this gap" claim and makes the distortion legible; content-sized (`auto`) rows give
+pixel-exact alignment by construction and delete the layout math but give the claim up.
+Neither was taken as offered, because the choice they present is false.
+
+What shipped is `minmax(min-content, <proportional target>)` per row. Where elapsed time
+earns more space than the words need, the row is EXACTLY proportional. Where it does not,
+the row is exactly as tall as its content - no floor, no hand-measured constant. And the
+claim that content-sizing would have destroyed is not destroyed: it is moved to
+`OwnershipStrip`, a horizontal bar above the rail where time is drawn in exact proportion
+because no text competes for the width. **The proportional reading went from 58-74%
+faithful to exact by being moved to a place that could afford it.** The rail keeps
+ordering and approximate scale; the strip keeps proportion; the hairlines say where the
+rail's scale breaks. Nothing left implies a precision it does not have.
+
+Three consequences, and the third is why the row-height bug is closed rather than patched:
+1. **Alignment is by construction.** Every dot now sits in its own grid cell, so rendered
+   text height is the browser's problem - which is the only place it was ever knowable.
+   `MIN_ROW` was 74, then 92, and `HOMECOMING_ROW = 40` was a third patch on top.
+2. **The overlap bug is structurally impossible.** A hop that was BOTH a homecoming and a
+   three-team deal overflowed onto the next row, because only one of its two notes had
+   bought itself a floor. A row that sizes to its content cannot overflow its content.
+   The requested fix was `notes.length x a measured per-note height`; that is the same
+   mistake with better arithmetic, so what shipped instead is `hopNotes()` returning the
+   notes and NOTHING measuring their height. A fourth note needs no constant anywhere.
+3. **The distortion that remains is drawn.** Dashed hairline at every calendar-year
+   boundary, solid at every real draft date - straight from WindowMap, where dashed is a
+   scale and solid is "the only line that is a fact rather than a scale". Three hairlines
+   in one row next to none in the row above states the compression instead of hiding it.
+
+**Deliberately CALENDAR years, not "season boundaries" as briefed.** A league season has
+no single recorded start timestamp in this corpus, so a line labelled as a season boundary
+would be a guess wearing a gridline's clothes. Year labels live in an HTML gutter column
+positioned at `top: <fraction>%`, never in an SVG `<text>` - D96's rule, and the same
+class of bug it was written for.
+
+**THE GAP IS NOW A FIRST-CLASS ROW WITH A THREE-STATE GRAMMAR.** `chainGapActivity` is
+deleted. It reported LEAGUE-WIDE activity in a chain's single longest gap, which for a
+never-traded player is origin-to-today - so every never-traded player sharing a startup
+draft got the same window and therefore byte-identical numbers: one paragraph, 149 pages,
+saying nothing about any of them. `chainGapScenes` asks the question the reader is
+actually on the page for - what did THE HOLDER do during this stretch - and answers it for
+every gap. Measured over the corpus: **153 active, 118 undated, 7 idle.**
+- `active` - a rug of ticks positioned in time, one per move that holder made elsewhere.
+  DistributionStrip's peer-tick discipline: FLAT, never the magnitude ramp, because a
+  tick's position IS its value and ramping fades the sparse end of a rug whose whole job
+  is showing where the moves were not (D48).
+- `idle` - "X made no other move in those 8 months, while the league recorded 11." A true
+  zero is real information (D40) and it is printed with the league's own count beside it,
+  because without a scale a quiet manager and a quiet league are indistinguishable.
+- `undated` - `RefusalMark` + `SOURCE_GAP` (D95). One boundary has no recorded date, so
+  the WINDOW does not exist and there is nothing to have counted. That is a different
+  statement from "nothing happened", and an empty cell would have said the wrong one.
+
+**REPEAT-HOLDER DETECTION GENERALIZED.** `isHomecoming` parsed the original roster out of
+a pick key, so it could only ever fire for picks - a PLAYER traded away and reacquired by
+the same manager, the more human version of the same story, was invisible. `repeatHolders`
+asks whether any holder appears twice in the de-duplicated holder sequence, which subsumes
+the pick case (a pick's origin node carries its original roster) and catches players.
+Measured: **14 of 53 multi-hop chains, 13 of them players** - i.e. 13 real findings the old
+check was structurally incapable of producing. Drawn as
+CoherenceFragilityQuadrant's own ring at its exact geometry (`r=9` on an `r=5` dot,
+`strokeWidth 1`, `opacity 0.75`) on BOTH ends of the pair. One deliberate deviation: that
+chart's ring is accent because it marks the VIEWER, and accent means "you" everywhere in
+this app - a returning holder is a fact about the asset, so the ring is neutral and the
+sentence is muted rather than the old loud `accent-text`.
+
+**HOLD DURATION: BOTH NUMBERS, NO THIRD ONE.** D45 applied exactly - print what this hold
+was and what their others run, and compute no delta, no ratio, no comparative adjective.
+"Shorter than usual" is a verdict about a manager built from two numbers that cannot
+support one: a hold ends when a trade happens, and a trade needs a counterparty, so a short
+hold is at least as much a fact about the rest of the league. Two gates, both of which
+print something rather than nothing: under 5 prior holds renders `INSUFFICIENT_SAMPLE`
+with the count that disqualified it, and an OPEN hold shows no comparison until elapsed
+time already exceeds the median (before that, the passage of time alone would turn a
+"short" hold into a "long" one). `formatDaysPair` fixes the unit from the SMALLER value so
+both numbers are directly comparable - choosing from the larger would print "1 month" for
+41 days, and 41 days is not a month.
+
+**TWO HONESTY BUGS, BOTH LIVE, BOTH FIXED.**
+1. `/lineage` said "Where a pick was reconstructed rather than recorded, the hop says so."
+   Nothing was reconstructed - D19 deleted `attachInferredPicks` - and no hop said
+   anything. Rewritten to what is now true: nothing is reconstructed, and where a hop we
+   DO have came from a commissioner move it says so and names what is missing.
+2. Commissioner-executed hops rendered identically to normal trades, hiding a gap
+   `/deals` has marked since D19. `isCommissionerExecuted()` is now the single reader of
+   the `coalesced-` prefix, the flag rides `AssetMove` onto the hop node exactly as
+   `parties` already did, and the rail prints the receipt's own words verbatim - "Pick
+   record missing." One condition, one sentence, three surfaces.
+
+**Also:** "Read upward" was simply false - the rail renders origin-at-top and every
+caption counts forward, so it reads DOWNWARD; now "Read top to bottom", and it was the
+only prose statement of the axis direction in the app. The deals receipt's
+`border-warn/30 bg-warn/[0.06]` moved to the opaque `border-warn-edge bg-warn-wash` pair.
+`unrecordedPickMoves` is deleted - it had zero callers and zero tests across three rounds
+while `API_NOTES.md`, `DECISIONS.md` (D19) and `lib/history.js` all claimed it "surfaced"
+unattributable hops "separately"; all three claims are corrected rather than left
+pointing at a function that no longer exists. `ORIGIN_TEXT["pre-record"]` is KEPT: it
+fires on nothing in this league but is a legitimate fallback for a shorter-history league,
+and it is what the LaVine chain lands on in the offline corpus.
+
+**One prop added to a shared component, and it is an honesty fix.** `DistributionStrip`
+hardcoded "rosters" into its spoken sentence and its rank reading, because all five
+callers compared one roster against thirteen. Pointed at a population of HOLDS it would
+have said "across 23 rosters" to exactly the reader who cannot see the picture, so `noun`
+is now a prop defaulted to `"rosters"` - one strip, one set of rules, every existing call
+site byte-identical.
+
+**Rejected: separating the two hairline kinds by weight alone.** The first render put the
+year gridlines and the activity rug in the same 20px column, and a dashed 1px line next to
+a solid 2px tick is genuinely hard to tell apart at that size - the rail was drawing "a
+year passed" and "the manager made a trade" as nearly the same mark. Split into two
+channels either side of the spine: LEFT is the scale, and lines up with its own year
+label; RIGHT is what the holder did. Nothing has to be distinguished by weight because
+nothing shares a channel. The legend under the rail is computed from the marks the chain
+actually contains, because listing a mark the drawing does not have is its own small lie.
+
+**Rejected: suppressing the ownership strip whenever any boundary is undated.** That was
+the first implementation and it sounded conservative; measured, 118 gaps carry an undated
+end - almost always the origin - so it deleted the strip from most chains that had
+anything to show. Discarding a measurement you have because a different one is missing is
+not caution. Undated segments are skipped and the omission is stated in the caption.
+
+**Verified by rendering, both themes, at 390px** - not by reading the diff. That is how
+four things above were found: the missing ownership strip, the confusable hairlines, the
+unlabelled solid line, and five ownership segments compositing into one uncountable band
+(fixed with the surface-coloured separator `CoherenceFragilityQuadrant` already uses to
+keep two overlapping dots reading as two dots, and deliberately with NO minimum segment
+width, since widening a two-week hold to be visible is the exact distortion this strip
+exists to avoid).
+
+**Not verified, and stated rather than implied: the real Zach LaVine chain.** The brief
+cited it as a repeat-holder example. `pnpm test` pins `LEAGUE_PROVIDER=fixture` and
+forbids network access, and the real league is only reachable over the Sleeper API, so the
+only LaVine this environment can see is the fixture's - where he is a never-traded player,
+0 hops, an undated origin. The 13-player finding above is real and measured; the
+LaVine-specific claim is untested here and should be checked against live data before
+anyone repeats it.
