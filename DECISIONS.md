@@ -5400,3 +5400,173 @@ about **data sufficiency** and never a judgment of the roster or the manager - s
 `SPLIT_ROSTER` is not "conflicted roster", which would smuggle a finding about a roster
 out of a fact about two quartiles. And no label may sound more certain than the condition
 under it: `SOURCE_GAP` says the provider has no row, not that no such fact exists.
+
+## D96. THE LOGO WAS THE WRONG FLOOR - the reserved diagonal, the corrected parquet, and a chart whose labels were a size nobody chose
+**What this is.** A five-person design panel ran a real tournament over Parquet's visual
+identity: nine independent drafts, team nominations, a mixed-seniority panel of five
+practitioners, then two rounds of cross-examined discussion in which the seniors were
+overruled three times on the record. It converged on one direction, "The Reserved
+Diagonal", and one rule holds the whole thing together:
+
+> **Orthogonal marks are data. The 45-degree diagonal is reserved, everywhere in the
+> product, for a refusal.**
+
+Nothing else is allowed to run at 45 degrees. That is what lets a refusal mark identify
+itself in any theme, at any size, **without a colour and without a caption** - and it
+means a refusal stops being a special box somebody designs later and becomes a channel
+that draws itself. The rule costs nothing from the colour budget, because angle is not a
+colour, so it also survives a third theme by construction.
+
+**Half the rule was already live.** D95 shipped `components/RefusalMark.jsx` and
+`lib/refusal.js`: a static dashed circle with a diagonal tick, in `--color-faint`, always
+paired with real text from a closed register. That half is correct and this entry does not
+touch it. What this entry does is the OTHER half - the part that makes the first half
+legible - which is making sure nothing else in the app runs at 45 degrees.
+
+### The logo was the largest violation, and the correction is not cosmetic
+`public/icon.svg` and `components/Brand.jsx` shipped for nine rounds as six rounded
+planks at `rotate(45)` and `rotate(-45)`: a **herringbone chevron**.
+
+**The Boston Garden floor is not herringbone, and the press consensus that says so is
+wrong.** Flooring sources describe it correctly: a basket-weave block parquet on a SQUARE
+GRID - alternating squares of red oak with the grain rotated 90 degrees between
+neighbours. 247 panels, five feet square, 988 bolts, red oak from northern Tennessee,
+$11,000 in 1946, laid out of post-war SCRAP oak of uneven lengths precisely so a damaged
+panel could be swapped and so the scrap still yielded. Herringbone is diagonal interlocked
+rectangles. It is a different floor in a different building.
+
+So the mark and the grammar could not both be right, and the grammar is worth more than
+the mark. All five panellists made this correction independently. The authentic answer and
+the technically correct answer turn out to be the same answer: a square grid composes with
+a 390px column and with CSS grid, where a diagonal fights every layout, and its encoded
+variable is ORIENTATION - one of Bertin's retinal variables, selective and associative,
+legitimate for categorical data, colour-blind-safe and theme-proof because it encodes
+nothing in colour.
+
+Both files now draw four 168-unit blocks in a 2x2 on a 24-unit gutter, three 44-unit slats
+per block on an 18-unit seam, grain alternating between edge-neighbours so diagonal
+neighbours agree - a checkerboard whose only variable is orientation. Two things were
+dropped with it: the `rx="10"` (oak has hard edges, and so does everything else in this
+direction) and the 0.72 opacity on the outer planks (it was faking depth on a chevron, and
+now that orientation carries the alternation a second varying channel would read as a
+magnitude ramp across a mark that has no magnitude in it). The gradient also stops running
+corner to corner - `x2="0" y2="1"` - which removes the last 45-degree axis of any kind
+from the mark and matches how the rest of the app models light. The PNG set is regenerated
+from the SVG by `pnpm gen:icons`.
+
+`public/icon.svg`'s three colours are still frozen hexes and that is unavoidable rather
+than an oversight: a standalone SVG referenced from a manifest is a separate document and
+never receives a custom property. They are now the DARK theme's own tokens copied rather
+than picked, which also retires a `#262b33` border value the file was still carrying from
+before the contrast pass.
+
+### The second violation was a diamond nobody thought of as a diagonal
+`components/ProvenanceRail.jsx` drew its resolution node as a `rotate(45)` square. It was
+the last mark in the app carrying DATA on the reserved angle, and a resolution node is the
+*opposite* of a refusal - it is the most stated thing on the rail. Dropping the rotation
+costs nothing the mark was using: square against circle is still a shape difference, still
+categorical, still legible with every colour deleted, and it now sits square to the
+orthogonal seams the rail is built from. There are now zero live 45-degree marks in the
+app outside `RefusalMark`.
+
+### The ground: one class, one call site, and the first alpha was wrong
+`.parquet-ground` in `app/globals.css` is the corrected geometry as a ground texture: an
+**alpha-only** 48px mask tile holding four 24px alternating-grain blocks, over a flat
+themed `--parquet-grain`. Mask, do not paint - a data-URI SVG is a separate document, so
+any hex baked into one as PAINT is frozen at the theme it was authored in, while as a
+MASK it cannot carry a hex at all. Integer module throughout (24px block, 48px tile
+derived from it, 2px slat on an 8px pitch that divides 24 exactly), because fractional
+modules land on fractional device pixels and shimmer during scroll at DPR 3.
+
+**The first alpha tried was 3.5% and it was wrong, on this file's own evidence.** 3.5%
+white on `--color-bg` composites to `#131416`, which is +3.06 CIE L\* - the same size of
+step the surfaces block calls "at or below the JND for a large flat field" and then
+deliberately widened so a card would read as a card. A ground texture running at
+card-elevation volume is not a ground texture, and the live render at 390px read as a
+plaid competing with the type. It is now 1.6% on dark (+1.25 L\*) and 1.5% on paper
+(about -1.1 L\*), which is roughly half a JND: felt as surface, never resolved as
+pattern.
+
+It is applied to exactly ONE bounded element - a childless decorative div scoped to the
+app's content column - and never to `body`, never viewport-fixed, and with no
+`mask-composite` anywhere (the spec and `-webkit-` keyword sets for that property are not
+aliases and composing masks is where they diverge). That scope is deliberate: a full-bleed
+masked ground was the one thing the panel named as a risk on its own recommendation, and
+the mitigation is scope rather than a smaller alpha. `-webkit-mask-*` is written first
+because full `mask-*` support starts at iOS 15.4. The opt-out is
+`@media (prefers-contrast: more)`, not `prefers-reduced-transparency`, which Safari does
+not ship on desktop through v27 nor on iOS through 26.6 - the accessibility story cannot
+be built on a query the app's primary browser does not implement.
+
+### The type audit found no drift, which is the finding
+The direction commits to the existing six-step scale and one gold, and the audit says the
+tokens are where D60-D62's passes left them: 10 / 12 / 13 (with `--text-note` still an
+alias of `--text-meta`) / 17 / 30, one accent split by job into fill and text values, the
+measured washes, the ground-scoped ink. **Nothing regressed and nothing new was picked.**
+Every colour in this entry is an existing token copied rather than re-chosen, and the
+three new custom properties (`--parquet-block`, `--parquet-tile`, `--parquet-grain`) are
+geometry and one alpha, not a hue.
+
+### The byproduct: a chart printing type at a size no token could reach
+`components/WindowMap.jsx` set its own labels in SVG `<text>` at `fontSize="8"` and
+`fontSize="7.5"` inside a `viewBox="0 0 320 H"` stretched by `w-full`. A user unit is only
+a real pixel at scale 1 and this chart never renders at scale 1: on a 390pt phone the card
+gives the plot about 338px, so the axis was rendering at roughly **8.4px and 7.9px** -
+under this app's own 10px `--text-micro` floor, off the six-step scale entirely, and
+unreachable by any utility, because the number lives in a presentation attribute measured
+in user units. `vector-effect` fixes strokes, not glyphs. Two panellists diagnosed the
+hazard from first principles without having seen the file; it was real and it was in the
+repo.
+
+There are exactly two clean fixes and this takes the first: **the text moves out to HTML
+siblings.** Stopping the viewBox from scaling would pin the chart at 320px, which
+overflows a 320pt viewport and wastes ~18px on a 390pt one; fluid marks with fixed type is
+the combination actually wanted and it is only available by separating them. The component
+is now a two-column CSS grid - a fixed 24px ordinal gutter, and a plot column whose first
+row is one `<svg>` with **zero `<text>` nodes** and whose second row is the season axis as
+a `repeat(bands, 1fr)` grid, so a label centres in its own band with no coordinate
+arithmetic at all. The ordinals cannot use a column grid, because their pitch is a
+fraction of the SVG's *scaled height*: they are absolutely positioned at `top: y/plotH%`
+inside a gutter grid stretches to exactly the SVG's rendered height, so the percentage
+tracks the scale with no resize listener and no measured height.
+
+What the labels gained beyond size: each is now on the token it should always have been on
+(`--text-micro` is documented as chrome - axis labels and rank ordinals *by name* - and
+`--color-faint` as the ink for exactly those two jobs, so both are finally legal uses of
+the scale rather than exceptions to it); every figure carries `.figure`, which is what
+keeps four-digit years optically identical down a centred axis; and the viewer's own
+ordinal moves from `--color-accent` to `--color-accent-text`, a fill-versus-read
+distinction an SVG `fill` could state but an 8px glyph could not honour. `paint-order:
+stroke fill` is deliberately absent and its absence is the point - no label overlaps a
+mark any more, and haloing an overlapping label is the second-best answer to the same
+problem. The label layers are `aria-hidden`, because the SVG's `aria-label` already reads
+every roster by name and states the season range in a sentence.
+
+The plot also gets the 17 units of former gutter back as chart width, which is the
+highest-ranked encoding channel there is at this size spent on the axis that carries the
+season.
+
+**This is now a rule, enforced in review: no `<text>` inside a scaling viewBox.** It is
+recorded in DESIGN.md. Four other charts still violate it - `CoherenceFragilityQuadrant`
+at 7.5 to 8.5 units, `TradeMatrix` at 6.5, `charts.jsx` and the three `/lab` pages at 9
+to 11 - and they are deliberately not fixed here, because a visual-foundation PR that
+also rewrites five charts is not reviewable.
+
+### Foundation only. A second wave is coming.
+What is deliberately deferred, so the next pass knows what is still open rather than
+inferring it from silence: the dense-list treatment (the divider-as-value-rule, which
+needs a `rosterValueMax` normalised at the data layer before it is safe to draw);
+tier-as-band rather than per-row badge, which needs tier-grouped-then-value-sorted output
+with a pinned sort and a real sticky-offset contract against the Desk; the `<Refused>`
+primitive and `--pattern-refusal` token that would make `RefusalMark` one consumer rather
+than the only place the idea lives, plus the test that fails when a hatched node renders
+with no legend row in the DOM; the avatar leaving the values row; the window map's own
+per-season census and cell-level ordering refusal; the provenance rail's to-scale
+custody stretches; and the label-placement fix for the four remaining charts. None of
+those are visual foundation; all of them build on it.
+
+**What is not deferred, it is refused.** The panel's Home frame prints the reader's rank
+inside a refusal in two of the five drafts, and counting how many rosters are dated before
+you is arithmetically identical to publishing your rank. A refusal that withholds an
+ordering and then prints the count has refused nothing (D6, D19). If the second wave
+brings that back, it is a regression, not a feature.
