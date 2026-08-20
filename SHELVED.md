@@ -17,6 +17,10 @@ that shipped it, and the entries name the files so `git log --` finds them.
 Shelved by committee review, 2026-08-10, against `main` @ `5e8dd02`. Executed in the
 same pass; see `DECISIONS.md` for the decision record.
 
+S9 was added 2026-08-20 against `main` @ `f982cb0`, as part of the depth-chart rung
+redesign. It is the first entry that records prose removed because a **drawing** started
+carrying its argument correctly, rather than because the idea behind it was wrong.
+
 S7 and S8 were added 2026-08-19 against `main` @ `4e71e51`, by owner decision rather
 than by committee: *"lets shelve the ai subjective component and focus more on this
 statistical call and other intuitive nuance feature set."* They are the only two
@@ -430,6 +434,71 @@ though they worked, because an operator who already has them set in a real `.env
 Vercel's project settings needs to learn why they stopped mattering rather than assume
 a bug. Nothing was removed from any actual `.env`; that file is gitignored and is the
 operator's.
+
+## S9. Five pieces of depth-chart prose, and the two fields that fed them
+
+**What they were.** Five things on `/depth/[team]` and in `lib/depth/index.js`, removed
+in one pass because they share one cause. They are recorded together rather than as five
+footnotes because the argument against each is the same argument, and a future round
+tempted to restore any one of them should meet the whole of it:
+
+1. **`DepthGroup.contiguous`** - a computed boolean, "the orders are exactly 1..n with no
+   gap and no repeat", exported in the typedef. Read by **zero** rendering code anywhere
+   in the repository (verified across `app/`, `components/`, `lib/`); its only readers
+   were its own tests. Its measurement - 117 of 149 live groups are non-contiguous - is
+   the fact worth keeping, and that already lives in the module header and `API_NOTES.md`.
+2. **The per-group tie-explanation paragraph.** Under every group with a duplicate order:
+   *"Sleeper gives two or more of these the same order, so they are level rather than
+   ranked. The order they print in here is alphabetical, which claims nothing."*
+3. **`DepthGroup.hasTies`** as a separately exported concept - the boolean that paragraph
+   was conditioned on.
+4. **The duplicated name lists inside the anchored player's standing sentence.** *"Sleeper
+   lists 2 ahead of him at C (Walker Kessler, Sandro Mamukelashvili)"*, with the same two
+   men drawn in the ladder about 90px below.
+5. **The first paragraph of "Where this chart comes from"** - *"This is Sleeper's depth
+   chart, not Parquet's reading of one..."* - and **the `<Tag tone="accent">Him</Tag>`**
+   on the anchored player's row.
+
+**Why they went.** The rungs took over a job the prose was doing badly. Every one of
+these five existed to hold up a geometry that was making the opposite claim: the surface
+drew `group.entries` as a flat stack of equal rows, which every reader reads top-down as a
+ranking, and then argued underneath that they should not. The paragraph could not win that
+argument, because a reader has already concluded that the top row is the starter before
+reaching the sentence saying they cannot know that - and on 18 of the 149 live groups
+there is no order 1 at all, so the top row was a player Sleeper never called first.
+
+`DepthGroup.layers` moved the partial order into the data (one array per distinct stated
+order, tied players sharing an array) so the shape the surface receives cannot express
+"kth". Once the tie is drawn as a shared rung, item 2 is restating the picture and item 3
+is a boolean that has to agree with a shape - a second source of truth that can drift from
+the first. Item 1 was already dead before this round. Item 4 was two copies of one list at
+90px separation, and the ladder is the better copy: it shows the relation as geometry,
+marks who holds each man, and links each name onward. Item 5 was pure repetition - the
+paragraph restated the page's own subtitle at three times the length, and the anchor was
+already marked four other ways (`aria-current`, the accent-wash cell, the `h2` naming him,
+and the standing sentence about him), so a fifth marker was the redundancy rather than the
+safety net. Its accent budget went to marking the viewer's OTHER players instead, which
+was previously stated in text only.
+
+**What did NOT go, deliberately.** The standing **sentence** survives, reduced to counts:
+*"Sleeper lists 2 ahead of him at C, and one player is level with him on the same
+number."* It is the only channel that survives leaving the screen - copied into a group
+chat, read aloud, or read before the ladder paints - and deleting it would have made the
+page's whole reading visual, which is the failure `lib/refusal.js` was written about one
+layer down. The `<Disclosure>` the deleted paragraph sat inside is untouched and its three
+caveat paragraphs are intact; that is the caveat layer and it is on a never-remove list.
+
+**What would bring them back.** For `contiguous`: a surface that genuinely needs to
+distinguish "1..n exactly" from every other shape - and note that no such surface has been
+proposed in nine rounds, and that on the live payload it would be false on 117 of 149
+groups, so it is a flag that is almost always off. For the tie paragraph and `hasTies`: a
+reader study showing the shared rung and its brace are not read as "level" - at which
+point the answer is probably a better mark rather than a return to prose under a list that
+contradicts it. For the name lists in the sentence: a channel where the ladder cannot
+render at all but the sentence can, and where the reader needs identities rather than
+counts. For the `Him` tag: any change that removes one of the anchor's other four markers.
+
+---
 
 ---
 
