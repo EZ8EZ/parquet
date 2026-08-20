@@ -10,11 +10,23 @@ import { MetricGloss } from "@/components/MetricGloss";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { cn, fmtValue } from "@/lib/ui";
 export const dynamic = "force-dynamic";
+/*
+ * NEUTRAL, LIKE POSTURE - for the same reason (components/PostureTag.jsx).
+ *
+ * `direction` is read directly off posture (lib/gameplan/index.js: contend from
+ * contending, ascend from ascending, rebuild from rebuilding, retool from straddling),
+ * so it inherits the same fact: these are four theses about what to do, not a ranking
+ * of them. `ascend: positive` told the reader "ascending is good" and `retool: warn`
+ * told them "retooling is bad" before they read a word of `dx.because`. `contend:
+ * accent` had the same second problem PostureTag records - gold means "you" everywhere
+ * else, and this pill has nothing to do with the viewer's identity, only their roster's
+ * recommended call.
+ */
 const DIR_LABEL = {
-  contend: { label: "Contend", tone: "accent" },
-  ascend: { label: "Ascend", tone: "positive" },
-  rebuild: { label: "Rebuild", tone: "info" },
-  retool: { label: "Retool", tone: "warn" },
+  contend: { label: "Contend" },
+  ascend: { label: "Ascend" },
+  rebuild: { label: "Rebuild" },
+  retool: { label: "Retool" },
 };
 export default async function PlanPage() {
   const h = await getLeagueHistory();
@@ -110,10 +122,10 @@ export default async function PlanPage() {
         </div>
       </PageHeader>
 
-      {/* The verdict, up top - the one thing that must be readable on landing. */}
+      {/* The recommendation, up top - the one thing that must be readable on landing. */}
       <section className="rounded-[--radius] border border-border bg-surface p-2.5">
         <div className="mb-1 flex items-center gap-2">
-          <Tag tone={dir.tone}>{dir.label}</Tag>
+          <Tag>{dir.label}</Tag>
           <span className="text-meta uppercase tracking-wide text-secondary">
             recommended direction
           </span>
