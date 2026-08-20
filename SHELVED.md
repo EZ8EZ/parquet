@@ -502,6 +502,76 @@ counts. For the `Him` tag: any change that removes one of the anchor's other fou
 
 ---
 
+## S10. The pick-agency split bar - a ratio that improved as you gave your future away
+
+Shelved 2026-08-20 by owner decision, against `main` @ `f982cb0`. Replaced in the same
+pass; see `DECISIONS.md` D98.
+
+**What it was.** `SplitBar` in `components/PickAgencyPanel.jsx`: a two-segment bar, 300
+by 14, accent for the picks whose slot your own seasons order and the neutral mark for
+the rest, with `summary.controlled / summary.total` setting the split. Under it a
+two-ended legend (`8 yours · 3,777` / `6 on others · 9,511`) and, above it,
+`summary.headline` stating the same ratio in prose: *"8 of 14 picks are set by your own
+seasons. The other 6 ride on somebody else's."* It was the smallest chart in the app and
+obeyed every house SVG rule it was meant to: fixed viewBox, integer coordinates, tokens
+for colour, one full-sentence aria-label, no library.
+
+**Why it was shelved.** The drawing was fine. The fraction was backwards.
+
+The denominator is the picks you **hold**. The numerator is the subset of those whose slot
+your own seasons order. So trading your own first away removes it from both ends of the
+fraction, and trading somebody else's pick **in** adds to the denominator alone - the bar
+therefore goes UP as you divest your own future and DOWN as you accumulate other people's.
+It was presented as a reading of how much of your own future you still decide, and it
+measured something closer to the reverse. Measured on the live league at the time of
+shelving:
+
+| roster | its own picks still at home | the bar read |
+| --- | --- | --- |
+| roster 1 | 4 of 9 | 80% yours |
+| roster 3 | 7 of 9 | 50% yours |
+
+Roster 1 had sent away more than half its own future and was shown a fuller accent segment
+than roster 3, which had sent away two picks. No caption fixes a monotonicity that runs
+the wrong way.
+
+The second, smaller fault is what the bar did at the edges. A full accent segment is a
+strong visual claim, and on a degenerate split it was being made over a set with one kind
+of thing in it - "100% yours" and "you hold one category of pick" are not the same
+statement, and the bar could not tell them apart. Measured across all fourteen rosters,
+the degeneracy depends entirely on which set you count:
+
+| denominator | rosters reading 100/0 or 0/100 |
+| --- | --- |
+| firsts only, the axis a dynasty manager reads | 8 of 14 |
+| live picks only, which is what the list below the bar showed | 3 of 14 |
+| every held pick, which is what the bar actually divided | 0 of 14 |
+
+Worth recording precisely, because the shelving brief carried the figure as "9 of 14" and
+that number is not reproducible against any of the three denominators. The nearest true
+statement is 8 of 14 on firsts. The monotonicity fault above is the load-bearing one and
+does not depend on this at all.
+
+**What replaced it.** Not a fixed bar and not a Venn diagram: three rows, no SVG. Rows one
+and two sum to what your own seasons decide, rows one and three sum to what you hold, and
+the first row is in both. Two overlapping sets have no shared denominator to divide by, so
+the ledger prints three counts and one sentence stating the overlap as a fact. The absence
+the bar used to render as 100% is now a sentence naming both halves of it. See D98 and
+`summarizeAgency` in `lib/agency/index.js`.
+
+**What would bring it back.** A split bar over these picks needs a denominator that does
+not move when the reader trades, and there is one: every pick the roster's own seasons will
+ever order, which is fixed at (seasons tracked x rounds) and does not shrink when a pick is
+sent away. `awayPicks` computes exactly that set now, so the honest version of this chart
+is buildable - **own picks still held / own picks total** - and it would answer "how much of
+my own future do I still hold" without inverting under trade. It was not built in this pass
+because the three-row ledger already prints both numbers, and a chart of a ratio the rows
+already state is the duplication D40 and D51 keep finding. If a future round wants a
+picture here, that is the fraction to draw, and it should not be drawn as "controlled vs
+passenger" over held picks again.
+
+---
+
 ## Considered, and deliberately not shelved
 
 Recorded here because a near-miss is worth remembering too — the argument was made, and

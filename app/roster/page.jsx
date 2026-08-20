@@ -22,11 +22,12 @@ import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTeamUrl } from "@/lib/sleeperLinks";
 import { ordinal } from "@/lib/derive/describe";
 import {
+  awayPicks,
   posturesByRoster,
   readPickAgency,
   summarizeAgency,
 } from "@/lib/agency";
-import { loadDraftOrderFidelity } from "@/lib/agency/source";
+import { loadDraftOrderFidelity, loadPickSlots } from "@/lib/agency/source";
 import { PickAgencyPanel } from "@/components/PickAgencyPanel";
 export const dynamic = "force-dynamic";
 /*
@@ -190,12 +191,28 @@ export default async function RosterPage() {
    * slot, and in this league that mapping is loose. Printing the measurement beside
    * the claim is the honest version of making the claim at all.
    */
-  const agencyInputs = { postures: posturesByRoster(timelines), forms };
+  const [orderFidelity, pickSlots] = await Promise.all([
+    loadDraftOrderFidelity(h),
+    loadPickSlots(h),
+  ]);
+  const agencyInputs = {
+    postures: posturesByRoster(timelines),
+    forms,
+    slots: pickSlots,
+  };
   const agencyReads = a.picks.picks.map((p) =>
     readPickAgency(h, rosterId, p, agencyInputs),
   );
-  const agency = summarizeAgency(agencyReads);
-  const orderFidelity = await loadDraftOrderFidelity(h);
+  /*
+   * THE SECOND HALF OF THE LEDGER. `awayPicks` is the reciprocal of the list above: the
+   * picks this roster's own seasons will order that somebody else is holding. It reads
+   * `pickCapital` in its "original" mode over data already in hand, so it costs one more
+   * pass and no requests, and it is what makes the panel's middle row possible at all.
+   */
+  const agency = summarizeAgency(
+    agencyReads,
+    awayPicks(h, rosterId, a.picks.picks),
+  );
   return (
     <div>
       {/* Identity, record, window and core age in one block - what used to be a
@@ -543,7 +560,7 @@ export default async function RosterPage() {
           <PickAgencyPanel
             reads={agencyReads}
             summary={agency}
-            orderNote={orderFidelity.note}
+            orderLine={orderFidelity.panelLine}
           />
         </>
       )}
