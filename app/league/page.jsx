@@ -51,7 +51,7 @@ export const dynamic = "force-dynamic";
  * ---------------------------------------------------------------------------------
  * WHAT WAS CUT, AND THE MEASUREMENT THAT JUSTIFIED CUTTING IT
  * ---------------------------------------------------------------------------------
- * The four posture-census tiles that used to lead this page are gone (SHELVED.md S11).
+ * The four posture-census tiles that used to lead this page are gone (SHELVED.md S12).
  * Three of their four counts were counts of QUARTILE MEMBERSHIP - `classify` in
  * lib/metrics/duration.js hands out contending / ascending / rebuilding by
  * `shortnessPercentile`, and its own comment says the consequence out loud: "somebody

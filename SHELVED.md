@@ -614,10 +614,10 @@ signed reasons attached to specific assets, which is the thing `choosePartner` c
 do. If a future round wants a shortlist on `/plan` rather than a link, it should call
 `partnerBoard` — the finder's own prefilter, which already scores every leaguemate over
 real assets — and never re-derive a parallel score from tags.
-## S11. `postureCensus()` - the league's postures as counts, in `TIMELINE_AXIS` order
+## S12. `postureCensus()` - the league's postures as counts, in `TIMELINE_AXIS` order
 
 Shelved 2026-08-20 by owner decision, against `main` @ `f982cb0`. Replaced in the same
-pass; see `DECISIONS.md` D99.
+pass; see `DECISIONS.md` D102.
 
 **What it was.** `postureCensus(timelines)` in `lib/metrics/duration.js`: a four-tile
 tally of every roster's timeline posture (`contending` / `ascending` / `rebuilding` /

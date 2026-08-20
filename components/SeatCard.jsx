@@ -6,7 +6,7 @@
  * WHY THE PAGE OPENS HERE
  * ---------------------------------------------------------------------------------
  * /league used to open on four posture-census tiles: a league-wide tally, three of whose
- * four counts were counts of quartile membership (SHELVED.md S11). It occupied the highest
+ * four counts were counts of quartile membership (SHELVED.md S12). It occupied the highest
  * slot on the page and answered a question nobody arrives with. The question people
  * arrive with is about their own seat - when does MY value land, and who else is dated
  * into it - and every number needed to answer it was already computed and scattered.

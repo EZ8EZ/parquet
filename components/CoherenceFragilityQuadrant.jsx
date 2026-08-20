@@ -617,7 +617,7 @@ export function CoherenceFragilityQuadrant({ view, selectedId, onSelect }) {
           A posture census used to lead /league with four counts, three of which were
           counts of QUARTILE MEMBERSHIP - `classify` hands out contending / ascending /
           rebuilding by percentile, so a census of them counts where the quartile lines
-          fell rather than anything about this league (SHELVED.md S11). This count is not
+          fell rather than anything about this league (SHELVED.md S12). This count is not
           that. It is the INTERSECTION of two median splits, and an intersection is free:
           the medians guarantee half the board below each line and guarantee nothing about
           how many rosters are below both, so this is genuinely allowed to come out 0.

@@ -6444,7 +6444,7 @@ are `AgeStrip`'s convention with a band added), no animation anywhere, and no re
 `partnerBoard`'s own output. The engine's arithmetic is untouched: every number on this
 surface was already being computed before this entry, and most of them were already being
 computed and thrown away.
-## D99. /LEAGUE ANSWERED ITS OWN QUESTION AT THE TOP OF THE PAGE INSTEAD OF ITS READER'S - a seat card, one shared selection, and a fabricated posture caught on the way out
+## D102. /LEAGUE ANSWERED ITS OWN QUESTION AT THE TOP OF THE PAGE INSTEAD OF ITS READER'S - a seat card, one shared selection, and a fabricated posture caught on the way out
 
 **What this is.** `/league` opened on four posture-census tiles - a league-wide tally that
 was the highest slot on the page - then a single toggled board, then the power ranking.
