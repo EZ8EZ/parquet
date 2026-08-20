@@ -5570,3 +5570,129 @@ inside a refusal in two of the five drafts, and counting how many rosters are da
 you is arithmetically identical to publishing your rank. A refusal that withholds an
 ordering and then prints the count has refused nothing (D6, D19). If the second wave
 brings that back, it is a regression, not a feature.
+
+## D97. A DEPTH CHART IS A PARTIAL ORDER, SO THE PAGE STOPPED DRAWING A LADDER OF ROWS - rungs, a brace for a tie, and the two nothings that were one code
+**What this is.** `/depth/[team]` published Sleeper's own chart as a flat `<ul>`, one
+player per row, with a paragraph under each group explaining that some of those rows were
+actually level with one another. The data underneath was already right - `standingFor` has
+published exactly four relations (ahead, level, behind, incomparable) since D92, and
+`hasTies` was correct - and the page still made a claim the feed does not support, because
+**a stack of equal rows is read top-down as a ranking and no caption survives that.** The
+reader concludes that row one is the starter before reaching the sentence saying they
+cannot know that.
+
+On the live payload the conclusion is wrong constantly rather than occasionally. Measured
+2026-08-20 across the 149 (team, position) groups: **44 put two or more players on the same
+order**, **117 are non-contiguous**, and **18 have no order 1 at all** - MEM's power
+forwards come back 2, 2, 3, so a list of them put a man at the top of the page whom Sleeper
+never called first. "Top row = starter" was not an imprecision on those 18 groups. It was a
+fact the page invented, which is D19's exact prohibition one layer up from where D92
+applied it.
+
+### The fix is a field, not a stylesheet
+`DepthGroup` gained `layers: DepthEntry[][]` - one array per DISTINCT stated order,
+ascending, players sharing an order sharing an array - with `unordered` as a **sibling**
+array rather than the tail of the list. The point is that the shape the surface receives
+can no longer express "kth" at all. Leaving the partial order as a sorted list plus a
+boolean and asking the page to draw it correctly is what had already failed once.
+
+Three geometry rules follow, and each refuses something specific:
+
+- **Rungs are evenly spaced.** Orders 1, 2, 5 draw three rungs, not five with two empty.
+  The integer is a sort key, not a count, so proportional spacing would draw two gaps
+  nobody is missing from and claim a precision the feed has not got.
+- **No rung is styled as first.** No accent on the top rung, no "starter" row, no numbering
+  anywhere. A treatment that is false on 12% of the data is not a treatment with an
+  exception; it is the wrong treatment. `DepthLadder.test.jsx` pins this by asserting every
+  cell in a ladder carries an identical class string.
+- **A tie is drawn as enclosure, not as adjacency.** This is the one thing the first build
+  got wrong and a screenshot caught. Tied cells set side by side read as level - until
+  390px makes two full names wrap into a column, at which point the tied pair is stacked
+  one above the other and the ranking is back. So a shared rung gets a **brace**: a
+  vertical rule spanning the rung with the tick meeting its middle. It holds at any width.
+  The cell basis dropped 10rem -> 8rem so a pair fits side by side at the design viewport,
+  and names now WRAP where the meta line truncates, because `truncate` had turned a tied
+  player into "Malik Dia..." - dropping the one thing the rung exists to carry.
+
+### Four more refusal sites wired, and one 7th code NOT added
+D95 built the register and reached one site here. Four more now use it: the whole-team gap
+and the unplaced section (`SOURCE_GAP`, both replacing hand-written paragraphs), the tie
+prose (deleted outright - it is geometry now), and the "charted but no order" case.
+
+That last one looked like it needed a seventh code, being a genuinely PARTIAL record
+(the provider has an entry and is missing the field that makes it comparable, which is
+neither "no record" nor "absent from the source" as those two are written). **It does not,
+because the condition does not occur.** `depth_chart_position` and `depth_chart_order`
+arrive together or not at all: of 593 on-team players, 474 carry both, 119 carry neither,
+and **zero carry one without the other**, so `unplacedInOrder` is false for every player
+the feed contains. Minting a register entry whose `condition` string could only describe a
+hypothetical would break the one contract that makes the register worth having - each of
+D95's six states arithmetic that really runs. Instead the invariant is named and asserted
+(`PROVIDER_PAIRS_POSITION_AND_ORDER`), and the branch is kept as structure rather than as
+prose: if the provider ever does emit it, the entry lands in the `unordered` sibling and
+renders off the axis under a `SOURCE_GAP`, instead of on the bottom rung. Kept rather than
+deleted because `null` sorts below 1 - an implementation that assumed the invariant would
+put such a player on the TOP rung of the group the day it broke.
+
+### Two different nothings that were one code, kept apart by luck
+`standingRefusal` returned the same `SOURCE_GAP`, carrying this team's placement counts,
+for both "on this team, absent from the chart" and "not on this team at all" - so the
+second produced a sentence claiming Sleeper's chart for this team "does not place" a player
+who was never on it. It never reached a screen only because the page happened to test
+`anchorOnTeam` in an earlier branch. A distinction that survives on caller sequencing is
+not a distinction. It is now `SOURCE_GAP` vs `NO_RECORD`, discriminated off `chart.unplaced`
+with no new field, which is precisely the line those two codes were written to draw:
+"the provider publishes this surface and has no entry" against "nothing was computed at
+all". The e2e test asserts the code rather than the prose.
+
+### And one thing the register was about to assert falsely
+The two new section-level refusals were first built carrying the withheld figure the
+single-player case carries - the share of the team the chart places. Rendered, that printed
+*"Players the source places would read 8 of 10, and is not published"* about 300px under a
+page header reading *"8 of 10 players placed"*. `withheld` means the module computed a
+number and declined to state it, so naming an already-published figure there is a false
+claim inside the one register built to stop the app making them. Both new sites carry
+`withheld: null` and keep the rate in `because`, where it is context. (`standingRefusal`'s
+own withheld figure is untouched - it is D95's, pinned by D95's tests, and out of scope
+here; it has the same tension and is worth a look on its own.)
+
+### Ownership, without a colour scale over people
+Three states and only one is chromatic, all using idioms that already existed. The anchor
+keeps `border-accent-edge bg-accent-wash` plus `aria-current`. The viewer's OTHER players
+get `border-accent-edge bg-surface` - **`app/league/page.jsx`'s own treatment for the
+viewer's row**, chosen there for this exact situation and reasoned about at length: the row
+carries arbitrary child content validated against the default ground, so the border marks
+it and the wash is left alone. Rivals and free agents get nothing chromatic; who holds a
+player is stated in his own meta line in words, where it cannot read as a grade (D6). The
+brief for this round specified `inset 2px 0 0 var(--color-accent)` as an existing idiom; it
+is not one - the repo has no left-inset accent anywhere, and `globals.css` opens by saying
+borders are the app's ONLY depth cue, "there is not one box-shadow in any component". The
+instruction to match the established convention beat the instruction's own example of it.
+
+One graphic was added: a per-group **unit strip**, one mark per charted player, accent fill
+for the viewer, neutral fill for another manager, outline for nobody. A count and not a
+proportion because every group has 1-6 charted players (142 of 149 have 2-6), and at that
+size "3 of 5" is checkable against the five names directly below it where "60%" is not. The
+count is the accessible name, because a strip of marks is not a reading on its own (D47
+rule 1). Fill separates rival from free agent rather than hue, because a hue per ownership
+class would be a three-way colour scale over people.
+
+### Five cuts, recorded as S9
+`contiguous` (computed, exported, read by zero rendering code), the tie paragraph,
+`hasTies` as a separate concept, the duplicated name lists inside the standing sentence,
+the restated provenance paragraph, and the `Him` tag on the anchor. One cause: the rungs
+took over a job the prose was doing badly. The standing **sentence** survives reduced to
+counts - it is the only channel that survives being copied, read aloud, or read before the
+ladder paints, and deleting it would have made the page's whole reading visual.
+
+### Tested against the feed, not against the fixture
+The dev fixture is measurably unrepresentative for this feature: **0%** of its groups have
+the no-order-1 case against 18 of 149 live, and 38% are non-contiguous against 117 of 149.
+A visual pass on the fixture would have confirmed a layout that is wrong on exactly the
+groups this was rebuilt for - and in fact the fixture never produced the wrapped-tie bug at
+all. So five real groups are transcribed off `/players/nba` with real names and orders and
+pinned twice, once as data and once as rendered markup: `LAL C` (1, 2, 5), `MEM PF`
+(2, 2, 3), `CHI C` (1, 1, 2), `MEM C` (1, 2, 2, 5, 5), and `CHA PF` (2, 2, 2, 3), the
+widest rung the payload contains. A pure two-man `1, 1` group is **not** pinned: it does
+not exist live, every tied-at-the-front group carries a third man, and pinning a shape the
+provider does not emit is how a suite ends up validating against a case that cannot happen.

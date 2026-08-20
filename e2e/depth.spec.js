@@ -131,7 +131,14 @@ test("an anchor link for a player who is not on the team says so instead of misl
   // A stale or hand-edited link is untrusted input; it must degrade, never throw.
   await page.goto("/depth/LAL?player=definitely-not-a-player");
   await expectStableChrome(page);
-  await expect(page.getByText(/not on .* in Sleeper's data/)).toBeVisible();
+  // NO_RECORD, and deliberately not SOURCE_GAP. This was a hand-written paragraph,
+  // and the refusal that would have replaced it claimed this team's chart "does not
+  // place" a player who was never on the team - kept off the screen only by which
+  // branch the page happened to test first. The code is the assertion now.
+  await expect(page.getByText(/NO_RECORD/)).toBeVisible();
+  await expect(
+    page.getByText(/does not have this player on this team/),
+  ).toBeVisible();
   expectNoConsoleErrors(guard);
 });
 test("/depth/[team] has no automated accessibility violations", async ({

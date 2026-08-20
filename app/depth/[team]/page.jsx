@@ -36,17 +36,20 @@ import { notFound } from "next/navigation";
 import Link from "next/link";
 import { getLeagueHistory } from "@/lib/history";
 import {
+  chartRefusal,
   depthChartFor,
   standingFor,
   standingRefusal,
   teamsPresent,
   normalizeTeam,
+  unplacedRefusal,
 } from "@/lib/depth";
 import { refusalSentence } from "@/lib/refusal";
 import { teamName, teamShortName } from "@/lib/depth/teams";
 import { readAnchorId } from "@/lib/depth/url";
 import { depthOnwardSteps } from "@/lib/depth/onward";
-import { Card, Disclosure, PageHeader, SectionHeader, Tag } from "@/components/ui";
+import { Card, Disclosure, PageHeader, SectionHeader } from "@/components/ui";
+import { DepthLadder, OwnershipStrip } from "@/components/DepthLadder";
 import { Onward } from "@/components/Onward";
 import { RefusalMark } from "@/components/RefusalMark";
 import { TeamLogo } from "@/components/TeamLogo";
@@ -136,15 +139,20 @@ export default async function DepthChartPage({ params, searchParams }) {
       {anchorId && (
         <Card className="mb-3">
           {!anchorOnTeam ? (
-            <p className="text-body leading-relaxed text-muted">
-              {/* `{" "}` explicitly: JSX drops the space that follows an
-                  expression at the end of a line, and without it this rendered
-                  "Los Angeles Lakersin Sleeper's data" (caught by e2e, not by
-                  eye). */}
-              The player in this link is not on {teamName(abbr)}{" "}
-              in Sleeper&apos;s data, so nothing below is about him. The chart
-              itself is unaffected.
-            </p>
+            /* NOT THE SAME NOTHING as the case below, and it used to render as
+               though it were. `standingRefusal` returned one `SOURCE_GAP` for both
+               "on this team, absent from the chart" and "not on this team", carrying
+               THIS team's placement counts either way - so the second case produced a
+               sentence claiming Sleeper's chart for this team "does not place" a
+               player who was never on it. Nothing caught it because this branch ran
+               first and the refusal was never reached. The distinction is in the code
+               now (`NO_RECORD` vs `SOURCE_GAP`), so the ordering of these two branches
+               is a layout choice again rather than the thing keeping the page honest. */
+            <RefusalMark>
+              <span className="text-body leading-relaxed text-muted">
+                {refusalSentence(standingRefusal(chart, anchorId))}
+              </span>
+            </RefusalMark>
           ) : standing ? (
             <>
               <h2 className="font-display text-lede leading-tight font-semibold text-ink">
@@ -200,13 +208,17 @@ export default async function DepthChartPage({ params, searchParams }) {
       )}
 
       {chart.groups.length === 0 ? (
+        /* The whole-team gap, as a code rather than a sentence. This was prose that
+           named the team and counted its players, which is the same information the
+           register carries with a token in front of it and the withheld figure ("0 of
+           17") attached - and unlike the prose it survives being read aloud or pasted
+           into a chat, which is the entire argument of lib/refusal.js. */
         <Card>
-          <p className="text-body leading-relaxed text-muted">
-            Sleeper has no depth chart for {teamName(abbr)} right now.{" "}
-            {chart.rosterCount > 0
-              ? `Its ${chart.rosterCount} players are all listed below, unplaced.`
-              : "It has no players in the payload either."}
-          </p>
+          <RefusalMark>
+            <span className="text-body leading-relaxed text-muted">
+              {refusalSentence(chartRefusal(chart))}
+            </span>
+          </RefusalMark>
         </Card>
       ) : (
         chart.groups.map((group) => (
@@ -217,78 +229,17 @@ export default async function DepthChartPage({ params, searchParams }) {
                   ? `${group.position} · ${group.entries.length}`
                   : `${group.position} · ${group.entries.length} (not one of the five)`
               }
+              action={
+                <OwnershipStrip entries={group.layers.flat()} holder={holder} />
+              }
             />
             <Card>
-              {/* A UL, not an OL. An ordered list would tell a screen reader these
-                  are items 1 through 5, which is the exact ordinal this feature
-                  refuses to publish: 43 of the live 149 groups contain a duplicate
-                  order and 18 have no order 1 at all. */}
-              <ul className="space-y-1">
-                {group.entries.map((entry) => {
-                  const own = holder(entry.playerId);
-                  const href = valueHref(entry.playerId);
-                  const isAnchor = entry.playerId === anchorId;
-                  return (
-                    <li
-                      key={entry.playerId}
-                      aria-current={isAnchor ? "true" : undefined}
-                      className={
-                        isAnchor
-                          ? "rounded-[--radius-sm] border border-accent-edge bg-accent-wash px-2.5 py-1.5"
-                          : "rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5"
-                      }
-                    >
-                      <div className="flex items-center gap-2">
-                        <span className="min-w-0 flex-1">
-                          <span className="block truncate text-body font-semibold leading-tight text-ink">
-                            {href ? (
-                              <Link
-                                href={href}
-                                className="hover:text-accent-text"
-                              >
-                                {entry.name}
-                              </Link>
-                            ) : (
-                              entry.name
-                            )}
-                          </span>
-                          <span className="block truncate figure text-meta leading-tight text-secondary">
-                            {entry.offPosition
-                              ? `listed ${entry.listedPosition}`
-                              : (entry.listedPosition ?? "position not stated")}
-                            {entry.age != null ? ` · ${entry.age}y` : ""}
-                            {entry.injuryStatus
-                              ? ` · ${entry.injuryStatus}`
-                              : ""}
-                            {own
-                              ? own.isMe
-                                ? " · your roster"
-                                : ` · ${own.name}`
-                              : " · not held in this league"}
-                          </span>
-                        </span>
-                        {own && !own.isMe && (
-                          <Link
-                            href={`/managers/${own.rosterId}`}
-                            className="inline-flex min-h-11 shrink-0 items-center px-1 text-meta font-semibold text-accent-text"
-                            aria-label={`${own.name}: read the dossier`}
-                          >
-                            Dossier
-                          </Link>
-                        )}
-                        {isAnchor && <Tag tone="accent">Him</Tag>}
-                      </div>
-                    </li>
-                  );
-                })}
-              </ul>
-              {group.hasTies && (
-                <p className="mt-1.5 text-meta leading-snug text-secondary">
-                  Sleeper gives two or more of these the same order, so they are
-                  level rather than ranked. The order they print in here is
-                  alphabetical, which claims nothing.
-                </p>
-              )}
+              <DepthLadder
+                group={group}
+                anchorId={anchorId}
+                holder={holder}
+                valueHref={valueHref}
+              />
             </Card>
           </section>
         ))
@@ -298,11 +249,15 @@ export default async function DepthChartPage({ params, searchParams }) {
         <section>
           <SectionHeader title={`Not placed · ${chart.unplaced.length}`} />
           <Card>
-            <p className="mb-2 text-body leading-relaxed text-muted">
-              On the roster, absent from the depth chart. Roughly one on-team
-              player in five is, every night. That is a gap in the source and
-              says nothing about any of them.
-            </p>
+            {/* Same condition as the single-player refusal above, counted once for
+                the section instead of once per name, and carrying the same withheld
+                figure. It was a paragraph holding the base rate in prose - the right
+                fact in a channel that does not survive being copied out. */}
+            <RefusalMark className="mb-2">
+              <span className="text-body leading-relaxed text-muted">
+                {refusalSentence(unplacedRefusal(chart))}
+              </span>
+            </RefusalMark>
             <ul className="space-y-1">
               {chart.unplaced.map((entry) => {
                 const own = holder(entry.playerId);
@@ -341,22 +296,21 @@ export default async function DepthChartPage({ params, searchParams }) {
 
       <SectionHeader title="Where this chart comes from" />
       <Card>
-        <p className="text-body leading-relaxed text-muted">
-          This is Sleeper&apos;s depth chart, not Parquet&apos;s reading of one.
-          Every name, position and order above came from the same
-          <code className="mx-1 font-mono text-meta">/players/nba</code>
-          payload the rest of the app is built on, and the league ownership
-          beside each name is this league&apos;s own rosters.
-        </p>
-        <Disclosure summary="Where this chart can be wrong" className="mt-1">
+        {/* The paragraph that used to open this card said "this is Sleeper's depth
+            chart, not Parquet's reading of one" - which is the page subtitle, three
+            inches above, at three times the length. The Disclosure below is the
+            caveat layer and stays whole. */}
+        <Disclosure summary="Where this chart can be wrong">
           <p>
-            Sleeper&apos;s orders are not ranks. Measured across the live
-            payload, 116 of 149 team-and-position groups are non-contiguous (one
-            team&apos;s centres come back 1, 2, 5), 43 contain two players on
-            the same number, and 18 have nobody at 1 at all. So this page sorts
-            by the order and never counts with it: no page in Parquet will tell
-            you a player is &quot;third string&quot;, because on those groups
-            that number would be arithmetic on something that was never a count.
+            Sleeper&apos;s orders are not ranks, and this page draws them as
+            rungs rather than rows for that reason. Measured across the live
+            payload, 117 of 149 team-and-position groups are non-contiguous (one
+            team&apos;s centres come back 1, 2, 5), 44 put two or more players
+            on the same number, and 18 have nobody at 1 at all - so on those 18
+            the top rung is nobody&apos;s starter, which is why no rung on this
+            page is styled as first and no number is printed beside any of them.
+            Players sharing a number share a rung; a gap in the numbers is not
+            drawn as an empty slot, because the number was never a count.
           </p>
           <p className="mt-1.5">
             It can also simply be stale. Each record carries the time Sleeper
@@ -368,8 +322,8 @@ export default async function DepthChartPage({ params, searchParams }) {
           <p className="mt-1.5">
             And it is incomplete by construction: about one on-team player in
             five has no entry at all, and a quarter of the players who do have
-            one are charted at a position other than the one they are listed
-            at. Both are stated where they occur rather than smoothed over.
+            one are charted at a position other than the one they are listed at.
+            Both are stated where they occur rather than smoothed over.
           </p>
         </Disclosure>
       </Card>
@@ -385,12 +339,26 @@ export default async function DepthChartPage({ params, searchParams }) {
   );
 }
 /**
- * The anchored player's standing, in a sentence, and every branch of it is a fact
- * about the feed rather than a claim about the player.
+ * The anchored player's standing as COUNTS, and every branch of it is a fact about the
+ * feed rather than a claim about the player.
  *
- * `level` is why this is prose and not a number: when Sleeper gives two players the
- * same order there is no ordinal to print, and inventing one would be the whole
- * mistake this feature was built to avoid.
+ * WHY THE NAMES CAME OUT. This sentence used to name the players in each list - "Sleeper
+ * lists 2 ahead of him at C (Walker Kessler, Sandro Mamukelashvili)" - and the ladder
+ * naming the same two men sits about 90px below it. Two copies of one list, and the
+ * ladder is the better copy: it shows the relation as geometry, marks who holds each
+ * man, and links each name onward. The counts are what the ladder cannot say in one
+ * breath, so the counts are what stayed.
+ *
+ * WHY THE SENTENCE DID NOT GO WITH THEM. It is the only channel that survives leaving
+ * the screen. A reader who copies this card into a group chat, or hears it read aloud,
+ * or reads it before the ladder has painted, gets "Sleeper lists 2 ahead of him at C,
+ * and 1 level with him on the same number" - a complete answer with no geometry in it.
+ * Deleting the sentence entirely would have made the page's whole reading visual, which
+ * is the failure lib/refusal.js was written about one layer down.
+ *
+ * `level` is still why this counts rather than ranks: when Sleeper gives two players the
+ * same order there is no ordinal to print, and inventing one would be the whole mistake
+ * this feature was built to avoid.
  *
  * @param {import('@/lib/depth').DepthStanding} s
  * @param {string} name
@@ -404,17 +372,11 @@ function standingSentence(s, name) {
   if (s.ahead.length === 0) {
     parts.push(`Sleeper lists nobody ahead of him at ${pos}`);
   } else {
-    parts.push(
-      `Sleeper lists ${s.ahead.length} ahead of him at ${pos} (${s.ahead
-        .map((e) => e.name)
-        .join(", ")})`,
-    );
+    parts.push(`Sleeper lists ${s.ahead.length} ahead of him at ${pos}`);
   }
   if (s.level.length > 0) {
     parts.push(
-      `${s.level.length === 1 ? "one player is" : `${s.level.length} players are`} level with him on the same number (${s.level
-        .map((e) => e.name)
-        .join(", ")})`,
+      `${s.level.length === 1 ? "one player is" : `${s.level.length} players are`} level with him on the same number`,
     );
   }
   if (s.behind.length > 0) {

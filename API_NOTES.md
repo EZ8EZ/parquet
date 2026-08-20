@@ -207,16 +207,26 @@ payload on that date:
 **`depth_chart_order` IS NOT A RANK, and this is the load-bearing caveat.** Across the
 149 (team, position) groups the payload contains:
 
-- **116 are non-contiguous.** LAL's centres are `1, 2, 5`. GSW's power forwards are
+- **117 are non-contiguous.** LAL's centres are `1, 2, 5`. GSW's power forwards are
   `1, 5, 6, 7, 8`. DAL's point guards are `1, 3`.
-- **43 contain a duplicate order.** LAL lists two small forwards at `2`; BOS lists two
-  power forwards at `1`; MEM's centres come back `1, 2, 2, 5, 5`.
-- **18 have no order 1 at all.** LAL's only listed power forward is a `2`.
+- **44 contain a duplicate order.** LAC lists two small forwards at `1`; BOS lists two
+  power forwards at `1`; MEM's centres come back `1, 2, 2, 5, 5`; CHA lists three power
+  forwards all at `2`, the widest tie in the payload.
+- **18 have no order 1 at all.** MEM's power forwards come back `2, 2, 3`.
 - Group sizes run 1 to 6, and one team is missing a position entirely.
+- **Distinct stated orders per group run 1 to 5**, against group sizes of 1 to 6: the
+  gap between those two is exactly the tie case, and it is 44 groups wide.
+
+Re-measured 2026-08-20; the first two counts were 116 and 43 on 2026-08-19. They drift by
+a group or two as the provider edits, which is itself the argument against a surface built
+against one night's shape. The third has not moved.
 
 So sort by it; never index by it, and never render an ordinal ("3rd string") computed
 from it. `lib/depth` publishes ahead / level / behind counts instead, which is what a
-sort can actually support.
+sort can actually support - and `DepthGroup.layers` groups the entries by DISTINCT stated
+order so that a surface cannot draw one row per player and thereby imply a rank. A
+`contiguous` boolean used to be computed here too; it was read by no rendering code and
+was removed (SHELVED.md S9), because this table is where that measurement belongs.
 
 **`depth_chart_position` is not `position`.** 120 of the 474 charted players - a
 quarter - are charted somewhere other than where they are listed (Bronny James listed
