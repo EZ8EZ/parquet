@@ -6444,3 +6444,133 @@ are `AgeStrip`'s convention with a band added), no animation anywhere, and no re
 `partnerBoard`'s own output. The engine's arithmetic is untouched: every number on this
 surface was already being computed before this entry, and most of them were already being
 computed and thrown away.
+## D99. /LEAGUE ANSWERED ITS OWN QUESTION AT THE TOP OF THE PAGE INSTEAD OF ITS READER'S - a seat card, one shared selection, and a fabricated posture caught on the way out
+
+**What this is.** `/league` opened on four posture-census tiles - a league-wide tally that
+was the highest slot on the page - then a single toggled board, then the power ranking.
+None of the three answered the question a manager actually arrives with, which is about
+their own seat: when does *my* value land, and who else is dated into it. The page is
+restructured into three sections that answer that question in order rather than three
+unrelated renderings: **the seat card** ("Where does your value land?"), **the board**
+("How does the league sit around you?"), and **the power ranking** ("Who do you talk
+to?"). `SectionHeader` gained a second register for it (`as="question"`, sentence case,
+ink, no tracking) rather than reusing the app's standing uppercase-tracked label, because
+three sentences read as one enquiry and three all-caps nouns read as a taxonomy.
+
+The three sections now share one piece of state - `?roster=` (`lib/league/url.js`) - so a
+roster selected on the board is the same roster the seat card's comparison chips point at
+and the same row highlighted in the ranking below. That did not exist before this round:
+selection was private `useState` inside `CoherenceFragilityQuadrant`, so switching to the
+window map lost it and the power ranking had no idea a selection existed at all.
+
+### The bug this round caught on the way out: a zero-asset roster read as the strongest negative posture there is
+`getTimelineProfile` (`lib/metrics/duration.js`) returns early for a roster holding no
+priced asset at all - no players, no picks - and that branch returned the literal string
+`"straddling"`, the posture `classify` hands out for the *least* coherent reading it can
+produce. `POSTURE_UNREAD` ("the absence of a reading, which is not a fifth posture")
+already existed in `lib/metrics/axes.js` and was already consumed downstream
+(`POSTURE_ORDER` and the `?? POSTURE_UNREAD` fallbacks in `lib/agency/index.js`), but the
+one function that can produce the condition never emitted it - the register was open and
+nothing could reach it. `getTimelineProfile` now returns `POSTURE_UNREAD` for that branch,
+and a new test builds the condition the way production reaches it (a real fixture roster,
+emptied of players, with every pick it owns reassigned through `h.tradedPicks` rather than
+a hand-rolled shape) and pins that `stanceOf` reaches its own "no reading" branch rather
+than asserting the disagreement `"straddling"` claims.
+
+**This is a latent fix, not an observed-and-corrected one, and the record should say so
+plainly.** Every roster on the live fourteen-roster league holds at least one priced
+asset, so the branch has not fired on real data and no census, tile, or row has actually
+printed a fabricated reading yet. It is recorded anyway because the failure mode is
+exactly the one D19 exists to prevent - the app inferring a reading it does not have - and
+the moment a commissioner-executed move leaves a roster holding nothing priced, this would
+have silently counted that roster as the most incoherent team in the league rather than as
+unread.
+
+### `postureCensus` is shelved (SHELVED.md S11), and the measurement is worse than the shelving brief usually needs
+The four tiles at the top of `/league` counted postures via `postureCensus`. Three of its
+four counts are not readings of the league; they are counts of **quartile membership**.
+`classify` hands out `contending` / `ascending` / `rebuilding` by `shortnessPercentile`
+against the league's own duration distribution, and the quartiles are taken over **all
+fourteen rosters** while the three labels are only handed to the **seven** that clear
+`COHERENCE_FLOOR` (55). Measured directly against the fixture league rather than asserted:
+
+```
+posture counts:        contending 1, ascending 5, rebuilding 1, straddling 7
+4 shortest-duration:    roster 13 (dur 3.28, tci 43) - straddling
+                        roster 7  (dur 3.57, tci 54) - straddling
+                        roster 1  (dur 3.65, tci 57) - contending
+                        roster 4  (dur 3.82, tci 52) - straddling
+```
+
+The tile read "1 contending" while **three of the four shortest-dated rosters were
+disqualified for incoherence, not for timing** - all three sit below the coherence floor
+of 55 (43, 54, 52). A reader took "one team is trying to win now" from a tile that meant
+"one team is both shortest-duration-quartile and coherent," and a one-word label has
+nowhere to put that difference. The fourth count, `straddling`, was the honest one - it
+comes off the absolute coherence floor rather than a quantile, so it is genuinely free to
+be 0 or 14 - and it is already said twice elsewhere on this page: the split rows on the
+window map, and `windowRefusalSummary`.
+
+Its replacement as this page's one league-wide tally is `buildQuadrantView().counts`,
+already computed for the board and now rendered beside the axes it was read from. It is
+an intersection of two independent median splits (coherence and fragility), which is
+genuinely allowed to come out 0 - unlike a quartile tally, whose four counts are fixed by
+construction to sum to the roster count. Measured on the fixture league: 4 of 14 rosters
+sit below the coherence median and above the fragility median (`splitTopHeavy`), against
+`agreedSpread` 4, `agreedTopHeavy` 3, `splitSpread` 3 - 14 in total, and a genuine finding
+rather than a restated quartile line.
+
+### The crossed-boards sentence, and the version of it that was rejected because the arithmetic said so
+The seat card's window-overlap buckets (`overlapFor`) and the quadrant's fragility half
+had never been read against each other, and the obvious crossing - the viewer's shared
+window (`overlapFor(me).shared`) intersected with the quadrant's `splitTopHeavy` corner -
+was tried first and rejected on the arithmetic, not on taste. A roster is only in `shared`
+if it has a readable single window, which requires a posture other than `straddling`,
+which requires TCI at or above the coherence floor of 55; `splitTopHeavy` requires TCI
+*below* the league median. The two sets can only intersect in the gap between 55 and a
+median that happens to exceed it. Measured: `tciMid` is 55.5 on the live league, so the
+gap is `[55, 55.5)` and it is empty - checked, not assumed, and empty on nearly any league
+by the same reasoning.
+
+The fragility half alone has no such dependency on the coherence axis, so the shipped
+sentence crosses `overlapFor(me).shared` with the quadrant's above-median-fragility half
+instead. Measured on the fixture league: `shared` is rosters `{14, 6, 11, 9, 2, 12}`;
+intersected with above-median fragility (`fragilityMid` 49), the result is `{14, 11, 2}` -
+three real rosters, named rather than counted, with the median stated as a median so
+nobody reads it as a bar somebody failed (D6, D19).
+
+### The quadrant chart's own D96 debt, paid
+D96 made "no `<text>` inside a scaling viewBox" a product-wide rule and fixed the window
+map, and named `CoherenceFragilityQuadrant` as one of four charts still violating it
+(labels at 7.5-8.5 SVG units, rendering under this app's own 10px `--text-micro` floor at
+this chart's real rendered width) - deliberately deferred rather than fixed in that round.
+This round pays that debt: every label is now HTML positioned as a percentage of the same
+viewBox coordinates the marks use, the same mechanism D96 used for the window map, so the
+labels track the scale with no resize listener. `PAD_L` (26 -> 34) and `PAD_B` (38 -> 48)
+grew to hold real 10px type where 8.5-unit `<text>` used to fit; the plot loses width to
+gain a legible axis, the same trade D96 already made once.
+
+### Selection gets a mark, deliberately not a colour
+A selected roster's dot on the quadrant gained a solid ink ring (it was dashed and muted;
+dashed reads as provisional, and a selection is chosen, not tentative), concentric with
+the unchanged accent "you" ring - two different facts, two different radii, and neither
+spends a new hue. Colour was rejected outright for this: the accent is already the
+viewer's identity everywhere in the app, and TCI's ramp is already the only colour
+encoding this chart has room for (D96's "the moment two things are accent, neither is").
+The window map marks the same selection by weight (a taller bar), a surface-coloured
+halo, and an ink rule in the ordinal gutter - three marks, still no second hue.
+
+### What else was rejected
+A permanent 44px "open the dossier" link column beside every power-ranking row was the
+first version of keeping the link reachable once the row became a selector (a button
+cannot nest inside a link, so the row's old wrap-the-whole-thing `<Link>` had to go). It
+was rejected for cost: the dossier link now renders only inside the selected row, on its
+own line, so the other thirteen rows spend nothing on a control that is only wanted on one
+row at a time. Advice framing for the crossed-boards sentence ("these rosters are
+vulnerable," "target these managers") was rejected per D6 and D19 - it names rosters and
+states a position, never a recommendation.
+
+### Gate
+`pnpm lint`, `pnpm test` (1,222 tests pre-rebase, 1,292 against the true `main` tip after
+it), `pnpm build`, and `pnpm e2e` (81) all clean, verified both before and after rebasing
+onto the concurrently-merged sibling rounds.
