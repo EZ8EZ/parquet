@@ -153,15 +153,27 @@ Observed volume 2025: wk1=84, wk2=31, wk5=17, wk10=2, wk15=21.
    attached **six** pick hops spanning 2023-2025, because rosters 6/7/11 traded picks
    with each other repeatedly over three seasons and nothing distinguishes which deal
    moved which pick. Attributing invented contents to a real trade is worse than
-   admitting the data is gone, so `attachInferredPicks()` exists but is
-   **deliberately not wired into the read path** (`lib/history.ts`). Unattributable
-   hops are surfaced separately by `unrecordedPickMoves()` in `lib/picks.ts`, and any
-   pick that IS inferred carries `inferred: true` and renders as "(inferred)".
+   admitting the data is gone, so `attachInferredPicks()` was **deleted** in D19's
+   second pass rather than left sitting uncalled, and nothing anywhere reconstructs a
+   pick hop. There is no `inferred: true` flag and no "(inferred)" rendering; both went
+   with it.
 
-   Worth knowing: a pick hop keyed only by `(season, round, originalRoster)` is
-   ambiguous, because a pick can change hands several times. Match on the full hop
+   **What the app does instead is mark the deal, not guess its contents.** A
+   commissioner-executed transaction is detectable with no inference at all - its id
+   carries the `coalesced-` prefix minted by `coalesceCommissionerTrades` - so
+   `isCommissionerExecuted()` (`lib/tradegraph/index.js`) is the one reader of that
+   fact, and every surface showing such a deal says the same sentence about it: the
+   `/deals` index tags it `no pick record`, and the receipt and the provenance rail
+   both open with "Pick record missing." The gap is stated wherever it is visible, and
+   never filled.
+
+   Worth knowing, for anyone tempted to reconstruct this later: a pick hop keyed only
+   by `(season, round, originalRoster)` is ambiguous, because a pick can change hands
+   several times. Match on the full hop
    `(season, round, originalRoster, previousOwnerId, ownerId)` or a later recorded
-   trade will mask an earlier unrecorded one.
+   trade will mask an earlier unrecorded one. A `unrecordedPickMoves()` helper keyed on
+   the short form did live in `lib/picks.js`; it was deleted along with the claim that
+   it was "surfaced separately", because in three rounds it never acquired a caller.
 
 **Corollary - trust the recorded trade, not the memory.** Picks a manager remembers
 receiving in a commissioner deal often actually moved in a *separate, properly

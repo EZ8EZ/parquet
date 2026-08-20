@@ -141,7 +141,7 @@ export default async function DealPage({ params }) {
       </PageHeader>
 
       {record.commissionerExecuted && (
-        <Card className="mb-3 border-warn/30 bg-warn/[0.06]">
+        <Card className="mb-3 border-warn-edge bg-warn-wash">
           <p className="text-note leading-snug text-muted">
             <span className="font-semibold text-warn">
               Pick record missing.

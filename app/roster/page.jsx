@@ -627,7 +627,17 @@ export default async function RosterPage() {
             // memoized on-demand loaders and not a corpus change (D25).
             provenance={
               provenance[v.playerId] && (
-                <ProvenanceRail chain={provenance[v.playerId]} showTitle />
+                // `names` only, and that is the whole prop list on purpose. The
+                // per-gap scenes, the draft hairlines and the hold population are
+                // deliberately NOT computed here: this page draws one rail per
+                // rostered player, and /lineage is where a single asset earns the
+                // full treatment. The rail degrades to ordering plus proportion,
+                // which is what an inline expansion wants anyway.
+                <ProvenanceRail
+                  chain={provenance[v.playerId]}
+                  names={ctx.names}
+                  showTitle
+                />
               )
             }
             key={v.playerId}
