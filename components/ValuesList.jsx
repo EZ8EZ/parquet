@@ -108,11 +108,13 @@ export function ValueAssetRow({
               {rank}
             </span>
           )}
-          {/* Only rendered when this deploy has real photos on (D39, `photosEnabled`).
+          {/* Only rendered when this deploy has real photos on (`photosEnabled`).
               A monogram repeated across sixty rows was removed as pure decoration
               (D72); a real photo repeated sixty times is the opposite - recognition
               a reader actually uses - so the column returns for exactly that case
-              and stays gone otherwise. */}
+              and stays gone otherwise. Photos default ON as of D90, so this is now
+              the normal path rather than the opt-in one; a fork that opts out still
+              gets D72's monogram-free row. */}
           {photosEnabled() && (
             <PlayerAvatar
               name={name}

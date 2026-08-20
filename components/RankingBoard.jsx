@@ -424,11 +424,11 @@ export function RankingBoard({ players, scoring }) {
                   either one further.
 
                   A REAL PHOTO IS DIFFERENT, so it is not gone unconditionally: see
-                  `photosEnabled` (components/PlayerAvatar.jsx). Off (the default,
-                  D39), this stays exactly the monogram-free row above. On, a real
+                  `photosEnabled` (lib/photos.js). On - the default as of D90 - a real
                   face is recognition value a reader uses, not decoration repeating
-                  the name - so it renders, at the same 32px this row's height
-                  arithmetic already has room for.
+                  the name, so it renders at the same 32px this row's height
+                  arithmetic already has room for. Off, which now takes an explicit
+                  opt-out, this stays exactly the monogram-free row above.
                 */}
               {photosEnabled() && (
                 <PlayerAvatar
