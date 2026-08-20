@@ -17,7 +17,12 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildProvenance, parsePickKey } from "@/lib/provenance";
-import { chainGapActivity, loadProvenanceSource } from "@/lib/provenance/source";
+import {
+  chainGapScenes,
+  draftDatesFrom,
+  holdDurationsByRoster,
+  loadProvenanceSource,
+} from "@/lib/provenance/source";
 import { ProvenanceRail, chainSummary } from "@/components/ProvenanceRail";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { Card, Disclosure, PageHeader, SectionHeader } from "@/components/ui";
@@ -37,15 +42,20 @@ export default async function LineagePage({ params }) {
   if (!requestedPid && !parsePickKey(assetKey)) notFound();
   const h = await getLeagueHistory();
   if (requestedPid && !h.players.has(requestedPid)) notFound();
-  const { ctx } = await loadProvenanceSource(h);
+  const { ctx, moves, index } = await loadProvenanceSource(h);
   const chain = buildProvenance(ctx, assetKey);
   if (!chain) notFound();
-  // Opt-in texture for the chain's single longest gap - see the docstring on
-  // `chainGapActivity`. Computed only here, not on /roster's inline rails: this page
-  // is one asset at a time, so the cost is bounded and the disclosure stays closed by
-  // default regardless (D58's density mandate is about what a reader sees on arrival,
-  // and a shut `<details>` shows nothing extra).
-  const activity = chainGapActivity(h, chain);
+  // EVERY GAP GETS ITS OWN SCENE, scoped to whoever was holding the thing - see
+  // `chainGapScenes`. Computed only here, not on /roster's inline rails: this page is
+  // one asset at a time, so the cost is bounded, and the per-gap comparisons stay
+  // inside closed disclosures regardless (D58's density mandate is about what a reader
+  // sees on arrival, and a shut `<details>` shows nothing extra).
+  const scenes = chainGapScenes(h, chain, ctx);
+  // Both free: `moves` and `index` were already built by the call above and thrown
+  // away. Real draft dates become the rail's SOLID hairlines, and the hold population
+  // is what a single hold is read against.
+  const drafts = draftDatesFrom(index);
+  const holdDurations = holdDurationsByRoster(moves);
   // The chain's SUBJECT, which is not always what was asked for: a spent pick
   // resolves to the player it became, since that is the same chain and the player is
   // the half that still exists.
@@ -111,15 +121,21 @@ export default async function LineagePage({ params }) {
       </PageHeader>
 
       <Card>
-        <ProvenanceRail chain={chain} activity={activity} />
+        <ProvenanceRail
+          chain={chain}
+          scenes={scenes}
+          drafts={drafts}
+          holdDurations={holdDurations}
+          names={ctx.names}
+        />
       </Card>
 
       <SectionHeader title="What this is and is not" />
       <Card>
         <p className="text-body leading-relaxed text-muted">
-          Read upward and this answers one question only: how the thing you hold
-          today got to you. It is not a claim that the trade was good, and there
-          is no grade anywhere on it.
+          Read top to bottom and this answers one question only: how the thing
+          you hold today got to you. It is not a claim that the trade was good,
+          and there is no grade anywhere on it.
         </p>
         <Disclosure summary="Where this chain can be wrong" className="mt-1">
           <p>
@@ -132,8 +148,10 @@ export default async function LineagePage({ params }) {
           <p className="mt-1.5">
             Commissioner-executed trades reach us with no picks attached, so a
             hop that moved a pick by hand can be missing from the chain
-            entirely. Where a pick was reconstructed rather than recorded, the
-            hop says so.
+            entirely. Nothing here is reconstructed to fill that in - where a
+            hop we DO have came from a commissioner move, it says so and names
+            what is missing; where the hop itself was never recorded, the chain
+            is simply shorter than the truth and cannot know it.
           </p>
           <p className="mt-1.5">
             The record starts when this league&apos;s history does. Anything

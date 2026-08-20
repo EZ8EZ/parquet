@@ -159,8 +159,10 @@ implemented, tested against the real league, and **rejected**: it attributed six
 unrelated pick hops spanning three seasons to a single 2023 deal, because the only
 available signal ("both parties are in this trade") is far too weak. Fabricating trade
 contents is worse than an acknowledged gap, especially for a product whose entire
-premise is an honest record. Unattributable hops surface separately via
-`unrecordedPickMoves()`.
+premise is an honest record. What IS published is the gap itself, wherever a
+commissioner deal is visible - see D97, which made that one sentence identical on all
+three surfaces that show one and deleted `unrecordedPickMoves()`, the helper this entry
+used to point at for "surfacing them separately". It never had a caller.
 
 **Second pass: the inference engine came back, uncalled, and was deleted again - and
 the "(inferred)" caveat went with it.** A hardened `attachInferredPicks` survived in
