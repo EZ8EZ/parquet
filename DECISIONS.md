@@ -5850,3 +5850,264 @@ D51 fixed at a different level of this app.
 `pnpm lint`, `pnpm test` (1,247 to 1,260 tests), `pnpm e2e` (81) and `pnpm build` all
 clean. Verified visually at 390px in both themes against the live league, and axe-scanned
 clean on /roster, /deals and /methodology in each. `pnpm typecheck` not chased (D89).
+
+## D99. THE NULL RESULT GOT THE SAME INK AS THE FINDING - two panels sharing one axis, a counterfactual that is now the model instead of the algebra, and the coverage number recounted against the board a reader is actually looking at
+
+D94 shipped in-league production into every price and argued the whole case in prose:
+a one-season test that came back null, a three-season test that did not, a 23% weight,
+and an injury overlap named in a footnote. Every number was right. None of them was
+drawn, and the two places the page did draw something - two side-by-side lists of five
+movers - was the one place the drawing was actively misleading.
+
+### The one-season null and the three-season finding are now the same picture
+
+`components/ProductionEvidence.jsx`. Two stacked dot-strip panels, three marks each
+(the consensus ordinal alone, production alone, production's partial correlation once
+the ordinal is already in the model), one shared correlation axis from -0.2 to 1.0, and
+exactly one gridline: zero.
+
+**Small multiples rather than six marks on one axis, and that is the load-bearing
+choice.** The two rows of numbers answer DIFFERENT QUESTIONS against DIFFERENT TARGETS
+with DIFFERENT n - next season alone at n=209, the discounted following three seasons at
+n=243. On one axis, 0.412 sitting to the right of -0.051 reads as "production got better
+at the same job", which is not what happened and not what either number means. Two
+panels with two captions naming two targets make the only legitimate comparison the only
+one the geometry offers: whether the interval clears zero.
+
+**The +/-2 SE whisker is on the partial mark only.** That mark's distance from zero IS
+the finding, so its uncertainty is the thing a reader has to see; the other two are
+context, and giving the incumbent ordinal an identical error bar would imply it was
+measured to the same purpose. Panel one's whisker runs -0.190 to +0.088 and straddles
+the zero line - which is the honest render of a null, and the reason the dot was NOT
+nudged onto zero to make the point look tidier. Panel two's runs 0.283 to 0.541 and
+clears zero by a wide margin.
+
+**The standard error is derived, never stored.** `partialSe(n) = 1/sqrt(n - 3)`, and it
+reproduces both of D94's reported z figures exactly (-0.051/0.0697 = -0.73;
+0.412/0.0645 = 6.38). A hand-copied SE beside the rho it belongs to is how a chart ends
+up drawing an interval nobody computed, so the number the whisker is made of comes from
+n and nothing else. Pinned by test in both directions: panel one's interval must contain
+zero, panel two's must not.
+
+### Two things deliberately NOT drawn, and the notes saying why
+
+**The R-squared lift, 0.790 to 0.826.** A 3.6-point move between two numbers that large
+is visually identical on an honest 0-to-1 axis and only becomes visible on a truncated
+one, so either version misinforms. Stated once in text, and `PRODUCTION_R2`'s own
+docstring carries the refusal so nobody adds the bar later. A test asserts the gap is
+under four points, which is the fact that makes it undrawable.
+
+**The hindsight caveat.** 0.233 is a stated FLOOR with no measured upper bound: the
+consensus snapshot postdates part of the window it is scored over, so the incumbent was
+graded with hindsight on the seasons it is meant to be predicting and production was not.
+That tilts the comparison toward the ordinal - which also means the 0.889 the ordinal
+scores is inflated, so the GAP between the two is overstated as well, a second direction
+the prose had not stated. No error bar, no arrow, no shaded "probably higher" band: an
+unmeasured quantity drawn as a measured one is D19's exact failure, and the page now says
+plainly that the correction is unknown rather than gesturing at its size.
+
+### The movers list stopped being two columns, because two columns hid the asymmetry
+
+`components/ProductionMovers.jsx`. One list, ten rows, sorted by absolute move across
+both directions, dumbbells on one axis anchored to **9,009** - the top price this league
+actually carries, read live off the same map /values ranks, not `cfg.maxValue` (10,000),
+which is `base(1)` before any multiplier and is reached by nobody.
+
+The two five-row columns looked balanced and the data is not: the largest drop is -1,917
+and the largest gain is +992, so each column was implicitly scaled to its own worst case
+and two effects of very different size appeared comparable. On one axis the drops are
+visibly about twice as long, which is a real property of the measurement - production
+penalises absence, and a lost season is what absence looks like.
+
+**A population strip above the ten, on the identical axis.** Every rostered player's move
+as a segment from his counterfactual value to his priced one. The result is deliberately
+anticlimactic and that is the entire point: 225 of 250 moved at all, median 91, p90 513,
+largest 1,917, against a ceiling of 9,009 - so almost every segment is too short to
+resolve, and the named ten are visibly the tail of a distribution that is mostly nothing
+rather than "what production did to this league".
+
+Drawn first on ONE line, which a screenshot caught as a real bug: 250 short segments at
+the same y merge into one continuous bar, and a continuous bar on a value axis reads as
+one enormous move - the exact opposite of the claim. They are now jittered across five
+rows by a hash of the player id. Vertical position carries no data and says so in the
+code; the band comes from a hash rather than an index because an index over a
+value-sorted list would draw a diagonal, which is both a false pattern and a reserved
+mark (D96).
+
+**The injury overlap travels IN the graphic.** 12 of the 20 largest drops carry a current
+injury flag against 3.8 expected by chance (48 of 250 rostered players are flagged), mean
+move -214 for a flagged player against +46 for an unflagged one, and 6 of the ten drawn
+rows carry a flag. All of it captioned directly above the list it qualifies, with the
+body part marked on each row - because a reader shown these ten names who does not learn
+that most of the drops are injuries has been shown a real number and led to a wrong
+conclusion about what it measures. Every figure in those captions is derived from the
+array the chart draws, so a caption cannot disagree with its own marks.
+
+The row marker is the body part in words, NOT the app's injury chip. The chip is
+`bg-negative-wash text-negative`, which inside a chart would make injury the only
+colour-encoded quantity on the page and imply the flag is the bad end of a scale this
+chart does not have. `/depth/[team]` already states injury as a plain `·`-joined fact in
+a secondary meta line; that is the convention borrowed.
+
+### The drawn counterfactual is now the model, not one exponential
+
+/methodology derived the "before" value analytically: every multiplier is identical
+either way, so the two values differ by exactly the ratio of their bases, which is one
+exponential and needs no second pass. The algebra is correct. It is also not what the
+model outputs, because `value` is rounded before the exponential multiplies it and the
+product is rounded again.
+
+Measured against the live league: the shortcut matched the model exactly for 178 of 246
+backed rostered players and differed by at most **2 points** for the other 68, and the
+top ten come out in the same order either way. Comfortably invisible in a sentence like
+"4,006 to 2,089", which is all it was ever asked to support. It stops being invisible
+when the two numbers become the two ends of a drawn mark: a dumbbell asserts its dots sit
+where the model puts them, and "within two points of where the model puts them" is a
+weaker claim. `cachedNoProductionValuePlayers` runs the real thing at
+`productionWeight: 0`, memoized on corpus identity exactly as `cachedValuePlayers` is.
+
+### The permutation guarantee, pinned in BOTH directions
+
+D94's claim is that the blend is a permutation of the pool's own search ranks, so the
+multiset of `base` values is preserved. True, and verified bit-for-bit on the live
+corpus. It is also narrower than it sounds, and the prose could be read as the wider
+claim, so two tests now bracket it: with every multiplier equal, the displayed VALUE
+multiset is preserved too - and once ages vary, it is not, because multipliers travel
+with the player and reordering who holds which base pairs bases with different
+multipliers. `base` survives; what a reader actually sees does not.
+
+### Per-row provenance marks the exception, and only the exception
+
+246 of 250 rostered players are production-backed. The temptation was to badge those,
+which is backwards: a mark present on most rows and absent on some reads as a grade the
+absent rows failed (D6), and it would decorate ~200 rows to carry information about a
+handful. So the mark goes where the claim is WEAKER - three words of plain text,
+`· consensus only`, joining the meta line that already carries position, team and age,
+in the same secondary voice, at zero added row height.
+
+Deliberately NOT a hatch on the value or its bar. These players have real published
+prices; what is missing is the provenance behind the rank, not the number. The value is
+printed exactly as any other.
+
+In the expansion, the value's single `consensus` fact became TWO - `consensus` and
+`priced`, with the places moved - because the row used to print only the ordinal, which
+is the one number the model had already stopped pricing from. Both ranks were on
+`ValuedPlayer` all along. A grey dumbbell puts them on a rank scale shared by every row
+in the list, hollow for consensus and filled for priced, one colour and no arrowhead: an
+arrow claims a trajectory, and these are two present-tense estimates. Drawn only where
+production actually moved him - for an unbacked row the two ranks are the same number by
+construction, and two coincident dots would assert a measurement nobody made. Its caption
+says "1 at the left", not "left is better": rank 1 is the most valuable asset by
+construction, but this app does not tell a reader which end of a scale to want (D6, the
+same discipline that leaves `betterEnd` unset on `DistributionStrip`).
+
+`productionBackingRefusal` reached exactly one site, a page-level card on /methodology,
+and is aggregate by construction - two counts and a league-wide plural sentence. Printing
+that beside one name would say something true about the league and nothing about the
+player next to it, so `productionRowRefusal` is a sibling: same closed `NO_RECORD` code,
+per-player numbers.
+
+**It carries no `withheld` figure, and the first cut's did.** `refusalSentence` renders
+that field as "<label> would read <value>, and is not published", so putting the rostered
+week count there made the sentence say the count was withheld and then publish it in the
+next clause - a contradiction and a duplication. The week count is EVIDENCE FOR the
+refusal, not the declined quantity; the declined quantity is the production index, which
+has no "would read" value because it does not exist, and writing 0.000 to fill the field
+is the invented zero the function exists to refuse. The field stays empty, by test.
+
+The sentence is built on the SERVER and passed in as a finished string. `ValueAssetRow`
+is a client component, and `RefusalMark`'s own contract is that the refusal-to-string
+boundary sits at the call site - a row that writes its own reason string is a row that
+can drift from the flag it is describing.
+
+### `derive-production.js` now keeps the counts it was throwing away
+
+The derivation dropped every sub-floor player-season before it counted anything, which
+is right for the index and lost the one fact a reader wants about an unpriced player: how
+far under. "No eight-week record" and "four rostered weeks against a floor of eight" are
+the same condition, but only the second lets a reader judge the floor. `BELOW_FLOOR_WEEKS`
+is a second committed constant - 64 players this league HAS rostered but never for eight
+weeks in one season - emitted alongside the table, never folded into it, because these
+players have no index and giving them a row would mean inventing one. The four unbacked
+rostered players read: **Gui Santos 6, Dylan Cardwell 6, Oso Ighodaro 4, Kris Dunn 4.**
+
+A player absent from both lists has never been rostered here at all, which is a different
+fact and reads differently: `rosteredWeeksBelowFloor` returns null, not zero, and the
+refusal words it as "has not rostered him at all" rather than printing a count. Null is
+the absence of a measurement; zero would be one.
+
+### The coverage number, recounted against the board a reader is looking at
+
+98.4% is the ROSTERED share, and it is the most flattering denominator available. /values
+ranks the top 260 players by value across the whole 2,108-player corpus, not the 250
+somebody rosters - and **211 of those 260 (81.2%)** rest on a production record. The 49
+that do not are almost entirely incoming prospects this league has never rostered, most
+of whom have not played an NBA game: the coming-rookie gap arriving early, on a page that
+already shows it. Both numbers are now on the page, computed live, with the worse one
+given the emphasis.
+
+The cap moved to a shared `VALUE_ROWS` constant so the disclosure cannot end up
+describing a list nobody renders.
+
+No coverage GEOMETRY, per the standing instruction: no ring, no near-full progress bar.
+Those shapes assert "essentially done", which is about to be false - the 2026 rookie
+draft has not run, so every roster is still last season's roster, and 98.4% falls on its
+own the moment it does. A fraction in text with its caveat cannot go stale silently the
+way a nearly-closed ring can.
+
+### `players_points` is ONE LOCKED GAME, and the page says so
+
+Checked in both files rather than trusted: `lib/valuation/production.js` and
+`scripts/derive-production.js` agree, and the derivation's own verification is quoted -
+three players across 23 weeks of 2025, where the field equalled a single game in most
+weeks and coincided with the week's sum only where the player played once that week. This
+league runs Sleeper's lock-in format, so a slotted player scores the one game that
+locked. The index is denominated in the currency this league actually pays in, and the
+window is the two most recent of FOUR completed seasons - stopping at two because lag-3
+persistence (rho 0.192) rests on n=153 and is inside its own noise.
+
+### One measured colour finding, fixed in the file that owns colour law
+
+`CHART_NEUTRAL` is `--color-border-strong`, and composited on `--color-surface` it is
+**2.59:1 on dark and 2.09:1 on paper**. Both are under 3:1 - the same floor
+`lib/chart-colors.js` already applies to the magnitude ramp, with the same rule attached:
+legitimate where a length or a printed number carries the value independently, not
+legitimate where a mark's own visibility IS the datum. The correlation panels' two
+context dots are exactly that second case; they state their value in position alone.
+
+So `CHART_MARK` (`--color-secondary`, 6.09:1 paper / 5.74:1 dark) joins the vocabulary
+for "a mark whose position is the datum", with the measurements in its docstring and a
+pointer on `CHART_NEUTRAL` saying when not to use it. No new colour was invented -
+`globals.css` already reserves `secondary` BY JOB for "anything carrying a datum" and
+`border-strong` for emphasis borders, so this is the token that was always correct for a
+mark. The borrowed border token merely looked correct on dark, where the gap is smallest.
+Every rho on the panels is now printed as well, so no mark is the only statement of its
+own value.
+
+### Also fixed, found by reading the rendered DOM rather than the source
+
+`predict next season'sproduction` - a missing space that had been live since D94. The JSX
+has one; SWC drops the leading space of the text node following `</span>`, so the RSC
+payload carried `"production better than..."` with nothing in front of it. An explicit
+`{" "}` is the idiom that survives any JSX whitespace implementation, and the line above
+it was already using it.
+
+### Deliberately not done
+
+The rank dumbbell scales to 1..309, which puts a typical 9-place move at about 3% of the
+axis - small, and honestly small, since the printed facts carry the number and the mark
+is the second encoding. A rank axis that expanded the top of the board would read better
+and would need a non-linear scale nobody has argued for here. `charts.jsx` still has five
+D96 violations (`<text>` inside a scaling viewBox) and this branch adds none, but fixes
+none either - the two new components use the WindowMap construction.
+
+### Gate
+
+`pnpm lint`, `pnpm test` (1,305) and `pnpm build` clean; `pnpm e2e` passed with three
+pre-existing flakes that pass on retry and sit on routes this branch does not touch
+(`/deals`' documented hydration race, and two that passed clean on a rerun). Verified
+visually at 390px in both themes against the LIVE league - the fixture provider's
+synthetic ids do not intersect the production table, so on fixtures nothing blends and
+the movers section correctly renders its "no player moved" sentence instead of ten
+zero-length marks. axe-scanned clean on /methodology and /values in both themes.
+`pnpm typecheck` not chased (D89).
