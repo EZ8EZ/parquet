@@ -5293,3 +5293,110 @@ permutation, so a trade receipt would have silently priced every asset on the ra
 popularity ordinal while /values priced it on the blend - the `tierOf` drift of D55 in
 another costume, and the file's own comment already said a receipt that disagrees with
 the page is a receipt you cannot trust about anything else.
+
+## D95. A REFUSAL THAT IS ONLY A MARK BECOMES AN EMPTY CELL - the closed refusal register, and the number printed beside its own disproof
+A five-person design panel (three seniors, one mid-career, two early-career, deliberately
+mixed) ran a **multi-round cross-examination** of this app's refusal states - the moments
+it says "not enough to say" rather than guessing. This was not five independent takes
+collated: round one produced a proposal the panel then attacked, round two produced the
+correction, and the finding below survived being reached three separate ways and then
+checked against this repo. Naming that matters, because the panel's **first** proposal
+was wrong and the record should show what killed it.
+
+**Round one drifted straight into designing a new 45-degree hatch texture** for refused
+values. Round two killed it in one line: `components/RefusalMark.jsx` already exists and
+already solves the drawn half correctly - a static dashed circle with a diagonal tick,
+sharing **none** of the three properties of `.skeleton`'s loading animation (rectangular,
+animated, empty-waiting-to-fill), always paired with mandatory text. Read its docstring;
+it is better reasoning than a second glyph would have been. **No new visual mark was
+invented here.** Nothing in this entry adds a CSS texture, touches the type scale, or
+moves a colour token.
+
+**The load-bearing finding, credited to the round-two layer separation: a refusal has to
+carry a real CODE in its data, not merely look refused.** A refusal that exists only as a
+visual mark survives exactly one medium. Export the row, paste it into a group chat, grep
+the derivation for "which rosters could not be read", hand the table to a screen reader,
+serialize the object - in every one of those the mark is gone and what is left is an
+**empty cell, which reads as zero, which is a claim the app just refused to make**. That
+is strictly worse than saying nothing. The layer separation is the whole insight: the
+DATA layer owns the refusal, the drawing is a secondary rendering of something that
+already exists without it.
+
+`lib/refusal.js` is that register, and it is **closed**: six codes, and a seventh means
+editing one file rather than adding a string literal somewhere. `NO_RECORD` (the record
+is empty, nothing was computed at all), `INSUFFICIENT_SAMPLE` (records exist, fewer than
+the statistic needs to separate), `CONCENTRATED_SAMPLE` (enough records, one of them
+carrying the aggregate), `SPLIT_ROSTER` (every part known, the parts disagree too widely
+to be one figure), `SOURCE_GAP` (the provider publishes the surface and has no row for
+this subject), `UNSCHEDULED` (no date exists for anyone to report). Each carries a label
+and a `condition` stating the arithmetic that produces it, which is the contract: a site
+may not widen a code to cover a case it was not written for, and a site may not write its
+own reason string - it picks a code and supplies the numbers.
+
+**What was actually wrong before, at four sites.** `windowShort` returned `"-"` for an
+unreadable roster, sitting in a mono line between two figures on /league and in the
+finder's window column - where a dash is how every other column in this app spells "no
+value here", so a **stated refusal rendered as a missing number**. `state: "unreadable"`
+collapsed two genuinely different facts (a roster with no priced asset at all, and a
+roster with one or two) into one word, so no surface could tell them apart. /league
+hand-wrote two sentences about data sufficiency with the counts interpolated in JSX,
+matching nothing the same conditions said elsewhere and countable by nothing downstream.
+And `deriveExitWindow` has returned a `refusal` string since it was written which
+**nothing ever rendered** - /methodology hand-wrote an equivalent paragraph beside it, and
+the two had already drifted (the paragraph said every bucket fails on concentration; the
+module's own bar fails most of them on count first).
+
+**Two patterns adopted from the panel's "Terminal" direction, unanimous across both
+rounds.** First, **the centroid pairing**: print the number the app declined to publish,
+directly beside the one line proving that publishing it would have been dishonest.
+`windowOf` computes a straddler's value-weighted centre and prints "A single window would
+read 2031, and is not published" next to the reason that season is the centre of a
+disagreement rather than a window - and deliberately does **not** promote it into `peak`,
+where a chart would read it. `deriveExitWindow` computes the age slope this league's
+market would have implied and prints it - on the live fixture league, **+24.2% per year of
+age** against the measured curve's ~2.5% - beside the thickest bucket's concentration.
+"The market cannot calibrate an age curve" is an abstraction until a reader sees *which*
+number was refused; refusing something near the model's own term and refusing something
+absurd are the same sentence and completely different facts. The figure exists only
+inside `refusal.withheld`, never as a field, never in the config.
+
+Second, **the field is deterministic.** No retry affordance anywhere near a refusal, and
+the absence is part of the signal. Every one of the six codes is a standing fact about a
+record that already arrived in full, so `windowRefusalSummary` closes with "each is a
+reading of the record as it stands, and there is nothing to retry". The one place a
+refusal may point at a future is where the bar is genuinely falsifiable, and it says so in
+those terms: `deriveExitWindow` ends with "as this league keeps trading, buckets thicken
+and start passing it on their own", not "try again". A test pins the absence of
+retry/refresh/loading language.
+
+**Which sites got the treatment, and which did not.** Wired: `lib/metrics/window.js`
+(both refused states, with codes and the withheld centroid), `lib/valuation/exitWindow.js`
+(per-bucket **and** section-level, with the withheld slope, plus a `reading` column in
+/methodology's table so the code travels in the row rather than in a paragraph beneath it),
+`lib/depth/index.js` (`standingRefusal`, `SOURCE_GAP`), `lib/valuation/production.js`
+(`productionBackingRefusal`, `NO_RECORD` - the flag was already in the data, the words
+were not). Left alone deliberately: /depth's first `RefusalMark` ("where a player sits is
+not a claim about his minutes") is a **scope disclaimer**, not a data-sufficiency refusal,
+and giving it a code would imply the app tried to read something and could not.
+`ProvenanceRail`'s pending pick already has its own closed register - `REASON_TEXT` in
+`lib/lineage` - which D44 pins verbatim so /drafts and the rail cannot describe one
+unresolved pick two ways; overlaying a second register there would create two names for
+one condition, which is the disease and not the cure.
+
+**One real bug the codes surfaced.** Posture is read from **unrounded** durations, so a
+roster can straddle while its printed quartiles round into a single season - on the
+fixture league one of the two split rosters is exactly that shape. The first draft of the
+sentence said "spread across 1 seasons", which is ungrammatical and, worse, **false**: it
+hands a reader a visible span to disbelieve instead of the actual reason. That branch now
+says the quartiles round into one season while the durations underneath them do not agree.
+
+**The gap, stated rather than papered over: there is no CSV or data export for these
+surfaces.** `lib/providers/csv` is an input provider, not an export. The code being in the
+returned object means an export would carry it for free the day one exists, which was the
+panel's point - but no export was invented here to prove it.
+
+D6 and D19 both constrain the wording and both are pinned by tests. A code names a fact
+about **data sufficiency** and never a judgment of the roster or the manager - so
+`SPLIT_ROSTER` is not "conflicted roster", which would smuggle a finding about a roster
+out of a fact about two quartiles. And no label may sound more certain than the condition
+under it: `SOURCE_GAP` says the provider has no row, not that no such fact exists.

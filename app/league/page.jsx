@@ -7,6 +7,7 @@ import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
 import { cachedLeagueTimelines, postureCensus } from "@/lib/metrics/duration";
 import {
   leagueWindows,
+  windowRefusalSummary,
   windowShort,
   windowSynthesis,
 } from "@/lib/metrics/window";
@@ -170,6 +171,11 @@ export default async function LeaguePage() {
               name: w.teamName ?? w.ownerName,
               isMe: w.isMe,
               state: w.state,
+              // The refused row's own code and proof travel with it. This projection
+              // used to drop them, which meant the chart's screen-reader label and the
+              // sentence under it each had to reconstruct the reason from `state` - the
+              // same word, two guesses at what it meant.
+              refusal: w.refusal ?? null,
               open: w.open,
               peak: w.peak,
               close: w.close,
@@ -178,6 +184,7 @@ export default async function LeaguePage() {
             last: windows.last,
             currentSeason: windows.currentSeason,
             synthesis: windowSynthesis(windows),
+            refusalSummary: windowRefusalSummary(windows.rows),
           }}
           view={board}
         />

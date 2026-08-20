@@ -19,6 +19,8 @@ import {
   slotValue,
 } from "@/lib/valuation";
 import { deriveExitWindow } from "@/lib/valuation/exitWindow";
+import { productionBackingRefusal } from "@/lib/valuation/production";
+import { refusalSentence } from "@/lib/refusal";
 import { pickDuration, playerDuration } from "@/lib/metrics/duration";
 import {
   W_LOO,
@@ -396,16 +398,15 @@ export default async function MethodologyPage() {
         </p>
         {unbacked.length > 0 ? (
           <div className="mt-3">
+            {/* The sentence moved into lib/valuation/production.js. The condition it
+                describes lives there (eight rostered weeks, `productionBacked`), so the
+                words belong there too - a page that writes its own reason string is a
+                page that can drift from the flag it is describing. */}
             <RefusalMark>
               <span className="text-body leading-relaxed text-muted">
-                {unbacked.length === 1
-                  ? "One rostered player has"
-                  : `${unbacked.length} rostered players have`}{" "}
-                no eight-week record in this league, so{" "}
-                {unbacked.length === 1 ? "he is" : "they are"} priced on the consensus
-                ordinal alone. That is a stated fallback, not a guess: no production
-                number is invented for{" "}
-                {unbacked.length === 1 ? "him" : "them"}, and none is treated as zero.
+                {refusalSentence(
+                  productionBackingRefusal(unbacked.length, priced.length),
+                )}
               </span>
             </RefusalMark>
             <ul className="mt-2 space-y-0.5">
@@ -667,6 +668,8 @@ export default async function MethodologyPage() {
           <table className="w-full text-meta">
             <caption className="sr-only">
               Realised return by age at the time of the trade, with sample size
+              and, for every bucket, the code naming why its ratio is not a
+              reading
             </caption>
             <thead>
               <tr className="text-secondary">
@@ -679,8 +682,17 @@ export default async function MethodologyPage() {
                 <th scope="col" className="py-1 pr-2 text-right font-semibold">
                   back per 100 paid
                 </th>
-                <th scope="col" className="py-1 text-right font-semibold">
+                <th scope="col" className="py-1 pr-2 text-right font-semibold">
                   biggest single deal
+                </th>
+                {/* THE COLUMN THAT MAKES THE OTHER THREE SAFE TO PRINT. Every row
+                    here is a refused reading, and before this column the only thing
+                    saying so was a paragraph underneath - so a reader who scanned the
+                    grid, or copied it, or heard it read out row by row, got four
+                    columns of figures with the refusal left behind on the page. The
+                    code travels in the row now (`bucket.refusal`, lib/refusal.js). */}
+                <th scope="col" className="py-1 text-left font-semibold">
+                  reading
                 </th>
               </tr>
             </thead>
@@ -699,8 +711,11 @@ export default async function MethodologyPage() {
                   <td className="figure py-1 pr-2 text-right text-secondary">
                     {b.n ? Math.round(b.ratio * 100) : "-"}
                   </td>
-                  <td className="figure py-1 text-right text-secondary">
+                  <td className="figure py-1 pr-2 text-right text-secondary">
                     {b.n ? `${Math.round(b.concentration * 100)}%` : "-"}
+                  </td>
+                  <td className="py-1 text-left text-faint">
+                    {b.refusal ? b.refusal.code : "calibrated"}
                   </td>
                 </tr>
               ))}
@@ -708,13 +723,27 @@ export default async function MethodologyPage() {
           </table>
         </div>
 
+        {/* THE REFUSAL WAS ALREADY IN THE DATA AND NOTHING RENDERED IT.
+            `deriveExitWindow` has returned a `refusal` since it was written, and this
+            page hand-wrote an equivalent paragraph beside it - so the sentence a reader
+            saw and the sentence the module produced could drift apart, and did (the
+            paragraph said every bucket fails on concentration; the module's own bar
+            fails most of them on count first). One string now, from the derivation,
+            with the code in front of it and the figure it declined to publish printed
+            immediately before the reason that figure cannot be trusted. */}
+        {market.refusal && (
+          <div className="mt-2">
+            <RefusalMark>
+              <span className="text-meta leading-snug text-secondary">
+                {refusalSentence(market.refusal)}
+              </span>
+            </RefusalMark>
+          </div>
+        )}
         <p className="mt-2 text-meta leading-snug text-secondary">
-          Every bucket fails the bar, and the last column is why. A bucket is
-          being asked to resolve an effect worth about five percent, and in
-          every one of them a single deal carries far more of the total than
-          that. So nothing in the model is calibrated against this table. It is
-          published because looking and finding nothing is a result, and because
-          the count of trades at each age is itself the thing worth knowing.
+          The table is published anyway, because looking and finding nothing is a
+          result, and because the count of trades at each age is itself the thing
+          worth knowing.
         </p>
         <p className="mt-2 text-meta leading-snug text-secondary">
           Two limits, stated rather than buried. Everything here is priced at

@@ -33,6 +33,7 @@ import { useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { CoherenceFragilityQuadrant } from "@/components/CoherenceFragilityQuadrant";
 import { MetricGloss } from "@/components/MetricGloss";
+import { RefusalMark } from "@/components/RefusalMark";
 import { WindowMap } from "@/components/WindowMap";
 import { BOARD_TABS, boardSearch, readBoard } from "@/lib/league/url";
 import { cn } from "@/lib/ui";
@@ -53,10 +54,6 @@ export function LeagueBoard({ windows, view }) {
       `${pathname}${boardSearch(search, next)}${hash}`,
     );
   }
-  const splits = windows.rows.filter((r) => r.state === "split").length;
-  const unreadable = windows.rows.filter(
-    (r) => r.state === "unreadable",
-  ).length;
   return (
     <div>
       <div
@@ -184,20 +181,21 @@ export function LeagueBoard({ windows, view }) {
             </p>
           )}
           {/* The COUNT of these is already in the synthesis above; what is not there,
-                and cannot be, is why the state is worth looking for. */}
-          {(splits > 0 || unreadable > 0) && (
-            <p className="mt-1 text-meta leading-snug text-secondary">
-              {splits > 0 && (
-                <>
-                  A roster drawn as two ends holds assets that disagree about
-                  when its value arrives, which is what makes it the most
-                  motivated trade partner on this board.
-                </>
-              )}
-              {unreadable > 0 && (
-                <> {unreadable} hold too few valued assets to place at all.</>
-              )}
-            </p>
+                and cannot be, is why the state is worth looking for.
+
+                THE WORDS USED TO LIVE HERE, interpolated with counts computed in this
+                component, and that was the bug lib/refusal.js was written for: two
+                sentences about data sufficiency, in this file's own words, matching
+                nothing the same conditions said anywhere else in the app and countable
+                by nothing downstream. `windowRefusalSummary` owns them now, code first,
+                and this is a render of a string the derivation produced. The mark is
+                the drawn half of that same refusal - see RefusalMark's docstring - and
+                deliberately the subordinate half: delete the glyph and the reading
+                survives intact, which is the acceptance test. */}
+          {windows.refusalSummary && (
+            <RefusalMark className="mt-1">
+              {windows.refusalSummary}
+            </RefusalMark>
           )}
           <MetricGloss metrics={["tci"]} className="mt-0.5" />
         </div>
