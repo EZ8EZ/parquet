@@ -212,6 +212,7 @@ app/                      Next.js App Router (all data pages force-dynamic)
   awards/                 league superlatives ("House of Cards" and friends)
   deals/                  every deal, and one receipt page per trade
   lineage/                one asset's provenance rail
+  depth/[team]/           one NBA team's Sleeper depth chart, anchored on a player
   ledger/ values/ rank/ recap/ methodology/ commissioner/ settings/ more/
   lab/                    experiments not promoted to the main flow (see below)
   api/{annotations,trade,custom-rank,search,digest-seen,viewing-as,
@@ -232,6 +233,7 @@ lib/
     skill.js              start rate, draft capture, trade value added
   gameplan/               diagnosis + concrete prescribed moves
   lineage/                traded pick -> the player it actually became
+  depth/                  Sleeper's NBA depth chart, sorted and never ranked
   superlatives/           league awards (behavioural + "On the merits")
   sleeperLinks.js         verified deep links back into the Sleeper app
   derive/                 per-manager behavioral derivation, descriptions, and

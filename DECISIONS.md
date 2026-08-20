@@ -4917,3 +4917,159 @@ place as a spare for a future LLM call, which is S4's exact failure mode and wou
 contradicted the rule D59 set in the same breath; deleting the LLM env vars from
 `.env.example` silently, which would leave an operator with a stale real `.env` no way
 to find out why nothing happens.
+
+---
+
+## D92. THE DEPTH CHART SLEEPER WAS ALREADY SENDING US - one field added, and the surface deliberately keyed to the TEAM rather than the player
+`lib/providers/sleeper/schemas.js` had parsed `depth_chart_order` since the first
+round and never `depth_chart_position`, which made the field it did parse unusable:
+**an order is an order WITHIN a position**, and on one live team in one payload the
+same integer 2 appears at PG, at SG and at C. Adding one string to the schema, the
+mapper and the `Player` typedef turns a number with no referent into a whole feature.
+`news_updated` came with it, because a fact shown without its age invites being read
+as current.
+
+**The measurement first, because every design decision below is downstream of it.**
+Taken against the live `/players/nba` payload on 2026-08-19 and written up in full in
+`API_NOTES.md`: 593 players are on an NBA team, 474 carry both depth fields, 119 carry
+neither, and **zero carry exactly one** - so the two fields are one fact and the app
+had been storing half of it. All 30 teams are covered, 12-19 charted players each.
+
+Then the part that decided the whole design. Across the 149 (team, position) groups:
+
+- **116 are NON-CONTIGUOUS.** LAL's centres are `1, 2, 5`. GSW's power forwards are
+  `1, 5, 6, 7, 8`. DAL's point guards are `1, 3`.
+- **43 contain a DUPLICATE order.** LAL lists two small forwards at `2`. BOS lists two
+  power forwards at `1`. MEM's centres come back `1, 2, 2, 5, 5`.
+- **18 have NO ORDER 1 AT ALL.** LAL's only listed power forward is a `2`.
+- **120 of the 474 charted players - a quarter - are charted away from their listed
+  position.** Bronny James is listed SG and charted PG; Anthony Davis is listed C and
+  charted PF; Jrue Holiday is listed PG and charted SG.
+
+**So the derivation sorts by the order and never indexes by it.** `lib/depth` publishes
+three lists - who is ahead, who is LEVEL (same integer), who is behind - plus a fourth
+for teammates the chart places without an order at all, who can be compared to nobody.
+There is no ordinal anywhere in the module and no page in Parquet says "third string",
+because on 43 groups that word would be a coin flip printed as a datum and on 116 more
+it would be arithmetic on a number that was never a count. This is D19 one layer down
+from where D19 was written: the inference available here is cheap, plausible and wrong,
+so it is refused and the gap is published instead. The tie-break inside a group is
+alphabetical **on purpose** - consensus rank was the obvious alternative and was
+rejected because it would have quietly converted "these two are level" into "the better
+player is listed higher", which the source does not say.
+
+Grouping is by `depthChartPosition`, never by `position`: for a depth chart the chart's
+own position is the answer, and at a quarter of charted players that is not a corner
+case. The listed position rides alongside as a fact worth showing ("listed SG").
+
+Adversarial cases, all tested: a player the payload puts on **two teams** (the fresher
+`news_updated` wins, so he appears on exactly one chart rather than two - a player has
+one team tonight and that is the one thing the source can never say twice); a
+**non-standard** chart position, kept and sorted after the five rather than dropped; a
+lowercase code, normalised at the provider so it cannot split a group; an **empty** team,
+a **one-player** team whose only order is a 2, and a team with no chart at all. 61 unit
+tests, and the fixtures are real reductions of live groups rather than invented tidy
+ones - a suite built on `1, 2, 3` would have passed against every wrong implementation.
+
+### WHERE THE SURFACE LIVES, which is the load-bearing decision in this entry
+`/depth/[team]?player=<id>` - a leaf route keyed by TEAM, with the player as a lens.
+Three placements were live and the other two lost on their merits:
+
+**An in-row expansion on /values and /roster.** `ValueAssetRow` already expands, so
+this was the cheapest option. It fails on arithmetic: a chart is 12-19 names in five
+groups, which at 390px is a row that grows to a screen and a half, and it would destroy
+the one property that expansion exists for - "open three rows and compare" (the
+component's own header has argued that since the multiplier readouts came out). What
+DOES fit in a row is the one-line fact, so that is exactly what went there.
+
+**A new `/player/[playerId]` page.** Tempting, since the app has no player page and
+this would have been the first. Rejected: the app already has a player-anchored page.
+`/lineage/[assetKey]` carries his crest, name, position, age, value and tier in its
+header, and a second page about the same subject is the failure this repo keeps
+recording (D62's one mark everywhere; the /drafts label drift). Worse, it is the wrong
+subject: a depth chart is not a fact about a player, it is a fact about his TEAM that
+mentions him. Keyed by player it would be nineteen pages showing the same fifteen
+names, none of them linkable as "the Lakers' chart".
+
+Keying by team also buys the thing that makes this feature Parquet's rather than a
+Sleeper mirror: **the league's own ownership is joined onto the NBA chart.** Every name
+carries who holds him here (your roster, a rival's team name, or "not held in this
+league") and links to that manager's dossier. An NBA depth chart is public; "two of
+these three centres are held in your league, one by the manager you are mid-trade with"
+is not, and it is a join, not an inference.
+
+**Not registered in `ALL_SURFACES`, and not given an index page nobody asked for.** It
+follows `/lineage/[assetKey]` exactly: a leaf reached from the rows where the question
+occurs. There is no reader question shaped like "show me a list of thirty NBA team
+codes", and the registry cannot hold a parameterised href anyway. What the registry
+DOES hold is a contract - two ways out of every surface, test-enforced - and a dynamic
+route is no excuse to reopen the dead-end bug that rule exists for, so
+`lib/depth/onward.js` computes the steps from what the page knows about its anchored
+player and `onward.test.js` pins the same five properties `lib/nav.test.js` pins on
+registered surfaces (two minimum, no repeats, no self-link, a why in the reader's voice
+with no em dash, and every registered destination's label taken FROM the registry
+rather than retyped). `e2e/depth.spec.js` then pins that they render as links.
+
+**Three entry points, all of them where the question actually occurs.** The row
+expansion on `/values` (260 rows) and `/roster` (17), which is one shared component so
+they cannot drift; and a chip on `/lineage/[assetKey]`, which is the page that has just
+answered "how did I get him" and leaves the reader holding "and what is his role now".
+The row's datum is a COUNT (`PG, 1 ahead`), never an ordinal, for the reason above.
+
+**Its own accessibility sweep, because the registry-driven one cannot see it.**
+`e2e/a11y.spec.js` iterates `ALL_SURFACES`, so an unregistered route gets zero coverage
+from it. Rather than let one surface sit outside the bar every other page is held to,
+`e2e/depth.spec.js` runs the same two passes that file runs (full axe in the default
+theme, contrast-only in light). The position groups are `<ul>`, never `<ol>`: an ordered
+list tells a screen reader these are items 1 through 5, which is precisely the ordinal
+the feature refuses to publish.
+
+### The fixture got real NBA teams, and that surfaced a real finding
+Fixture players carried `team: null` and `depthChartOrder: null`, which would have left
+this surface untestable end to end and invisible in `pnpm dev`. They now carry both,
+with the live data's defects reproduced deterministically: 93 groups, 35 with a tie, 35
+non-contiguous, 21% of players with no entry, 26% charted off-position.
+
+That change moved two existing tests, and neither is cosmetic:
+
+1. `lib/lab/counterfactual/counterfactual.test.js` asserted the fixture models no NBA
+   teams at all. It now builds that case by stripping teams explicitly - it still
+   matters, since the CSV provider's `team` column is optional - and asserts the
+   opposite of the fixture as shipped.
+2. `lib/metrics/fragility.test.js`'s calibration guard went from "at most 2 ties in 14"
+   to "at most 4". **The cause is worth stating precisely, because it is a finding about
+   the valuation model, not about fragility:** `roleMultiplier` in `lib/valuation` reads
+   `depthChartOrder`, every fixture player used to have none, so it returned `unknown`
+   for all 288 and **that code path had never once run in a fixture test**. It runs now.
+   The spread this guard exists to protect is unmoved at 34 points.
+
+**THE REAL FINDING, named and deliberately not fixed here.** `roleMultiplier` prices a
+player as `starter` at order <= 1, `secondary` at 2 and `bench` at 3+ - which is exactly
+the caveat-blind reading of the integer that `lib/depth` spends its header disproving.
+On live data that means LAL's only listed power forward is discounted to `secondary`
+for being a `2` with nobody ahead of him, and every player in the 18 groups that have
+no order 1 is discounted the same way. `depthChartPosition` now makes the correct
+question computable ("is anyone actually listed ahead of him at his charted position"),
+which this PR deliberately does NOT act on: changing it moves every value on every
+surface, and a value-model change does not belong in the same commit as the data layer
+that revealed it. It is the first thing to do next.
+
+**Also verified / rejected.** `pnpm lint`, `pnpm test` (1,132 passing), `pnpm build`
+clean with `/depth/[team]` in the route table, `pnpm e2e` 84/84. `pnpm typecheck` is
+**not** clean and was not clean before (D91 recorded 355 on `origin/main`; it is not in
+CI); this branch adds no error of its own beyond the same JSX-props noise every page in
+the app already produces, and the one real error it did introduce was fixed. No
+horizontal overflow and no clipped leaf text at 375 / 390 / 430 in both themes, measured
+rather than eyeballed. `components/PlayerAvatar.jsx` deliberately untouched (owned by a
+concurrent branch), and nothing here reads `lib/analyst`, which D91 shelved.
+
+**Rejected:** an ordinal anywhere ("2nd on the chart"), for the 43-group reason;
+rendering the raw order integer next to a name, which is the same mistake wearing a
+number instead of a word; a `/depth` index of thirty teams, which is a page shaped like
+the data rather than like a question; inferring anything about minutes, role or value
+from a slot, which is the whole thing D6 and D19 exist to prevent and which the surface
+says out loud that it is not doing; and **contract data**, researched separately and
+genuinely promising (Basketball-Reference's `/contracts/players.html` is fetchable, not
+robots-disallowed, ~462 rows, joins on normalised name at ~75%, ~90% with suffix
+handling) - it is a second source with its own staleness and matching story, and it does
+not belong in the commit that fixes the first source's missing field.

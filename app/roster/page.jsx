@@ -2,6 +2,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
+import { depthChartsByTeam, depthRowFor } from "@/lib/depth";
 import { leagueTimelines } from "@/lib/metrics/duration";
 import { leagueFragility, lineupSlots } from "@/lib/metrics/fragility";
 import { Card, PageHeader, SectionHeader, Tag } from "@/components/ui";
@@ -105,6 +106,9 @@ export default async function RosterPage() {
     const chain = buildProvenance(ctx, `p:${v.playerId}`);
     if (chain) provenance[v.playerId] = chain;
   }
+  // Where each of these players sits on his REAL team's chart. One index for the
+  // whole payload, seventeen O(1) reads off it (lib/depth).
+  const charts = depthChartsByTeam(h.players);
   const ages = a.valued.map((v) => v.age).filter((x) => x != null);
   const posData = a.byPosition.map((p) => ({
     label: p.pos,
@@ -602,6 +606,7 @@ export default async function RosterPage() {
             injuryDetail={v.injuryDetail}
             share={a.playerValue ? v.value / a.playerValue : 0}
             consensusRank={v.consensusRank}
+            depth={depthRowFor(charts, h.players.get(v.playerId))}
             trajectory={valueTrajectory(v)}
             // Young players' declining trajectory is just the age-curve premium unwinding,
             // not a warning - show it in muted color instead of red.

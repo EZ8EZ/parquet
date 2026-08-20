@@ -25,6 +25,7 @@ import { cachedValuePlayers } from "@/lib/valuation";
 import { leagueTiers, tierResolver } from "@/lib/rankings/tiers";
 import { assetPlayerId } from "@/lib/tradegraph";
 import { valuesFocusHref } from "@/lib/values/url";
+import { depthChartHref } from "@/lib/depth/url";
 import { fmtValue } from "@/lib/ui";
 export const dynamic = "force-dynamic";
 export default async function LineagePage({ params }) {
@@ -64,6 +65,7 @@ export default async function LineagePage({ params }) {
       tier = tierResolver(leagueTiers(desc))(v.value)?.label ?? null;
     }
   }
+  const depthHref = pid && player?.team ? depthChartHref(player.team, pid) : null;
   return (
     <div>
       <PageHeader
@@ -142,6 +144,20 @@ export default async function LineagePage({ params }) {
       </Card>
 
       <div className="mt-3 flex flex-wrap gap-1.5">
+        {/* WHERE HE SITS TONIGHT. This page answers "how did I get him"; the
+            question a reader holds immediately after that is "and what is his
+            actual role now", which is the one thing on the same subject that this
+            app can answer from a fact rather than a model. Rendered only when
+            Sleeper has him on an NBA team - a free agent has no chart to open. */}
+        {depthHref && player?.team && (
+          <Link
+            href={depthHref}
+            className="inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-surface px-3 text-note font-semibold leading-snug text-muted transition-colors hover:border-accent hover:text-accent-text"
+          >
+            Where he sits on {player.team}
+            <ChevronRight size={13} aria-hidden="true" />
+          </Link>
+        )}
         {pid && (
           <Link
             href={valuesFocusHref(pid)}

@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
+import { depthChartsByTeam, depthRowFor } from "@/lib/depth";
 import { cachedValuePlayers, injuryLabel } from "@/lib/valuation";
 import { leagueTiers, tierResolver } from "@/lib/rankings/tiers";
 import { ValuesList } from "@/components/ValuesList";
@@ -24,6 +25,10 @@ export default async function ValuesPage({ searchParams }) {
     .sort((a, b) => b - a);
   const tiers = leagueTiers(valuesDesc);
   const tierFor = tierResolver(tiers);
+  // Thirty charts built ONCE and read 260 times: `depthLineFor` off a prebuilt index
+  // is O(1) per row, where deriving per row would walk all 2,108 players 260 times
+  // (see lib/depth's `depthChartsByTeam`).
+  const charts = depthChartsByTeam(h.players);
   const sortedRows = [...h.players.values()]
     .map((p) => {
       const v = values.get(p.playerId);
@@ -50,6 +55,7 @@ export default async function ValuesPage({ searchParams }) {
           notes: p.injuryNotes,
         }),
         consensusRank: p.searchRank,
+        depth: depthRowFor(charts, p),
       };
     })
     .sort((a, b) => b.value - a.value);
