@@ -5,13 +5,16 @@ import {
   CURVE_SUPPORTED_MAX,
   CURVE_SUPPORTED_MIN,
   DERIVED_AGE_CURVE,
+  DERIVED_PRODUCTION,
   INJURY_CLASS_LABELS,
+  PRODUCTION_PROVENANCE,
   STAR_AGE_ADJUSTMENT,
   STAR_AGE_ADJUSTMENT_PROVENANCE,
   STAR_SEARCH_RANK_CUTOFF,
   ageMultiplier,
   firstCliffAge,
   pickValue,
+  cachedValuePlayers,
   positionMultipliers,
   slotValue,
 } from "@/lib/valuation";
@@ -28,6 +31,7 @@ import { LineChart } from "@/components/charts";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { Onward } from "@/components/Onward";
+import { RefusalMark } from "@/components/RefusalMark";
 export const dynamic = "force-dynamic";
 /**
  * TEN SECTIONS, EACH A DOOR. This page used to print every subsection's charts,
@@ -43,6 +47,7 @@ export const dynamic = "force-dynamic";
  */
 const SECTION_LINKS = [
   { id: "base", label: "1 · Base value" },
+  { id: "production", label: "1a · Production" },
   { id: "age", label: "2 · Age curve" },
   { id: "star", label: "2a · Star tier" },
   { id: "market", label: "2b · Market" },
@@ -79,6 +84,50 @@ export default async function MethodologyPage() {
     label: `#${rank}`,
     value: Math.round(cfg.maxValue * Math.exp(-cfg.rankDecay * (rank - 1))),
   }));
+  // PRODUCTION COVERAGE, counted off the live corpus rather than restated from the
+  // derivation's own run notes. The point of this page is that the model is auditable;
+  // a coverage claim a reader cannot check against today's rosters is not auditable.
+  // Free of extra cost: `cachedValuePlayers` is the same memoized map every other
+  // surface already reads (D25).
+  const valued = cachedValuePlayers(h);
+  const rosteredIds = [...new Set(h.rosters.flatMap((r) => r.players))];
+  const priced = rosteredIds
+    .map((id) => ({ id, v: valued.get(id), p: h.players.get(id) }))
+    .filter((x) => x.v);
+  const backed = priced.filter((x) => x.v.productionBacked);
+  const unbacked = priced.filter((x) => !x.v.productionBacked);
+  const backedPct = priced.length
+    ? Math.round((1000 * backed.length) / priced.length) / 10
+    : 0;
+  // The largest disagreements in each direction, which is the honest way to show what a
+  // 23% weight buys: not "values changed" in the abstract, but these players, by this
+  // much, for this reason.
+  // Sorted by the change in VALUE, not by the change in rank. Rank movement is a bad
+  // illustration here and it is worth saying why: `base` decays exponentially, so the
+  // same 80-place move is worth thousands of points at the top of the board and single
+  // digits at the bottom - ranking by places moved fills the list with deep-bench
+  // players nobody is pricing. The counterfactual value needs no second pass over the
+  // model: every multiplier is identical either way (the star-tier flag reads the RAW
+  // search rank on purpose), so the two values differ by exactly the ratio of their
+  // bases, which is one exponential.
+  const disagreements = backed
+    .map((x) => {
+      const wasValue = Math.round(
+        x.v.value * Math.exp(-cfg.rankDecay * ((x.v.searchRank ?? 0) - x.v.rank)),
+      );
+      return {
+        name: x.p?.fullName ?? x.id,
+        searchRank: x.v.searchRank,
+        rank: x.v.rank,
+        index: x.v.productionIndex,
+        value: x.v.value,
+        wasValue,
+        move: x.v.value - wasValue,
+      };
+    })
+    .filter((x) => x.searchRank != null);
+  const promoted = [...disagreements].sort((a, b) => b.move - a.move).slice(0, 5);
+  const demoted = [...disagreements].sort((a, b) => a.move - b.move).slice(0, 5);
   const ageExamples = [19, 22, 25, 28, 31, 34, 37];
   const cliff = firstCliffAge();
   const peakAnchor = Math.max(...cfg.ageAnchors.map(([, m]) => m));
@@ -183,11 +232,16 @@ export default async function MethodologyPage() {
 
       <Card className="mb-4">
         <p className="text-body leading-relaxed text-ink">
-          A player&apos;s dynasty value is a base value from consensus rank,
-          bent by four multipliers:
+          A player&apos;s dynasty value is a base value from a rank, bent by
+          four multipliers. The rank is part consensus opinion and part what he
+          has actually produced in this league:
         </p>
         <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-body text-accent-text">
           value = base(rank) × age × injury × role × position
+        </p>
+        <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-body text-accent-text">
+          rank = {Math.round((1 - cfg.productionWeight) * 100)}% consensus rank
+          + {Math.round(cfg.productionWeight * 100)}% in-league production
         </p>
       </Card>
 
@@ -216,6 +270,203 @@ export default async function MethodologyPage() {
           </span>
         </p>
         <LineChart data={baseExamples} format={(n) => n.toLocaleString()} />
+      </Card>
+      </Subsection>
+
+      <Subsection id="production" title="1a · In-league production" defaultOpen>
+      <Card>
+        <p className="text-body leading-relaxed text-muted">
+          The rank above used to be Sleeper&apos;s <span className="text-ink">search_rank</span>{" "}
+          and nothing else. That is a <span className="text-ink">redraft popularity
+          ordinal</span> - how eagerly people draft a player this year - and it is not a
+          measurement of how anyone played. Every other number in this app descended from
+          it, so the model priced assets without a single per-player input about
+          production.
+        </p>
+        <p className="mt-3 text-body leading-relaxed text-muted">
+          It now blends in what a player has actually banked{" "}
+          <span className="text-ink">here</span>. This league runs Sleeper&apos;s lock-in
+          format, so a week&apos;s score is one game, and the index is the mean points a
+          player banked per rostered week - zeros included, because a week on a roster
+          that scored nothing is a real zero - normalised so{" "}
+          <span className="font-mono text-ink">1.000</span> is an average qualifying
+          player-season, across{" "}
+          {PRODUCTION_PROVENANCE.seasons.slice().reverse().join(" and ")} at{" "}
+          {PRODUCTION_PROVENANCE.recency.join(" / ")}. That is{" "}
+          {PRODUCTION_PROVENANCE.playerWeeks.toLocaleString()} player-weeks across{" "}
+          {PRODUCTION_PROVENANCE.playerSeasons} player-seasons, read once offline and
+          committed as a table of {DERIVED_PRODUCTION.length} players.
+        </p>
+      </Card>
+
+      <Card className="mt-2">
+        <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
+          The weight is {Math.round(cfg.productionWeight * 100)}%, and the first
+          measurement said zero
+        </h3>
+        <p className="mt-2 text-body leading-relaxed text-muted">
+          Asked the obvious question first: does past production here predict{" "}
+          <span className="text-ink">next season&apos;s</span> production better than the
+          consensus ordinal does? It does not, and it is not close - the ordinal scored
+          ρ 0.590 against production&apos;s 0.420, and the partial correlation of
+          production given the ordinal was −0.05. Sleeper&apos;s number is a live human
+          forecast that already knows about injuries, trades and role changes. On a
+          one-season question it wins.
+        </p>
+        <p className="mt-3 text-body leading-relaxed text-muted">
+          But a dynasty value is not a one-season question. Re-run against the discounted
+          sum of the <span className="text-ink">following three seasons</span> - counting
+          a season a player did not produce in as a zero, the same survivorship rule the
+          age curve uses - and production carries information the ordinal does not:
+          partial ρ <span className="font-mono text-ink">0.412</span> (n 243, z 6.4),
+          lifting R² from 0.790 to 0.826. The standardised weight that falls out is{" "}
+          <span className="font-mono text-ink">0.233</span>, and that is the weight used,
+          unrounded.
+        </p>
+        <p className="mt-3 text-body leading-relaxed text-muted">
+          It is a floor rather than a best guess, for one reason worth stating: the
+          consensus snapshot is from today and the target window is already over, so the
+          incumbent was scored <span className="text-ink">with hindsight</span> over the
+          thing it was predicting and production was not.
+        </p>
+      </Card>
+
+      <Card className="mt-2">
+        <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
+          It changes who sits where, never the scale
+        </h3>
+        <p className="mt-2 text-body leading-relaxed text-muted">
+          Production is not a fifth multiplier. The two ranks are blended as percentiles,
+          the blendable players are re-ordered, and each is then handed the rank belonging
+          to his new position <span className="text-ink">in that same set</span>. The
+          ranks coming out are exactly the ranks that went in, reshuffled - so the
+          collection of values in this league is unchanged and only the assignment moves.
+          Nothing was rescaled, which is deliberate: production earned a claim about who
+          should be ahead of whom, and no claim at all about what a dynasty asset is worth
+          in points.
+        </p>
+        <div className="mt-3 grid gap-3 sm:grid-cols-2">
+          <div>
+            <p className="text-meta font-semibold uppercase tracking-[0.14em] text-muted">
+              Production says higher
+            </p>
+            <ul className="mt-1 space-y-0.5">
+              {promoted.map((d) => (
+                <li key={d.name} className="text-body text-muted">
+                  <span className="text-ink">{d.name}</span> · #{d.searchRank} →
+                  #{d.rank}
+                  <span className="text-faint">
+                    {" "}
+                    · {d.wasValue.toLocaleString()} →{" "}
+                    {d.value.toLocaleString()} · index {d.index?.toFixed(2)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+          <div>
+            <p className="text-meta font-semibold uppercase tracking-[0.14em] text-muted">
+              Production says lower
+            </p>
+            <ul className="mt-1 space-y-0.5">
+              {demoted.map((d) => (
+                <li key={d.name} className="text-body text-muted">
+                  <span className="text-ink">{d.name}</span> · #{d.searchRank} →
+                  #{d.rank}
+                  <span className="text-faint">
+                    {" "}
+                    · {d.wasValue.toLocaleString()} →{" "}
+                    {d.value.toLocaleString()} · index {d.index?.toFixed(2)}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+      </Card>
+
+      <Card className="mt-2">
+        <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
+          Which prices rest on production, and which do not
+        </h3>
+        <p className="mt-2 text-body leading-relaxed text-muted">
+          Of the {priced.length} players currently rostered in this league,{" "}
+          <span className="text-ink">{backed.length}</span> ({backedPct}%) are priced with
+          a real production record. {unbacked.length === 0 ? "Every one of them is." : null}
+        </p>
+        {unbacked.length > 0 ? (
+          <div className="mt-3">
+            <RefusalMark>
+              <span className="text-body leading-relaxed text-muted">
+                {unbacked.length === 1
+                  ? "One rostered player has"
+                  : `${unbacked.length} rostered players have`}{" "}
+                no eight-week record in this league, so{" "}
+                {unbacked.length === 1 ? "he is" : "they are"} priced on the consensus
+                ordinal alone. That is a stated fallback, not a guess: no production
+                number is invented for{" "}
+                {unbacked.length === 1 ? "him" : "them"}, and none is treated as zero.
+              </span>
+            </RefusalMark>
+            <ul className="mt-2 space-y-0.5">
+              {unbacked.map((x) => (
+                <li key={x.id} className="text-body text-muted">
+                  <span className="text-ink">{x.p?.fullName ?? x.id}</span>
+                  <span className="text-faint">
+                    {" "}
+                    · consensus #{x.v.searchRank} · value{" "}
+                    {x.v.value.toLocaleString()}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
+        <p className="mt-3 text-body leading-relaxed text-muted">
+          That share is high for a temporary reason: the {h.currentLeague.season} rookie
+          draft has not run yet, so every roster is still last season&apos;s roster. Once
+          it runs, every rookie taken will be a player this table cannot price. Being
+          absent from it says nothing about a player - this league holds around{" "}
+          {h.rosters.length * 19} roster spots against roughly 500 NBA players who play
+          real minutes, so absence is a fact about fourteen managers, not about him.
+        </p>
+      </Card>
+
+      <Card className="mt-2">
+        <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
+          What it is confounded by
+        </h3>
+        <ul className="mt-2 space-y-2">
+          <li className="text-body leading-relaxed text-muted">
+            <span className="text-ink">Opportunity.</span> Minutes are in here. A player
+            on a bad team who plays 34 minutes outscores a better player on a deep team
+            who plays 22. For a price that is mostly right - fantasy points are what you
+            buy - but it is not a talent measure and should not be read as one.
+          </li>
+          <li className="text-body leading-relaxed text-muted">
+            <span className="text-ink">The manager&apos;s lock.</span> In a lock-in league
+            the owner picks which game counts, so a started week is production filtered
+            through one manager&apos;s choice. Averaging over a season dilutes that; it
+            does not remove it.
+          </li>
+          <li className="text-body leading-relaxed text-muted">
+            <span className="text-ink">Who got rostered.</span> Only players someone
+            rostered here appear, only for the seasons they were rostered. The seasons in
+            a player&apos;s index were chosen by managers, not by us.
+          </li>
+          <li className="text-body leading-relaxed text-muted">
+            <span className="text-ink">Injury, and this one overlaps the injury term.</span>{" "}
+            A player hurt for eleven weeks banked eleven zeros, so production charges him
+            for an absence the injury multiplier is also looking at. Measured: 12 of the
+            20 largest drops carry a current injury flag, against 4 expected by chance.
+            The two terms are not measuring the same thing - the injury multiplier prices
+            the forward risk in a current flag and sits near 1.0 for most of them, while
+            production records output that did not happen - but on an injured player they
+            point the same way, and the combined effect is the largest single limitation
+            here. It is stated rather than smoothed, and it is the first thing to
+            re-measure.
+          </li>
+        </ul>
       </Card>
       </Subsection>
 
