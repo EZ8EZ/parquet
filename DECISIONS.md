@@ -6574,3 +6574,49 @@ states a position, never a recommendation.
 `pnpm lint`, `pnpm test` (1,222 tests pre-rebase, 1,292 against the true `main` tip after
 it), `pnpm build`, and `pnpm e2e` (81) all clean, verified both before and after rebasing
 onto the concurrently-merged sibling rounds.
+
+## D103. PRISMA 7, AND THE TWO DEPENDABOT PRS THAT COULD NOT BE TESTED ALONE - a driver adapter, a config file Migrate reads and generate does not, and D18's no-database mode verified to still hold
+
+**What broke, and why it looked like two different failures.** Dependabot opened
+`@prisma/client` 6.19.3→7.9.1 and `prisma` 6.19.3→7.9.1 as two SEPARATE PRs (#37, #36).
+Testing either alone is guaranteed to fail, because the two packages are not
+independently versioned in practice: PR #37 (client bumped, CLI not) failed
+`prisma generate` with `Cannot find module '.../query_engine_bg.postgresql.wasm-base64.js'`
+- the v6 CLI writing a client shape the v7 package's runtime no longer has a matching
+file for. PR #36 (CLI bumped, client not) failed with a real Prisma 7 schema-validation
+error instead, which is the one that actually mattered once both packages moved together.
+
+**The real breaking change, read off the CI log rather than assumed from training data.**
+Prisma 7 error P1012: `The datasource property 'url' is no longer supported in schema
+files.` Connection config splits in two: `prisma.config.mjs` for Migrate/`db push`, and an
+explicit driver adapter passed to the `PrismaClient` constructor for the app's own runtime
+client - a bare `DATABASE_URL` string is no longer enough for either.
+
+**Three changes, verified in order rather than written from the migration guide alone:**
+1. `prisma/schema.prisma`'s `datasource` block drops `url`. Confirmed `prisma generate`
+   needs nothing else - it does not read `prisma.config.mjs` at all, only Migrate does.
+2. `lib/db.js` now builds `new PrismaPg({ connectionString: process.env.DATABASE_URL })`
+   and passes it as `adapter` to `PrismaClient`. Checked directly rather than assumed:
+   constructing `PrismaPg` with an `undefined` connection string does not throw, so D18's
+   "no database configured" mode still degrades on the first real query rather than on
+   module load - confirmed by the full `app/api/annotations/route.test.js` suite passing
+   unchanged, including its explicit "no database" and "database rejected" cases.
+3. `prisma.config.mjs` added at the repo root (`.mjs`, not `.ts` - the app carries no
+   TypeScript source since D87/D89, and Prisma's config loader accepts either). Read only
+   by `db:push`/`bootstrap`; verified by running `db:push` against a fabricated
+   `localhost:5432` URL and confirming the error changes from a config-validation failure
+   to `P1001: Can't reach database server` - the config is being read, and the remaining
+   failure is only the absence of a real Postgres in this sandbox.
+4. `@prisma/adapter-pg` added as a direct dependency (pulls in `pg` transitively; no
+   separate `pg` dependency added).
+
+**Not touched:** the schema's four models, the CI workflow's placeholder `DATABASE_URL`
+(still syntactically valid, still never connects), and every write-path error-handling
+contract in `lib/db.js` (`databaseConfigured`, `describeDbError`) - none of it reads
+Prisma's internal client shape, only the error's `code`/`message` fields.
+
+### Gate
+`pnpm lint`, `pnpm test` (1,380), `pnpm build`, and `pnpm e2e` (81) all clean against
+matched `prisma`/`@prisma/client` 7.9.1. `prisma generate` and `prisma db push` both
+exercised directly (the latter confirmed reaching the network step, not merely passing
+config validation) rather than inferred from the test suite alone.
