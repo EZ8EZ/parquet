@@ -336,10 +336,17 @@ details[open] .disclosure-body {
  *
  * `--arrive-delay` is a per-element stagger for the list case (`ValueAssetRow` in
  * `components/ValuesList.jsx`, used by both /values and /roster): each row's own
- * inline style sets it, capped short so a 60-row page settles inside half a second
- * rather than visibly queueing. Sites with nothing to stagger (the ledger's
- * captured quote) just don't set it and get 0ms - one declaration, two jobs, no
- * second keyframe.
+ * inline style sets it - first ~8 rows at 30ms steps, VISION.md M8's register,
+ * capped so a 60-row page settles inside half a second rather than visibly
+ * queueing. Sites with nothing to stagger (the ledger's captured quote) just
+ * don't set it and get 0ms - one declaration, two jobs, no second keyframe.
+ *
+ * THIS IS M8's FIRST SIGNATURE MOMENT (VISION.md), and the register is CLOSED:
+ * the staggered entrance, the evaluator's receipt reveal (`.receipt` below), and
+ * the one-time tier sheen (`.tier-sheen` below) are the three choreographies this
+ * app has, plus the two small pre-register confirmations this same round shipped
+ * (the ledger quote's `.arrive`, `.copy-pop`). A fourth signature moment needs
+ * its own decision entry, per M8's own house rule.
  *
  * THIS IS DISABLED OUTRIGHT UNDER REDUCED MOTION, NOT REDUCED TO OPACITY like the
  * press-feedback and disclosure blocks above. That is a deliberate departure from
@@ -395,6 +402,105 @@ details[open] .disclosure-body {
 }
 @media (prefers-reduced-motion: reduce) {
   .copy-pop {
+    animation: none;
+  }
+}
+
+/*
+ * ======================= THE RECEIPT (M8, moment two) =======================
+ *
+ * The trade evaluator's result revealing top-to-bottom, one section at a time,
+ * like a receipt printing - VISION.md M8's second signature moment, and the one
+ * place in the app where sequence IS the content: the evaluation is built to be
+ * read in order (the number, then each side, then the bets, then the assumption,
+ * then your own history), and until now the whole stack appeared in one frame,
+ * which buried that order.
+ *
+ * Same `arrive` keyframe and spring as everything else - one vocabulary - with
+ * per-child delays. `:nth-child()` enumeration rather than a JS-assigned index:
+ * the receipt is a bounded, hand-countable stack (a value card, four to seven
+ * thesis blocks, the counterparty card, the Sleeper CTA - eleven children at its
+ * absolute fullest), so twelve declarations cover every real case and there is
+ * nothing for a component to compute. 70ms steps: fast enough that the full
+ * stack settles inside a second, slow enough that the top-to-bottom order is
+ * actually visible, which is the entire point.
+ *
+ * The container is keyed per evaluation in `TradeBuilder.jsx`, so re-evaluating
+ * the same deal reprints the receipt - a new answer arrives like a new answer -
+ * while mere re-renders of the same result never replay it.
+ *
+ * Disabled outright under reduced motion, same reasoning as `.arrive`: the
+ * sections carry their order in their layout either way; the print is theater.
+ */
+.receipt > * {
+  animation: arrive var(--motion-base) var(--ease-spring) both;
+}
+.receipt > :nth-child(1) { animation-delay: 0ms; }
+.receipt > :nth-child(2) { animation-delay: 70ms; }
+.receipt > :nth-child(3) { animation-delay: 140ms; }
+.receipt > :nth-child(4) { animation-delay: 210ms; }
+.receipt > :nth-child(5) { animation-delay: 280ms; }
+.receipt > :nth-child(6) { animation-delay: 350ms; }
+.receipt > :nth-child(7) { animation-delay: 420ms; }
+.receipt > :nth-child(8) { animation-delay: 490ms; }
+.receipt > :nth-child(9) { animation-delay: 560ms; }
+.receipt > :nth-child(10) { animation-delay: 630ms; }
+.receipt > :nth-child(11) { animation-delay: 700ms; }
+.receipt > :nth-child(n + 12) { animation-delay: 770ms; }
+@media (prefers-reduced-motion: reduce) {
+  .receipt > * {
+    animation: none;
+  }
+}
+
+/*
+ * ======================= THE TIER SHEEN (M8, moment three) =======================
+ *
+ * A one-time light pass across a Franchise or Cornerstone card as it scrolls into
+ * view - VISION.md M8's third signature moment, and the only motion in the app that
+ * exists purely to say "this row is one of the few that matter." The tier word
+ * already says it in text; the sheen makes it FELT once, then never again.
+ *
+ * The element is a skewed accent-alpha gradient band (`color-mix` into transparent -
+ * an alpha move over the one accent, zero new hues, the same argument D64 recorded)
+ * that translates across the card and parks past its right edge, clipped by the
+ * row's own `overflow-hidden`. Transform-only, so it composites. Mounted by
+ * `ValueAssetRow` only after its one-shot IntersectionObserver fires - the mount is
+ * the trigger, the observer disconnects, and the state never resets, which is what
+ * makes "one-time" a mechanism rather than a hope.
+ *
+ * 650ms with a 150ms lead-in: longer than the interaction ceiling this file's
+ * header sets, deliberately - that ceiling is about answering INPUT, and this
+ * answers nothing; it is a decoration with a schedule, and at interaction speeds
+ * a sheen reads as a glitch rather than a glint. The delay lets the row's own
+ * `.arrive` settle first when both fire on the same paint (the top rows of
+ * /values are in view at load, so both do).
+ *
+ * Removed outright under reduced motion - the base transform parks it off-card
+ * and clipped, so with the animation gone it simply never appears. Pure
+ * decoration; nothing is lost.
+ */
+@keyframes tier-sheen {
+  from { transform: translateX(-120%) skewX(-14deg); }
+  to { transform: translateX(340%) skewX(-14deg); }
+}
+.tier-sheen {
+  position: absolute;
+  inset-block: 0;
+  left: 0;
+  width: 38%;
+  pointer-events: none;
+  background: linear-gradient(
+    105deg,
+    transparent,
+    color-mix(in srgb, var(--color-accent) 13%, transparent) 50%,
+    transparent
+  );
+  transform: translateX(-120%) skewX(-14deg);
+  animation: tier-sheen 650ms var(--ease-out) 150ms both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .tier-sheen {
     animation: none;
   }
 }
