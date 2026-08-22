@@ -1040,3 +1040,138 @@ a[role="button"],
   box-shadow: 0 0 0 1px var(--color-border-strong);
   cursor: pointer;
 }
+
+/*
+ * ============================================================================
+ * THE DATA-SURFACE DEPTH KIT (round 10, "make the numbers feel alive").
+ *
+ * NEW BLOCK, appended rather than woven into the token sections above - three
+ * parallel sessions share this file and an additive block merges; a rewrite of
+ * the sections above does not.
+ *
+ * The owner's third flag on the same wound: the data pages are "clean, dense,
+ * correct - and flat." Every row weighed the same, every card sat on the same
+ * ground, and the one number a page exists to deliver was set in the same 13px
+ * as its own chrome. This kit is the shared vocabulary the data surfaces
+ * (/rank, /roster, and the shared asset row) use to break that sameness:
+ *
+ *   --text-hero    the ONE number that anchors a data surface (a roster's total
+ *                  value, the blend weight, a trade's delta). 44px against a
+ *                  30px masthead: Apple Fitness and the Sofascore rating hero
+ *                  both set the anchor DATUM well above the page title, because
+ *                  on a data surface the number IS the headline. This is a
+ *                  seventh type role, added deliberately against the "six steps
+ *                  are the whole scale" note above: the six-step scale had no
+ *                  size at which a datum outranks the masthead, and reusing
+ *                  --text-display for both is how every hero number in the app
+ *                  ended up exactly as loud as every page title. Used ONLY via
+ *                  `text-hero`, only on figures, never on prose.
+ *
+ *   .glass         sticky chrome that genuinely floats over scrolling data
+ *                  (the /values filter bar). Translucent ground + blur +
+ *                  saturate is the one depth cue borders cannot give, and it is
+ *                  scoped to chrome that overlaps content - never to cards,
+ *                  which still separate by surface (see the DEPTH note above).
+ *
+ *   .hero-card     the raised, gold-washed ground for a hero moment: an
+ *                  opaque surface with a single radial wash of the accent in
+ *                  its top corner (gradient-within-hue, so it costs nothing
+ *                  against the one-accent rule) plus the existing edge
+ *                  catchlight. Vercel's dashboard cards use exactly this
+ *                  corner-spot to make one card read as the headline without
+ *                  a second hue.
+ *
+ *   .ghost-rank    an oversized, near-ground ordinal behind a hero row's
+ *                  content - depth via layering rather than shadow. Alpha is
+ *                  low enough that it never competes with text on top of it
+ *                  (it is aria-hidden decoration restating a rank the row
+ *                  already prints).
+ *
+ * Both themes restate the four alphas below; nothing here introduces a hue the
+ * theme does not already own.
+ */
+@theme {
+  --text-hero: 44px;
+  --glass-bg: rgba(11, 12, 14, 0.72);
+  --hero-spot: rgba(230, 179, 77, 0.16);
+  --hero-spot-faint: rgba(230, 179, 77, 0.05);
+  --ghost-ink: rgba(230, 179, 77, 0.13);
+}
+:root[data-theme="light"] {
+  --glass-bg: rgba(246, 244, 240, 0.78);
+  --hero-spot: rgba(122, 88, 16, 0.13);
+  --hero-spot-faint: rgba(122, 88, 16, 0.04);
+  --ghost-ink: rgba(122, 88, 16, 0.12);
+}
+
+.glass {
+  background-color: var(--glass-bg);
+  -webkit-backdrop-filter: blur(14px) saturate(1.5);
+  backdrop-filter: blur(14px) saturate(1.5);
+}
+
+.hero-card {
+  background-color: var(--color-surface);
+  background-image:
+    radial-gradient(120% 90% at 100% 0%, var(--hero-spot), transparent 58%),
+    linear-gradient(180deg, var(--hero-spot-faint), transparent 45%);
+  box-shadow: var(--edge-hilite);
+}
+
+.ghost-rank {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 3.25rem;
+  z-index: 0;
+  font-family: var(--font-display);
+  font-weight: 700;
+  font-size: 88px;
+  line-height: 1;
+  letter-spacing: -0.04em;
+  color: var(--ghost-ink);
+  pointer-events: none;
+  user-select: none;
+}
+
+/*
+ * THE PRINT LEDGER'S CARD STOCK (VISION.md M1, fork resolved as B by the owner).
+ *
+ * Basketball-card grammar, Fleer '86 -> Prizm: tier is carried by the card's
+ * MATERIAL - border, keyline, finish - never by a printed grade (D6-safe: the
+ * tier is already the model's published output; this only lets the stock say
+ * what the right-hand label already says). The ladder, top to bottom:
+ *
+ *   .stock-franchise    double keyline (border, 2px gap, 1px inner line) plus a
+ *                       restrained diagonal sheen - the gold /10 parallel
+ *   .stock-cornerstone  single gold keyline, no sheen
+ *   (plain stock)       every middle tier - the base card, today's row
+ *   .stock-fringe       uncoated: flat, borderless, the page's own ground
+ *
+ * The double keyline is drawn with two inset ring-shadows (a bg-colored 2px ring
+ * under a 3px accent ring leaves exactly a 1px line, 2px inside the border),
+ * which costs no layout and no extra node. The sheen is the depth kit's own
+ * hero wash at its faint stop - gradient-within-hue, nothing new against the
+ * one-accent rule.
+ */
+.stock-franchise {
+  border-color: var(--color-accent-edge);
+  background-color: var(--color-surface);
+  background-image: linear-gradient(
+    160deg,
+    var(--hero-spot-faint),
+    transparent 45%
+  );
+  box-shadow:
+    inset 0 0 0 2px var(--color-surface),
+    inset 0 0 0 3px var(--color-accent-edge),
+    var(--edge-hilite);
+}
+.stock-cornerstone {
+  border-color: var(--color-accent-edge);
+  background-color: var(--color-surface);
+}
+.stock-fringe {
+  border-color: transparent;
+  background-color: transparent;
+}

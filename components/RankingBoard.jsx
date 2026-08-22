@@ -20,7 +20,7 @@
  * turns a drag into an ordered id list and hands it to `customSource()`.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GripVertical, RotateCcw } from "lucide-react";
+import { GripVertical, RotateCcw, Search } from "lucide-react";
 import {
   applyRanks,
   blendSources,
@@ -38,9 +38,9 @@ import {
   reorder,
   syncCustomOrder,
 } from "@/lib/rankings/customOrder";
-import { Card, DeltaValue, EmptyState, SectionHeader } from "@/components/ui";
+import { Card, EmptyState, SectionHeader } from "@/components/ui";
 import { PlayerAvatar, photosEnabled } from "@/components/PlayerAvatar";
-import { cn, fmtValue } from "@/lib/ui";
+import { cn, fmtValue, fold } from "@/lib/ui";
 // Row pitch: 64px row (h-16) + 4px gap (gap-1). The drag math below assumes
 // every row is exactly this tall, so if the row markup's height classes ever
 // change, this constant has to move with them.
@@ -54,6 +54,13 @@ import { cn, fmtValue } from "@/lib/ui";
 const ROW_HEIGHT = 64;
 const ROW_GAP = 4;
 const ROW_PITCH = ROW_HEIGHT + ROW_GAP;
+/**
+ * How much of the board stands on the page at rest (VISION kill list, item 5).
+ * The full pool still exists - saved, blended, and priced identically - but the
+ * page renders your top slice plus whatever search has pulled into view: nobody
+ * hand-ranks 120 assets on a phone; they disagree with the model about ~15.
+ */
+const WORKING_SET = 25;
 /**
  * How long to wait before persisting the order into the cookie.
  *
@@ -89,6 +96,37 @@ export function RankingBoard({ players, scoring }) {
   const [weight, setWeight] = useState(50);
   const [resetArmed, setResetArmed] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
+  // The working set: how many rows the page currently stands up. Search grows it
+  // just far enough to land on the row it found; the buttons below grow it in
+  // pages or all at once. Never shrinks a drag out from under a finger - only
+  // user taps change it.
+  const [limit, setLimit] = useState(WORKING_SET);
+  const [q, setQ] = useState("");
+  const [flashId, setFlashId] = useState(null);
+  const shownCount = Math.min(limit, order.length);
+  const matches = useMemo(() => {
+    const s = fold(q.trim());
+    if (!s) return [];
+    return order
+      .map((id, idx) => ({ id, idx, p: playersById.get(id) }))
+      .filter((m) => m.p && fold(m.p.fullName).includes(s))
+      .slice(0, 8);
+  }, [q, order, playersById]);
+  const jumpTo = useCallback((id, idx) => {
+    setLimit((l) => Math.max(l, idx + 1));
+    setQ("");
+    setFlashId(id);
+  }, []);
+  // Scroll to the row search landed on, once it is rendered, and let the ring
+  // fade the same way /values' ?focus arrival does.
+  useEffect(() => {
+    if (!flashId) return;
+    document
+      .getElementById(`rank-li-${flashId}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => setFlashId(null), 1600);
+    return () => clearTimeout(t);
+  }, [flashId]);
   // Read the saved order once, after hydration - never on the server render, so
   // the first client paint matches the server's and React has nothing to warn
   // about. The cookie is the store (see lib/rankings/customOrder.ts); the
@@ -119,9 +157,13 @@ export function RankingBoard({ players, scoring }) {
   // pagehide) always see the latest order without re-subscribing per drag.
   const orderRef = useRef(order);
   const customizedRef = useRef(customized);
+  // Same pattern for the drag handler's clamp: a ref, so mid-drag pointermove
+  // never runs against a stale working-set size and never resubscribes per tap.
+  const limitRef = useRef(limit);
   useEffect(() => {
     orderRef.current = order;
     customizedRef.current = customized;
+    limitRef.current = limit;
   });
   const lastWrittenRef = useRef(null);
   // Persist the order into the cookie - the one store, and the only form a
@@ -223,7 +265,14 @@ export function RankingBoard({ players, scoring }) {
       if (!info || e.pointerId !== info.pointerId) return;
       const deltaY = e.clientY - info.startClientY;
       const rawHover = info.startIndex + Math.round(deltaY / ROW_PITCH);
-      const hoverIndex = Math.max(0, Math.min(order.length - 1, rawHover));
+      // Clamped to the VISIBLE slice, not the whole order: the rows below the
+      // working-set cut are not on screen, so letting a drag cross the cut would
+      // drop the row somewhere the finger cannot see. Expanding the list first
+      // (search or "show more") makes the deeper slots reachable.
+      const hoverIndex = Math.max(
+        0,
+        Math.min(Math.min(order.length, limitRef.current) - 1, rawHover),
+      );
       // The row has already reflowed by (hoverIndex - startIndex) pitches once
       // the last setOrder below commits. Subtracting that out of the transform
       // keeps the row's ON-SCREEN position exactly `deltaY` from where the drag
@@ -281,6 +330,12 @@ export function RankingBoard({ players, scoring }) {
     () => computeDisagreements(custom, consensus, playersById).slice(0, 12),
     [custom, consensus, playersById],
   );
+  // The board's #1 value: the shared scale every row's bottom bar is drawn
+  // against (see the row markup below).
+  const boardMax = useMemo(
+    () => Math.max(...[...values.values()].map((x) => x.value), 1),
+    [values],
+  );
   const movedCount = useMemo(
     () => order.reduce((n, id, i) => (id !== poolIds[i] ? n + 1 : n), 0),
     [order, poolIds],
@@ -309,16 +364,24 @@ export function RankingBoard({ players, scoring }) {
         />
       </dl>
 
-      <Card className="mt-2.5">
-        <div className="flex items-center justify-between gap-2">
+      {/* THE PAGE'S OWN INSTRUMENT (round 10). The blend weight is the one control
+          this surface exists for, and it was set in the same 16px as a stat cell.
+          Hero treatment: the shared gold-washed ground (hero-card, see globals.css)
+          and the weight at --text-hero - the number IS this page's headline. */}
+      <Card className="hero-card mt-2.5">
+        <div className="flex items-end justify-between gap-2">
           <label
             htmlFor="blend-weight"
-            className="text-[12px] font-semibold uppercase tracking-[0.16em] text-muted"
+            className="pb-1 text-[12px] font-semibold uppercase tracking-[0.16em] text-muted"
           >
             Blend weight
+            <span className="mt-0.5 block normal-case tracking-normal text-secondary">
+              yours vs consensus
+            </span>
           </label>
-          <span className="figure text-base font-semibold text-accent">
-            {weight}%
+          <span className="figure text-hero font-semibold leading-none text-accent-text">
+            {weight}
+            <span className="text-lede font-semibold text-muted">%</span>
           </span>
         </div>
         <input
@@ -332,7 +395,10 @@ export function RankingBoard({ players, scoring }) {
           aria-label="Blend weight: percent your ranking versus consensus"
           className="weight-slider mt-2.5 h-11 w-full cursor-pointer rounded-full bg-elevated"
           style={{
-            background: `linear-gradient(to right, var(--color-accent) ${weight}%, var(--color-elevated) ${weight}%)`,
+            // COURT BLUE (VISION M4): the track IS a you-vs-the-field comparison -
+            // your share of the blend in gold, consensus's share in the field
+            // hue's wash. Same numbers, one more honest channel.
+            background: `linear-gradient(to right, var(--color-accent) ${weight}%, var(--color-info-wash) ${weight}%)`,
           }}
         />
         <p className="mt-1.5 text-meta leading-snug text-muted">
@@ -359,17 +425,72 @@ export function RankingBoard({ players, scoring }) {
         }
       />
       <p className="-mt-1 mb-1.5 text-meta leading-snug text-faint">
-        Drag the handle to reorder. Your position in this list is your rank;
-        everything else on the page follows it.
+        Drag the handle to reorder - your position in this list is your rank.
+        Nobody hand-ranks {order.length} players: the board shows your top{" "}
+        {WORKING_SET}, and search pulls anyone else into view.
       </p>
 
+      {/* THE FINDER (VISION kill list, item 5). The 120-row wall is gone as the
+          primary surface: you disagree with the model about the assets you care
+          about, so the board is a working set plus a search that jumps straight
+          to any player - expanding the list only as far as that row. The feature
+          (the full order, the cookie, the finder's conviction line) is untouched;
+          only how much of it stands on the page at once changed. */}
+      <div className="relative mb-1.5">
+        <Search
+          size={15}
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"
+        />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={`Find any of the ${order.length} to rank him`}
+          aria-label="Find a player on the board"
+          className="h-11 w-full rounded-full border border-border bg-surface pl-9 pr-3 text-sm text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
+        />
+        {q.trim() && (
+          <ul className="mt-1 space-y-0.5 rounded-[--radius-sm] border border-border bg-surface p-1">
+            {matches.length === 0 && (
+              <li className="px-2 py-1.5 text-meta text-secondary">
+                No player matches.
+              </li>
+            )}
+            {matches.map(({ id, idx, p }) => (
+              <li key={id}>
+                <button
+                  type="button"
+                  onClick={() => jumpTo(id, idx)}
+                  className="flex min-h-11 w-full items-center gap-2 rounded-[--radius-sm] px-2 text-left transition-colors hover:bg-surface-2"
+                >
+                  <span className="w-8 shrink-0 text-right figure text-meta text-secondary">
+                    {idx + 1}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">
+                    {p.fullName}
+                  </span>
+                  <span className="shrink-0 figure text-meta text-faint">
+                    cons #{p.searchRank}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <ul className="flex flex-col gap-1">
-        {order.map((id, i) => {
+        {order.slice(0, shownCount).map((id, i) => {
           const p = playersById.get(id);
           if (!p) return null;
           const v = values.get(id);
           const tier = v ? tierFor(v.value)?.label : undefined;
           const dragging = draggingId === id;
+          // YOUR FINGERPRINTS ON THE BOARD: a row sitting anywhere other than its
+          // consensus slot carries a gold edge, so a scroll down the list shows at
+          // a glance exactly where your opinion diverges - the same fact the
+          // "moved" counter above states as one number.
+          const moved = id !== poolIds[i];
           // Body part only: this row is 390px wide with a drag handle in it. Null for
           // a healthy player and for load management, which is a flag, not an injury.
           const injury = injuryLabel(
@@ -383,6 +504,7 @@ export function RankingBoard({ players, scoring }) {
           return (
             <li
               key={id}
+              id={`rank-li-${id}`}
               /*
                * The name that lets the reset transition follow THIS row to its new
                * slot. Suppressed while a drag is in flight: that row is being moved by
@@ -394,12 +516,42 @@ export function RankingBoard({ players, scoring }) {
                 dragging ? undefined : { viewTransitionName: `rank-row-${id}` }
               }
               className={cn(
-                "relative flex h-16 items-center gap-2 rounded-[--radius-sm] border px-2 transition-colors",
+                // overflow-hidden added for the two zero-height marks below (the
+                // bottom value bar and the moved edge) - the row's OWN height is
+                // exactly the ROW_HEIGHT the drag arithmetic assumes, unchanged.
+                "relative flex h-16 items-center gap-2 overflow-hidden rounded-[--radius-sm] border px-2 transition-colors",
                 dragging
                   ? "z-10 border-accent-edge bg-surface-2 shadow-lg"
                   : "border-border bg-surface/60",
+                flashId === id && "ring-2 ring-accent",
               )}
             >
+              {moved && !dragging && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-y-0 left-0 w-[3px] bg-accent"
+                />
+              )}
+              {/* The board's value curve, drawn INSIDE the fixed-height row: each
+                  row's bottom edge carries its value as length against the board's
+                  #1. 120 identical rows become one readable decay curve on the way
+                  down - geometry, never valence. */}
+              {v && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-0 bottom-0 h-[3px]"
+                >
+                  <span
+                    className="block h-full"
+                    style={{
+                      width: `${Math.max(1, Math.round((v.value / boardMax) * 100))}%`,
+                      backgroundImage:
+                        "linear-gradient(90deg, var(--color-accent-dim), var(--color-accent))",
+                      opacity: 0.75,
+                    }}
+                  />
+                </span>
+              )}
               <button
                 type="button"
                 aria-label={`Drag to reorder ${p.fullName}`}
@@ -411,7 +563,17 @@ export function RankingBoard({ players, scoring }) {
               >
                 <GripVertical size={18} aria-hidden="true" />
               </button>
-              <span className="w-6 shrink-0 text-right figure text-meta text-faint">
+              {/* The top of YOUR board gets podium-weight ordinals - hierarchy
+                  restating the sort, exactly as the /values list's own top three
+                  do (see ValueAssetRow's `hero`). */}
+              <span
+                className={cn(
+                  "w-6 shrink-0 text-right figure",
+                  i < 3
+                    ? "text-lede font-semibold leading-none text-accent-text"
+                    : "text-meta text-faint",
+                )}
+              >
                 {i + 1}
               </span>
               {/*
@@ -476,6 +638,28 @@ export function RankingBoard({ players, scoring }) {
         })}
       </ul>
 
+      {shownCount < order.length && (
+        <div className="mt-2 flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => setLimit((l) => l + WORKING_SET)}
+            className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full border border-border bg-surface text-sm font-semibold text-ink transition-colors hover:border-accent hover:text-accent-text"
+          >
+            Show {Math.min(WORKING_SET, order.length - shownCount)} more
+            <span className="figure text-meta text-secondary">
+              of {order.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLimit(order.length)}
+            className="flex min-h-11 shrink-0 items-center justify-center rounded-full border border-border px-4 text-sm font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
+          >
+            All {order.length}
+          </button>
+        </div>
+      )}
+
       <SectionHeader title="Where you disagree with consensus" />
       <p className="-mt-1 mb-1.5 text-meta leading-snug text-faint">
         Sorted biggest gap first. This cuts both ways: it is your strongest
@@ -488,7 +672,22 @@ export function RankingBoard({ players, scoring }) {
         </EmptyState>
       ) : (
         <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface/60">
+          {/* THE GAPS AS GEOMETRY (round 10). This list used to state each gap as a
+              green-or-red signed number - but a rank disagreement has no good end
+              (the page's own caption says it cuts both ways), so the valence pair
+              was exactly the colour-as-judgment D6 forbids. Now: a centre-origin
+              bar, direction by which side of the spine it fills, size by length
+              against the biggest gap on the board, and the number beside it in
+              plain ink. The two directions take the two OWNED hues (VISION M4:
+              gold = yours, court blue = the field): a bar toward gold is a player
+              you rank above consensus, toward blue is one the field ranks above
+              you - identity, not valence, and the printed ranks still carry
+              everything if the colour is deleted (lib/chart-colors' test). */}
           {gaps.map((g) => {
+            const maxGap = Math.max(Math.abs(gaps[0]?.delta ?? 1), 1);
+            const half = (Math.abs(g.delta) / maxGap) * 50;
+            const right = g.delta > 0;
+            const n = Math.round(g.delta);
             return (
               <li
                 key={g.playerId}
@@ -502,7 +701,32 @@ export function RankingBoard({ players, scoring }) {
                     you #{g.yourRank} · consensus #{g.consensusRank}
                   </span>
                 </span>
-                <DeltaValue n={Math.round(g.delta)} />
+                <span
+                  aria-hidden="true"
+                  className="relative h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-elevated"
+                >
+                  <span className="absolute inset-y-0 left-1/2 w-px bg-border-strong" />
+                  {/* A zero gap draws nothing but the spine - a minimum-width nub
+                      on a zero would assert a disagreement that does not exist. */}
+                  {n !== 0 && (
+                    <span
+                      className="absolute inset-y-0"
+                      style={{
+                        [right ? "left" : "right"]: "50%",
+                        width: `${Math.max(half, 4)}%`,
+                        // delta = consensusRank - yourRank: positive means YOU
+                        // have him higher (gold, rightward); negative means the
+                        // field does (court blue, leftward).
+                        background: right
+                          ? "var(--color-accent)"
+                          : "var(--color-info)",
+                      }}
+                    />
+                  )}
+                </span>
+                <span className="w-8 shrink-0 text-right figure text-meta font-semibold text-ink">
+                  {n > 0 ? `+${n}` : n}
+                </span>
               </li>
             );
           })}
@@ -515,7 +739,7 @@ function Figure({ label, value, sub }) {
   return (
     <div className="min-w-0 px-2.5 py-1.5">
       <dt className="text-meta uppercase tracking-wide text-faint">{label}</dt>
-      <dd className="truncate figure text-base font-semibold text-ink">
+      <dd className="truncate figure text-lede font-semibold text-ink">
         {value}
       </dd>
       {sub && <dd className="truncate text-meta text-muted">{sub}</dd>}
