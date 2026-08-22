@@ -5,7 +5,6 @@ import { PageHeader, SectionHeader } from "@/components/ui";
 import { SearchPanel } from "@/components/SearchPanel";
 import { groupedSurfaces } from "@/lib/nav";
 import { iconForSurface } from "@/components/nav-icons";
-import { Onward } from "@/components/Onward";
 export const dynamic = "force-dynamic";
 export default function MorePage() {
   const groups = groupedSurfaces();
@@ -103,7 +102,14 @@ export default function MorePage() {
           )}
         </div>
       ))}
-      <Onward from="/more" />
+      {/*
+          No WHERE NEXT block, and /more is the one page allowed to skip it
+          (VISION kill-list #7): its former two steps, About and Methodology, are
+          both already listed in THE APP group on this same screen. A page whose
+          body is the complete index of ways out cannot be a dead end, and a footer
+          of links under a list of links was the app repeating itself. The
+          no-dead-ends rule in lib/nav.test.js carries the matching exemption.
+        */}
     </div>
   );
 }

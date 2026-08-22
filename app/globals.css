@@ -292,6 +292,28 @@
   --color-warn-edge: #6d5229;
 
   /*
+   * THE TITLE-CARD GROUND (VISION M7, the 30-for-30 lesson).
+   *
+   * One ground for the Superlatives' posters: the award name set huge over a
+   * near-black plate, one stat as the deck, nothing else. It sits BELOW the page
+   * ground rather than above it - every other card in the app steps UP from the bg
+   * (+4.94 L*, see the surfaces block), and a poster that stepped up too would just
+   * be a thirteenth grey card. Stepping down (~1 L* under --color-bg) makes the
+   * poster read as a window cut into the page, which is what a monochrome title
+   * card is. The article's border does the delineating; the plate itself stays
+   * within a JND of the ground on purpose.
+   *
+   * Measured on the dark value (#08090b): ink 18.24:1, muted 7.66:1, accent-text
+   * 11.79:1, and the accent fill (the gold floor-line, a non-text graphic) 10.36:1
+   * - everything the poster sets clears its bar with room. Only ink, muted,
+   * accent-text and the accent fill may sit on this ground: `faint` and
+   * `secondary` are ground-scoped tokens (see the block below the themes) and
+   * .bg-poster is deliberately not in that scoping, so a component that used them
+   * here would be reading values measured against a different ground.
+   */
+  --color-poster: #08090b;
+
+  /*
    * DEPTH - two declarations, and the cheapest "this is a real product" fix available.
    *
    * Rule: cards separate by SURFACE, never by shadow. `--shadow-raised` goes only on
@@ -420,6 +442,14 @@
   --color-info-edge: #a3bcda;
   --color-warn-wash: #ebe3d3;
   --color-warn-edge: #ceba97;
+
+  /* The title-card plate on paper is DEEP CREAM, not near-black - paper is "a good
+   * magazine", and a magazine's full-page title card is a heavier stock of the same
+   * paper, never a black insert. Same relationship to the ground as dark's (a step
+   * the body cards don't take, here downward into warmth: 1.17:1 against the bg),
+   * and the same measured pairs: ink 13.91:1, muted 5.74:1, accent-text 5.99:1,
+   * accent fill 5.04:1. */
+  --color-poster: #e9e2d2;
 
   /* Paper does not need the raised shadow to be as heavy - a near-white page reads
    * depth from a much smaller value, and the dark theme's would look like soot. */
