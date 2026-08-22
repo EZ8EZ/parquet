@@ -6666,3 +6666,118 @@ A fourth candidate - a route/page transition - was considered and deliberately n
 *One small pre-existing bug fixed because the receipt made it worse:* `OpenInSleeper` renders nothing for fixture ids, which left `TradeResult`'s Sleeper CTA box printing as an empty bordered rectangle - invisible enough as a static blank, but the receipt animated it in on its own beat, a blank line the printer paused on. The wrapper is now conditional on `sleeperTradeUrl(leagueId)` resolving.
 
 *Verified the same way as the first pass - live, against a production `next start` build, not from the stylesheet:* 16 new checks (stagger at 30ms/cap 8 read off computed styles; the sheen's animation name/duration/pointer-events, that every sheened row is Franchise/Cornerstone across the full 60-row page, that the first row's sheen does NOT replay after scrolling away and back, and that reduced motion disables it; the receipt's per-child `arrive` delays stepping 70ms in DOM order, that re-evaluating genuinely remounts the panel - a `data-*` probe planted on the old node is gone after the second evaluate - and that reduced motion disables the print). Plus the first pass's own 19 checks re-run green after the parameter change, `pnpm lint` clean, 1054/1054 unit tests, clean `rm -rf .next && pnpm build`, axe-core zero violations on `/trade` with a printed receipt open, and a full-page screenshot of the printed receipt at 390px. Both new moments are disabled outright under `prefers-reduced-motion`, same rationale as `.arrive`'s own: the sections carry their order in their layout and the tier carries its word in the row; the motion is theater, and theater is what that setting asks to be spared.
+
+## D106. THE IDENTITY ROUND - a real material system for the surfaces that ARE the app, and the second-hue question finally made real instead of hypothetical
+
+The owner has now said it three times, most recently in these words: "we're lacking
+in the visuals and general user experience side of things... this needs to be our
+main focus before spending any more energy on features and stats." D64 answered the
+first "flat" verdict with a type bump and a louder grain and explicitly declined to
+touch depth; D72 answered the second with density. This round finally treats the
+verdict as what it is - a MATERIALS problem - and touches only the identity
+surfaces: Home, the Desk's chrome, the first-run `/teams` screen, and the token
+system itself.
+
+**WHAT THE RESEARCH ACTUALLY SAID.** The two references the owner gave plus
+teardowns of the current premium-app canon (Linear, Vercel's Geist, Family, the
+2025 liquid-glass wave). The finding that mattered: Linear's dark-theme depth is a
+surface ladder + hairline borders + a one-pixel top highlight - which Parquet
+ALREADY HAD, in full, and which is exactly why it read clean-but-flat. The half it
+lacked is Geist's: multi-layer shadow stacks where each layer has one job (contact,
+ambient, inner top light), so "cards feel built, not floating," plus the glass-era
+chrome recipe (blur + SATURATE + an edge that catches light) for the one plane that
+floats. So the round's rule: keep the ladder, add the light.
+
+**THE MATERIAL SYSTEM (globals.css, all tokens themed per theme):**
+- **`.card-lit`** - `--sheen` (a white-alpha vertical light gradient, hue-free) +
+  `--shadow-card` (one contact shadow + one soft ambient) + the existing top
+  catchlight. Composes onto a normal card with one class. Applied to Home's capture
+  badge, contradiction/steady cards, the four-figure grid, the activity tape, and
+  the first-run form + team rows.
+- **`.hero-mesh`** - the identity moment, ONE per page at most: the same lit card
+  with an accent-family radial mesh behind it (`--mesh-1/2` - the SAME gold+blue
+  the body grain has carried since round 1, at wash strength, so zero new hues) and
+  a real grain: `--noise`, an inline feTurbulence tile at 4% alpha, also layered
+  over the page ground itself. Its ink joins the ground-scoped wash restatement so
+  every text pair on it stays measured.
+- **`.desk-sheet`** - the Desk stops being "background at 93% alpha with a blur"
+  and becomes glass: `--glass-fill` + `--glass-hilite` pane light +
+  `blur(20px) saturate(1.4)` (saturate is what keeps the page alive behind it
+  instead of grey), `--shadow-dock` lifting it off the scroll, and `--edge-glow` -
+  the accent laid as a catchlight along the top edge, brightest mid-edge, gone by
+  the corners. The lit tab additionally gets `.tab-glow`, a static gold halo behind
+  its icon. The seat popover trades Tailwind's stock `shadow-lg` for the app's own
+  raised stack. No motion added anywhere - static material only, the
+  micro-interaction lane belongs to a sibling this round.
+
+**THE PAGES.** Home's revealed-strategy headline - the biggest sentence in the app -
+now sits on the page's one hero-mesh panel instead of floating on bare ground at the
+same material weight as everything below it, and the four season figures move from
+`lede` (17px) to `display` (30px), which is precisely the job the token's own
+comment reserves display for (Stat already sets it; these four anchor the page).
+`/teams`, the first screen anyone ever sees, gets the other hero-mesh moment (mark +
+kicker + the question), team rows finally carry the same TeamAvatar every other team
+list in the app has (they were the one team list rendered as bare text), and each
+row gains a 3px value bar - the printed total-value figure restated as a length
+against the league's best-stocked roster. Non-text, proportional, an amount and
+never a verdict (D6 untouched).
+
+**THE DEPTH RULE IS REVISED, ON PURPOSE.** "Cards separate by surface, never by
+shadow" is now "three material tiers" (DESIGN.md table). That rule was written by an
+earlier round and defended twice; what changed is not the argument but the evidence:
+three consecutive owner verdicts that its output reads flat. The tier system keeps
+its real content - elevation is still surface-first, `--shadow-raised` still means
+"genuinely floats" - and adds the ambient stack the references all share.
+
+**THE SECOND HUE - EXPLORED, THEN DECIDED BY THE OWNER MID-ROUND.** The
+exploration shipped first as a clearly-marked inert violet-duotone token block
+behind `data-experiment="duotone"`, with side-by-side screenshots in both themes.
+The owner then approved the plan ("The Program", VISION.md) and picked the other
+candidate: **court blue (M4A), with exactly one product-wide meaning - gold =
+yours, blue = the field/the market/everyone-else** - tuning the existing `info`
+token rather than adding a fifth semantic. So the violet block is deleted (its
+screenshots survive in the round report as the road not taken), and the first
+court-blue application lands where this round's scope already had a genuine
+you-vs-the-field object: `/teams`' value bars - the field's bars blue, the
+viewer's own row gold, and before a seat exists every bar is blue, so the first
+gold thing a new reader ever sees is the team they picked. Decorative blue (a
+surface with no "field" side) is still out, and D47's rules still bind.
+
+**THE COVER GRAMMAR LANDS ON HOME (VISION.md M2).** The front page now opens as a
+cover, not a header: kicker → Fraunces headline → a standfirst (the season in one
+honest sentence: trades, notable decisions, how many have their why written down)
+→ ONE hero fact in display type - the record and standing - on a 3px gold
+floor-line, the typographic signature (The Athletic's inline lesson). With the
+record promoted to the cover, the four-figure grid would have printed the same
+score one screen lower (the restatement D61 warns about), so it becomes "How you
+deal, in three numbers" - trades / pick capital / acquisition age, the dealing
+profile the cover does not carry.
+
+**HOME'S THREE ACCORDIONS ARE KILLED (VISION.md kill list #3, owner-approved).**
+"STILL RUNNING · 5 active / WHAT YOUR RECORD SHOWS · 4 findings / WHO YOU DEAL
+WITH · top 3" were three grey bars hiding the front page's other three stories.
+Replaced by **leads** - plain set prose, no card, no uppercase label, one real
+sentence per story with its destination inline: the top live streak (same
+worth-showing rule StreakPanel applies) linking to /awards, the findings printed
+in full (they ARE sentences, a handful of one-liners shorter than the accordion
+chrome they replace), and the top trade partner linking to their dossier - the
+partner lead skipping itself when the findings already name the same partner,
+because one fact twice in one block is the failure this block exists to end. The
+full streak panel now lives behind /awards; D46's "nothing hides behind a label"
+is satisfied the stronger way - nothing hides at all.
+
+**THE SCOREBUG (VISION.md M3) IS NOTED FOR THE NEXT WAVE, NOT HALF-BUILT.** The
+context row's replacement by a persistent mono `PK · 13-7 · #5/14 · TCI 57 ·
+2029-31` strip needs two things this round should not rush: a decision about
+where the capture-count status goes (lib/desk.js's rule 1b - D40's "standing
+accusation" argument - currently owns that row when captures are outstanding),
+and TCI/window computed cheaply enough for the root layout on every route. Both
+are design decisions about OTHER surfaces' data, so the Desk keeps its current
+context row this round and the scorebug ships with M3's wave.
+
+**Verified (final tree):** `pnpm lint` clean; `pnpm test` 1054/1054; `rm -rf .next
+&& pnpm build` clean; full `pnpm e2e` green via an uncommitted local Chromium-path
+config (deleted after, per the visual-review skill); axe-core clean on `/` and
+`/teams` in both themes; before/after full-page and viewport screenshots at 390px
+in both themes, plus the superseded duotone variant pair. Fixture provider
+throughout - synthetic data, real layout.

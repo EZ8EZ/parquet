@@ -4,6 +4,7 @@ import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
 import { buildDossier } from "@/lib/dossier";
 import { getPrincipals } from "@/lib/principals";
 import { PageHeader } from "@/components/ui";
+import { BrandMark } from "@/components/Brand";
 import { TeamPicker } from "@/components/TeamPicker";
 import { NEXT_PARAM, safeNextPath } from "@/lib/auth/entry";
 import { readLensRosterId } from "@/lib/auth/server";
@@ -35,10 +36,18 @@ export default async function TeamsPage({ searchParams }) {
     const record = f
       ? `${f.wins}-${f.losses}${f.isLive ? "" : ` (${f.season} final)`}`
       : `${r.record.wins}-${r.record.losses}`;
+    // The picker rows carry the same avatar every other roster of teams in the app
+    // does (TeamAvatar's source order: uploaded logo, Sleeper avatar, monogram) -
+    // this used to be the one team list rendered as bare text.
+    const user = h.rostersById.get(r.rosterId)?.ownerId
+      ? h.usersById.get(h.rostersById.get(r.rosterId).ownerId)
+      : null;
     return {
       rosterId: r.rosterId,
       teamName: r.teamName ?? r.ownerName,
       ownerName: r.ownerName,
+      avatarId: user?.avatar ?? null,
+      teamLogoUrl: user?.teamLogoUrl ?? null,
       record,
       totalValue: r.totalValue,
       coreAgeBand: r.coreAgeBand,
@@ -47,11 +56,17 @@ export default async function TeamsPage({ searchParams }) {
   });
   return (
     <div>
-      <PageHeader
-        kicker={h.currentLeague.name}
-        title="Whose team are you?"
-        subtitle="Pick a team to run the whole app as that manager - their roster, their revealed strategy, their game plan, their read on everyone else. Nothing here is permanent: tap your team's name at the bottom of any page to switch to a different one later."
-      />
+      {/* The first screen anyone ever sees, so it is the other hero-mesh moment
+          (D88): the mark and the question sit on the one lit, grained panel
+          instead of opening the app with bare text on bare ground. */}
+      <section className="hero-mesh mb-4 rounded-[--radius-lg] border border-border px-4 pb-1.5 pt-4">
+        <PageHeader
+          leading={<BrandMark size={44} gradientId="teams-hero" />}
+          kicker={h.currentLeague.name}
+          title="Whose team are you?"
+          subtitle="Pick a team to run the whole app as that manager - their roster, their revealed strategy, their game plan, their read on everyone else. Nothing here is permanent: tap your team's name at the bottom of any page to switch to a different one later."
+        />
+      </section>
       {/* Empty on purpose: there is no per-visitor stored username to reflect (the
             "viewing as" cookie stores a rosterId, not a Sleeper handle - see
             /api/viewing-as), so any default here would just be one specific person's

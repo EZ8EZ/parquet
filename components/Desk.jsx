@@ -362,7 +362,11 @@ export function Desk({ data }) {
           role={expanded ? "dialog" : undefined}
           aria-modal={expanded ? true : undefined}
           aria-label={expanded ? "Everything in Parquet" : undefined}
-          className="mx-auto w-full max-w-2xl rounded-t-[--radius-lg] border-t border-border bg-bg/[0.93] backdrop-blur-lg"
+          // `desk-sheet` (globals.css) is the app's one true glass: fill + pane
+          // light + blur-and-saturate + upward shadow + the gold catchlight laid
+          // along this top edge. The plain border-t stays underneath it so the
+          // edge is still a defined line where the catchlight has faded out.
+          className="desk-sheet mx-auto w-full max-w-2xl rounded-t-[--radius-lg] border-t border-border"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
           {/* `aria-label="Primary"` is load-bearing well beyond this file: every
@@ -656,7 +660,10 @@ export function Desk({ data }) {
               {seatMenu && data?.seat && (
                 <div
                   id={seatMenuId}
-                  className="absolute bottom-[calc(100%+6px)] left-3 z-10 w-56 overflow-hidden rounded-[--radius-sm] border border-border-strong bg-elevated shadow-lg"
+                  // The app's own raised stack + catchlight, not Tailwind's stock
+                  // `shadow-lg`: this popover genuinely floats, so it uses the
+                  // same tokens the drawer does and re-themes with them.
+                  className="absolute bottom-[calc(100%+6px)] left-3 z-10 w-56 overflow-hidden rounded-[--radius-sm] border border-border-strong bg-elevated shadow-[var(--shadow-raised),var(--edge-hilite)]"
                 >
                   <SeatAction
                     href="/teams"
@@ -709,7 +716,7 @@ export function Desk({ data }) {
                     className={cn(
                       "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 transition-colors",
                       active
-                        ? "text-accent-text"
+                        ? "tab-glow text-accent-text"
                         : "text-muted hover:text-ink",
                     )}
                   >
@@ -732,7 +739,9 @@ export function Desk({ data }) {
                 onClick={() => setExpanded(!expanded)}
                 className={cn(
                   "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 transition-colors",
-                  moreActive ? "text-accent-text" : "text-muted hover:text-ink",
+                  moreActive
+                    ? "tab-glow text-accent-text"
+                    : "text-muted hover:text-ink",
                 )}
               >
                 {expanded ? (
