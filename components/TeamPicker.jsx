@@ -4,11 +4,6 @@ import { useState } from "react";
 import { Check, Loader2, Search } from "lucide-react";
 import { cn, fmtValue } from "@/lib/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
-const WINDOW_TONE = {
-  "win-now": "text-accent-text",
-  rebuilding: "text-info",
-  balanced: "text-muted",
-};
 export function TeamPicker({
   teams,
   currentRosterId,
