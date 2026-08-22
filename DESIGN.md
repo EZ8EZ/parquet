@@ -39,8 +39,30 @@ Defined in `app/globals.css` under Tailwind v4 `@theme` (so `bg-*`, `text-*`,
 | `info` | `#5aa9ff` | rebuilding / neutral highlight |
 | `warn` | `#f0a83c` | cautions (dossier privacy, history checks) |
 
-The near-black background carries a faint gold+blue radial grain so it never reads
-as flat black.
+The near-black background carries a faint gold+blue radial grain plus a film-grain
+noise tile (`--noise`, an inline feTurbulence SVG at 4% alpha) so it never reads as
+flat black.
+
+## Depth & materials (D88)
+
+Three material tiers, all tokenized in `app/globals.css` and re-stated per theme, so
+"how much light does this element catch" is a system rather than a per-card guess.
+The old rule ("cards separate by surface, never by shadow") was deliberately revised
+after three owner verdicts of "flat": Parquet had Linear's surface-ladder half of
+modern depth and none of Vercel Geist's layered-shadow half.
+
+| Class | Tokens | Job |
+|---|---|---|
+| `.card-lit` | `--sheen` (white-alpha top light), `--shadow-card` (contact + ambient), `--edge-hilite` | A card that is *built*: the anchoring cards of a page (Home's four figures, the first-run team rows). Composes onto a normal `bg-surface` card - one class, never a rewrite. |
+| `.hero-mesh` | `--mesh-1/--mesh-2` (the grain's own gold+blue at wash strength), `--noise`, plus the `.card-lit` stack | The identity moment - **one per page at most**. Home's revealed-strategy masthead and the first-run welcome panel. Its ink gets the wash-grade ground-scoped restatement, same as `bg-accent-wash`. |
+| `.desk-sheet` | `--glass-fill`, `--glass-hilite`, `blur(20px) saturate(1.4)`, `--shadow-dock`, `--edge-glow` | Real glass, for the one plane that floats: the Desk. Saturate keeps the page alive behind the blur; `--edge-glow` is a gold catchlight laid along the top edge, brightest mid-edge, gone at the corners. |
+
+Supporting: `.tab-glow` puts a static gold halo (`--tab-halo`) behind the lit tab's
+icon; `--shadow-raised` keeps its old job (the drawer, the seat popover). All of it
+is one hue - the mesh's second stop is the same grain-blue the ground has carried
+since round 1. A **duotone variant** (gold + violet) is committed as an inert,
+clearly-marked block gated behind `data-experiment="duotone"`; nothing sets it -
+the owner decides from the D88 side-by-side screenshots whether it ships.
 
 ## Themes
 Two, not more: **dark** (the default identity, D15) and **light** ("Paper" in the

@@ -239,15 +239,74 @@
   --color-warn-edge: #6d5229;
 
   /*
-   * DEPTH - two declarations, and the cheapest "this is a real product" fix available.
+   * DEPTH - now a three-tier MATERIAL system, not two declarations (round 10).
    *
-   * Rule: cards separate by SURFACE, never by shadow. `--shadow-raised` goes only on
-   * things that genuinely float above the page - the Desk, a scrim - and nowhere else.
-   * `--edge-hilite` is the one-pixel top catchlight that makes a raised plane read as
-   * lit from above; use it via the `.edge-hilite` class.
+   * The old rule here read "cards separate by SURFACE, never by shadow," and after
+   * three owner verdicts of "flat / looks the same" that rule is the thing being
+   * revised, deliberately (see D88). The teardown evidence: Linear does run
+   * surface-ladder-plus-hairline depth, but Vercel's Geist composes MULTI-LAYER
+   * shadow stacks where each layer has one job (hairline ring, ambient softness,
+   * depth at distance, inner top highlight) - "cards feel built, not floating."
+   * Parquet had the Linear half and none of the Geist half, which is exactly the
+   * clean-but-flat verdict. The tiers, cheapest first:
+   *
+   *   card-lit    a card that is BUILT: its own surface + `--sheen` (a white-alpha
+   *               vertical light gradient, not a hue) + `--shadow-card` (one contact
+   *               shadow + one soft ambient) + the top catchlight. For the cards
+   *               that anchor a page - Home's figures, the first-run team rows.
+   *   hero-mesh   the identity moment: the same lit card with the accent-family
+   *               radial mesh (`--mesh-1/2`, the SAME two hues the body grain has
+   *               always used, at wash strength) and the `--noise` grain baked over
+   *               it. One per page, at most - a masthead, never a list row.
+   *   desk-sheet  the one plane that genuinely floats: real glass (see below).
+   *
+   * `--shadow-raised` keeps its old job - the drawer, a scrim-adjacent popover -
+   * and `--edge-hilite` keeps being the one-pixel top catchlight (`.edge-hilite`).
    */
   --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.28);
   --edge-hilite: inset 0 1px 0 rgb(255 255 255 / 0.045);
+  /* Geist-style stack, halved: contact + ambient. No spread games - the border
+   * utilities already draw the hairline ring, so the shadow never doubles it. */
+  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.35), 0 5px 16px rgb(0 0 0 / 0.22);
+  /* Light falling from above, as a gradient rather than a second surface hex:
+   * white-alpha so it is hue-free and works over any ground it is composited on. */
+  --sheen: linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0) 55%);
+
+  /*
+   * GLASS - the Desk's material. The sheet was `--color-bg` at 93% alpha with a
+   * bare blur, which is translucency, not glass: nothing caught light at the edge
+   * and nothing separated it from the page it floated over. The 2025-era recipe
+   * (Apple's Liquid Glass, Linear's take on it) is blur + SATURATE so the page
+   * behind stays alive instead of going grey, a light-gradient on the pane itself,
+   * an upward shadow, and a hairline that catches light at the top edge. The
+   * catchlight (`--edge-glow`) is the accent at alpha, brightest mid-edge and gone
+   * at the corners - one hue, spent where the eye reads "lit object."
+   */
+  --glass-fill: rgb(17 18 22 / 0.82);
+  --glass-hilite: linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0) 45%);
+  --shadow-dock: 0 -1px 0 rgb(255 255 255 / 0.04), 0 -12px 36px rgb(0 0 0 / 0.42);
+  --edge-glow: linear-gradient(
+    90deg,
+    transparent 4%,
+    rgb(230 179 77 / 0.55) 50%,
+    transparent 96%
+  );
+  /* The static halo behind the lit tab's icon - position + gold text already say
+   * "you are here"; this makes the lit tab read as LIT rather than merely tinted. */
+  --tab-halo: rgb(230 179 77 / 0.2);
+
+  /*
+   * THE MESH + NOISE PAIR behind `hero-mesh`. Same two hues as `--grain-1/2` - the
+   * gold+blue the ground has carried since round 1, so this costs nothing against
+   * the one-accent rule - at wash strength instead of whisper strength, plus a real
+   * grain: an inline feTurbulence tile at 4% so the panel has TOOTH instead of the
+   * airbrushed-gradient look every default-styled app has. The noise alpha is baked
+   * into the SVG so one asset serves both themes (4% grey noise reads as paper
+   * grain on paper and as film grain on dark).
+   */
+  --mesh-1: rgb(230 179 77 / 0.15);
+  --mesh-2: rgb(90 169 255 / 0.07);
+  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
 
   /*
    * TCI HEAT RAMP - four steps, red to green, used by the coherence x fragility
@@ -367,6 +426,26 @@
   --shadow-raised: 0 1px 2px rgb(60 50 30 / 0.1), 0 8px 24px rgb(60 50 30 / 0.09);
   --edge-hilite: inset 0 1px 0 rgb(255 255 255 / 0.7);
 
+  /* The material tiers, re-tuned for paper: shadows warm and lighter (soot rule
+   * above), the sheen and glass-hilite much STRONGER because white-on-white light
+   * needs amplitude to register, the mesh re-picked from this theme's own accent
+   * ink, and the glass fill this theme's own warm white. `--noise` is shared -
+   * grey grain at 4% IS paper grain here. */
+  --shadow-card: 0 1px 2px rgb(60 50 30 / 0.07), 0 5px 18px rgb(60 50 30 / 0.08);
+  --sheen: linear-gradient(180deg, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0) 60%);
+  --glass-fill: rgb(250 248 243 / 0.85);
+  --glass-hilite: linear-gradient(180deg, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0) 50%);
+  --shadow-dock: 0 -1px 0 rgb(255 255 255 / 0.6), 0 -12px 36px rgb(60 50 30 / 0.16);
+  --edge-glow: linear-gradient(
+    90deg,
+    transparent 4%,
+    rgb(122 88 16 / 0.4) 50%,
+    transparent 96%
+  );
+  --tab-halo: rgb(122 88 16 / 0.12);
+  --mesh-1: rgb(191 144 44 / 0.14);
+  --mesh-2: rgb(26 90 168 / 0.06);
+
   /* Same ramp, same direction, re-stepped for a near-white chart surface: OKLCH L
    * 0.36 -> 0.60. The dark theme's values are invisible on paper and vice versa, so
    * the ramp is a themed token like every other colour here rather than a constant in
@@ -404,7 +483,10 @@
  */
 .bg-surface-2,
 .bg-elevated,
-.bg-accent-wash {
+.bg-accent-wash,
+/* The hero mesh peaks at the same strength as the accent wash, so its ink gets the
+ * same wash-grade restatement rather than the bare-surface values. */
+.hero-mesh {
   --color-faint: #909bac;
   --color-secondary: #9aa1ad;
 }
@@ -421,7 +503,8 @@
  * lighter than `secondary`, so the ordering survives the flip. */
 :root[data-theme="light"] .bg-surface-2,
 :root[data-theme="light"] .bg-elevated,
-:root[data-theme="light"] .bg-accent-wash {
+:root[data-theme="light"] .bg-accent-wash,
+:root[data-theme="light"] .hero-mesh {
   --color-faint: #5c636f;
   --color-secondary: #5b626e;
 }
@@ -443,8 +526,13 @@ body {
   font-family: var(--font-sans);
   -webkit-font-smoothing: antialiased;
   text-rendering: optimizeLegibility;
-  /* subtle parquet-grain radial so the ground isn't flat */
+  /* The parquet grain: the gold+blue radial wash the ground has always carried,
+   * now with the film-grain noise tile over it (round 10) so bare ground has
+   * TOOTH under a fingertip-sized zoom instead of a smooth vignette. The noise is
+   * 4%-alpha inside its own SVG, far below any text-contrast threshold - same
+   * argument as the wash itself (see --grain-1's comment). */
   background-image:
+    var(--noise),
     radial-gradient(120% 80% at 50% -10%, var(--grain-1), transparent 60%),
     radial-gradient(100% 60% at 100% 0%, var(--grain-2), transparent 55%);
   background-attachment: fixed;
@@ -492,6 +580,114 @@ body {
  * theme override is the only place the value is stated. */
 .edge-hilite {
   box-shadow: var(--edge-hilite);
+}
+
+/*
+ * THE MATERIALS (round 10, D88). Three classes, three tiers - see the token block's
+ * comment for the argument. Each composes onto an ordinary `bg-*` card rather than
+ * replacing it, so adopting a material is one class added, never a rewrite.
+ */
+
+/* Tier 1: a BUILT card. Sheen + contact/ambient stack + top catchlight. */
+.card-lit {
+  background-image: var(--sheen);
+  box-shadow: var(--shadow-card), var(--edge-hilite);
+}
+
+/* Tier 2: the identity moment - one per page at most. Noise over accent-family
+ * mesh over the card surface; text on it keeps its measured pairs because the
+ * mesh peaks at wash strength (see the ground-scoped ink block below, which
+ * treats this ground exactly like the accent wash). */
+.hero-mesh {
+  background-color: var(--color-surface);
+  background-image:
+    var(--noise),
+    radial-gradient(130% 110% at 12% 0%, var(--mesh-1), transparent 58%),
+    radial-gradient(95% 90% at 100% 4%, var(--mesh-2), transparent 55%);
+  box-shadow: var(--shadow-card), var(--edge-hilite);
+}
+
+/* Tier 3: the glass the Desk is made of. Fill + pane-light + blur-and-saturate
+ * (saturate is what keeps the page behind alive instead of going grey), an upward
+ * shadow so the dock visibly floats over the scroll, and the gold catchlight
+ * laid along the top edge - brightest mid-edge, gone by the rounded corners. */
+.desk-sheet {
+  position: relative;
+  background-color: var(--glass-fill);
+  background-image: var(--glass-hilite);
+  -webkit-backdrop-filter: blur(20px) saturate(1.4);
+  backdrop-filter: blur(20px) saturate(1.4);
+  box-shadow: var(--shadow-dock);
+}
+.desk-sheet::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  left: 0;
+  right: 0;
+  height: 1px;
+  pointer-events: none;
+  background: var(--edge-glow);
+}
+
+/* The lit tab's halo (components/Desk.jsx). Static - a material, not a motion. */
+.tab-glow {
+  position: relative;
+}
+.tab-glow::before {
+  content: "";
+  position: absolute;
+  top: 4px;
+  left: 50%;
+  width: 38px;
+  height: 32px;
+  transform: translateX(-50%);
+  border-radius: 9999px;
+  pointer-events: none;
+  background: radial-gradient(closest-side, var(--tab-halo), transparent);
+}
+
+/*
+ * D88 VARIANT - NOT SHIPPED, OWNER DECIDES. The owner explicitly authorized a
+ * second-hue exploration this round (reopening D47/D48/D61/D64 is theirs to do).
+ * This block is inert unless `data-experiment="duotone"` is set on <html>; nothing
+ * in the app sets it. It turns the hero mesh's second radial from the grain-blue
+ * whisper into a real VIOLET co-accent - violet because every other candidate hue
+ * is already spent as a semantic (green=positive, red=negative, blue=info/rebuild,
+ * orange=warn), so it is the one hue that cannot be misread as a verdict - and
+ * splits the Desk's edge catchlight gold-into-violet. Screenshots of both variants
+ * ride with D88; delete this block or promote its values once the owner picks.
+ */
+:root[data-experiment="duotone"] {
+  --mesh-2: rgb(139 124 246 / 0.32);
+  --grain-2: rgb(139 124 246 / 0.07);
+  --edge-glow: linear-gradient(
+    90deg,
+    transparent 4%,
+    rgb(230 179 77 / 0.55) 38%,
+    rgb(139 124 246 / 0.55) 62%,
+    transparent 96%
+  );
+}
+/* The variant pulls the second radial down the hero's right side so the two hues
+ * genuinely share the panel instead of the violet hiding in a corner - the point
+ * is a choice the owner can SEE, not a technicality. */
+:root[data-experiment="duotone"] .hero-mesh {
+  background-image:
+    var(--noise),
+    radial-gradient(130% 110% at 12% 0%, var(--mesh-1), transparent 58%),
+    radial-gradient(110% 130% at 100% 45%, var(--mesh-2), transparent 62%);
+}
+:root[data-experiment="duotone"][data-theme="light"] {
+  --mesh-2: rgb(94 78 214 / 0.16);
+  --grain-2: rgb(94 78 214 / 0.05);
+  --edge-glow: linear-gradient(
+    90deg,
+    transparent 4%,
+    rgb(122 88 16 / 0.4) 38%,
+    rgb(94 78 214 / 0.4) 62%,
+    transparent 96%
+  );
 }
 
 /*

@@ -3,6 +3,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Check, Loader2, Search } from "lucide-react";
 import { cn, fmtValue } from "@/lib/ui";
+import { TeamAvatar } from "@/components/TeamAvatar";
 const WINDOW_TONE = {
   "win-now": "text-accent-text",
   rebuilding: "text-info",
@@ -65,6 +66,11 @@ export function TeamPicker({
           t.ownerName.toLowerCase().includes(q.toLowerCase()),
       )
     : teams;
+  // Each row's value bar restates its printed total-value figure as a length,
+  // against the best-stocked team in the league - a fact the sort order already
+  // implies, now visible without reading fourteen numbers. Non-text and
+  // proportional, so it encodes an amount, never a verdict (D6).
+  const maxValue = Math.max(...teams.map((x) => x.totalValue), 1);
   return (
     <div>
       {/* Username entry - the primary path: type your own Sleeper handle and we
@@ -72,7 +78,7 @@ export function TeamPicker({
             people often type that instead. */}
       <form
         onSubmit={resolveUsername}
-        className="mb-5 rounded-[--radius] border border-border bg-surface p-4"
+        className="card-lit mb-5 rounded-[--radius] border border-border bg-surface p-4"
       >
         <label
           htmlFor="sleeper-username"
@@ -135,6 +141,10 @@ export function TeamPicker({
       <ul className="space-y-2">
         {filtered.map((t) => {
           const active = t.rosterId === currentRosterId;
+          const share = Math.max(
+            4,
+            Math.round((t.totalValue / maxValue) * 100),
+          );
           return (
             <li key={t.rosterId}>
               <button
@@ -142,13 +152,20 @@ export function TeamPicker({
                 disabled={pending !== null}
                 aria-current={active ? "true" : undefined}
                 className={cn(
-                  "flex w-full items-center gap-3 rounded-[--radius] border p-4 text-left transition-colors",
+                  "card-lit flex w-full flex-wrap items-center gap-3 rounded-[--radius] border p-4 text-left transition-colors",
                   active
                     ? "border-accent-edge bg-accent-wash"
                     : "border-border bg-surface hover:border-border-strong hover:bg-surface-2",
                   pending !== null && "opacity-60",
                 )}
               >
+                <TeamAvatar
+                  name={t.teamName}
+                  avatarId={t.avatarId}
+                  teamLogoUrl={t.teamLogoUrl}
+                  size="md"
+                  isMe={active}
+                />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
                     <span className="truncate text-body leading-relaxed font-semibold text-ink">
@@ -185,6 +202,21 @@ export function TeamPicker({
                     className="animate-spin text-accent-text"
                   />
                 )}
+                {/* basis-full wraps the bar onto its own row inside the same
+                    button; the flex-wrap above is what makes that legal. */}
+                <span
+                  aria-hidden="true"
+                  className="-mt-1 h-[3px] basis-full overflow-hidden rounded-full bg-elevated"
+                >
+                  <span
+                    className="block h-full rounded-full"
+                    style={{
+                      width: `${share}%`,
+                      background:
+                        "linear-gradient(90deg, var(--color-accent-dim), var(--color-accent))",
+                    }}
+                  />
+                </span>
               </button>
             </li>
           );

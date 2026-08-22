@@ -134,7 +134,7 @@ export default async function HomePage() {
       {mayCapture && ledger.unannotatedNotable > 0 && (
         <Link
           href="/ledger"
-          className="mb-3 flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-accent-edge bg-accent-wash px-2.5 py-2 transition-colors hover:border-accent"
+          className="card-lit mb-3 flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-accent-edge bg-accent-wash px-2.5 py-2 transition-colors hover:border-accent"
         >
           <ScrollText
             size={15}
@@ -158,21 +158,27 @@ export default async function HomePage() {
         </Link>
       )}
 
-      {/* Revealed strategy - the headline, first thing on the screen. The kicker
-            names WHOSE strategy, because "You said win-now. You sold." only lands when
-            the reader knows who "you" is - obvious to the manager in their own seat,
-            not to a leaguemate seeing this app (or this seat) for the first time. */}
-      <PageHeader
-        kicker={`Revealed strategy · ${p.teamName ?? p.displayName}`}
-        title={report.headline}
-      />
+      {/* Revealed strategy - the headline, first thing on the screen, and now the
+            page's one hero-mesh moment (D88): the biggest sentence in the app gets
+            the one panel with light, grain and the accent-family mesh behind it,
+            instead of floating on bare ground at the same material weight as
+            everything under it. The kicker names WHOSE strategy, because "You said
+            win-now. You sold." only lands when the reader knows who "you" is -
+            obvious to the manager in their own seat, not to a leaguemate seeing
+            this app (or this seat) for the first time. */}
+      <section className="hero-mesh mb-3 rounded-[--radius-lg] border border-border px-4 pb-1.5 pt-4">
+        <PageHeader
+          kicker={`Revealed strategy · ${p.teamName ?? p.displayName}`}
+          title={report.headline}
+        />
+      </section>
 
       {report.contradictions.length > 0 ? (
         <div className="mt-3 space-y-2">
           {report.contradictions.slice(0, 2).map((c) => (
             <Card
               key={c.id}
-              className="border-negative/30 bg-negative/[0.06] p-3"
+              className="card-lit border-negative/30 bg-negative/[0.06] p-3"
             >
               <div className="mb-1.5 flex items-center gap-2">
                 <AlertTriangle size={15} className="text-negative" />
@@ -204,7 +210,7 @@ export default async function HomePage() {
         // serving self-knowledge, and "here's what you said, it still holds" is
         // part of that memory, not just the moments it catches you out. Kept
         // visually calm and clearly not a warning: no red, no AlertTriangle.
-        <div className="mt-3 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2">
+        <div className="card-lit mt-3 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2">
           <div className="flex items-center gap-2">
             <CheckCircle2
               size={14}
@@ -249,7 +255,7 @@ export default async function HomePage() {
       {/* YOUR SEASON, in figures. Four numbers in one card's worth of height rather
             than four stacked boxes, and every one of them is a link. */}
       <SectionHeader title="Your season, in four numbers" />
-      <div className="grid grid-cols-2 overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
+      <div className="card-lit grid grid-cols-2 overflow-hidden rounded-[--radius] border border-border bg-surface">
         <Figure
           href="/league"
           label="Record"
@@ -303,7 +309,7 @@ export default async function HomePage() {
       {/* Activity tape - the rest of the derived profile, previously unsurfaced. */}
       <Link
         href="/ledger"
-        className="mt-1.5 block rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
+        className="card-lit mt-1.5 block rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2 transition-colors hover:border-border-strong hover:bg-surface-2"
       >
         <div className="grid grid-cols-4 gap-1">
           <Micro label="moves" value={`${p.totalTransactions}`} />
@@ -457,7 +463,13 @@ function Figure({ href, label, value, sub, className }) {
       <span className="truncate text-meta uppercase tracking-wide text-faint">
         {label}
       </span>
-      <span className="truncate figure text-lede font-semibold leading-tight text-ink">
+      {/* `text-display`, not `lede` (D88): these four ARE the hero figures that
+          anchor this page, which is precisely the job the token's own comment
+          reserves display for (Stat already sets it) - and "oversized confident
+          type at the key moment" was the flat-verdict fix every reference app
+          agrees on. Semibold, per the house rule that numbers never take the
+          headline's full bold. */}
+      <span className="truncate figure text-display font-semibold leading-tight text-ink">
         {value}
       </span>
       <span className="truncate text-meta leading-tight text-muted">{sub}</span>

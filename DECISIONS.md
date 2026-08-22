@@ -4581,3 +4581,83 @@ Also fixed, unrelated root cause, same investigation: `pnpm setup` was silently 
 **VERIFIED, not assumed working from the diff.** All three scripts run their real bodies end to end: `node scripts/ingest.js` made a genuine live call to the real NSL Fantasy Hoops league on Sleeper's API and walked all 5 seasons; `node scripts/seed.js` (with `LEAGUE_PROVIDER=fixture`) reached its real Prisma write and failed only on "no Postgres at localhost:5432" - the expected, correct failure with no real database running, not an import error; `node scripts/claim-links.js` correctly detected no `AUTH_SECRET` and printed the real single-user-mode message. `pnpm lint` clean. `pnpm test`: 1054/1054 passed, unchanged. `pnpm build` clean after `rm -rf .next`. Full `pnpm e2e`: 78/78 passed.
 
 README updated to match: the "currently broken" callouts and the Scripts-table caveats from D86 are gone, because the scripts they described are no longer broken - not because the finding was walked back.
+
+## D88. THE IDENTITY ROUND - a real material system for the surfaces that ARE the app, and the second-hue question finally made real instead of hypothetical
+
+The owner has now said it three times, most recently in these words: "we're lacking
+in the visuals and general user experience side of things... this needs to be our
+main focus before spending any more energy on features and stats." D64 answered the
+first "flat" verdict with a type bump and a louder grain and explicitly declined to
+touch depth; D72 answered the second with density. This round finally treats the
+verdict as what it is - a MATERIALS problem - and touches only the identity
+surfaces: Home, the Desk's chrome, the first-run `/teams` screen, and the token
+system itself.
+
+**WHAT THE RESEARCH ACTUALLY SAID.** The two references the owner gave plus
+teardowns of the current premium-app canon (Linear, Vercel's Geist, Family, the
+2025 liquid-glass wave). The finding that mattered: Linear's dark-theme depth is a
+surface ladder + hairline borders + a one-pixel top highlight - which Parquet
+ALREADY HAD, in full, and which is exactly why it read clean-but-flat. The half it
+lacked is Geist's: multi-layer shadow stacks where each layer has one job (contact,
+ambient, inner top light), so "cards feel built, not floating," plus the glass-era
+chrome recipe (blur + SATURATE + an edge that catches light) for the one plane that
+floats. So the round's rule: keep the ladder, add the light.
+
+**THE MATERIAL SYSTEM (globals.css, all tokens themed per theme):**
+- **`.card-lit`** - `--sheen` (a white-alpha vertical light gradient, hue-free) +
+  `--shadow-card` (one contact shadow + one soft ambient) + the existing top
+  catchlight. Composes onto a normal card with one class. Applied to Home's capture
+  badge, contradiction/steady cards, the four-figure grid, the activity tape, and
+  the first-run form + team rows.
+- **`.hero-mesh`** - the identity moment, ONE per page at most: the same lit card
+  with an accent-family radial mesh behind it (`--mesh-1/2` - the SAME gold+blue
+  the body grain has carried since round 1, at wash strength, so zero new hues) and
+  a real grain: `--noise`, an inline feTurbulence tile at 4% alpha, also layered
+  over the page ground itself. Its ink joins the ground-scoped wash restatement so
+  every text pair on it stays measured.
+- **`.desk-sheet`** - the Desk stops being "background at 93% alpha with a blur"
+  and becomes glass: `--glass-fill` + `--glass-hilite` pane light +
+  `blur(20px) saturate(1.4)` (saturate is what keeps the page alive behind it
+  instead of grey), `--shadow-dock` lifting it off the scroll, and `--edge-glow` -
+  the accent laid as a catchlight along the top edge, brightest mid-edge, gone by
+  the corners. The lit tab additionally gets `.tab-glow`, a static gold halo behind
+  its icon. The seat popover trades Tailwind's stock `shadow-lg` for the app's own
+  raised stack. No motion added anywhere - static material only, the
+  micro-interaction lane belongs to a sibling this round.
+
+**THE PAGES.** Home's revealed-strategy headline - the biggest sentence in the app -
+now sits on the page's one hero-mesh panel instead of floating on bare ground at the
+same material weight as everything below it, and the four season figures move from
+`lede` (17px) to `display` (30px), which is precisely the job the token's own
+comment reserves display for (Stat already sets it; these four anchor the page).
+`/teams`, the first screen anyone ever sees, gets the other hero-mesh moment (mark +
+kicker + the question), team rows finally carry the same TeamAvatar every other team
+list in the app has (they were the one team list rendered as bare text), and each
+row gains a 3px value bar - the printed total-value figure restated as a length
+against the league's best-stocked roster. Non-text, proportional, an amount and
+never a verdict (D6 untouched).
+
+**THE DEPTH RULE IS REVISED, ON PURPOSE.** "Cards separate by surface, never by
+shadow" is now "three material tiers" (DESIGN.md table). That rule was written by an
+earlier round and defended twice; what changed is not the argument but the evidence:
+three consecutive owner verdicts that its output reads flat. The tier system keeps
+its real content - elevation is still surface-first, `--shadow-raised` still means
+"genuinely floats" - and adds the ambient stack the references all share.
+
+**THE SECOND HUE - EXPLORED AS DIRECTED, NOT SHIPPED.** The owner explicitly
+authorized reopening the one-accent rule (D47/D48/D61/D64) this round. Rather than
+argue it again, the choice is made real: a clearly-marked, INERT token block gated
+behind `data-experiment="duotone"` (nothing in the app sets it) turns the hero
+mesh's second radial into a true violet co-accent - violet because every other
+candidate hue is already a semantic (green/red/blue/orange), so it is the one hue
+that cannot be misread as a verdict - and splits the Desk's edge catchlight
+gold-into-violet. Side-by-side screenshots (one-hue default vs duotone, both
+themes) ride with this round's report. Promote the block's values or delete the
+block once the owner picks; the committed DEFAULT remains one accent.
+
+**Verified:** `pnpm lint` clean; `pnpm test` 1054/1054; `rm -rf .next && pnpm build`
+clean; full `pnpm e2e` green via an uncommitted local Chromium-path config (deleted
+after, per the visual-review skill); axe-core clean on `/` and `/teams` in both
+themes; before/after full-page and viewport screenshots at 390px in both themes,
+plus the duotone variant pair. Fixture provider throughout - synthetic data, real
+layout.
