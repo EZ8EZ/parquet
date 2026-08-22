@@ -7066,3 +7066,65 @@ change. axe-scan
 clean on /awards, /recap, /more in BOTH themes (heading order intact: the poster
 changes the h3's size, never its level). Before/after screenshots at 390px, both
 themes, in the session scratchpad.
+
+## D110. THE RECORD GETS TYPOGRAPHY OF IMPORTANCE (VISION M6) - a season's headline deal as a box score, magnitude ticks on every row, and the receipt page's totals as a real two-sided receipt
+
+**The defect this answers.** /deals was the phone book of VISION.md's Part 1 critique:
+141 deals as identical two-line rows, the trade that reshaped the league typeset
+exactly like a throw-in swap. The record is the app's premise and it had zero visual
+hierarchy of importance.
+
+**The measurement, and why it is not a verdict.** The only ordering this ships is
+TOTAL TWO-WAY VALUE MOVED (`lib/tradegraph/magnitude.js`): every player a transaction
+moved, both directions summed, priced by the same `cachedValuePlayers` model /values
+publishes. A sum over both sides cannot say who won - that is why it is the sum and
+not a delta (D6). Copy is measurement language everywhere ("most value moved", "value
+moved: top quarter of all deals"), pinned by a test that greps the shared label for
+verdict words. The honesty caveats print where the number does: "both sides at
+today's prices, players only" (D23's hindsight caveat, D24's players-only caveat), and
+a commissioner deal still carries its "no pick record" tag (D19).
+
+**Unmeasured is not small.** A deal none of whose players the model can price gets
+`ticks: null` - no glyph - and a season of such deals gets no headline, rather than an
+arbitrary one. Zero-value deals are also excluded from the quartile thresholds, so a
+dozen all-pick deals cannot promote every real deal a bucket. This is D19's posture
+applied to a glyph: an acknowledged gap beats a fabricated "measured: tiny".
+
+**The box score.** On the unfiltered index each season group now leads with its
+largest deal as a full-width card: kicker ("MOST VALUE MOVED"), the sum as a display
+numeral, then the deal as a two-column receipt - each side's assets as ledger lines
+with dotted leaders and a ruled players-only total. It is pulled out of chronological
+order on purpose (a front page leads with its biggest story) but it is still exactly
+one `<li>` with one link, the deal's own row promoted - so the index's
+one-row-per-deal e2e contract holds byte-for-byte. Ordinary rows gain a three-slot
+tick glyph (quartile bucket, count-as-geometry, neutral greys in both states - colour
+grading a deal's size would be one step from grading the deal).
+
+**The two-sided receipt is ONE component.** `components/DealReceipt.jsx` renders both
+the index's box-score columns (`dense`) and the receipt page's "what each side is
+worth today" section, which previously drew only the two endpoint totals as SideBars.
+The receipt lists EVERYTHING a side received - a pick or an unpriceable player prints
+an em dash in the price column instead of disappearing, so the players-only total sits
+above a visible record of what it did not count. Deliberately link-free and
+presentation-only so it can sit inside the index card's `<Link>` and so the trade
+evaluator's result can adopt it unchanged when that wave lands (VISION M5's 2K
+receipt note) - the evaluator builds `sides` and renders, nothing here to rewire.
+`SideBars` lost its only caller and was deleted from `components/charts.jsx` rather
+than kept warm (the D19 discipline on zero-caller code).
+
+**Colour discipline held.** Gold means "yours": the only accent on a box score or
+receipt is the viewer's own team name when they were actually in the deal - the same
+treatment their name already had on the rows. Court blue was NOT spent here: a deal
+between two other managers has no "yours" side, and a receipt is a document, not a
+you-against-the-field comparison (M4's own rule). Names line-clamp at word
+boundaries, never mid-word truncate (the kill-list #8 rule); every number is
+`.figure` tabular. No new motion, so nothing new to retire under
+`prefers-reduced-motion`.
+
+### Gate
+`pnpm lint` clean; `pnpm test` 1,388 (8 new in `magnitude.test.js`); `rm -rf .next &&
+pnpm build` clean; full `pnpm e2e` 77/81 with the 4 failures reproduced byte-identically
+on an UNMODIFIED stash of this branch (`net::ERR_CONNECTION_RESET` on /roster + /depth:
+this sandbox's proxy resetting an external fetch, not app behaviour - real CI is
+unaffected). axe-core: /deals and /deals/[id] clean in both themes. Before/after
+shot at 390px, dark and paper.

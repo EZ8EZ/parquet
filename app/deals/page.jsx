@@ -31,11 +31,14 @@ import { getLeagueHistory } from "@/lib/history";
 import { getPrincipals } from "@/lib/principals";
 import { leagueBuybacks } from "@/lib/agency";
 import { buildTradeLedger, dealPieces, pairMatrix } from "@/lib/tradegraph";
+import { dealMagnitudes, ticksLabel } from "@/lib/tradegraph/magnitude";
 import {
   dealHref,
   dealsQueryString,
   parseDealsParams,
 } from "@/lib/tradegraph/url";
+import { cachedValuePlayers } from "@/lib/valuation";
+import { ordinal } from "@/lib/derive/describe";
 import {
   Card,
   EmptyState,
@@ -44,9 +47,10 @@ import {
   Stat,
   Tag,
 } from "@/components/ui";
+import { DealReceipt } from "@/components/DealReceipt";
 import { LocalDate } from "@/components/LocalDate";
 import { TeamAvatar } from "@/components/TeamAvatar";
-import { cn } from "@/lib/ui";
+import { cn, fmtValue } from "@/lib/ui";
 import { Onward } from "@/components/Onward";
 import { NeverTradedList, TradeMatrix } from "@/components/TradeMatrix";
 export const dynamic = "force-dynamic";
@@ -106,6 +110,26 @@ export default async function DealsPage({ searchParams }) {
    */
   const buybacks = leagueBuybacks(h);
   const matrix = pairMatrix(ledger.managers, ledger.pairings);
+  /*
+   * TYPOGRAPHY OF IMPORTANCE (VISION M6). The index was a phone book: 141 deals as
+   * identical two-line rows, nothing separating the trade that reshaped the league
+   * from a throw-in swap. The separator is a MEASUREMENT, never a verdict (D6):
+   * total two-way value moved, both sides summed at today's prices on the same
+   * model `/values` publishes, players only (D24 - and a commissioner deal has no
+   * pick record at all, D19). Each season leads with its largest deal as a box
+   * score; every other row carries a small quartile tick glyph so the eye can find
+   * the heavy ones without reading 141 dates.
+   */
+  const values = cachedValuePlayers(h);
+  const priceOf = (pid) => {
+    const v = values.get(pid);
+    return v && v.value > 0 ? v.value : 0;
+  };
+  const mag = dealMagnitudes(h.transactions, priceOf);
+  const txById = new Map(h.transactions.map((t) => [t.transactionId, t]));
+  const rosterNames = {};
+  for (const m of ledger.managers)
+    if (!m.isFormer) rosterNames[m.rosterId] = m.name;
   const filterLabel = pairing
     ? `${byOwner.get(pairing.a)?.name ?? pairing.a} and ${byOwner.get(pairing.b)?.name ?? pairing.b}`
     : manager
@@ -213,7 +237,12 @@ export default async function DealsPage({ searchParams }) {
           className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface"
         >
           {trades.map((t) => (
-            <DealRow key={t.id} t={t} meRosterId={ledger.meRosterId} />
+            <DealRow
+              key={t.id}
+              t={t}
+              meRosterId={ledger.meRosterId}
+              ticks={mag.byId.get(t.id)?.ticks ?? null}
+            />
           ))}
         </ul>
       ) : (
@@ -227,35 +256,67 @@ export default async function DealsPage({ searchParams }) {
          * every row still a real link into its own receipt the moment you tap.
          */
         <div className="space-y-1.5" data-testid="deal-index">
-          {seasonGroups.map((g, i) => (
-            <details
-              key={g.season}
-              open={i === 0 || undefined}
-              className="group overflow-hidden rounded-[--radius-sm] border border-border bg-surface"
-            >
-              <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-1">
-                <span className="flex items-center gap-1.5">
-                  <ChevronRight
-                    size={13}
-                    aria-hidden="true"
-                    className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
-                  />
-                  <span className="figure text-note font-semibold text-ink">
-                    {g.season}
+          {seasonGroups.map((g, i) => {
+            /*
+             * THE SEASON'S HEADLINE DEAL leads its group as a full-width box
+             * score, pulled out of chronological order on purpose - a front page
+             * leads with its biggest story, not its latest. Still exactly one
+             * <li> and one link per deal: the headline is a deal's row promoted,
+             * never a second copy of it, so the index's one-row-per-deal
+             * contract (and the e2e count that pins it) holds unchanged.
+             */
+            const headlineId = mag.headlineBySeason.get(g.season);
+            const headline = headlineId
+              ? (g.trades.find((t) => t.id === headlineId) ?? null)
+              : null;
+            const rest = headline
+              ? g.trades.filter((t) => t.id !== headline.id)
+              : g.trades;
+            return (
+              <details
+                key={g.season}
+                open={i === 0 || undefined}
+                className="group overflow-hidden rounded-[--radius-sm] border border-border bg-surface"
+              >
+                <summary className="flex min-h-11 cursor-pointer list-none items-center justify-between gap-2 px-2.5 py-1">
+                  <span className="flex items-center gap-1.5">
+                    <ChevronRight
+                      size={13}
+                      aria-hidden="true"
+                      className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
+                    />
+                    <span className="figure text-note font-semibold text-ink">
+                      {g.season}
+                    </span>
                   </span>
-                </span>
-                <span className="figure text-meta text-secondary">
-                  {g.trades.length}{" "}
-                  {g.trades.length === 1 ? "deal" : "deals"}
-                </span>
-              </summary>
-              <ul className="disclosure-body divide-y divide-border border-t border-border">
-                {g.trades.map((t) => (
-                  <DealRow key={t.id} t={t} meRosterId={ledger.meRosterId} />
-                ))}
-              </ul>
-            </details>
-          ))}
+                  <span className="figure text-meta text-secondary">
+                    {g.trades.length} {g.trades.length === 1 ? "deal" : "deals"}
+                  </span>
+                </summary>
+                <ul className="disclosure-body divide-y divide-border border-t border-border">
+                  {headline && (
+                    <HeadlineDeal
+                      t={headline}
+                      tx={txById.get(headline.id)}
+                      valueMoved={mag.byId.get(headline.id)?.value ?? 0}
+                      priceOf={priceOf}
+                      players={h.players}
+                      rosterNames={rosterNames}
+                      meRosterId={ledger.meRosterId}
+                    />
+                  )}
+                  {rest.map((t) => (
+                    <DealRow
+                      key={t.id}
+                      t={t}
+                      meRosterId={ledger.meRosterId}
+                      ticks={mag.byId.get(t.id)?.ticks ?? null}
+                    />
+                  ))}
+                </ul>
+              </details>
+            );
+          })}
         </div>
       )}
 
@@ -569,8 +630,13 @@ export default async function DealsPage({ searchParams }) {
  * ONE DEAL, ONE ROW. Pulled out unchanged from the flat list so the season-grouped
  * branch and the filtered (small, already-flat) branch render the identical row -
  * a season fold must never mean two different rows for the same deal.
+ *
+ * `ticks` is the deal's magnitude bucket (lib/tradegraph/magnitude.js): 1-3 by
+ * quartile of value moved, so the eye can find the heavy deals in a season without
+ * reading every date line. Count is the encoding - geometry, not colour - and a
+ * deal the model cannot price carries NO glyph rather than a smallest one.
  */
-function DealRow({ t, meRosterId }) {
+function DealRow({ t, meRosterId, ticks = null }) {
   return (
     <li>
       <Link
@@ -580,8 +646,10 @@ function DealRow({ t, meRosterId }) {
         <span className="min-w-0 flex-1">
           {/* Who, on one line. The parties ARE the headline of a deal index -
             what each of them got is the receipt's job, and printing it here
-            printed every deal twice. */}
-          <span className="block truncate text-body font-semibold leading-tight">
+            printed every deal twice. line-clamp, not truncate: these are names,
+            and the standing rule (VISION kill-list #8) is that a name may clamp
+            at a word boundary but never shear mid-word. */}
+          <span className="block text-body font-semibold leading-tight line-clamp-1">
             {t.sides.map((s, i) => (
               <span key={s.rosterId}>
                 {i > 0 && <span className="text-faint"> &harr; </span>}
@@ -599,6 +667,7 @@ function DealRow({ t, meRosterId }) {
             <LocalDate ts={t.created} /> · wk {t.week} · {dealPieces(t.assets)}
           </span>
         </span>
+        <MagnitudeTicks ticks={ticks} />
         {t.multiTeam && <Tag tone="info">{t.parties.length}-team</Tag>}
         {t.commissionerExecuted && <Tag tone="warn">no pick record</Tag>}
         <ChevronRight
@@ -606,6 +675,133 @@ function DealRow({ t, meRosterId }) {
           aria-hidden="true"
           className="shrink-0 text-faint"
         />
+      </Link>
+    </li>
+  );
+}
+/**
+ * The magnitude glyph: three fixed slots, `ticks` of them filled, rising like a
+ * signal meter. The COUNT carries the reading and the empty slots show the scale
+ * it sits on; both states are neutral greys, because colour grading a deal's size
+ * would be one short step from grading the deal (D6). Null renders nothing -
+ * unmeasured is not "small".
+ */
+function MagnitudeTicks({ ticks }) {
+  if (!ticks) return null;
+  return (
+    <span
+      role="img"
+      aria-label={ticksLabel(ticks)}
+      className="flex shrink-0 items-end gap-[3px]"
+    >
+      {[1, 2, 3].map((slot) => (
+        <span
+          key={slot}
+          className={cn(
+            "w-[3px] rounded-[1px]",
+            slot === 1 ? "h-1.5" : slot === 2 ? "h-2.5" : "h-3.5",
+            slot <= ticks ? "bg-secondary" : "bg-border",
+          )}
+        />
+      ))}
+    </span>
+  );
+}
+/**
+ * THE SEASON'S BOX SCORE - one deal per season, promoted from a row to a document
+ * (VISION M6: "the record gets typography of importance").
+ *
+ * Everything on it is a standing measurement: "most value moved" is arithmetic on
+ * published values (both sides summed - a sum cannot say who won), the hero
+ * numeral is that sum, and the two columns are the same two-sided receipt the
+ * deal's own page prints (components/DealReceipt.jsx - one component, so the
+ * index's box score and the receipt page can never disagree about what a side
+ * got). No "best", no "blockbuster", no winner (D6).
+ *
+ * NEUTRAL GROUND: the card is between whichever two managers made it, so nothing
+ * here is gold except the viewer's own name when they were actually in the deal -
+ * the exact treatment every ordinary row already applies.
+ *
+ * Still one <li> with one <a>, like every row around it: the whole card is the
+ * deal's own tap target into its receipt page.
+ */
+function HeadlineDeal({
+  t,
+  tx,
+  valueMoved,
+  priceOf,
+  players,
+  rosterNames,
+  meRosterId,
+}) {
+  if (!tx) return null;
+  const nameOf = (rosterId) =>
+    t.sides.find((s) => s.rosterId === rosterId)?.name ?? `Roster ${rosterId}`;
+  const sides = t.parties.map((rosterId) => {
+    const playersIn = Object.entries(tx.adds)
+      .filter(([, r]) => r === rosterId)
+      .map(([pid]) => pid);
+    const picksIn = tx.draftPicks.filter((dp) => dp.ownerId === rosterId);
+    return {
+      key: rosterId,
+      name: nameOf(rosterId),
+      isMe: rosterId === meRosterId,
+      total: playersIn.reduce((s, pid) => s + priceOf(pid), 0),
+      lines: [
+        ...playersIn.map((pid) => {
+          const v = priceOf(pid);
+          return {
+            key: `p:${pid}`,
+            label: players.get(pid)?.fullName ?? `Player ${pid}`,
+            value: v > 0 ? Math.round(v) : null,
+          };
+        }),
+        ...picksIn.map((dp) => ({
+          key: `k:${dp.season}-${dp.round}-${dp.rosterId}|${dp.previousOwnerId}`,
+          label: `${dp.season} ${ordinal(dp.round)}${
+            dp.rosterId !== dp.previousOwnerId && rosterNames[dp.rosterId]
+              ? ` (orig. ${rosterNames[dp.rosterId]})`
+              : ""
+          }`,
+          value: null,
+        })),
+      ],
+    };
+  });
+  return (
+    <li>
+      <Link
+        href={dealHref(t.id)}
+        className="block px-2.5 py-2.5 transition-colors hover:bg-surface-2"
+      >
+        {/* The masthead grammar in miniature: kicker, then the hero numeral in
+            display scale - the measurement is the artwork, the date is the
+            caption. */}
+        <span className="flex items-baseline justify-between gap-2">
+          <span className="text-meta font-semibold uppercase tracking-[0.16em] text-secondary">
+            Most value moved
+          </span>
+          <span className="figure shrink-0 text-meta leading-tight text-secondary">
+            <LocalDate ts={t.created} /> · wk {t.week}
+          </span>
+        </span>
+        <span className="mt-0.5 flex flex-wrap items-baseline gap-x-2 gap-y-0">
+          <span className="figure text-display font-semibold leading-tight text-ink">
+            {fmtValue(Math.round(valueMoved))}
+          </span>
+          <span className="text-meta leading-snug text-muted">
+            both sides at today&apos;s prices, players only
+          </span>
+        </span>
+        <div className="mt-2">
+          <DealReceipt sides={sides} dense />
+        </div>
+        {(t.multiTeam || t.commissionerExecuted) && (
+          <span className="mt-2 flex flex-wrap gap-1.5">
+            {t.multiTeam && <Tag tone="info">{t.parties.length}-team</Tag>}
+            {t.commissionerExecuted && <Tag tone="warn">no pick record</Tag>}
+          </span>
+        )}
       </Link>
     </li>
   );
