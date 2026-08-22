@@ -131,11 +131,13 @@ test("an anchor link for a player who is not on the team says so instead of misl
   // A stale or hand-edited link is untrusted input; it must degrade, never throw.
   await page.goto("/depth/LAL?player=definitely-not-a-player");
   await expectStableChrome(page);
-  // NO_RECORD, and deliberately not SOURCE_GAP. This was a hand-written paragraph,
-  // and the refusal that would have replaced it claimed this team's chart "does not
-  // place" a player who was never on the team - kept off the screen only by which
-  // branch the page happened to test first. The code is the assertion now.
-  await expect(page.getByText(/NO_RECORD/)).toBeVisible();
+  // NO_RECORD's register label, and deliberately not SOURCE_GAP's. This was a
+  // hand-written paragraph, and the refusal that would have replaced it claimed this
+  // team's chart "does not place" a player who was never on the team - kept off the
+  // screen only by which branch the page happened to test first. The label is the
+  // assertion now (refusalSentence leads with the human label, not the raw code -
+  // VISION.md kill-list #4; the code still lives on the refusal object).
+  await expect(page.getByText(/No record to read/)).toBeVisible();
   await expect(
     page.getByText(/does not have this player on this team/),
   ).toBeVisible();

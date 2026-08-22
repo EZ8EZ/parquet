@@ -255,7 +255,7 @@ export function DepthLadder({ group, anchorId, holder, valueHref }) {
       {group.unordered.length > 0 && (
         <div className="mt-2 border-t border-border pt-2">
           <RefusalMark className="mb-1.5">
-            SOURCE_GAP: Sleeper places{" "}
+            Absent from the source: Sleeper places{" "}
             {group.unordered.length === 1 ? "this player" : "these players"} at{" "}
             {group.position} but states no order there, so{" "}
             {group.unordered.length === 1 ? "he" : "they"} cannot be placed
