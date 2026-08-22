@@ -6757,3 +6757,81 @@ bars by tier or trajectory by direction (D6, three separate times above); touchi
 those; component-level work reaches both pages through their shared components
 anyway); animating any of the new marks (a sibling session owns motion this round -
 everything here is static except the transitions the restyled elements already had).
+
+## D105. THE PROGRAM RATIFIES MID-ROUND - the podium becomes a print ledger, court blue ships as a meaning instead of a flagged variant, and two kill-list items land on these surfaces
+
+D104 shipped with two questions deliberately left open for the owner - how far the
+top-of-board hierarchy should go, and whether the two-hue /rank variant should ever be
+more than screenshots. Both were answered mid-round, in writing, by VISION.md ("The
+Program", committed on the integration branch and read in full before continuing):
+M1's asset-card fork resolved as **B, "Print Ledger"**, M4's second-hue fork resolved
+as **A, court blue adopted**, and two of M5's kill-list items name these exact
+surfaces. This entry records the deltas applied on top of D104 - same session, same
+verification bar - so the reasoning trail shows what was a proposal and what the owner
+actually ratified.
+
+**THE PODIUM IS GONE; THE CARD STOCK ARRIVED (M1B).** D104's `hero="podium"` weight for
+ranks #2-3 is deleted: the ratified design wants exactly ONE cover card per surface
+(the #1 asset on /values, the roster's own best asset on /roster) and wants everyone
+else's hierarchy carried the basketball-card way - by MATERIAL, never by a printed
+grade. The ladder ships as three unlayered classes in the depth-kit block
+(`globals.css`), applied by `ValueAssetRow` from the tier label it already receives:
+`Franchise` = double keyline (border, 2px gap, 1px inner line - two inset ring-shadows,
+no extra node) plus a restrained diagonal sheen at the hero wash's faint stop;
+`Cornerstone` = single gold keyline; every middle tier = plain stock, byte-identical to
+yesterday's row; `Fringe` = uncoated - flat, borderless, the page's own ground. This is
+D6-safe for the same reason the tier LABEL always was: the model already publishes the
+tier; the stock only lets the row say what the right-hand text already says. The tier
+seams from D104 stay - the ladder and the seams are the same reading at two scales.
+
+**COURT BLUE IS A MEANING NOW, NOT A VARIANT (M4A).** The owner adopted the second hue
+with exactly one sentence of semantics - **gold = yours, blue = the field** - and the
+Teenage-Engineering rule that a mark only gets the hue if its caption can be written as
+"this is the field's side of a comparison against you." It rides the existing `info`
+token (no fifth semantic invented; the token's measured per-theme values carry over),
+exported for charts as `CHART_FIELD` in lib/chart-colors with the rule written at the
+export. Applied to exactly four things, all previously monochrome comparisons:
+`DistributionStrip`'s peer ticks (the one chart whose whole job is you-against-the-
+league was drawing both sides in the same gold); the /rank blend slider's remainder
+(your share gold, consensus's share the info wash); the /rank disagreement bars
+(toward gold = a player you rank above consensus, toward blue = one the field ranks
+above you - identity, not valence, and a zero gap still draws only the spine); and the
+trade receipt (`BalanceBeam` send-gold/get-blue, the two mini-ledger headers likewise -
+replacing D104's all-gold beam, and giving the "you send"/"you get" labels back a
+colour that means WHOSE side, where the pre-D104 red/green had meant good/bad).
+Decorative blue remains banned; nothing else changed hue.
+
+**KILL LIST, THE TWO ITEMS ON THESE PAGES (M5).** (1) " · consensus only" no longer
+prints on every unbacked /values row - a property of the dataset was being repeated as
+if it were a property of each player (60 repetitions on the live board). One sentence
+under the list header now states it once, with the honest split: "N of M players are
+priced from consensus alone" when it is some, a differently-worded line when it is all
+(the fixture league's case), and nothing at all when it is none. The per-row
+information is NOT lost: every affected row still carries the full refusal sentence
+and the priced-vs-consensus fact in its expansion, which D104's own comment already
+argued was the room to say it properly. (2) The /rank 120-row wall is no longer the
+page's primary surface: the board renders a 25-row working set plus a search that
+jumps to any of the 120 (expanding the list exactly far enough to land on the found
+row, scrolling to it, flashing it - the same arrival grammar as /values' `?focus`),
+with "Show 25 more" / "All 120" beneath. The FEATURE is untouched - the full order
+still saves to the same cookie, still blends, still feeds the finder's conviction
+line - and the drag arithmetic is untouched except for one honest clamp: a drag cannot
+cross below the rendered slice, because dropping a row where the finger cannot see it
+is not a gesture anyone means. Nobody hand-ranks 120 assets on a phone; they disagree
+with the model about ~15, and the surface finally says so.
+
+**Verified, post-delta (full re-run, not carried over from D104).** `pnpm lint` clean;
+`pnpm test` 1380/1380; `rm -rf .next && pnpm build` clean, all routes present; full
+`pnpm e2e` 77 passed with the same 4 sandbox-only `ERR_CONNECTION_RESET` image-load
+failures that reproduce bit-identically with this round's entire diff stashed
+(confirmed again this round: the failing URL is sleepercdn.com team art, D81's class);
+axe-core clean on /values, /rank, /roster and /trade in both themes; fresh 390px
+screenshots in both themes of all four pages plus the two scripted states (an
+evaluated trade, a genuinely reordered board with real gaps).
+
+**Rejected:** re-colouring `RankDumbbell` (consensus-vs-priced is the model against
+the market - there is no "you" in it, so under M4's own rule it keeps its one grey);
+colouring "cons #N" row text or the consensus figure-strip cells blue (text-as-hue on
+every row is decoration, not a comparison mark - the blue lives in the marks);
+shrinking the working set below 25 or persisting its expansion (a session-local view
+of a saved order should reset to short on every visit, that being the point).

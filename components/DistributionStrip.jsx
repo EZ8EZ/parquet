@@ -35,6 +35,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import {
   CHART_ACCENT,
+  CHART_FIELD,
   CHART_GRID,
   CHART_NEUTRAL,
   divergingFill,
@@ -166,7 +167,11 @@ export function DistributionStrip({
               width={2}
               height={10}
               rx={1}
-              fill={signed ? divergingFill(v) : CHART_ACCENT}
+              // COURT BLUE (VISION M4): the peers are the FIELD's side of this
+              // comparison, so they take the field hue - gold stays yours alone.
+              // Both sides used to be the same gold, which made the one chart
+              // whose whole job is you-against-the-league monochrome.
+              fill={signed ? divergingFill(v) : CHART_FIELD}
               // FLAT, not the magnitude ramp. A peer tick's position IS its value,
               // so ramping opacity with position adds nothing - and it subtracts
               // something real: the ramp's bottom steps sit under 3:1 on every

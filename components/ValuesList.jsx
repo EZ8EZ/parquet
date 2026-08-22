@@ -62,14 +62,14 @@ export function ValueAssetRow({
   provenance,
   depth,
   /**
-   * THE PODIUM (round 10). "lead" for the #1 asset on a value-ordered list,
-   * "podium" for #2-3, undefined for everyone else. A ranking where row #1 and
-   * row #40 carry identical visual weight is a spreadsheet, not a board -
-   * Sofascore/FotMob put the top of a rating list in a visibly heavier frame,
-   * and that is hierarchy restating the SORT the list already performs, never a
-   * verdict (D6): the value column, not this styling, is the claim. Everything
+   * THE COVER CARD (VISION M1, fork B - "Print Ledger"). "lead" for exactly one
+   * row per surface: the #1 asset on /values, the roster's own best asset on
+   * /roster - the page's cover, with the value set as display typography and
+   * the rank as a ghost numeral. Every other row carries its tier as CARD
+   * STOCK instead (see the ladder in globals.css): hierarchy restating the
+   * sort and the model's own published tier, never a verdict (D6). Everything
    * behavioural - expansion, the lineage door, the injury chip - is identical
-   * across all three weights.
+   * across every weight.
    */
   hero,
 }) {
@@ -89,13 +89,20 @@ export function ValueAssetRow({
       className={cn(
         "overflow-hidden border transition-colors duration-700",
         hero ? "rounded-[--radius]" : "rounded-[--radius-sm]",
-        // The podium ground: the shared hero-card wash (gradient-within-hue) and
-        // the accent-edge border. `open` still wins the ground for both weights so
-        // an expanded hero reads as expanded, not merely as gold.
+        // The cover ground: the shared hero-card wash (gradient-within-hue) and
+        // the accent-edge border. `open` still wins the ground everywhere so an
+        // expanded row reads as expanded, not merely as its stock.
         hero && !open && "hero-card border-accent-edge",
         open
           ? "border-border-strong bg-surface-2"
-          : !hero && "border-border bg-surface hover:border-border-strong",
+          : !hero &&
+              cn(
+                "border-border bg-surface hover:border-border-strong",
+                // THE MATERIAL TIER LADDER (VISION M1B): tier as card stock.
+                tier === "Franchise" && "stock-franchise",
+                tier === "Cornerstone" && "stock-cornerstone",
+                tier === "Fringe" && "stock-fringe",
+              ),
         justArrived && "ring-2 ring-accent",
       )}
     >
@@ -217,26 +224,14 @@ export function ValueAssetRow({
                 </span>
               ) : null}
               {/*
-                THE EXCEPTION, MARKED - AND ONLY THE EXCEPTION.
-
-                Most rows here rest on a real in-league production record, and the
-                temptation was to badge those. That is exactly backwards: a mark that
-                is present on most rows and absent on some reads as a grade the absent
-                rows failed (D6), and it would put a decoration on ~200 rows to carry
-                information about ~50.
-
-                So the mark goes on the rows where the claim is WEAKER, it is three
-                words of plain text in the same secondary voice as the position code
-                beside it, and it costs no row height because it joins a line that is
-                already there and already wraps.
-
-                NOT HATCHED, and not drawn as a refusal on the value itself. These
-                players have real published prices; what is missing is the provenance
-                behind the rank, not the number. The full sentence - with his own
-                rostered-week count against the floor - is one tap down in the
-                expansion, which is where there is room to say it properly.
+                "consensus only" USED TO PRINT HERE, on every unbacked row. VISION's
+                kill list (M5) retired the repetition: it is a property of the
+                dataset, said once under the list header (see ValuesList below),
+                and each affected row still carries the full refusal sentence and
+                the priced-vs-consensus fact one tap down in its expansion - the
+                per-row information survives where there is room to say it
+                properly, and the caption stops wallpapering the list.
               */}
-              {productionBacked === false ? " · consensus only" : ""}
               {meta ? ` · ${meta}` : ""}
             </span>
             {share != null && (
@@ -675,6 +670,10 @@ export function ValuesList({ rows }) {
     () => Math.max(...rows.map((r) => r.value), 1),
     [rows],
   );
+  const consensusOnly = useMemo(
+    () => rows.filter((r) => r.productionBacked === false).length,
+    [rows],
+  );
   function reset(fn) {
     fn();
     setLimit(PAGE);
@@ -725,6 +724,19 @@ export function ValuesList({ rows }) {
           ))}
         </div>
       </div>
+
+      {/* THE DATASET'S OWN CAVEAT, SAID ONCE (VISION kill list, item 1). This used
+          to print as " · consensus only" on every unbacked row - a property of the
+          dataset repeated as if it were a property of each player. One sentence
+          here instead; each affected row still carries its own refusal in full,
+          in its expansion. Hidden entirely when nothing is unbacked. */}
+      {consensusOnly > 0 && (
+        <p className="mb-1 text-meta leading-snug text-secondary">
+          {consensusOnly === rows.length
+            ? "Every value here is priced from consensus alone - this league has no eight-week production record to reorder them with."
+            : `${consensusOnly} of ${rows.length} players are priced from consensus alone (under eight rostered weeks here) - each says so in its expanded row.`}
+        </p>
+      )}
 
       {/* Count and sort share a line: always visible, unlike a control parked at
             the end of the horizontally scrolling filter row. */}
@@ -796,19 +808,12 @@ export function ValuesList({ rows }) {
               depth={r.depth}
               focused={r.id === focusId}
               /* Value as geometry on every row, against the board's own #1 - the
-                 whole 260-row curve becomes scannable as bar lengths. And the top
-                 of a value-ordered board gets the podium weights: rank #1 is the
-                 page's own headline datum and now looks like it. */
+                 whole 260-row curve becomes scannable as bar lengths. And exactly
+                 ONE cover card (VISION M1B): the #1 asset of a value-ordered
+                 board is the page's own headline datum and now looks like it;
+                 everyone else's weight is carried by their tier's card stock. */
               share={r.value / maxValue}
-              hero={
-                sort === "value"
-                  ? i === 0
-                    ? "lead"
-                    : i < 3
-                      ? "podium"
-                      : undefined
-                  : undefined
-              }
+              hero={sort === "value" && i === 0 ? "lead" : undefined}
             />
           </Fragment>
         ))}

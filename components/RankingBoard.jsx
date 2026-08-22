@@ -20,7 +20,7 @@
  * turns a drag into an ordered id list and hands it to `customSource()`.
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { GripVertical, RotateCcw } from "lucide-react";
+import { GripVertical, RotateCcw, Search } from "lucide-react";
 import {
   applyRanks,
   blendSources,
@@ -40,7 +40,7 @@ import {
 } from "@/lib/rankings/customOrder";
 import { Card, EmptyState, SectionHeader } from "@/components/ui";
 import { PlayerAvatar, photosEnabled } from "@/components/PlayerAvatar";
-import { cn, fmtValue } from "@/lib/ui";
+import { cn, fmtValue, fold } from "@/lib/ui";
 // Row pitch: 64px row (h-16) + 4px gap (gap-1). The drag math below assumes
 // every row is exactly this tall, so if the row markup's height classes ever
 // change, this constant has to move with them.
@@ -54,6 +54,13 @@ import { cn, fmtValue } from "@/lib/ui";
 const ROW_HEIGHT = 64;
 const ROW_GAP = 4;
 const ROW_PITCH = ROW_HEIGHT + ROW_GAP;
+/**
+ * How much of the board stands on the page at rest (VISION kill list, item 5).
+ * The full pool still exists - saved, blended, and priced identically - but the
+ * page renders your top slice plus whatever search has pulled into view: nobody
+ * hand-ranks 120 assets on a phone; they disagree with the model about ~15.
+ */
+const WORKING_SET = 25;
 /**
  * How long to wait before persisting the order into the cookie.
  *
@@ -89,6 +96,37 @@ export function RankingBoard({ players, scoring }) {
   const [weight, setWeight] = useState(50);
   const [resetArmed, setResetArmed] = useState(false);
   const [draggingId, setDraggingId] = useState(null);
+  // The working set: how many rows the page currently stands up. Search grows it
+  // just far enough to land on the row it found; the buttons below grow it in
+  // pages or all at once. Never shrinks a drag out from under a finger - only
+  // user taps change it.
+  const [limit, setLimit] = useState(WORKING_SET);
+  const [q, setQ] = useState("");
+  const [flashId, setFlashId] = useState(null);
+  const shownCount = Math.min(limit, order.length);
+  const matches = useMemo(() => {
+    const s = fold(q.trim());
+    if (!s) return [];
+    return order
+      .map((id, idx) => ({ id, idx, p: playersById.get(id) }))
+      .filter((m) => m.p && fold(m.p.fullName).includes(s))
+      .slice(0, 8);
+  }, [q, order, playersById]);
+  const jumpTo = useCallback((id, idx) => {
+    setLimit((l) => Math.max(l, idx + 1));
+    setQ("");
+    setFlashId(id);
+  }, []);
+  // Scroll to the row search landed on, once it is rendered, and let the ring
+  // fade the same way /values' ?focus arrival does.
+  useEffect(() => {
+    if (!flashId) return;
+    document
+      .getElementById(`rank-li-${flashId}`)
+      ?.scrollIntoView({ behavior: "smooth", block: "center" });
+    const t = setTimeout(() => setFlashId(null), 1600);
+    return () => clearTimeout(t);
+  }, [flashId]);
   // Read the saved order once, after hydration - never on the server render, so
   // the first client paint matches the server's and React has nothing to warn
   // about. The cookie is the store (see lib/rankings/customOrder.ts); the
@@ -119,9 +157,13 @@ export function RankingBoard({ players, scoring }) {
   // pagehide) always see the latest order without re-subscribing per drag.
   const orderRef = useRef(order);
   const customizedRef = useRef(customized);
+  // Same pattern for the drag handler's clamp: a ref, so mid-drag pointermove
+  // never runs against a stale working-set size and never resubscribes per tap.
+  const limitRef = useRef(limit);
   useEffect(() => {
     orderRef.current = order;
     customizedRef.current = customized;
+    limitRef.current = limit;
   });
   const lastWrittenRef = useRef(null);
   // Persist the order into the cookie - the one store, and the only form a
@@ -223,7 +265,14 @@ export function RankingBoard({ players, scoring }) {
       if (!info || e.pointerId !== info.pointerId) return;
       const deltaY = e.clientY - info.startClientY;
       const rawHover = info.startIndex + Math.round(deltaY / ROW_PITCH);
-      const hoverIndex = Math.max(0, Math.min(order.length - 1, rawHover));
+      // Clamped to the VISIBLE slice, not the whole order: the rows below the
+      // working-set cut are not on screen, so letting a drag cross the cut would
+      // drop the row somewhere the finger cannot see. Expanding the list first
+      // (search or "show more") makes the deeper slots reachable.
+      const hoverIndex = Math.max(
+        0,
+        Math.min(Math.min(order.length, limitRef.current) - 1, rawHover),
+      );
       // The row has already reflowed by (hoverIndex - startIndex) pitches once
       // the last setOrder below commits. Subtracting that out of the transform
       // keeps the row's ON-SCREEN position exactly `deltaY` from where the drag
@@ -346,7 +395,10 @@ export function RankingBoard({ players, scoring }) {
           aria-label="Blend weight: percent your ranking versus consensus"
           className="weight-slider mt-2.5 h-11 w-full cursor-pointer rounded-full bg-elevated"
           style={{
-            background: `linear-gradient(to right, var(--color-accent) ${weight}%, var(--color-elevated) ${weight}%)`,
+            // COURT BLUE (VISION M4): the track IS a you-vs-the-field comparison -
+            // your share of the blend in gold, consensus's share in the field
+            // hue's wash. Same numbers, one more honest channel.
+            background: `linear-gradient(to right, var(--color-accent) ${weight}%, var(--color-info-wash) ${weight}%)`,
           }}
         />
         <p className="mt-1.5 text-meta leading-snug text-muted">
@@ -373,12 +425,62 @@ export function RankingBoard({ players, scoring }) {
         }
       />
       <p className="-mt-1 mb-1.5 text-meta leading-snug text-faint">
-        Drag the handle to reorder. Your position in this list is your rank;
-        everything else on the page follows it.
+        Drag the handle to reorder - your position in this list is your rank.
+        Nobody hand-ranks {order.length} players: the board shows your top{" "}
+        {WORKING_SET}, and search pulls anyone else into view.
       </p>
 
+      {/* THE FINDER (VISION kill list, item 5). The 120-row wall is gone as the
+          primary surface: you disagree with the model about the assets you care
+          about, so the board is a working set plus a search that jumps straight
+          to any player - expanding the list only as far as that row. The feature
+          (the full order, the cookie, the finder's conviction line) is untouched;
+          only how much of it stands on the page at once changed. */}
+      <div className="relative mb-1.5">
+        <Search
+          size={15}
+          aria-hidden="true"
+          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"
+        />
+        <input
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={`Find any of the ${order.length} to rank him`}
+          aria-label="Find a player on the board"
+          className="h-11 w-full rounded-full border border-border bg-surface pl-9 pr-3 text-sm text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
+        />
+        {q.trim() && (
+          <ul className="mt-1 space-y-0.5 rounded-[--radius-sm] border border-border bg-surface p-1">
+            {matches.length === 0 && (
+              <li className="px-2 py-1.5 text-meta text-secondary">
+                No player matches.
+              </li>
+            )}
+            {matches.map(({ id, idx, p }) => (
+              <li key={id}>
+                <button
+                  type="button"
+                  onClick={() => jumpTo(id, idx)}
+                  className="flex min-h-11 w-full items-center gap-2 rounded-[--radius-sm] px-2 text-left transition-colors hover:bg-surface-2"
+                >
+                  <span className="w-8 shrink-0 text-right figure text-meta text-secondary">
+                    {idx + 1}
+                  </span>
+                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">
+                    {p.fullName}
+                  </span>
+                  <span className="shrink-0 figure text-meta text-faint">
+                    cons #{p.searchRank}
+                  </span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+
       <ul className="flex flex-col gap-1">
-        {order.map((id, i) => {
+        {order.slice(0, shownCount).map((id, i) => {
           const p = playersById.get(id);
           if (!p) return null;
           const v = values.get(id);
@@ -402,6 +504,7 @@ export function RankingBoard({ players, scoring }) {
           return (
             <li
               key={id}
+              id={`rank-li-${id}`}
               /*
                * The name that lets the reset transition follow THIS row to its new
                * slot. Suppressed while a drag is in flight: that row is being moved by
@@ -420,6 +523,7 @@ export function RankingBoard({ players, scoring }) {
                 dragging
                   ? "z-10 border-accent-edge bg-surface-2 shadow-lg"
                   : "border-border bg-surface/60",
+                flashId === id && "ring-2 ring-accent",
               )}
             >
               {moved && !dragging && (
@@ -534,6 +638,28 @@ export function RankingBoard({ players, scoring }) {
         })}
       </ul>
 
+      {shownCount < order.length && (
+        <div className="mt-2 flex gap-1.5">
+          <button
+            type="button"
+            onClick={() => setLimit((l) => l + WORKING_SET)}
+            className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full border border-border bg-surface text-sm font-semibold text-ink transition-colors hover:border-accent hover:text-accent-text"
+          >
+            Show {Math.min(WORKING_SET, order.length - shownCount)} more
+            <span className="figure text-meta text-secondary">
+              of {order.length}
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setLimit(order.length)}
+            className="flex min-h-11 shrink-0 items-center justify-center rounded-full border border-border px-4 text-sm font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
+          >
+            All {order.length}
+          </button>
+        </div>
+      )}
+
       <SectionHeader title="Where you disagree with consensus" />
       <p className="-mt-1 mb-1.5 text-meta leading-snug text-faint">
         Sorted biggest gap first. This cuts both ways: it is your strongest
@@ -552,8 +678,11 @@ export function RankingBoard({ players, scoring }) {
               was exactly the colour-as-judgment D6 forbids. Now: a centre-origin
               bar, direction by which side of the spine it fills, size by length
               against the biggest gap on the board, and the number beside it in
-              plain ink. One hue. Delete the bar and the printed ranks still carry
-              everything - the acceptance test in lib/chart-colors. */}
+              plain ink. The two directions take the two OWNED hues (VISION M4:
+              gold = yours, court blue = the field): a bar toward gold is a player
+              you rank above consensus, toward blue is one the field ranks above
+              you - identity, not valence, and the printed ranks still carry
+              everything if the colour is deleted (lib/chart-colors' test). */}
           {gaps.map((g) => {
             const maxGap = Math.max(Math.abs(gaps[0]?.delta ?? 1), 1);
             const half = (Math.abs(g.delta) / maxGap) * 50;
@@ -585,7 +714,12 @@ export function RankingBoard({ players, scoring }) {
                       style={{
                         [right ? "left" : "right"]: "50%",
                         width: `${Math.max(half, 4)}%`,
-                        background: "var(--color-accent)",
+                        // delta = consensusRank - yourRank: positive means YOU
+                        // have him higher (gold, rightward); negative means the
+                        // field does (court blue, leftward).
+                        background: right
+                          ? "var(--color-accent)"
+                          : "var(--color-info)",
                       }}
                     />
                   )}

@@ -510,11 +510,12 @@ function counterpartyOf(incoming) {
   return best && best.name ? best : null;
 }
 /**
- * Give vs get as one centre-split bar: the send side fills leftward from the
- * spine in the dimmed accent, the get side rightward in the full accent, each
+ * Give vs get as one centre-split bar, in the app's two OWNED hues (VISION M4:
+ * gold = yours, court blue = the field): what leaves your roster fills leftward
+ * in gold, what arrives from the other side fills rightward in blue, each
  * proportional to its share of the package. Direction and size are geometry;
- * the printed totals beside/above it carry the numbers (never colour-as-verdict,
- * D6 - both sides are the same hue at two strengths).
+ * the printed totals beside/above it carry the numbers. Identity, never a
+ * verdict (D6) - neither hue is the good one, they are the two parties.
  */
 function BalanceBeam({ give, get, className }) {
   const total = give + get;
@@ -531,21 +532,21 @@ function BalanceBeam({ give, get, className }) {
           className="absolute inset-y-0 left-0"
           style={{
             width: `${givePct}%`,
-            background: "var(--color-accent-dim)",
+            background: "var(--color-accent)",
           }}
         />
         <span
           className="absolute inset-y-0 right-0"
           style={{
             width: `${100 - givePct}%`,
-            background: "var(--color-accent)",
+            background: "var(--color-info)",
           }}
         />
         <span className="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2 bg-bg" />
       </div>
-      <div className="mt-1 flex items-baseline justify-between figure text-meta text-secondary">
-        <span>send {fmtValue(give)}</span>
-        <span>get {fmtValue(get)}</span>
+      <div className="mt-1 flex items-baseline justify-between figure text-meta">
+        <span className="text-accent-text">send {fmtValue(give)}</span>
+        <span className="text-info">get {fmtValue(get)}</span>
       </div>
     </div>
   );
@@ -593,9 +594,15 @@ function TradeResult({ r, leagueId, counterparty }) {
             >
               <div className="flex items-baseline justify-between gap-1">
                 {/* Was red-for-send / green-for-get: valence on the two halves of
-                    every trade, the same D6 problem as the old delta colour. The
-                    words say which side is which. */}
-                <span className="text-meta uppercase tracking-wide text-secondary">
+                    every trade, the same D6 problem as the old delta colour. Now
+                    the two OWNED hues (VISION M4): gold is your side of the
+                    ledger, court blue is theirs - identity, not judgment. */}
+                <span
+                  className={cn(
+                    "text-meta uppercase tracking-wide",
+                    k === "send" ? "text-accent-text" : "text-info",
+                  )}
+                >
                   you {k}
                 </span>
                 <span className="figure text-meta font-semibold text-ink">
