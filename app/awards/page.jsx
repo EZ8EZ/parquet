@@ -5,6 +5,7 @@ import { AWARD_GROUPS, awardsPageData } from "@/lib/superlatives";
 import { Tag, Disclosure, EmptyState, PageHeader } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { AwardBadge, GROUP_TONE, iconForAward } from "@/components/AwardBadge";
+import { AwardPoster } from "@/components/AwardTitleCard";
 import { cn } from "@/lib/ui";
 import { Onward } from "@/components/Onward";
 export const dynamic = "force-dynamic";
@@ -118,27 +119,42 @@ function AwardCard({ award, meRosterId, userOf }) {
   return (
     <article
       className={cn(
-        "rounded-[--radius] border p-2.5",
-        isMe ? "border-accent-edge bg-accent-wash" : "border-border bg-surface",
+        "overflow-hidden rounded-[--radius] border",
+        isMe ? "border-accent-edge" : "border-border",
       )}
     >
       {/*
-          THIS USED TO SHARE ONE BASELINE: the title on `flex-1` and the stat line
-          on `shrink-0`. That works while `statLine` is a short number ("94.3%
-          started · 3 seasons"), but several awards' statLine is a full clause -
-          a runner's name, a pick, a rank ("Brayden Adeyemi · pick 11, 29th best in
-          2024" for The Reach) - and a `shrink-0` string that long claimed most of
-          the card width and squeezed the SHORT, editorial title into wrapping
-          mid-word onto two lines ("The" / "Reach"). The title is this page's own
-          voice and should never break like that; the stat is the flexible half,
-          so it moves below rather than beside it.
+          THE TITLE CARD (VISION M7). The award's 30-for-30 name finally gets the
+          poster it deserved: name huge in Fraunces on the poster ground, the stat
+          line as the deck (it used to be a 12px gold line under a truncating
+          17px title - now it is the sub on the artwork), the winner's team mark.
+          Twelve distinct posters instead of twelve identical tables. Everything on
+          it is a published measurement (D6): the deck is the same `statLine` this
+          card always printed, promoted rather than rewritten. The ranked list below
+          is unchanged in content - the winner row stays there too, because it is
+          the tappable dossier link and the poster is not a control.
         */}
-      <h3 className="truncate font-display text-lede font-semibold leading-tight text-ink">
-        {award.title}
-      </h3>
-      <p className="figure text-note font-semibold leading-snug text-accent-text">
-        {award.statLine}
-      </p>
+      <AwardPoster title={award.title} deck={award.statLine}>
+        <div className="mt-3 flex items-center gap-2">
+          <TeamAvatar
+            name={w.label}
+            avatarId={user?.avatar}
+            teamLogoUrl={user?.teamLogoUrl}
+            size="xs"
+            isMe={isMe}
+          />
+          <span className="min-w-0 text-body font-semibold leading-tight text-ink">
+            {w.label}
+          </span>
+          {isMe ? (
+            <Tag tone="accent">you</Tag>
+          ) : w.isFormer ? (
+            <Tag>former{w.tenureLabel ? ` ${w.tenureLabel}` : ""}</Tag>
+          ) : null}
+        </div>
+      </AwardPoster>
+
+      <div className={cn("p-2.5 pt-1.5", isMe ? "bg-accent-wash" : "bg-surface")}>
       <AwardSubtitle text={award.subtitle} />
 
       <EntrantLink
@@ -214,6 +230,7 @@ function AwardCard({ award, meRosterId, userOf }) {
           ))}
         </ol>
       )}
+      </div>
     </article>
   );
 }

@@ -6996,3 +6996,73 @@ colouring "cons #N" row text or the consensus figure-strip cells blue (text-as-h
 every row is decoration, not a comparison mark - the blue lives in the marks);
 shrinking the working set below 25 or persisting its expansion (a session-local view
 of a saved order should reset to short on every visit, that being the point).
+
+## D109. THE SUPERLATIVES GET THEIR TITLE CARDS - VISION M7 executed, one poster family at two scales, plus kill-list #6 and #7
+
+**The defect (VISION Part 1, verbatim critique).** The Superlatives had 30-for-30 names
+(The Closer, The Shark, House of Cards, Best Friends Forever) and phone-book bodies -
+twelve sections, each the identical 4-row list, a solid grey column at overview zoom. The
+names deserved title cards; they got tables. Meanwhile /recap's three held-award
+mini-cards were "the most fun square inches in the app" as content and plain rows as
+form, and its TIMELINE tile crammed a five-sentence `timelineToday.read` into a
+half-width column - a ~40-line wall of 12px text, the worst single tile in the app.
+
+**The move.** One title-card family, `components/AwardTitleCard.jsx`, at two scales:
+
+- `AwardPoster` on /awards: each award's section now OPENS on a 30-for-30-style
+  monochrome card - the award name huge in Fraunces (the existing title, promoted, not
+  rewritten), a gold floor-line as the one accent element, the award's existing
+  `statLine` as the deck in the broadcast voice (mono + tabular, the job VISION
+  explicitly assigns that face on title cards), and the winner's team mark. The ranked
+  list beneath is unchanged in content - the winner row stays in it too, because it is
+  the tappable dossier link and the poster is not a control.
+- `AwardMiniCard` on /recap: the held awards (The Scout / The Steal / Hot Potato on the
+  fixture) render as the same family at mini scale in a two-up grid - same plate, same
+  floor-line, same mono deck, the award's icon as a gold watermark instead of a toned
+  badge - so recap and awards read as one system.
+
+**The ground is a new token, and it steps DOWN.** `--color-poster` (globals.css): every
+other card steps UP from the page ground (+4.94 L*), so a poster that stepped up too
+would be a thirteenth grey card. Near-black `#08090b` in dark (a window cut into the
+page; the article border delineates), deep cream `#e9e2d2` on paper - a magazine's
+heavier stock of the same paper, never a black insert, because paper is first-class
+(VISION: "a good magazine"). Measured, not eyeballed: dark plate carries ink 18.24:1,
+muted 7.66:1, accent-text 11.79:1, accent fill 10.36:1; paper plate 13.91 / 5.74 / 5.99
+/ 5.04. `faint`/`secondary` are BANNED on the plate by comment - they are ground-scoped
+tokens and `.bg-poster` is deliberately not in that scoping.
+
+**House rules held, stated because each was a live risk:**
+- D6: everything a poster sets is a published measurement - the same title, the same
+  statLine, the same winner the list already printed. The honesty caveats stay in the
+  subtitles, untouched. No verdict enters.
+- One-accent: monochrome + gold only. These are league-wide awards with no "yours vs
+  field" side, so no second hue - the winner being you stays a Tag, not a tint.
+- Kill-list #8 discipline: the poster title drops the old `truncate` (it balances and
+  wraps), the deck wraps ("Brayden Adeyemi · pick 11, 29th best in 2024" is a clause,
+  not a label).
+- M8's motion register stays closed at three moments: the posters get NO entrance
+  animation, because a poster fade-in is not one of the three and a fourth needs its
+  own decision entry.
+
+**Kill-list #6, /recap.** The TIMELINE tile keeps its data - the TCI figure and the
+posture tag - and `timelineToday.read` is gone from it. The explanation was never
+wrong, just misplaced: "What TCI and RFI measure" already sits directly below on the
+same page, and the full reading lives on /league where the tile links.
+
+**Kill-list #7, /more.** The WHERE NEXT block linked to About and Methodology, both
+already listed in THE APP group on the same screen. `<Onward from="/more">` and the
+registry's `ONWARD["/more"]` entry are deleted. The no-dead-ends test
+(lib/nav.test.js) carries a named carve-out for /more only - its entire body is the
+surface registry, so it cannot be a dead end by construction - plus a new assertion
+pinning that /more has zero onward steps, so the entry cannot quietly grow back.
+
+### Gate
+`pnpm lint`, `pnpm test` (1,381) clean; `rm -rf .next && pnpm build` clean; `pnpm e2e`
+76/81, and the 5 failures are the sandbox, not the change: four (three /depth, one
+/roster smoke) fail identically on the UNMODIFIED baseline with
+net::ERR_CONNECTION_RESET on an external resource this sandbox's proxy resets, and the
+fifth (density) was the same reset once and passes on re-run both with and without the
+change. axe-scan
+clean on /awards, /recap, /more in BOTH themes (heading order intact: the poster
+changes the h3's size, never its level). Before/after screenshots at 390px, both
+themes, in the session scratchpad.
