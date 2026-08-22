@@ -262,6 +262,11 @@ export function TradeBuilder({
   const [getPicks, setGetPicks] = useState(initial.getPicks);
   const [picker, setPicker] = useState(null);
   const [result, setResult] = useState(null);
+  // Counts evaluations, and exists only to KEY the result panel: a new number on
+  // this key remounts <TradeResult>, which is what makes the receipt reveal
+  // (`.receipt`, interaction.css - M8's second signature moment) replay for a
+  // fresh answer while ordinary re-renders of the same answer never replay it.
+  const [evalSeq, setEvalSeq] = useState(0);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
   const resultRef = useRef(null);
@@ -310,6 +315,7 @@ export function TradeBuilder({
       });
       if (!res.ok) throw new Error(`evaluation failed (${res.status})`);
       setResult(await res.json());
+      setEvalSeq((s) => s + 1);
     } catch (e) {
       setError(e instanceof Error ? e.message : "evaluation failed");
     } finally {
@@ -440,6 +446,7 @@ export function TradeBuilder({
       <div ref={resultRef} className="scroll-mt-4">
         {result && (
           <TradeResult
+            key={evalSeq}
             r={result}
             leagueId={leagueId}
             counterparty={counterpartyOf([...get, ...getPicks])}
@@ -502,7 +509,11 @@ function TradeResult({ r, leagueId, counterparty }) {
         ? "text-info"
         : "text-muted";
   return (
-    <div className="mt-4 space-y-2">
+    // `.receipt` (interaction.css): the whole evaluation prints top-to-bottom,
+    // one section per beat, in the order it is meant to be read. The parent
+    // keys this component per evaluation so the print replays only for a
+    // genuinely new answer.
+    <div className="receipt mt-4 space-y-2">
       <div className="rounded-[--radius] border border-border bg-surface p-3 text-center">
         <div className="text-meta uppercase tracking-wide text-secondary">
           Value to you
@@ -636,15 +647,22 @@ function TradeResult({ r, leagueId, counterparty }) {
         </div>
       )}
 
-      <div className="rounded-[--radius] border border-border bg-bg/70 p-3">
-        {/* Sleeper has no write API, so we can't send the proposal - the trade
-            centre is one tap away instead. */}
-        <OpenInSleeper
-          href={sleeperTradeUrl(leagueId)}
-          label="Open Sleeper to send"
-          className="w-full"
-        />
-      </div>
+      {/* Sleeper has no write API, so we can't send the proposal - the trade
+          centre is one tap away instead. The wrapper is conditional on the URL
+          resolving because OpenInSleeper renders NOTHING for ids that cannot be
+          real Sleeper ids (the fixture provider's), which left this box printing
+          as an empty bordered line - invisible enough before, but the receipt
+          reveal animates each child in, and an empty box arriving on its own
+          beat is a blank line the printer paused on. */}
+      {sleeperTradeUrl(leagueId) && (
+        <div className="rounded-[--radius] border border-border bg-bg/70 p-3">
+          <OpenInSleeper
+            href={sleeperTradeUrl(leagueId)}
+            label="Open Sleeper to send"
+            className="w-full"
+          />
+        </div>
+      )}
     </div>
   );
 }
