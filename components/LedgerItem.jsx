@@ -27,6 +27,12 @@ export function LedgerItem({
   // fine for the server - but silently losing a note would betray the whole
   // premise of the ledger, so the user gets told the truth about it.
   const [notPersisted, setNotPersisted] = useState(false);
+  // True only after THIS component captured a save in this session - never on a
+  // normal mount of already-annotated history, so scrolling the ledger never
+  // replays it. Its only job is to gate `.arrive` (interaction.css) on the quote
+  // that replaces the editor, so the one moment this app calls a decision
+  // "captured" gets an answer instead of a snap.
+  const [justSaved, setJustSaved] = useState(false);
   /**
    * Three outcomes, and the difference between them is the whole point.
    *
@@ -64,6 +70,7 @@ export function LedgerItem({
       }
       setNotPersisted(data.persisted === false);
       setEditing(false);
+      setJustSaved(true);
       if (data.persisted !== false) router.refresh();
     } catch {
       setError(
@@ -166,7 +173,12 @@ export function LedgerItem({
           </div>
         </div>
       ) : (
-        <div className={cn(reasoning || posture ? "mt-2.5" : "")}>
+        <div
+          className={cn(
+            reasoning || posture ? "mt-2.5" : "",
+            justSaved && "arrive",
+          )}
+        >
           {posture && (
             <span className="mb-1.5 inline-block rounded-full border border-border px-2 py-0.5 text-meta text-muted">
               {posture}

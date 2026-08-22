@@ -61,10 +61,48 @@ export function ValueAssetRow({
   focused,
   provenance,
   depth,
+  enterIndex,
 }) {
   const [open, setOpen] = useState(!!focused);
   const [justArrived, setJustArrived] = useState(!!focused);
   const liRef = useRef(null);
+  // Staggered entrance (`.arrive`, interaction.css) for a first render only - a
+  // focused row already gets its own scroll+ring treatment above, and stacking a
+  // rise-and-spring under a smooth-scroll would be two answers to one arrival.
+  // First ~8 rows at 30ms steps - VISION.md M8's exact register - so a 60-row
+  // /values page still settles in about half a second instead of visibly
+  // queueing; rows past the cap all fire together rather than queuing further.
+  const enterStyle =
+    enterIndex != null && !focused
+      ? { "--arrive-delay": `${Math.min(enterIndex, 8) * 30}ms` }
+      : undefined;
+  // M8's third signature moment: a ONE-TIME sheen when a top-two-tier card
+  // (Franchise / Cornerstone - lib/rankings/tiers.js's own labels) scrolls into
+  // view. IntersectionObserver rather than a scroll-driven animation-timeline
+  // because "one-time" is the register's own requirement: a view() timeline
+  // replays in reverse on scroll-back, which turns a moment into a toy. State
+  // never resets and the observer disconnects after firing, so it genuinely
+  // cannot play twice per mount. The overlay is decorative accent-alpha only
+  // (no new hue) and marks the model's already-printed tier CLASSIFICATION,
+  // not a judgment on any decision - the tier word is in the row either way.
+  const topTier = tier === "Franchise" || tier === "Cornerstone";
+  const [sheen, setSheen] = useState(false);
+  useEffect(() => {
+    if (!topTier) return;
+    const el = liRef.current;
+    if (!el || typeof IntersectionObserver === "undefined") return;
+    const io = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) {
+          setSheen(true);
+          io.disconnect();
+        }
+      },
+      { threshold: 0.6 },
+    );
+    io.observe(el);
+    return () => io.disconnect();
+  }, [topTier]);
   useEffect(() => {
     if (!focused) return;
     liRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -75,14 +113,20 @@ export function ValueAssetRow({
     <li
       ref={liRef}
       id={playerId ? `value-row-${playerId}` : undefined}
+      style={enterStyle}
       className={cn(
-        "overflow-hidden rounded-[--radius-sm] border transition-colors duration-700",
+        "relative overflow-hidden rounded-[--radius-sm] border transition-colors duration-700",
         open
           ? "border-border-strong bg-surface-2"
           : "border-border bg-surface hover:border-border-strong",
         justArrived && "ring-2 ring-accent",
+        enterStyle && "arrive",
       )}
     >
+      {/* Mounted only after the one-time IntersectionObserver above fires, so the
+          animation's mount IS its trigger; it ends parked past the right edge,
+          clipped by this li's own overflow-hidden, and never runs again. */}
+      {sheen && <span aria-hidden="true" className="tier-sheen" />}
       {/*
           THE ROW HAS TWO ACTIONS NOW, and the second one is the fix for the app's
           clearest good-and-undiscoverable feature. The provenance rail
@@ -697,6 +741,7 @@ export function ValuesList({ rows }) {
             meta={r.owner ?? undefined}
             depth={r.depth}
             focused={r.id === focusId}
+            enterIndex={i}
           />
         ))}
       </ul>
