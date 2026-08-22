@@ -41,7 +41,7 @@ import { ordinal } from "@/lib/derive/describe";
 import { Card, Disclosure, PageHeader, SectionHeader } from "@/components/ui";
 import { LocalDate } from "@/components/LocalDate";
 import { ManagerLink, PlayerNowRow } from "@/components/TradeParts";
-import { SideBars } from "@/components/charts";
+import { DealReceipt } from "@/components/DealReceipt";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { fmtValue } from "@/lib/ui";
 export const dynamic = "force-dynamic";
@@ -116,8 +116,47 @@ export default async function DealPage({ params }) {
     const manager = ledger.managers.find((m) => m.ownerId === ownerId);
     return { rosterId, playersIn, picksIn, total, side, manager };
   });
-  const maxTotal = Math.max(1, ...sides.map((s) => s.total));
   const anyValued = sides.some((s) => s.total > 0);
+  /*
+   * The receipt proper (components/DealReceipt.jsx): each side as one column of
+   * ledger lines over a ruled total. It lists EVERYTHING a side received - a pick
+   * or an unpriceable player prints an em dash in the price column rather than
+   * disappearing - so the players-only total (D24) sits above a visible record of
+   * exactly what it did not count. The rich rows above keep the avatars and the
+   * lineage links; this document is the "what each side is worth today" summary
+   * itself, replacing the bar chart that used to draw only the two endpoint
+   * numbers.
+   */
+  const receiptSides = sides.map((s) => ({
+    key: s.rosterId,
+    name: s.manager?.name ?? s.side?.name ?? `Roster ${s.rosterId}`,
+    isMe: s.manager?.isMe ?? false,
+    total: s.total,
+    lines: [
+      ...s.playersIn.map((pid) => {
+        const now = nowOf(pid);
+        return {
+          key: `p:${pid}`,
+          label: h.players.get(pid)?.fullName ?? `Player ${pid}`,
+          value: now ? Math.round(now.value) : null,
+        };
+      }),
+      ...s.picksIn.map((dp) => {
+        const key = pickKey(dp.season, dp.round, dp.rosterId);
+        const became = pickPlayers[key];
+        return {
+          key: `${key}|${dp.previousOwnerId}`,
+          label: `${dp.season} ${ordinal(dp.round)}${
+            dp.rosterId !== dp.previousOwnerId && names[dp.rosterId]
+              ? ` (orig. ${names[dp.rosterId]})`
+              : ""
+          }`,
+          value: null,
+          note: became ? `became ${became}` : null,
+        };
+      }),
+    ],
+  }));
   return (
     <div>
       <Link
@@ -280,15 +319,7 @@ export default async function DealPage({ params }) {
         <>
           <SectionHeader title="What each side is worth today" />
           <Card>
-            <SideBars
-              data={sides.map((s) => ({
-                label:
-                  s.manager?.name ?? s.side?.name ?? `Roster ${s.rosterId}`,
-                value: Math.round(s.total),
-              }))}
-              max={maxTotal}
-              format={(n) => fmtValue(n)}
-            />
+            <DealReceipt sides={receiptSides} />
             <p className="mt-2 text-meta leading-snug text-muted">
               Today&apos;s prices, on the players only. Not a grade and not a
               winner.
