@@ -164,12 +164,17 @@ function SideColumn({
   total,
 }) {
   return (
-    <div className="rounded-[--radius] border border-border bg-surface p-2">
-      <div className="mb-1.5 flex items-center justify-between px-0.5">
+    // edge-hilite (round 10): the one-pixel top catchlight the depth system
+    // already owns, so the two ledger columns read as raised plates rather than
+    // outlined rectangles. Surface separation rules unchanged - no shadow.
+    <div className="edge-hilite rounded-[--radius] border border-border bg-surface p-2">
+      <div className="mb-1.5 flex items-baseline justify-between px-0.5">
         <span className="text-meta font-semibold uppercase tracking-wide text-muted">
           {label}
         </span>
-        <span className="figure text-body font-semibold text-ink">
+        {/* The column's running total at heading weight - it is the number the
+            whole column exists to accumulate (round 10). */}
+        <span className="figure text-lede font-semibold leading-none text-ink">
           {fmtValue(total)}
         </span>
       </div>
@@ -418,6 +423,16 @@ export function TradeBuilder({
         />
       </div>
 
+      {/* THE BEAM (round 10): the package's two totals as one piece of geometry,
+          live while you build - the first read of a deal ("which way does this
+          lean, and by how much") without pressing anything. Two strengths of the
+          one accent, split at the ledger's own midpoint; the printed totals above
+          carry the numbers, the beam carries the shape. Never a verdict: lean is
+          a fact about the package, not advice about it (D6). */}
+      {hasSomething && giveTotal + getTotal > 0 && (
+        <BalanceBeam give={giveTotal} get={getTotal} className="mt-2" />
+      )}
+
       <button
         onClick={evaluate}
         disabled={!hasSomething || loading}
@@ -494,6 +509,47 @@ function counterpartyOf(incoming) {
   }
   return best && best.name ? best : null;
 }
+/**
+ * Give vs get as one centre-split bar: the send side fills leftward from the
+ * spine in the dimmed accent, the get side rightward in the full accent, each
+ * proportional to its share of the package. Direction and size are geometry;
+ * the printed totals beside/above it carry the numbers (never colour-as-verdict,
+ * D6 - both sides are the same hue at two strengths).
+ */
+function BalanceBeam({ give, get, className }) {
+  const total = give + get;
+  if (!total) return null;
+  const givePct = (give / total) * 100;
+  return (
+    <div className={className}>
+      <div
+        role="img"
+        aria-label={`Package balance: you send ${fmtValue(give)}, you get ${fmtValue(get)}.`}
+        className="relative h-2 w-full overflow-hidden rounded-full bg-elevated"
+      >
+        <span
+          className="absolute inset-y-0 left-0"
+          style={{
+            width: `${givePct}%`,
+            background: "var(--color-accent-dim)",
+          }}
+        />
+        <span
+          className="absolute inset-y-0 right-0"
+          style={{
+            width: `${100 - givePct}%`,
+            background: "var(--color-accent)",
+          }}
+        />
+        <span className="absolute inset-y-0 left-1/2 w-[2px] -translate-x-1/2 bg-bg" />
+      </div>
+      <div className="mt-1 flex items-baseline justify-between figure text-meta text-secondary">
+        <span>send {fmtValue(give)}</span>
+        <span>get {fmtValue(get)}</span>
+      </div>
+    </div>
+  );
+}
 function TradeResult({ r, leagueId, counterparty }) {
   const dirTone =
     r.direction === "buying"
@@ -503,20 +559,24 @@ function TradeResult({ r, leagueId, counterparty }) {
         : "text-muted";
   return (
     <div className="mt-4 space-y-2">
-      <div className="rounded-[--radius] border border-border bg-surface p-3 text-center">
+      {/* Round 10: the headline delta was green-when-positive, red-when-negative -
+          value gained painted as "good" on the one card the app's own copy says is
+          NOT the verdict. That was colour-as-judgment (D6). Now the number is ink
+          at hero weight, and the lean is drawn as geometry by the beam below it. */}
+      <div className="hero-card rounded-[--radius] border border-accent-edge p-3 text-center">
         <div className="text-meta uppercase tracking-wide text-secondary">
           Value to you
         </div>
-        <div
-          className={cn(
-            "figure text-display leading-tight font-semibold",
-            r.delta >= 0 ? "text-positive" : "text-negative",
-          )}
-        >
+        <div className="figure text-hero leading-none font-semibold text-ink">
           {r.delta >= 0 ? "+" : ""}
           {fmtValue(r.delta)}
         </div>
-        <div className="mt-0.5 text-note leading-snug text-muted">
+        <BalanceBeam
+          give={r.give.total}
+          get={r.get.total}
+          className="mx-auto mt-2 max-w-64"
+        />
+        <div className="mt-1.5 text-note leading-snug text-muted">
           You&apos;re{" "}
           <span className={cn("font-semibold", dirTone)}>{r.direction}</span>.
           Value is a guide, not the verdict - read below.
@@ -532,12 +592,10 @@ function TradeResult({ r, leagueId, counterparty }) {
               className="rounded-[--radius-sm] border border-border bg-bg/40 px-2 py-1.5"
             >
               <div className="flex items-baseline justify-between gap-1">
-                <span
-                  className={cn(
-                    "text-meta uppercase tracking-wide",
-                    k === "send" ? "text-negative" : "text-positive",
-                  )}
-                >
+                {/* Was red-for-send / green-for-get: valence on the two halves of
+                    every trade, the same D6 problem as the old delta colour. The
+                    words say which side is which. */}
+                <span className="text-meta uppercase tracking-wide text-secondary">
                   you {k}
                 </span>
                 <span className="figure text-meta font-semibold text-ink">

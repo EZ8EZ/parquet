@@ -20,7 +20,7 @@
  * beats navigating, you can open three rows and compare" half, which was always the
  * better half.
  */
-import { useEffect, useMemo, useRef, useState } from "react";
+import { Fragment, useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ChevronDown, ChevronRight, Route, Search } from "lucide-react";
@@ -61,6 +61,17 @@ export function ValueAssetRow({
   focused,
   provenance,
   depth,
+  /**
+   * THE PODIUM (round 10). "lead" for the #1 asset on a value-ordered list,
+   * "podium" for #2-3, undefined for everyone else. A ranking where row #1 and
+   * row #40 carry identical visual weight is a spreadsheet, not a board -
+   * Sofascore/FotMob put the top of a rating list in a visibly heavier frame,
+   * and that is hierarchy restating the SORT the list already performs, never a
+   * verdict (D6): the value column, not this styling, is the claim. Everything
+   * behavioural - expansion, the lineage door, the injury chip - is identical
+   * across all three weights.
+   */
+  hero,
 }) {
   const [open, setOpen] = useState(!!focused);
   const [justArrived, setJustArrived] = useState(!!focused);
@@ -76,10 +87,15 @@ export function ValueAssetRow({
       ref={liRef}
       id={playerId ? `value-row-${playerId}` : undefined}
       className={cn(
-        "overflow-hidden rounded-[--radius-sm] border transition-colors duration-700",
+        "overflow-hidden border transition-colors duration-700",
+        hero ? "rounded-[--radius]" : "rounded-[--radius-sm]",
+        // The podium ground: the shared hero-card wash (gradient-within-hue) and
+        // the accent-edge border. `open` still wins the ground for both weights so
+        // an expanded hero reads as expanded, not merely as gold.
+        hero && !open && "hero-card border-accent-edge",
         open
           ? "border-border-strong bg-surface-2"
-          : "border-border bg-surface hover:border-border-strong",
+          : !hero && "border-border bg-surface hover:border-border-strong",
         justArrived && "ring-2 ring-accent",
       )}
     >
@@ -101,16 +117,35 @@ export function ValueAssetRow({
           expanded row keeps the written "Where he came from" link, which is where a
           reader learns what the glyph means.
         */}
-      <div className="flex items-stretch">
+      <div className="relative flex items-stretch">
+        {/* The oversized ordinal BEHIND a podium row - depth by layering, not by
+            shadow. aria-hidden decoration restating the rank the row already
+            prints, at an alpha (--ghost-ink) that never competes with the text
+            painted over it. */}
+        {hero === "lead" && rank != null && (
+          <span aria-hidden="true" className="ghost-rank figure">
+            {rank}
+          </span>
+        )}
         <button
           type="button"
           onClick={() => setOpen((o) => !o)}
           aria-expanded={open}
           aria-label={`${name}, value ${fmtValue(value)}. Show details`}
-          className="flex min-w-0 flex-1 items-center gap-2.5 px-2.5 py-1.5 text-left"
+          className={cn(
+            "flex min-w-0 flex-1 items-center gap-2.5 px-2.5 text-left",
+            hero === "lead" ? "py-3.5" : hero ? "py-2.5" : "py-1.5",
+          )}
         >
           {rank != null && (
-            <span className="w-5 shrink-0 text-right figure text-meta text-secondary">
+            <span
+              className={cn(
+                "shrink-0 text-right figure",
+                hero
+                  ? "w-6 text-lede font-semibold leading-none text-accent-text"
+                  : "w-5 text-meta text-secondary",
+              )}
+            >
               {rank}
             </span>
           )}
@@ -132,7 +167,12 @@ export function ValueAssetRow({
           )}
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
-              <span className="truncate text-[13px] font-semibold leading-tight text-ink">
+              <span
+                className={cn(
+                  "truncate font-semibold leading-tight text-ink",
+                  hero === "lead" ? "text-lede" : "text-[13px]",
+                )}
+              >
                 {name}
               </span>
               {injury && (
@@ -200,10 +240,23 @@ export function ValueAssetRow({
               {meta ? ` · ${meta}` : ""}
             </span>
             {share != null && (
-              <span className="mt-1 block h-[3px] w-full overflow-hidden rounded-full bg-elevated">
+              <span
+                className={cn(
+                  "mt-1 block w-full overflow-hidden rounded-full bg-elevated",
+                  hero ? "h-[4px]" : "h-[3px]",
+                )}
+              >
+                {/* Gradient WITHIN the accent (dim -> full) rather than a flat
+                    fill: length still carries the whole value (geometry, never
+                    valence), the ramp just makes sixty bars read as one lit
+                    material instead of sixty identical rectangles. */}
                 <span
-                  className="block h-full rounded-full bg-accent-strong"
-                  style={{ width: `${Math.max(2, Math.round(share * 100))}%` }}
+                  className="block h-full rounded-full"
+                  style={{
+                    width: `${Math.max(2, Math.round(share * 100))}%`,
+                    backgroundImage:
+                      "linear-gradient(90deg, var(--color-accent-dim), var(--color-accent))",
+                  }}
                 />
               </span>
             )}
@@ -218,8 +271,25 @@ export function ValueAssetRow({
               />
             </span>
           )}
-          <span className="w-[4.5rem] shrink-0 text-right">
-            <span className="block figure text-[13px] font-semibold leading-tight text-ink">
+          <span
+            className={cn(
+              "shrink-0 text-right",
+              hero === "lead" ? "w-[6.5rem]" : "w-[4.5rem]",
+            )}
+          >
+            {/* On the lead row the value is TYPOGRAPHY, not a table cell - the one
+                number this whole page ranks by, set at display size (the same jolt
+                logic as the masthead's own 25->30px raise). */}
+            <span
+              className={cn(
+                "block figure font-semibold text-ink",
+                hero === "lead"
+                  ? "text-display leading-none"
+                  : hero
+                    ? "text-lede leading-none"
+                    : "text-[13px] leading-tight",
+              )}
+            >
               {fmtValue(value)}
             </span>
             {/* Was `whitespace-nowrap`, which sizes this shrink-0 column to fit its
@@ -598,13 +668,23 @@ export function ValuesList({ rows }) {
     return out;
   }, [rows, pos, q, sort]);
   const shown = filtered.slice(0, limit);
+  // The board's own #1 value, the shared scale every row's bar is drawn against.
+  // League-wide (from `rows`, not `filtered`) on purpose: a PG-only view keeps the
+  // same scale as the full board, so filtering never silently re-inflates the bars.
+  const maxValue = useMemo(
+    () => Math.max(...rows.map((r) => r.value), 1),
+    [rows],
+  );
   function reset(fn) {
     fn();
     setLimit(PAGE);
   }
   return (
     <div>
-      <div className="sticky top-0 z-10 -mx-4 border-b border-border bg-bg/95 px-4 pb-2 pt-1 backdrop-blur sm:-mx-6 sm:px-6">
+      {/* `.glass` (round 10): the one piece of chrome that genuinely floats over
+          scrolling data earns the blur+saturate treatment - see the depth kit's
+          note in globals.css. */}
+      <div className="glass sticky top-0 z-10 -mx-4 border-b border-border px-4 pb-2 pt-1 sm:-mx-6 sm:px-6">
         <div className="relative">
           <Search
             size={15}
@@ -677,27 +757,60 @@ export function ValuesList({ rows }) {
 
       <ul className="mt-1 space-y-1">
         {shown.map((r, i) => (
-          <ValueAssetRow
-            key={r.id}
-            rank={i + 1}
-            name={r.name}
-            team={r.team}
-            position={r.position}
-            age={r.age}
-            value={r.value}
-            tier={r.tier}
-            playerId={r.id}
-            injury={r.injury}
-            injuryDetail={r.injuryDetail}
-            consensusRank={r.consensusRank}
-            pricedRank={r.pricedRank}
-            productionBacked={r.productionBacked}
-            productionRefusal={r.productionRefusal}
-            rankAxisMax={rankAxisMax}
-            meta={r.owner ?? undefined}
-            depth={r.depth}
-            focused={r.id === focusId}
-          />
+          <Fragment key={r.id}>
+            {/* TIER SEAMS (round 10). The tiers are computed from where the value
+                distribution actually cliffs (this page's own header says so) and
+                until now the list rendered straight across them - 260 rows at one
+                unbroken rhythm. A labelled seam where the tier changes gives the
+                scroll the whitespace beat the data already contains. Value order
+                only: under the age sort tiers are not contiguous and a seam would
+                lie. aria-hidden - each row already announces its own tier. */}
+            {sort === "value" && i > 0 && shown[i - 1].tier !== r.tier && (
+              <li
+                aria-hidden="true"
+                className="flex items-center gap-2 px-1 pb-0.5 pt-2.5"
+              >
+                <span className="text-meta font-semibold uppercase tracking-[0.16em] text-accent-text">
+                  {r.tier}
+                </span>
+                <span className="rule min-w-0 flex-1" />
+              </li>
+            )}
+            <ValueAssetRow
+              rank={i + 1}
+              name={r.name}
+              team={r.team}
+              position={r.position}
+              age={r.age}
+              value={r.value}
+              tier={r.tier}
+              playerId={r.id}
+              injury={r.injury}
+              injuryDetail={r.injuryDetail}
+              consensusRank={r.consensusRank}
+              pricedRank={r.pricedRank}
+              productionBacked={r.productionBacked}
+              productionRefusal={r.productionRefusal}
+              rankAxisMax={rankAxisMax}
+              meta={r.owner ?? undefined}
+              depth={r.depth}
+              focused={r.id === focusId}
+              /* Value as geometry on every row, against the board's own #1 - the
+                 whole 260-row curve becomes scannable as bar lengths. And the top
+                 of a value-ordered board gets the podium weights: rank #1 is the
+                 page's own headline datum and now looks like it. */
+              share={r.value / maxValue}
+              hero={
+                sort === "value"
+                  ? i === 0
+                    ? "lead"
+                    : i < 3
+                      ? "podium"
+                      : undefined
+                  : undefined
+              }
+            />
+          </Fragment>
         ))}
       </ul>
 

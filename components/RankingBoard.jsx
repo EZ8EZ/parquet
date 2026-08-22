@@ -38,7 +38,7 @@ import {
   reorder,
   syncCustomOrder,
 } from "@/lib/rankings/customOrder";
-import { Card, DeltaValue, EmptyState, SectionHeader } from "@/components/ui";
+import { Card, EmptyState, SectionHeader } from "@/components/ui";
 import { PlayerAvatar, photosEnabled } from "@/components/PlayerAvatar";
 import { cn, fmtValue } from "@/lib/ui";
 // Row pitch: 64px row (h-16) + 4px gap (gap-1). The drag math below assumes
@@ -281,6 +281,12 @@ export function RankingBoard({ players, scoring }) {
     () => computeDisagreements(custom, consensus, playersById).slice(0, 12),
     [custom, consensus, playersById],
   );
+  // The board's #1 value: the shared scale every row's bottom bar is drawn
+  // against (see the row markup below).
+  const boardMax = useMemo(
+    () => Math.max(...[...values.values()].map((x) => x.value), 1),
+    [values],
+  );
   const movedCount = useMemo(
     () => order.reduce((n, id, i) => (id !== poolIds[i] ? n + 1 : n), 0),
     [order, poolIds],
@@ -309,16 +315,24 @@ export function RankingBoard({ players, scoring }) {
         />
       </dl>
 
-      <Card className="mt-2.5">
-        <div className="flex items-center justify-between gap-2">
+      {/* THE PAGE'S OWN INSTRUMENT (round 10). The blend weight is the one control
+          this surface exists for, and it was set in the same 16px as a stat cell.
+          Hero treatment: the shared gold-washed ground (hero-card, see globals.css)
+          and the weight at --text-hero - the number IS this page's headline. */}
+      <Card className="hero-card mt-2.5">
+        <div className="flex items-end justify-between gap-2">
           <label
             htmlFor="blend-weight"
-            className="text-[12px] font-semibold uppercase tracking-[0.16em] text-muted"
+            className="pb-1 text-[12px] font-semibold uppercase tracking-[0.16em] text-muted"
           >
             Blend weight
+            <span className="mt-0.5 block normal-case tracking-normal text-secondary">
+              yours vs consensus
+            </span>
           </label>
-          <span className="figure text-base font-semibold text-accent">
-            {weight}%
+          <span className="figure text-hero font-semibold leading-none text-accent-text">
+            {weight}
+            <span className="text-lede font-semibold text-muted">%</span>
           </span>
         </div>
         <input
@@ -370,6 +384,11 @@ export function RankingBoard({ players, scoring }) {
           const v = values.get(id);
           const tier = v ? tierFor(v.value)?.label : undefined;
           const dragging = draggingId === id;
+          // YOUR FINGERPRINTS ON THE BOARD: a row sitting anywhere other than its
+          // consensus slot carries a gold edge, so a scroll down the list shows at
+          // a glance exactly where your opinion diverges - the same fact the
+          // "moved" counter above states as one number.
+          const moved = id !== poolIds[i];
           // Body part only: this row is 390px wide with a drag handle in it. Null for
           // a healthy player and for load management, which is a flag, not an injury.
           const injury = injuryLabel(
@@ -394,12 +413,41 @@ export function RankingBoard({ players, scoring }) {
                 dragging ? undefined : { viewTransitionName: `rank-row-${id}` }
               }
               className={cn(
-                "relative flex h-16 items-center gap-2 rounded-[--radius-sm] border px-2 transition-colors",
+                // overflow-hidden added for the two zero-height marks below (the
+                // bottom value bar and the moved edge) - the row's OWN height is
+                // exactly the ROW_HEIGHT the drag arithmetic assumes, unchanged.
+                "relative flex h-16 items-center gap-2 overflow-hidden rounded-[--radius-sm] border px-2 transition-colors",
                 dragging
                   ? "z-10 border-accent-edge bg-surface-2 shadow-lg"
                   : "border-border bg-surface/60",
               )}
             >
+              {moved && !dragging && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-y-0 left-0 w-[3px] bg-accent"
+                />
+              )}
+              {/* The board's value curve, drawn INSIDE the fixed-height row: each
+                  row's bottom edge carries its value as length against the board's
+                  #1. 120 identical rows become one readable decay curve on the way
+                  down - geometry, never valence. */}
+              {v && (
+                <span
+                  aria-hidden="true"
+                  className="absolute inset-x-0 bottom-0 h-[3px]"
+                >
+                  <span
+                    className="block h-full"
+                    style={{
+                      width: `${Math.max(1, Math.round((v.value / boardMax) * 100))}%`,
+                      backgroundImage:
+                        "linear-gradient(90deg, var(--color-accent-dim), var(--color-accent))",
+                      opacity: 0.75,
+                    }}
+                  />
+                </span>
+              )}
               <button
                 type="button"
                 aria-label={`Drag to reorder ${p.fullName}`}
@@ -411,7 +459,17 @@ export function RankingBoard({ players, scoring }) {
               >
                 <GripVertical size={18} aria-hidden="true" />
               </button>
-              <span className="w-6 shrink-0 text-right figure text-meta text-faint">
+              {/* The top of YOUR board gets podium-weight ordinals - hierarchy
+                  restating the sort, exactly as the /values list's own top three
+                  do (see ValueAssetRow's `hero`). */}
+              <span
+                className={cn(
+                  "w-6 shrink-0 text-right figure",
+                  i < 3
+                    ? "text-lede font-semibold leading-none text-accent-text"
+                    : "text-meta text-faint",
+                )}
+              >
                 {i + 1}
               </span>
               {/*
@@ -488,7 +546,19 @@ export function RankingBoard({ players, scoring }) {
         </EmptyState>
       ) : (
         <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface/60">
+          {/* THE GAPS AS GEOMETRY (round 10). This list used to state each gap as a
+              green-or-red signed number - but a rank disagreement has no good end
+              (the page's own caption says it cuts both ways), so the valence pair
+              was exactly the colour-as-judgment D6 forbids. Now: a centre-origin
+              bar, direction by which side of the spine it fills, size by length
+              against the biggest gap on the board, and the number beside it in
+              plain ink. One hue. Delete the bar and the printed ranks still carry
+              everything - the acceptance test in lib/chart-colors. */}
           {gaps.map((g) => {
+            const maxGap = Math.max(Math.abs(gaps[0]?.delta ?? 1), 1);
+            const half = (Math.abs(g.delta) / maxGap) * 50;
+            const right = g.delta > 0;
+            const n = Math.round(g.delta);
             return (
               <li
                 key={g.playerId}
@@ -502,7 +572,27 @@ export function RankingBoard({ players, scoring }) {
                     you #{g.yourRank} · consensus #{g.consensusRank}
                   </span>
                 </span>
-                <DeltaValue n={Math.round(g.delta)} />
+                <span
+                  aria-hidden="true"
+                  className="relative h-1.5 w-16 shrink-0 overflow-hidden rounded-full bg-elevated"
+                >
+                  <span className="absolute inset-y-0 left-1/2 w-px bg-border-strong" />
+                  {/* A zero gap draws nothing but the spine - a minimum-width nub
+                      on a zero would assert a disagreement that does not exist. */}
+                  {n !== 0 && (
+                    <span
+                      className="absolute inset-y-0"
+                      style={{
+                        [right ? "left" : "right"]: "50%",
+                        width: `${Math.max(half, 4)}%`,
+                        background: "var(--color-accent)",
+                      }}
+                    />
+                  )}
+                </span>
+                <span className="w-8 shrink-0 text-right figure text-meta font-semibold text-ink">
+                  {n > 0 ? `+${n}` : n}
+                </span>
               </li>
             );
           })}
@@ -515,7 +605,7 @@ function Figure({ label, value, sub }) {
   return (
     <div className="min-w-0 px-2.5 py-1.5">
       <dt className="text-meta uppercase tracking-wide text-faint">{label}</dt>
-      <dd className="truncate figure text-base font-semibold text-ink">
+      <dd className="truncate figure text-lede font-semibold text-ink">
         {value}
       </dd>
       {sub && <dd className="truncate text-meta text-muted">{sub}</dd>}

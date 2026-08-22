@@ -1,3 +1,4 @@
+import { Fragment } from "react";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
@@ -161,7 +162,6 @@ export default async function RosterPage() {
         ?.team ?? null)
     : null;
   const slotCount = lineupSlots(h).length;
-  const tciRank = timelines.findIndex((t) => t.rosterId === rosterId) + 1;
   // THE COMPARISON THE HEADLINE NUMBERS WERE MISSING. Every figure in the stat rail
   // is scored against these same fourteen rosters and `ranked` is already in hand, so
   // the distribution costs an array walk over data the page has already paid for -
@@ -295,8 +295,13 @@ export default async function RosterPage() {
        * never carry. A rank on its own ("11th") does not say whether the pack is
        * bunched or strung out, and the pack is the reading.
        */}
-      <div className="space-y-1.5 rounded-[--radius-sm] border border-border bg-surface p-1.5">
+      {/* Round 10: the panel is the page's hero moment. Total value is the number
+          this page anchors on, so it gets the hero weight (--text-hero) inside the
+          strip that already owns it, on the shared gold-washed ground - see the
+          depth kit in globals.css. Same figures, same ticks, new hierarchy. */}
+      <div className="hero-card space-y-1.5 rounded-[--radius] border border-accent-edge p-2">
         <DistributionStrip
+          hero
           href="/values"
           label="Total value"
           sub={`${fmtValue(a.playerValue)} of it in players`}
@@ -347,8 +352,12 @@ export default async function RosterPage() {
           <Card className="p-3">
             <div className="flex items-center justify-between gap-2">
               <div className="flex items-baseline gap-3">
+                {/* Round 10: the card's two proprietary numbers at display weight
+                    rather than card-heading weight - a metric this app derives
+                    itself should not whisper (same move the /values podium and the
+                    hero strip above make; labels and facts unchanged). */}
                 <span>
-                  <span className="figure text-lede leading-tight font-semibold text-ink">
+                  <span className="figure text-display leading-none font-semibold text-ink">
                     {tl.rosterDuration.toFixed(1)}s
                   </span>
                   <span className="ml-1 text-meta uppercase tracking-wide text-secondary">
@@ -356,11 +365,14 @@ export default async function RosterPage() {
                   </span>
                 </span>
                 <span>
-                  <span className="figure text-lede leading-tight font-semibold text-ink">
+                  <span className="figure text-display leading-none font-semibold text-ink">
                     {tl.tci}
                   </span>
+                  {/* Just "TCI": the rank used to ride along here ("· 7/14"), but
+                      at display weight it wrapped as a dangling fragment, and the
+                      League TCI strip below already states the same rank in words. */}
                   <span className="ml-1 text-meta uppercase tracking-wide text-secondary">
-                    TCI · {tciRank}/{timelines.length}
+                    TCI
                   </span>
                 </span>
               </div>
@@ -617,8 +629,24 @@ export default async function RosterPage() {
         player value · line = {TRAJECTORY_SEASONS}-season age-curve trajectory
       </p>
       <ul className="space-y-1">
-        {a.valued.map((v) => (
-          <ValueAssetRow
+        {a.valued.map((v, i) => (
+          <Fragment key={v.playerId}>
+            {/* TIER SEAMS, same device as /values (round 10): a labelled beat where
+                the tier changes, so seventeen rows read as the tiers they already
+                belong to instead of one unbroken column. The list is value-sorted
+                by construction (analyzeRoster), so tiers are contiguous. */}
+            {i > 0 && a.valued[i - 1].tier !== v.tier && (
+              <li
+                aria-hidden="true"
+                className="flex items-center gap-2 px-1 pb-0.5 pt-2"
+              >
+                <span className="text-meta font-semibold uppercase tracking-[0.16em] text-accent-text">
+                  {v.tier}
+                </span>
+                <span className="rule min-w-0 flex-1" />
+              </li>
+            )}
+            <ValueAssetRow
             // WHY HE IS HERE, in place. This is the page that asks the question, so
             // this is the page that answers it without a navigation: expanding a row
             // shows the whole chain back to whichever of the five origins it ends on.
@@ -640,7 +668,6 @@ export default async function RosterPage() {
                 />
               )
             }
-            key={v.playerId}
             name={v.name}
             team={v.team}
             position={v.position}
@@ -661,12 +688,19 @@ export default async function RosterPage() {
             rankAxisMax={rosterRankAxisMax}
             depth={depthRowFor(charts, h.players.get(v.playerId))}
             trajectory={valueTrajectory(v)}
-            // Young players' declining trajectory is just the age-curve premium unwinding,
-            // not a warning - show it in muted color instead of red.
-            trajectoryColor={
-              v.age != null && v.age < 26 ? "var(--color-muted)" : undefined
-            }
+            // ONE HUE, EVERY ROW (round 10). This used to leave the Sparkline's
+            // default valence pair in play: a declining line drew itself red, which
+            // painted most of an aging roster as a wall of warnings - colour
+            // restating slope as judgment, exactly what D6 forbids and what the
+            // line's own geometry already carries. Age-curve trajectories are the
+            // model unwinding a premium, not a verdict, so every row draws in the
+            // same dimmed accent and the slope alone does the talking.
+            trajectoryColor="var(--color-accent-dim)"
+            // The roster's own best asset gets the podium frame - same `hero`
+            // vocabulary as the /values board (see ValueAssetRow).
+            hero={i === 0 ? "lead" : undefined}
           />
+          </Fragment>
         ))}
       </ul>
 

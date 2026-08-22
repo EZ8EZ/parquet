@@ -6620,3 +6620,140 @@ Prisma's internal client shape, only the error's `code`/`message` fields.
 matched `prisma`/`@prisma/client` 7.9.1. `prisma generate` and `prisma db push` both
 exercised directly (the latter confirmed reaching the network step, not merely passing
 config validation) rather than inferred from the test suite alone.
+
+## D104. THE ROUND THE NUMBERS STOPPED WHISPERING - a depth kit for the data surfaces, podium hierarchy on the boards, geometry where valence used to be, and three colour-as-judgment bugs paid off along the way
+
+The owner's third flag on the same wound ("we're lacking in the visuals and general
+user experience side of things... this needs to be our main focus"), and this round
+treats it as what it is: not another cleanup pass but a demand for a visible step
+change on the data-heavy surfaces. The diagnosis, made by scrolling the real pages
+rather than re-reading the code: /values, /rank, /roster and /trade are long vertical
+stacks of near-identical rows in which every element carries the same weight, the same
+shape, and the same rhythm. Dense and correct - and emotionally dead, because the one
+number each page exists to deliver was set in the same 12-13px as its own chrome, and
+the #1 asset on a 260-row board rendered pixel-identically to #260.
+
+**BASE MOVED FIRST, DELIBERATELY.** Thirty-six commits (D90-D103) landed on main from
+parallel sessions mid-round, including a Trade Finder redesign (D101) and a /values
+production-data reveal in the exact component this round restyles. Since the standing
+rule for collisions is "newer main wins," origin/main was merged INTO this branch
+before a single edit, so this work is a delta on top of those redesigns rather than a
+parallel rewrite of them - and /trade/finder itself was left completely untouched
+(D101 owns its structure now), with /values and /trade constrained to component-level
+work (`ValuesList`, `TradeBuilder`) for the same reason.
+
+**THE RESEARCH, mined for what translates to CSS.** Sofascore's and FotMob's player
+pages set the rating - the datum - visibly heavier than the page's own title, and put
+the top of a list in a frame the middle does not get; Apple Fitness does the same with
+its oversized numerals over tiny caps labels. Vercel's dashboard cards get "premium"
+out of one radial gradient in a card corner, not out of a second hue. Linear's lists
+carry hierarchy in weight and tone, with glass reserved for chrome that genuinely
+floats over scrolling content. Of the owner's two references, MengTo/threeui is
+shader-first but its CSS-translatable core is exactly backdrop-filter glass, layered
+gradients and edge glow, and yui540's static lesson is oversized type as the
+compositional anchor with restraint everywhere else. All of that fits inside this
+app's own one-accent doctrine: tonal range, gradients-within-hue, glass, layering and
+type scale were the open levers, and they were enough.
+
+**THE DEPTH KIT (globals.css, one appended block - additive on purpose, three
+sessions share the file).** Four pieces, both themes restating every alpha:
+`--text-hero` (44px, figures only - see below); `.glass` (translucent ground +
+blur/saturate, scoped to sticky chrome that overlaps content, never to cards, which
+still separate by surface); `.hero-card` (opaque surface + one radial accent wash in
+the top corner + the existing `--edge-hilite` catchlight - the Vercel corner-spot,
+built from tokens the theme already owns); `.ghost-rank` (an oversized aria-hidden
+ordinal layered BEHIND a hero row's content at ~0.13 alpha - depth by layering, not
+shadow, restating a rank the row already prints).
+
+**A SEVENTH TYPE ROLE, argued rather than smuggled.** The six-step scale's own header
+says "six steps, and they are the whole scale," and this round adds `--text-hero`
+anyway, on the grounds the original argument left open: the scale had no size at
+which a DATUM outranks the masthead. `--text-display` was doing two jobs - page title
+and hero figure - which guaranteed every anchor number in the app was exactly as loud
+as every page title and no louder. Fitness apps and sports raters put the number
+above the title because on a data surface the number IS the headline. Named for its
+job like the other six, used only via `text-hero`, only on figures (a roster's total
+value, the blend weight, a trade's delta), never on prose. If the owner reads this as
+scale creep, reverting is one token and four call sites.
+
+**/rank - the primary canvas, and the drag math untouched.** The blend-weight card
+becomes the page's instrument: hero-card ground, the weight at `text-hero` in
+accent-text. The 120 drag rows keep their exact 64px height (`ROW_PITCH` arithmetic
+is load-bearing; every new mark is a zero-height absolute overlay inside
+`overflow-hidden`): each row now carries its value as a bottom-edge bar scaled to the
+board's #1 - scrolling the board reads as the value curve it is - plus a 3px gold
+left edge on exactly the rows sitting somewhere other than their consensus slot, so
+your own fingerprints on the board are visible at a glance. Ranks 1-3 get
+podium-weight ordinals. And the disagreement list traded its green/red `DeltaValue`
+for a centre-origin diverging bar: direction by which side of the spine fills, size
+by length against the board's biggest gap, the signed number beside it in plain ink.
+A rank disagreement has no good end - the page's own caption says it cuts both ways -
+so the valence pair was a live D6 violation, not a style choice. A zero gap draws
+only the spine: a minimum-width nub would assert a disagreement that does not exist.
+
+**/roster - the other primary canvas.** The headline panel is the page's hero moment:
+`DistributionStrip` gained an additive `hero` prop (default off, every existing call
+site byte-identical) that moves the value it already printed out of the 12px caption
+slot onto its own line at hero weight - total value at 44px over its own
+fourteen-tick distribution, on the hero-card wash. The timeline card's two
+proprietary numbers (duration, TCI) rise to display weight; TCI's "· 7/14" rank
+rider came off the label because it wrapped as a dangling fragment at the new size
+and the League TCI strip below already states the same rank in words. The roster
+list gets tier seams (below) and its top asset gets the podium frame. And the
+age-curve sparklines stopped defaulting to the Sparkline's rising-green/falling-red
+pair: an aging roster rendered as a wall of red warnings, colour restating slope as
+judgment (D6) when the line's own geometry already carries it. Every trajectory now
+draws in the dimmed accent; the slope talks, the colour does not.
+
+**/values and /trade - component-level by discipline.** `ValueAssetRow` (shared by
+/values and /roster) gained the podium vocabulary: `hero="lead"` for #1 (hero-card
+ground, ghost ordinal behind, name at lede, value at display weight),
+`hero="podium"` for #2-3, everyone else unchanged - hierarchy restating the sort the
+list already performs, never a verdict; the value column, not the styling, is the
+claim. Every row's value bar (previously /roster-only) now draws on /values too,
+scaled to the board's #1 so 260 rows scan as the decaying curve they are, with the
+flat fill upgraded to a dim-to-full gradient within the accent. Tier seams - a small
+labelled rule where the tier changes - give the scroll the whitespace beat the value
+cliffs already contain (value order only; under the age sort tiers are not contiguous
+and a seam would lie). The sticky filter bar upgraded from `bg-bg/95 backdrop-blur`
+to the `.glass` treatment. In `TradeBuilder`, the two ledger columns get the
+edge-hilite catchlight and lede-weight running totals, and a new `BalanceBeam` draws
+the package's two totals as one centre-split bar - send filling leftward in the
+dimmed accent, get rightward in the full accent - live while the package is being
+built, before Evaluate is ever pressed. The verdict card is the third D6 payoff: the
+headline delta was green-when-positive/red-when-negative ("value gained = good") on
+the very card whose own copy says value is not the verdict, and the side labels
+painted "you send" red and "you get" green. The delta is now ink at hero weight with
+the beam under it carrying the lean as geometry; the labels are secondary ink.
+
+**Verified.** `pnpm lint` clean. `pnpm test` 1380/1380 (70 files). `rm -rf .next &&
+pnpm build` clean, all routes present. Full `pnpm e2e` (fresh build, sandbox-local
+chromium override in an uncommitted config, deleted after): **77 passed, 4 failed -
+and all 4 reproduce IDENTICALLY against the unmodified merged base with this round's
+diff stashed** (three depth.spec cases and the /roster smoke, all
+`ERR_CONNECTION_RESET` on image loads - the photos-on default from D90 meeting this
+sandbox's proxy, the same class D81 documented), so they are inherited, not caused.
+axe-core scans clean on /values, /rank, /roster, /trade in BOTH themes. Before/after
+screenshots at 390px in both themes for all four pages, plus scripted captures of the
+two states a plain page-load cannot show: an evaluated trade (the beam and the ink
+verdict) and a genuinely customized /rank board (the moved-edges and real
+disagreement bars).
+
+**FLAGGED FOR THE OWNER, not silently decided: the two-hue variant.** The owner
+authorized exploring a second hue this round. The committed default above is
+one-hue by doctrine (D47/D48/D61/D64), and /rank is the one surface with a genuinely
+two-party semantic - YOUR order versus CONSENSUS - where a second hue would encode
+identity rather than judgment. A variant with consensus in the existing info blue
+(slider remainder, "cons #" figures, consensus-direction disagreement bars) was
+built, screenshotted in both themes side-by-side with the committed gold-only
+version, and reverted. Screenshots are in the round's report for the owner to
+choose; nothing two-hue ships in this commit.
+
+**Rejected:** shadows for card depth (the surface-only depth rule stands; everything
+here is wash, catchlight and layering); per-row rating chips a la Sofascore (a chip
+repeated 260 times is the same monotony in a rounder shape); colouring the value
+bars by tier or trajectory by direction (D6, three separate times above); touching
+/trade/finder or /values/page.jsx structure (D101 and the production reveal own
+those; component-level work reaches both pages through their shared components
+anyway); animating any of the new marks (a sibling session owns motion this round -
+everything here is static except the transitions the restyled elements already had).

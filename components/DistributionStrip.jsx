@@ -70,6 +70,15 @@ export function DistributionStrip({
   href,
   className,
   noun = "rosters",
+  /**
+   * HERO WEIGHT (round 10). One strip per surface may carry the page's anchor
+   * number at display weight: the value moves out of the 12px caption slot and
+   * onto its own line at --text-hero, with the rank reading beside it. Same
+   * facts, same ticks, same rules - only the typographic weight of a number the
+   * strip already printed. Defaulted off, so every existing call site renders
+   * byte-identically.
+   */
+  hero = false,
 }) {
   const clean = values.filter((v) => Number.isFinite(v));
   if (clean.length < 3) return null;
@@ -102,16 +111,21 @@ export function DistributionStrip({
           )}
         </span>
         <span className="shrink-0 figure text-meta">
-          {mine != null && (
+          {!hero && mine != null && (
             <span className="font-semibold text-ink">{format(mine)}</span>
           )}
           <span className="text-secondary">
             {" "}
-            {mine != null ? "· " : ""}
+            {!hero && mine != null ? "· " : ""}
             {reading}
           </span>
         </span>
       </div>
+      {hero && mine != null && (
+        <div className="mb-0.5 mt-1 figure text-hero font-semibold leading-none text-ink">
+          {format(mine)}
+        </div>
+      )}
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full"
