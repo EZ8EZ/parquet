@@ -6781,3 +6781,350 @@ config (deleted after, per the visual-review skill); axe-core clean on `/` and
 `/teams` in both themes; before/after full-page and viewport screenshots at 390px
 in both themes, plus the superseded duotone variant pair. Fixture provider
 throughout - synthetic data, real layout.
+
+## D107. THE ROUND THE NUMBERS STOPPED WHISPERING - a depth kit for the data surfaces, podium hierarchy on the boards, geometry where valence used to be, and three colour-as-judgment bugs paid off along the way
+
+The owner's third flag on the same wound ("we're lacking in the visuals and general
+user experience side of things... this needs to be our main focus"), and this round
+treats it as what it is: not another cleanup pass but a demand for a visible step
+change on the data-heavy surfaces. The diagnosis, made by scrolling the real pages
+rather than re-reading the code: /values, /rank, /roster and /trade are long vertical
+stacks of near-identical rows in which every element carries the same weight, the same
+shape, and the same rhythm. Dense and correct - and emotionally dead, because the one
+number each page exists to deliver was set in the same 12-13px as its own chrome, and
+the #1 asset on a 260-row board rendered pixel-identically to #260.
+
+**BASE MOVED FIRST, DELIBERATELY.** Thirty-six commits (D90-D103) landed on main from
+parallel sessions mid-round, including a Trade Finder redesign (D101) and a /values
+production-data reveal in the exact component this round restyles. Since the standing
+rule for collisions is "newer main wins," origin/main was merged INTO this branch
+before a single edit, so this work is a delta on top of those redesigns rather than a
+parallel rewrite of them - and /trade/finder itself was left completely untouched
+(D101 owns its structure now), with /values and /trade constrained to component-level
+work (`ValuesList`, `TradeBuilder`) for the same reason.
+
+**THE RESEARCH, mined for what translates to CSS.** Sofascore's and FotMob's player
+pages set the rating - the datum - visibly heavier than the page's own title, and put
+the top of a list in a frame the middle does not get; Apple Fitness does the same with
+its oversized numerals over tiny caps labels. Vercel's dashboard cards get "premium"
+out of one radial gradient in a card corner, not out of a second hue. Linear's lists
+carry hierarchy in weight and tone, with glass reserved for chrome that genuinely
+floats over scrolling content. Of the owner's two references, MengTo/threeui is
+shader-first but its CSS-translatable core is exactly backdrop-filter glass, layered
+gradients and edge glow, and yui540's static lesson is oversized type as the
+compositional anchor with restraint everywhere else. All of that fits inside this
+app's own one-accent doctrine: tonal range, gradients-within-hue, glass, layering and
+type scale were the open levers, and they were enough.
+
+**THE DEPTH KIT (globals.css, one appended block - additive on purpose, three
+sessions share the file).** Four pieces, both themes restating every alpha:
+`--text-hero` (44px, figures only - see below); `.glass` (translucent ground +
+blur/saturate, scoped to sticky chrome that overlaps content, never to cards, which
+still separate by surface); `.hero-card` (opaque surface + one radial accent wash in
+the top corner + the existing `--edge-hilite` catchlight - the Vercel corner-spot,
+built from tokens the theme already owns); `.ghost-rank` (an oversized aria-hidden
+ordinal layered BEHIND a hero row's content at ~0.13 alpha - depth by layering, not
+shadow, restating a rank the row already prints).
+
+**A SEVENTH TYPE ROLE, argued rather than smuggled.** The six-step scale's own header
+says "six steps, and they are the whole scale," and this round adds `--text-hero`
+anyway, on the grounds the original argument left open: the scale had no size at
+which a DATUM outranks the masthead. `--text-display` was doing two jobs - page title
+and hero figure - which guaranteed every anchor number in the app was exactly as loud
+as every page title and no louder. Fitness apps and sports raters put the number
+above the title because on a data surface the number IS the headline. Named for its
+job like the other six, used only via `text-hero`, only on figures (a roster's total
+value, the blend weight, a trade's delta), never on prose. If the owner reads this as
+scale creep, reverting is one token and four call sites.
+
+**/rank - the primary canvas, and the drag math untouched.** The blend-weight card
+becomes the page's instrument: hero-card ground, the weight at `text-hero` in
+accent-text. The 120 drag rows keep their exact 64px height (`ROW_PITCH` arithmetic
+is load-bearing; every new mark is a zero-height absolute overlay inside
+`overflow-hidden`): each row now carries its value as a bottom-edge bar scaled to the
+board's #1 - scrolling the board reads as the value curve it is - plus a 3px gold
+left edge on exactly the rows sitting somewhere other than their consensus slot, so
+your own fingerprints on the board are visible at a glance. Ranks 1-3 get
+podium-weight ordinals. And the disagreement list traded its green/red `DeltaValue`
+for a centre-origin diverging bar: direction by which side of the spine fills, size
+by length against the board's biggest gap, the signed number beside it in plain ink.
+A rank disagreement has no good end - the page's own caption says it cuts both ways -
+so the valence pair was a live D6 violation, not a style choice. A zero gap draws
+only the spine: a minimum-width nub would assert a disagreement that does not exist.
+
+**/roster - the other primary canvas.** The headline panel is the page's hero moment:
+`DistributionStrip` gained an additive `hero` prop (default off, every existing call
+site byte-identical) that moves the value it already printed out of the 12px caption
+slot onto its own line at hero weight - total value at 44px over its own
+fourteen-tick distribution, on the hero-card wash. The timeline card's two
+proprietary numbers (duration, TCI) rise to display weight; TCI's "· 7/14" rank
+rider came off the label because it wrapped as a dangling fragment at the new size
+and the League TCI strip below already states the same rank in words. The roster
+list gets tier seams (below) and its top asset gets the podium frame. And the
+age-curve sparklines stopped defaulting to the Sparkline's rising-green/falling-red
+pair: an aging roster rendered as a wall of red warnings, colour restating slope as
+judgment (D6) when the line's own geometry already carries it. Every trajectory now
+draws in the dimmed accent; the slope talks, the colour does not.
+
+**/values and /trade - component-level by discipline.** `ValueAssetRow` (shared by
+/values and /roster) gained the podium vocabulary: `hero="lead"` for #1 (hero-card
+ground, ghost ordinal behind, name at lede, value at display weight),
+`hero="podium"` for #2-3, everyone else unchanged - hierarchy restating the sort the
+list already performs, never a verdict; the value column, not the styling, is the
+claim. Every row's value bar (previously /roster-only) now draws on /values too,
+scaled to the board's #1 so 260 rows scan as the decaying curve they are, with the
+flat fill upgraded to a dim-to-full gradient within the accent. Tier seams - a small
+labelled rule where the tier changes - give the scroll the whitespace beat the value
+cliffs already contain (value order only; under the age sort tiers are not contiguous
+and a seam would lie). The sticky filter bar upgraded from `bg-bg/95 backdrop-blur`
+to the `.glass` treatment. In `TradeBuilder`, the two ledger columns get the
+edge-hilite catchlight and lede-weight running totals, and a new `BalanceBeam` draws
+the package's two totals as one centre-split bar - send filling leftward in the
+dimmed accent, get rightward in the full accent - live while the package is being
+built, before Evaluate is ever pressed. The verdict card is the third D6 payoff: the
+headline delta was green-when-positive/red-when-negative ("value gained = good") on
+the very card whose own copy says value is not the verdict, and the side labels
+painted "you send" red and "you get" green. The delta is now ink at hero weight with
+the beam under it carrying the lean as geometry; the labels are secondary ink.
+
+**Verified.** `pnpm lint` clean. `pnpm test` 1380/1380 (70 files). `rm -rf .next &&
+pnpm build` clean, all routes present. Full `pnpm e2e` (fresh build, sandbox-local
+chromium override in an uncommitted config, deleted after): **77 passed, 4 failed -
+and all 4 reproduce IDENTICALLY against the unmodified merged base with this round's
+diff stashed** (three depth.spec cases and the /roster smoke, all
+`ERR_CONNECTION_RESET` on image loads - the photos-on default from D90 meeting this
+sandbox's proxy, the same class D81 documented), so they are inherited, not caused.
+axe-core scans clean on /values, /rank, /roster, /trade in BOTH themes. Before/after
+screenshots at 390px in both themes for all four pages, plus scripted captures of the
+two states a plain page-load cannot show: an evaluated trade (the beam and the ink
+verdict) and a genuinely customized /rank board (the moved-edges and real
+disagreement bars).
+
+**FLAGGED FOR THE OWNER, not silently decided: the two-hue variant.** The owner
+authorized exploring a second hue this round. The committed default above is
+one-hue by doctrine (D47/D48/D61/D64), and /rank is the one surface with a genuinely
+two-party semantic - YOUR order versus CONSENSUS - where a second hue would encode
+identity rather than judgment. A variant with consensus in the existing info blue
+(slider remainder, "cons #" figures, consensus-direction disagreement bars) was
+built, screenshotted in both themes side-by-side with the committed gold-only
+version, and reverted. Screenshots are in the round's report for the owner to
+choose; nothing two-hue ships in this commit.
+
+**Rejected:** shadows for card depth (the surface-only depth rule stands; everything
+here is wash, catchlight and layering); per-row rating chips a la Sofascore (a chip
+repeated 260 times is the same monotony in a rounder shape); colouring the value
+bars by tier or trajectory by direction (D6, three separate times above); touching
+/trade/finder or /values/page.jsx structure (D101 and the production reveal own
+those; component-level work reaches both pages through their shared components
+anyway); animating any of the new marks (a sibling session owns motion this round -
+everything here is static except the transitions the restyled elements already had).
+
+## D108. THE PROGRAM RATIFIES MID-ROUND - the podium becomes a print ledger, court blue ships as a meaning instead of a flagged variant, and two kill-list items land on these surfaces
+
+D107 shipped with two questions deliberately left open for the owner - how far the
+top-of-board hierarchy should go, and whether the two-hue /rank variant should ever be
+more than screenshots. Both were answered mid-round, in writing, by VISION.md ("The
+Program", committed on the integration branch and read in full before continuing):
+M1's asset-card fork resolved as **B, "Print Ledger"**, M4's second-hue fork resolved
+as **A, court blue adopted**, and two of M5's kill-list items name these exact
+surfaces. This entry records the deltas applied on top of D107 - same session, same
+verification bar - so the reasoning trail shows what was a proposal and what the owner
+actually ratified.
+
+**THE PODIUM IS GONE; THE CARD STOCK ARRIVED (M1B).** D107's `hero="podium"` weight for
+ranks #2-3 is deleted: the ratified design wants exactly ONE cover card per surface
+(the #1 asset on /values, the roster's own best asset on /roster) and wants everyone
+else's hierarchy carried the basketball-card way - by MATERIAL, never by a printed
+grade. The ladder ships as three unlayered classes in the depth-kit block
+(`globals.css`), applied by `ValueAssetRow` from the tier label it already receives:
+`Franchise` = double keyline (border, 2px gap, 1px inner line - two inset ring-shadows,
+no extra node) plus a restrained diagonal sheen at the hero wash's faint stop;
+`Cornerstone` = single gold keyline; every middle tier = plain stock, byte-identical to
+yesterday's row; `Fringe` = uncoated - flat, borderless, the page's own ground. This is
+D6-safe for the same reason the tier LABEL always was: the model already publishes the
+tier; the stock only lets the row say what the right-hand text already says. The tier
+seams from D107 stay - the ladder and the seams are the same reading at two scales.
+
+**COURT BLUE IS A MEANING NOW, NOT A VARIANT (M4A).** The owner adopted the second hue
+with exactly one sentence of semantics - **gold = yours, blue = the field** - and the
+Teenage-Engineering rule that a mark only gets the hue if its caption can be written as
+"this is the field's side of a comparison against you." It rides the existing `info`
+token (no fifth semantic invented; the token's measured per-theme values carry over),
+exported for charts as `CHART_FIELD` in lib/chart-colors with the rule written at the
+export. Applied to exactly four things, all previously monochrome comparisons:
+`DistributionStrip`'s peer ticks (the one chart whose whole job is you-against-the-
+league was drawing both sides in the same gold); the /rank blend slider's remainder
+(your share gold, consensus's share the info wash); the /rank disagreement bars
+(toward gold = a player you rank above consensus, toward blue = one the field ranks
+above you - identity, not valence, and a zero gap still draws only the spine); and the
+trade receipt (`BalanceBeam` send-gold/get-blue, the two mini-ledger headers likewise -
+replacing D107's all-gold beam, and giving the "you send"/"you get" labels back a
+colour that means WHOSE side, where the pre-D107 red/green had meant good/bad).
+Decorative blue remains banned; nothing else changed hue.
+
+**KILL LIST, THE TWO ITEMS ON THESE PAGES (M5).** (1) " · consensus only" no longer
+prints on every unbacked /values row - a property of the dataset was being repeated as
+if it were a property of each player (60 repetitions on the live board). One sentence
+under the list header now states it once, with the honest split: "N of M players are
+priced from consensus alone" when it is some, a differently-worded line when it is all
+(the fixture league's case), and nothing at all when it is none. The per-row
+information is NOT lost: every affected row still carries the full refusal sentence
+and the priced-vs-consensus fact in its expansion, which D107's own comment already
+argued was the room to say it properly. (2) The /rank 120-row wall is no longer the
+page's primary surface: the board renders a 25-row working set plus a search that
+jumps to any of the 120 (expanding the list exactly far enough to land on the found
+row, scrolling to it, flashing it - the same arrival grammar as /values' `?focus`),
+with "Show 25 more" / "All 120" beneath. The FEATURE is untouched - the full order
+still saves to the same cookie, still blends, still feeds the finder's conviction
+line - and the drag arithmetic is untouched except for one honest clamp: a drag cannot
+cross below the rendered slice, because dropping a row where the finger cannot see it
+is not a gesture anyone means. Nobody hand-ranks 120 assets on a phone; they disagree
+with the model about ~15, and the surface finally says so.
+
+**Verified, post-delta (full re-run, not carried over from D107).** `pnpm lint` clean;
+`pnpm test` 1380/1380; `rm -rf .next && pnpm build` clean, all routes present; full
+`pnpm e2e` 77 passed with the same 4 sandbox-only `ERR_CONNECTION_RESET` image-load
+failures that reproduce bit-identically with this round's entire diff stashed
+(confirmed again this round: the failing URL is sleepercdn.com team art, D81's class);
+axe-core clean on /values, /rank, /roster and /trade in both themes; fresh 390px
+screenshots in both themes of all four pages plus the two scripted states (an
+evaluated trade, a genuinely reordered board with real gaps).
+
+**Rejected:** re-colouring `RankDumbbell` (consensus-vs-priced is the model against
+the market - there is no "you" in it, so under M4's own rule it keeps its one grey);
+colouring "cons #N" row text or the consensus figure-strip cells blue (text-as-hue on
+every row is decoration, not a comparison mark - the blue lives in the marks);
+shrinking the working set below 25 or persisting its expansion (a session-local view
+of a saved order should reset to short on every visit, that being the point).
+
+## D109. THE SUPERLATIVES GET THEIR TITLE CARDS - VISION M7 executed, one poster family at two scales, plus kill-list #6 and #7
+
+**The defect (VISION Part 1, verbatim critique).** The Superlatives had 30-for-30 names
+(The Closer, The Shark, House of Cards, Best Friends Forever) and phone-book bodies -
+twelve sections, each the identical 4-row list, a solid grey column at overview zoom. The
+names deserved title cards; they got tables. Meanwhile /recap's three held-award
+mini-cards were "the most fun square inches in the app" as content and plain rows as
+form, and its TIMELINE tile crammed a five-sentence `timelineToday.read` into a
+half-width column - a ~40-line wall of 12px text, the worst single tile in the app.
+
+**The move.** One title-card family, `components/AwardTitleCard.jsx`, at two scales:
+
+- `AwardPoster` on /awards: each award's section now OPENS on a 30-for-30-style
+  monochrome card - the award name huge in Fraunces (the existing title, promoted, not
+  rewritten), a gold floor-line as the one accent element, the award's existing
+  `statLine` as the deck in the broadcast voice (mono + tabular, the job VISION
+  explicitly assigns that face on title cards), and the winner's team mark. The ranked
+  list beneath is unchanged in content - the winner row stays in it too, because it is
+  the tappable dossier link and the poster is not a control.
+- `AwardMiniCard` on /recap: the held awards (The Scout / The Steal / Hot Potato on the
+  fixture) render as the same family at mini scale in a two-up grid - same plate, same
+  floor-line, same mono deck, the award's icon as a gold watermark instead of a toned
+  badge - so recap and awards read as one system.
+
+**The ground is a new token, and it steps DOWN.** `--color-poster` (globals.css): every
+other card steps UP from the page ground (+4.94 L*), so a poster that stepped up too
+would be a thirteenth grey card. Near-black `#08090b` in dark (a window cut into the
+page; the article border delineates), deep cream `#e9e2d2` on paper - a magazine's
+heavier stock of the same paper, never a black insert, because paper is first-class
+(VISION: "a good magazine"). Measured, not eyeballed: dark plate carries ink 18.24:1,
+muted 7.66:1, accent-text 11.79:1, accent fill 10.36:1; paper plate 13.91 / 5.74 / 5.99
+/ 5.04. `faint`/`secondary` are BANNED on the plate by comment - they are ground-scoped
+tokens and `.bg-poster` is deliberately not in that scoping.
+
+**House rules held, stated because each was a live risk:**
+- D6: everything a poster sets is a published measurement - the same title, the same
+  statLine, the same winner the list already printed. The honesty caveats stay in the
+  subtitles, untouched. No verdict enters.
+- One-accent: monochrome + gold only. These are league-wide awards with no "yours vs
+  field" side, so no second hue - the winner being you stays a Tag, not a tint.
+- Kill-list #8 discipline: the poster title drops the old `truncate` (it balances and
+  wraps), the deck wraps ("Brayden Adeyemi · pick 11, 29th best in 2024" is a clause,
+  not a label).
+- M8's motion register stays closed at three moments: the posters get NO entrance
+  animation, because a poster fade-in is not one of the three and a fourth needs its
+  own decision entry.
+
+**Kill-list #6, /recap.** The TIMELINE tile keeps its data - the TCI figure and the
+posture tag - and `timelineToday.read` is gone from it. The explanation was never
+wrong, just misplaced: "What TCI and RFI measure" already sits directly below on the
+same page, and the full reading lives on /league where the tile links.
+
+**Kill-list #7, /more.** The WHERE NEXT block linked to About and Methodology, both
+already listed in THE APP group on the same screen. `<Onward from="/more">` and the
+registry's `ONWARD["/more"]` entry are deleted. The no-dead-ends test
+(lib/nav.test.js) carries a named carve-out for /more only - its entire body is the
+surface registry, so it cannot be a dead end by construction - plus a new assertion
+pinning that /more has zero onward steps, so the entry cannot quietly grow back.
+
+### Gate
+`pnpm lint`, `pnpm test` (1,381) clean; `rm -rf .next && pnpm build` clean; `pnpm e2e`
+76/81, and the 5 failures are the sandbox, not the change: four (three /depth, one
+/roster smoke) fail identically on the UNMODIFIED baseline with
+net::ERR_CONNECTION_RESET on an external resource this sandbox's proxy resets, and the
+fifth (density) was the same reset once and passes on re-run both with and without the
+change. axe-scan
+clean on /awards, /recap, /more in BOTH themes (heading order intact: the poster
+changes the h3's size, never its level). Before/after screenshots at 390px, both
+themes, in the session scratchpad.
+
+## D110. THE RECORD GETS TYPOGRAPHY OF IMPORTANCE (VISION M6) - a season's headline deal as a box score, magnitude ticks on every row, and the receipt page's totals as a real two-sided receipt
+
+**The defect this answers.** /deals was the phone book of VISION.md's Part 1 critique:
+141 deals as identical two-line rows, the trade that reshaped the league typeset
+exactly like a throw-in swap. The record is the app's premise and it had zero visual
+hierarchy of importance.
+
+**The measurement, and why it is not a verdict.** The only ordering this ships is
+TOTAL TWO-WAY VALUE MOVED (`lib/tradegraph/magnitude.js`): every player a transaction
+moved, both directions summed, priced by the same `cachedValuePlayers` model /values
+publishes. A sum over both sides cannot say who won - that is why it is the sum and
+not a delta (D6). Copy is measurement language everywhere ("most value moved", "value
+moved: top quarter of all deals"), pinned by a test that greps the shared label for
+verdict words. The honesty caveats print where the number does: "both sides at
+today's prices, players only" (D23's hindsight caveat, D24's players-only caveat), and
+a commissioner deal still carries its "no pick record" tag (D19).
+
+**Unmeasured is not small.** A deal none of whose players the model can price gets
+`ticks: null` - no glyph - and a season of such deals gets no headline, rather than an
+arbitrary one. Zero-value deals are also excluded from the quartile thresholds, so a
+dozen all-pick deals cannot promote every real deal a bucket. This is D19's posture
+applied to a glyph: an acknowledged gap beats a fabricated "measured: tiny".
+
+**The box score.** On the unfiltered index each season group now leads with its
+largest deal as a full-width card: kicker ("MOST VALUE MOVED"), the sum as a display
+numeral, then the deal as a two-column receipt - each side's assets as ledger lines
+with dotted leaders and a ruled players-only total. It is pulled out of chronological
+order on purpose (a front page leads with its biggest story) but it is still exactly
+one `<li>` with one link, the deal's own row promoted - so the index's
+one-row-per-deal e2e contract holds byte-for-byte. Ordinary rows gain a three-slot
+tick glyph (quartile bucket, count-as-geometry, neutral greys in both states - colour
+grading a deal's size would be one step from grading the deal).
+
+**The two-sided receipt is ONE component.** `components/DealReceipt.jsx` renders both
+the index's box-score columns (`dense`) and the receipt page's "what each side is
+worth today" section, which previously drew only the two endpoint totals as SideBars.
+The receipt lists EVERYTHING a side received - a pick or an unpriceable player prints
+an em dash in the price column instead of disappearing, so the players-only total sits
+above a visible record of what it did not count. Deliberately link-free and
+presentation-only so it can sit inside the index card's `<Link>` and so the trade
+evaluator's result can adopt it unchanged when that wave lands (VISION M5's 2K
+receipt note) - the evaluator builds `sides` and renders, nothing here to rewire.
+`SideBars` lost its only caller and was deleted from `components/charts.jsx` rather
+than kept warm (the D19 discipline on zero-caller code).
+
+**Colour discipline held.** Gold means "yours": the only accent on a box score or
+receipt is the viewer's own team name when they were actually in the deal - the same
+treatment their name already had on the rows. Court blue was NOT spent here: a deal
+between two other managers has no "yours" side, and a receipt is a document, not a
+you-against-the-field comparison (M4's own rule). Names line-clamp at word
+boundaries, never mid-word truncate (the kill-list #8 rule); every number is
+`.figure` tabular. No new motion, so nothing new to retire under
+`prefers-reduced-motion`.
+
+### Gate
+`pnpm lint` clean; `pnpm test` 1,388 (8 new in `magnitude.test.js`); `rm -rf .next &&
+pnpm build` clean; full `pnpm e2e` 77/81 with the 4 failures reproduced byte-identically
+on an UNMODIFIED stash of this branch (`net::ERR_CONNECTION_RESET` on /roster + /depth:
+this sandbox's proxy resetting an external fetch, not app behaviour - real CI is
+unaffected). axe-core: /deals and /deals/[id] clean in both themes. Before/after
+shot at 390px, dark and paper.

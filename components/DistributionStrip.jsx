@@ -35,6 +35,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import {
   CHART_ACCENT,
+  CHART_FIELD,
   CHART_GRID,
   CHART_NEUTRAL,
   divergingFill,
@@ -70,6 +71,15 @@ export function DistributionStrip({
   href,
   className,
   noun = "rosters",
+  /**
+   * HERO WEIGHT (round 10). One strip per surface may carry the page's anchor
+   * number at display weight: the value moves out of the 12px caption slot and
+   * onto its own line at --text-hero, with the rank reading beside it. Same
+   * facts, same ticks, same rules - only the typographic weight of a number the
+   * strip already printed. Defaulted off, so every existing call site renders
+   * byte-identically.
+   */
+  hero = false,
 }) {
   const clean = values.filter((v) => Number.isFinite(v));
   if (clean.length < 3) return null;
@@ -102,16 +112,21 @@ export function DistributionStrip({
           )}
         </span>
         <span className="shrink-0 figure text-meta">
-          {mine != null && (
+          {!hero && mine != null && (
             <span className="font-semibold text-ink">{format(mine)}</span>
           )}
           <span className="text-secondary">
             {" "}
-            {mine != null ? "· " : ""}
+            {!hero && mine != null ? "· " : ""}
             {reading}
           </span>
         </span>
       </div>
+      {hero && mine != null && (
+        <div className="mb-0.5 mt-1 figure text-hero font-semibold leading-none text-ink">
+          {format(mine)}
+        </div>
+      )}
       <svg
         viewBox={`0 0 ${W} ${H}`}
         className="w-full"
@@ -152,7 +167,11 @@ export function DistributionStrip({
               width={2}
               height={10}
               rx={1}
-              fill={signed ? divergingFill(v) : CHART_ACCENT}
+              // COURT BLUE (VISION M4): the peers are the FIELD's side of this
+              // comparison, so they take the field hue - gold stays yours alone.
+              // Both sides used to be the same gold, which made the one chart
+              // whose whole job is you-against-the-league monochrome.
+              fill={signed ? divergingFill(v) : CHART_FIELD}
               // FLAT, not the magnitude ramp. A peer tick's position IS its value,
               // so ramping opacity with position adds nothing - and it subtracts
               // something real: the ramp's bottom steps sit under 3:1 on every

@@ -21,7 +21,8 @@ import {
   Tag,
 } from "@/components/ui";
 import { MetricGloss } from "@/components/MetricGloss";
-import { AwardBadge, GROUP_TONE, iconForAward } from "@/components/AwardBadge";
+import { iconForAward } from "@/components/AwardBadge";
+import { AwardMiniCard } from "@/components/AwardTitleCard";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { photosEnabled } from "@/lib/photos";
 import { fmtValue } from "@/lib/ui";
@@ -289,32 +290,24 @@ export default async function RecapPage() {
           moment.
         </EmptyState>
       ) : (
-        <div className="space-y-1.5">
+        /*
+          The held awards as MINI TITLE CARDS - the same family /awards' posters use
+          (VISION M7), at mini scale, so recap and awards read as one system. These
+          were already the most fun square inches in the app; now they are small
+          posters instead of rows, and nothing on them changed in content: the same
+          award title, the same statLine, the same link to /awards. The award's icon
+          survives as a gold watermark rather than a toned badge, because a title
+          card is monochrome + gold by the family's own rule.
+        */
+        <div className="grid grid-cols-2 gap-1.5">
           {awardsHeld.map((a) => (
-            <Link
+            <AwardMiniCard
               key={a.id}
               href="/awards"
-              className="flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-accent-edge bg-surface px-2.5 py-1.5 transition-colors hover:bg-surface-2"
-            >
-              <AwardBadge
-                icon={iconForAward(a.id)}
-                tone={GROUP_TONE[a.group]}
-                rank="winner"
-              />
-              <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
-                  {a.title}
-                </span>
-                <span className="block truncate text-meta leading-tight text-secondary">
-                  {a.statLine}
-                </span>
-              </span>
-              <ChevronRight
-                size={13}
-                className="shrink-0 text-faint"
-                aria-hidden="true"
-              />
-            </Link>
+              icon={iconForAward(a.id)}
+              title={a.title}
+              deck={a.statLine}
+            />
           ))}
         </div>
       )}
@@ -336,15 +329,18 @@ export default async function RecapPage() {
           <div className="mt-0.5 figure text-xl font-semibold text-ink">
             {timelineToday ? timelineToday.tci.toFixed(0) : "-"}
           </div>
+          {/*
+              The tile keeps its DATA - the index and the posture - and nothing
+              else. It used to also print `timelineToday.read`, a five-sentence
+              explanation, into this half-width column: ~40 lines of 12px text in a
+              ~165px gutter, the worst single tile in the app (VISION kill-list #6).
+              The explanation was never wrong, just misplaced - what TCI means lives
+              behind the "What TCI and RFI measure" disclosure directly below, and
+              the full reading lives on /league where the tile already links.
+            */}
           <div className="mt-0.5 text-meta leading-snug text-muted">
             {timelineToday ? (
-              <>
-                <Tag tone="accent" className="mb-1">
-                  {timelineToday.posture}
-                </Tag>
-                <br />
-                {timelineToday.read}
-              </>
+              <Tag tone="accent">{timelineToday.posture}</Tag>
             ) : (
               "no roster data"
             )}
