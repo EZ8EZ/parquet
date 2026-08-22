@@ -70,6 +70,13 @@ export function TeamPicker({
   // against the best-stocked team in the league - a fact the sort order already
   // implies, now visible without reading fourteen numbers. Non-text and
   // proportional, so it encodes an amount, never a verdict (D6).
+  //
+  // COURT BLUE (VISION.md M4A, owner-approved): gold means yours, blue means the
+  // field - and this list is literally the field with your seat in it. The
+  // field's bars take the existing `info` blue (one token, not a new hue); the
+  // one row that is yours keeps the gold bar. Before a seat exists the whole
+  // list is the field, so every bar is blue and the first gold thing a new
+  // reader ever sees is the team they picked.
   const maxValue = Math.max(...teams.map((x) => x.totalValue), 1);
   return (
     <div>
@@ -212,8 +219,10 @@ export function TeamPicker({
                     className="block h-full rounded-full"
                     style={{
                       width: `${share}%`,
-                      background:
-                        "linear-gradient(90deg, var(--color-accent-dim), var(--color-accent))",
+                      background: active
+                        ? "linear-gradient(90deg, var(--color-accent-dim), var(--color-accent))"
+                        : "var(--color-info)",
+                      opacity: active ? 1 : 0.75,
                     }}
                   />
                 </span>

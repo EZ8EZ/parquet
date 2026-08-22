@@ -4644,20 +4644,55 @@ three consecutive owner verdicts that its output reads flat. The tier system kee
 its real content - elevation is still surface-first, `--shadow-raised` still means
 "genuinely floats" - and adds the ambient stack the references all share.
 
-**THE SECOND HUE - EXPLORED AS DIRECTED, NOT SHIPPED.** The owner explicitly
-authorized reopening the one-accent rule (D47/D48/D61/D64) this round. Rather than
-argue it again, the choice is made real: a clearly-marked, INERT token block gated
-behind `data-experiment="duotone"` (nothing in the app sets it) turns the hero
-mesh's second radial into a true violet co-accent - violet because every other
-candidate hue is already a semantic (green/red/blue/orange), so it is the one hue
-that cannot be misread as a verdict - and splits the Desk's edge catchlight
-gold-into-violet. Side-by-side screenshots (one-hue default vs duotone, both
-themes) ride with this round's report. Promote the block's values or delete the
-block once the owner picks; the committed DEFAULT remains one accent.
+**THE SECOND HUE - EXPLORED, THEN DECIDED BY THE OWNER MID-ROUND.** The
+exploration shipped first as a clearly-marked inert violet-duotone token block
+behind `data-experiment="duotone"`, with side-by-side screenshots in both themes.
+The owner then approved the plan ("The Program", VISION.md) and picked the other
+candidate: **court blue (M4A), with exactly one product-wide meaning - gold =
+yours, blue = the field/the market/everyone-else** - tuning the existing `info`
+token rather than adding a fifth semantic. So the violet block is deleted (its
+screenshots survive in the round report as the road not taken), and the first
+court-blue application lands where this round's scope already had a genuine
+you-vs-the-field object: `/teams`' value bars - the field's bars blue, the
+viewer's own row gold, and before a seat exists every bar is blue, so the first
+gold thing a new reader ever sees is the team they picked. Decorative blue (a
+surface with no "field" side) is still out, and D47's rules still bind.
 
-**Verified:** `pnpm lint` clean; `pnpm test` 1054/1054; `rm -rf .next && pnpm build`
-clean; full `pnpm e2e` green via an uncommitted local Chromium-path config (deleted
-after, per the visual-review skill); axe-core clean on `/` and `/teams` in both
-themes; before/after full-page and viewport screenshots at 390px in both themes,
-plus the duotone variant pair. Fixture provider throughout - synthetic data, real
-layout.
+**THE COVER GRAMMAR LANDS ON HOME (VISION.md M2).** The front page now opens as a
+cover, not a header: kicker → Fraunces headline → a standfirst (the season in one
+honest sentence: trades, notable decisions, how many have their why written down)
+→ ONE hero fact in display type - the record and standing - on a 3px gold
+floor-line, the typographic signature (The Athletic's inline lesson). With the
+record promoted to the cover, the four-figure grid would have printed the same
+score one screen lower (the restatement D61 warns about), so it becomes "How you
+deal, in three numbers" - trades / pick capital / acquisition age, the dealing
+profile the cover does not carry.
+
+**HOME'S THREE ACCORDIONS ARE KILLED (VISION.md kill list #3, owner-approved).**
+"STILL RUNNING · 5 active / WHAT YOUR RECORD SHOWS · 4 findings / WHO YOU DEAL
+WITH · top 3" were three grey bars hiding the front page's other three stories.
+Replaced by **leads** - plain set prose, no card, no uppercase label, one real
+sentence per story with its destination inline: the top live streak (same
+worth-showing rule StreakPanel applies) linking to /awards, the findings printed
+in full (they ARE sentences, a handful of one-liners shorter than the accordion
+chrome they replace), and the top trade partner linking to their dossier - the
+partner lead skipping itself when the findings already name the same partner,
+because one fact twice in one block is the failure this block exists to end. The
+full streak panel now lives behind /awards; D46's "nothing hides behind a label"
+is satisfied the stronger way - nothing hides at all.
+
+**THE SCOREBUG (VISION.md M3) IS NOTED FOR THE NEXT WAVE, NOT HALF-BUILT.** The
+context row's replacement by a persistent mono `PK · 13-7 · #5/14 · TCI 57 ·
+2029-31` strip needs two things this round should not rush: a decision about
+where the capture-count status goes (lib/desk.js's rule 1b - D40's "standing
+accusation" argument - currently owns that row when captures are outstanding),
+and TCI/window computed cheaply enough for the root layout on every route. Both
+are design decisions about OTHER surfaces' data, so the Desk keeps its current
+context row this round and the scorebug ships with M3's wave.
+
+**Verified (final tree):** `pnpm lint` clean; `pnpm test` 1054/1054; `rm -rf .next
+&& pnpm build` clean; full `pnpm e2e` green via an uncommitted local Chromium-path
+config (deleted after, per the visual-review skill); axe-core clean on `/` and
+`/teams` in both themes; before/after full-page and viewport screenshots at 390px
+in both themes, plus the superseded duotone variant pair. Fixture provider
+throughout - synthetic data, real layout.

@@ -17,7 +17,6 @@ import { homeNext } from "@/lib/nav";
 import { canCapture, readSeat } from "@/lib/auth/server";
 import { Onward } from "@/components/Onward";
 import { DigestBeacon } from "@/components/DigestBeacon";
-import { StreakPanel } from "@/components/StreakPanel";
 import { Wordmark } from "@/components/Brand";
 import {
   Card,
@@ -28,57 +27,32 @@ import {
 } from "@/components/ui";
 export const dynamic = "force-dynamic";
 /**
- * A FOLDED HOME SECTION. Same disclosure idiom the rest of the app already
- * uses for this exact problem - Awards' `AwardGroup`, /deals' `Directory`,
- * /methodology's `Subsection`, all a `<details>` whose `<summary>` states its
- * own count so nothing hides behind a label that will not admit what is
- * inside it (D46) - closed by default. Built locally rather than reusing
- * `components/ui.jsx`'s `Disclosure`, whose summary is styled as a small
- * inline footnote (`text-meta text-faint`): right for "what this cannot
- * know," wrong for a section that used to be a full `SectionHeader`. This
- * keeps SectionHeader's own type scale, so folding a section does not also
- * quietly demote it.
- *
- * Home used to render "Still running," "What your record shows" and "Who you
- * deal with" open, permanently, at the same visual weight as the headline
- * insight above them and the stat grid beside them - ten bordered sections in
- * a row with nothing to tell a reader which one mattered most. These three are
- * real information, not chrome, so nothing here is deleted; they are one tap
- * away instead of a scroll away, exactly the fix D58 already proved on
- * /deals and /ledger (60-70% shorter, zero information lost) and this round
- * applies to the one page that had never had it applied to it.
+ * A FRONT-PAGE LEAD (VISION.md M2, replacing the HomeFold accordions the
+ * approved kill list retired). One real sentence from one story, open on the
+ * page, with its destination inline at the end - the newspaper convention of
+ * printing the section's best sentence on the front page instead of the
+ * section's name on a grey bar. Deliberately NO card, NO uppercase label and
+ * NO chrome: after a cover panel and a stat grid, the third register on this
+ * page is plain set prose, which is what makes the first two read as designed
+ * rather than as three more boxes.
  */
-function HomeFold({ title, count, href, cta, children }) {
+function Lead({ href, cta, children }) {
   return (
-    <details className="group mt-4">
-      <summary className="mb-1.5 flex min-h-11 cursor-pointer list-none items-center gap-1.5">
-        <ChevronRight
-          size={13}
-          aria-hidden="true"
-          className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
-        />
-        <h2 className="min-w-0 flex-1 text-note font-semibold uppercase tracking-[0.16em] text-muted">
-          {title}
-        </h2>
-        {count != null && (
-          <span className="shrink-0 figure text-meta text-secondary">
-            {count}
-          </span>
-        )}
-      </summary>
-      <div className="disclosure-body">
-        {children}
-        {href && cta && (
+    <p className="text-body leading-relaxed text-ink/90">
+      {children}
+      {href && cta && (
+        <>
+          {" "}
           <Link
             href={href}
-            className="mt-2 inline-flex min-h-11 items-center gap-0.5 text-meta font-semibold text-accent-text"
+            className="inline-flex min-h-11 items-center gap-0.5 whitespace-nowrap align-middle text-meta font-semibold text-accent-text"
           >
             {cta}
             <ChevronRight size={13} aria-hidden="true" />
           </Link>
-        )}
-      </div>
-    </details>
+        </>
+      )}
+    </p>
   );
 }
 export default async function HomePage() {
@@ -95,12 +69,23 @@ export default async function HomePage() {
   const roster = h.rostersById.get(p.rosterId);
   const form = (await currentFormByRoster(h)).get(p.rosterId);
   const digest = await loadDigest(h);
-  // The clock is read inside lib/streaks (see its `opts.now`), which hands back the
-  // instant it used so the panel's stamp and its numbers describe the same moment.
-  const { streaks, countedAt } = liveStreaks(h, p.rosterId);
+  const { streaks } = liveStreaks(h, p.rosterId);
   const holdYears =
     p.avgHoldingDays != null ? (p.avgHoldingDays / 365).toFixed(1) : null;
   const partners = p.tradePartners.slice(0, 3);
+  // The cover's hero fact (and the same strings the four-numbers grid prints in
+  // its Record cell - the cover states the score as identity, the grid as one of
+  // four linked tiles; a program's front page and its box score both carry the
+  // score, and that is the one restatement this page keeps on purpose).
+  const recordValue = form
+    ? `${form.wins}-${form.losses}`
+    : `${roster?.settings.wins ?? 0}-${roster?.settings.losses ?? 0}`;
+  const recordSub = form
+    ? `${form.isLive ? form.season : `${form.season} final`}, ${ordinal(form.rank)} of ${form.teams}`
+    : `${h.currentLeague.season} season`;
+  // The lead from the streaks story: the first streak the panel itself would show
+  // (same worth-showing rule StreakPanel applies - idle AND zero is anti-information).
+  const topStreak = streaks.find((s) => !(s.state === "idle" && s.value === 0));
   return (
     <div>
       {/* The wordmark, and nothing beside it. "Switch team" and "Settings" used to sit
@@ -158,19 +143,38 @@ export default async function HomePage() {
         </Link>
       )}
 
-      {/* Revealed strategy - the headline, first thing on the screen, and now the
-            page's one hero-mesh moment (D88): the biggest sentence in the app gets
-            the one panel with light, grain and the accent-family mesh behind it,
-            instead of floating on bare ground at the same material weight as
-            everything under it. The kicker names WHOSE strategy, because "You said
-            win-now. You sold." only lands when the reader knows who "you" is -
-            obvious to the manager in their own seat, not to a leaguemate seeing
-            this app (or this seat) for the first time. */}
-      <section className="hero-mesh mb-3 rounded-[--radius-lg] border border-border px-4 pb-1.5 pt-4">
+      {/* THE COVER (VISION.md M2): kicker → Fraunces headline → standfirst → ONE
+            hero fact set as display type on the gold floor-line - the 30-for-30
+            numeral move, on the app's one hero-mesh panel. The kicker names WHOSE
+            strategy, because "You said win-now. You sold." only lands when the
+            reader knows who "you" is. The standfirst is the season in one honest
+            sentence; the hero fact is the record and standing, the one number a
+            manager carries in their head all week. */}
+      <section className="hero-mesh mb-3 rounded-[--radius-lg] border border-border px-4 pb-3.5 pt-4">
         <PageHeader
           kicker={`Revealed strategy · ${p.teamName ?? p.displayName}`}
           title={report.headline}
+          subtitle={`A record of ${p.trades} trades and ${ledger.notable} notable decisions - ${ledger.annotated} of them with the why written down.`}
         />
+        <Link
+          href="/league"
+          className="group -mt-1 inline-flex min-h-11 items-end gap-2.5"
+        >
+          <span>
+            <span className="block figure text-display font-semibold leading-none text-ink">
+              {recordValue}
+            </span>
+            {/* The gold floor-line: the typographic signature under the hero
+                  numeral (The Athletic's inline lesson, via VISION.md M2). */}
+            <span
+              aria-hidden="true"
+              className="mt-1.5 block h-[3px] w-14 rounded-full bg-accent"
+            />
+          </span>
+          <span className="pb-px text-meta leading-tight text-secondary transition-colors group-hover:text-ink">
+            {recordSub}
+          </span>
+        </Link>
       </section>
 
       {report.contradictions.length > 0 ? (
@@ -252,42 +256,30 @@ export default async function HomePage() {
             /lab/pulse, which the floor is what makes worth visiting twice. */}
       <DigestBeacon metrics={digest.nextMetrics} />
 
-      {/* YOUR SEASON, in figures. Four numbers in one card's worth of height rather
-            than four stacked boxes, and every one of them is a link. */}
-      <SectionHeader title="Your season, in four numbers" />
-      <div className="card-lit grid grid-cols-2 overflow-hidden rounded-[--radius] border border-border bg-surface">
-        <Figure
-          href="/league"
-          label="Record"
-          value={
-            form
-              ? `${form.wins}-${form.losses}`
-              : `${roster?.settings.wins ?? 0}-${roster?.settings.losses ?? 0}`
-          }
-          sub={
-            form
-              ? `${form.isLive ? form.season : `${form.season} final`}, ${ordinal(form.rank)} of ${form.teams}`
-              : `${h.currentLeague.season} season`
-          }
-          className="border-b border-r border-border"
-        />
+      {/* HOW YOU DEAL, in figures - three numbers in one card's worth of height,
+            every one of them a link. The Record cell that used to lead this grid
+            moved up to the cover as the hero fact (VISION.md M2): the same score
+            printed twice one screen apart was the restatement D61 warns about,
+            so the grid keeps only the dealing profile the cover does not carry. */}
+      <SectionHeader title="How you deal, in three numbers" />
+      <div className="card-lit grid grid-cols-3 overflow-hidden rounded-[--radius] border border-border bg-surface">
         <Figure
           href="/ledger"
-          label="Trades made"
+          label="Trades"
           value={`${p.trades}`}
           sub={`${p.tradesInitiated} you started`}
-          className="border-b border-border"
+          className="border-r border-border"
         />
         <Figure
           href="/drafts"
           label="Pick capital"
           value={<DeltaValue n={p.picks.net} />}
-          sub={`${p.picks.firstsAcquired} firsts in / ${p.picks.firstsSpent} out`}
+          sub={`${p.picks.firstsAcquired} in / ${p.picks.firstsSpent} out`}
           className="border-r border-border"
         />
         <Figure
           href={`/managers/${p.rosterId}`}
-          label="Avg acq. age"
+          label="Acq. age"
           value={`${p.acquisitions.avgAge ?? "-"}`}
           /* The caption has to describe the number above it. It used to read off
        `overpaysForAge` - a count of 30+ acquisitions, not an average - so a
@@ -334,72 +326,50 @@ export default async function HomePage() {
         </p>
       </Link>
 
-      {/* The natural sibling of the digest, and the other half of the same question:
-            that panel is what CHANGED while you were gone, this one is what is still
-            running right now. Both are about the present; neither is a ranking.
-            Closed by default (HomeFold) - real content, one tap away rather than
-            permanently at the same weight as the headline above it. */}
-      <HomeFold
-        title="Still running"
-        count={`${streaks.length} active`}
-        href="/awards"
-        cta="vs. settled awards"
-      >
-        <StreakPanel streaks={streaks} countedAt={countedAt} />
-      </HomeFold>
-
-      {/* Findings */}
-      {report.findings.length > 0 && (
-        <HomeFold
-          title="What your record shows"
-          count={`${report.findings.length} findings`}
-        >
-          <ul className="space-y-1.5">
-            {report.findings.map((f, i) => (
-              <li key={i} className="flex gap-2 text-body leading-snug">
-                <span
-                  aria-hidden="true"
-                  className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
-                />
-                <span className="text-ink/90">{f}</span>
-              </li>
-            ))}
-          </ul>
-        </HomeFold>
-      )}
-
-      {/* Trade partners - the people behind the numbers, each a dossier. */}
-      {partners.length > 0 && (
-        <HomeFold
-          title="Who you deal with"
-          count={`top ${partners.length}`}
-          href="/managers"
-          cta="all dossiers"
-        >
-          <div className="scroll-x flex gap-1.5">
-            {partners.map((tp) => (
-              <Link
-                key={tp.ownerId ?? `r${tp.rosterId}`}
-                // A departed partner's file lives at their owner id - the seat they
-                // used to hold now routes to whoever took it over.
-                href={
-                  tp.isFormer && tp.ownerId
-                    ? `/managers/former/${tp.ownerId}`
-                    : `/managers/${tp.rosterId}`
-                }
-                className="inline-flex min-h-11 shrink-0 items-center gap-2 rounded-full border border-border bg-surface px-3 transition-colors hover:border-accent"
-              >
-                <span className="max-w-[8rem] truncate text-note font-semibold text-ink">
-                  {tp.displayName}
-                </span>
-                <span className="figure text-meta text-accent-text">
-                  {tp.count}
-                </span>
-              </Link>
-            ))}
-          </div>
-        </HomeFold>
-      )}
+      {/* THE LEADS (VISION.md M2 + kill list item 3). This page used to fold its
+            other three stories into collapsed accordions - "STILL RUNNING · 5
+            active", "WHAT YOUR RECORD SHOWS · 4 findings", "WHO YOU DEAL WITH ·
+            top 3" - three grey bars that looked like each other and said nothing.
+            A newspaper doesn't print its section names on the front page; it
+            prints its best sentence from each section. So each story now leads
+            with its one real sentence, open, with the destination beside it.
+            The full streak panel lives behind the /awards link; the findings ARE
+            sentences, so they print in full (they are a handful of one-liners,
+            shorter than the accordion chrome they replace). */}
+      <div className="mt-4 space-y-3 border-t border-border pt-3.5">
+        {topStreak && (
+          <Lead href="/awards" cta="streaks & awards">
+            {topStreak.label}:{" "}
+            <b className="figure font-semibold text-ink">{topStreak.display}</b>
+            {topStreak.detail ? <> - {topStreak.detail}</> : "."}
+          </Lead>
+        )}
+        {report.findings.map((f, i) => (
+          <Lead key={i}>{f}</Lead>
+        ))}
+        {/* Skipped when the findings above already name the same partner - the
+              report computes its own "most frequent partner" line from the same
+              data, and one fact printed twice in one block is the exact
+              restatement this block replaced the accordions to avoid. */}
+        {partners.length > 0 &&
+          !report.findings.some((f) =>
+            f.includes(partners[0].displayName),
+          ) && (
+          <Lead
+            href={
+              partners[0].isFormer && partners[0].ownerId
+                ? `/managers/former/${partners[0].ownerId}`
+                : `/managers/${partners[0].rosterId}`
+            }
+            cta="the dossier"
+          >
+            Most of your business is with{" "}
+            <b className="font-semibold text-ink">{partners[0].displayName}</b>{" "}
+            - <b className="figure font-semibold text-ink">{partners[0].count}</b>{" "}
+            deals between you.
+          </Lead>
+        )}
+      </div>
 
       {/*
           WHERE NEXT, and pointedly NOT a menu.

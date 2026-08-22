@@ -648,47 +648,16 @@ body {
 }
 
 /*
- * D88 VARIANT - NOT SHIPPED, OWNER DECIDES. The owner explicitly authorized a
- * second-hue exploration this round (reopening D47/D48/D61/D64 is theirs to do).
- * This block is inert unless `data-experiment="duotone"` is set on <html>; nothing
- * in the app sets it. It turns the hero mesh's second radial from the grain-blue
- * whisper into a real VIOLET co-accent - violet because every other candidate hue
- * is already spent as a semantic (green=positive, red=negative, blue=info/rebuild,
- * orange=warn), so it is the one hue that cannot be misread as a verdict - and
- * splits the Desk's edge catchlight gold-into-violet. Screenshots of both variants
- * ride with D88; delete this block or promote its values once the owner picks.
+ * THE SECOND HUE, DECIDED (VISION.md M4A). A violet duotone variant was built and
+ * screenshotted here for one round; the owner instead approved COURT BLUE with
+ * exactly one product-wide meaning: gold = yours, blue = the field/the market/
+ * everyone-else. No new token exists for it - the field's side of a comparison
+ * uses the existing `--color-info` blue, re-tuned here if a surface ever needs it,
+ * never a fifth semantic. A use that cannot be written as "this is the field's
+ * side of a comparison" does not get the hue (decorative blue is still out, and
+ * D47's rules still bind: never the sole encoding, fill/text split per theme).
+ * First application: the /teams value bars (components/TeamPicker.jsx).
  */
-:root[data-experiment="duotone"] {
-  --mesh-2: rgb(139 124 246 / 0.32);
-  --grain-2: rgb(139 124 246 / 0.07);
-  --edge-glow: linear-gradient(
-    90deg,
-    transparent 4%,
-    rgb(230 179 77 / 0.55) 38%,
-    rgb(139 124 246 / 0.55) 62%,
-    transparent 96%
-  );
-}
-/* The variant pulls the second radial down the hero's right side so the two hues
- * genuinely share the panel instead of the violet hiding in a corner - the point
- * is a choice the owner can SEE, not a technicality. */
-:root[data-experiment="duotone"] .hero-mesh {
-  background-image:
-    var(--noise),
-    radial-gradient(130% 110% at 12% 0%, var(--mesh-1), transparent 58%),
-    radial-gradient(110% 130% at 100% 45%, var(--mesh-2), transparent 62%);
-}
-:root[data-experiment="duotone"][data-theme="light"] {
-  --mesh-2: rgb(94 78 214 / 0.16);
-  --grain-2: rgb(94 78 214 / 0.05);
-  --edge-glow: linear-gradient(
-    90deg,
-    transparent 4%,
-    rgb(122 88 16 / 0.4) 38%,
-    rgb(94 78 214 / 0.4) 62%,
-    transparent 96%
-  );
-}
 
 /*
  * THEME TOGGLE selection state - CSS, not React, on purpose.
