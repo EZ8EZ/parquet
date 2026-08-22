@@ -55,6 +55,35 @@
   --ease-out: cubic-bezier(0.32, 0.72, 0, 1);
 
   /*
+   * --ease-spring IS THE SECOND CURVE THE PARAGRAPH ABOVE SAYS DOES NOT EXIST, and
+   * that is not a contradiction quietly slipped in - it is a narrow, owner-directed
+   * exception, recorded the way this file records every other one. The owner's own
+   * brief for this round asked for real spring physics, "noticeable and fun," not
+   * the invisible-subtle end of the scale - and the paragraph above's ban was
+   * written for a DIFFERENT surface: a panel bolted to the bottom edge of a phone,
+   * where an overshoot reads as the whole screen wobbling.
+   *
+   * This curve is used in exactly two places, both far from that surface: the
+   * `.arrive` stagger on a value/roster row (`ValueAssetRow`) and the captured-
+   * reasoning quote in the ledger, and `.copy-pop` on the copy-confirmation
+   * checkmark. All three are small, self-contained elements settling into a
+   * position they already occupy in the layout - nothing full-bleed, nothing
+   * attached to a screen edge, nothing that moves the reader's eye across the
+   * viewport the way a drawer does. `cubic-bezier(0.34, 1.56, 0.64, 1)` (a standard
+   * "back-out" curve - Radix and shadcn ship the same numbers) overshoots past its
+   * resting value before settling, which is what makes it read as a spring rather
+   * than a stop.
+   *
+   * It is NOT applied to press feedback, disclosures, or the Desk drawer below -
+   * those are exactly the full-width and edge-attached cases the original ban
+   * named, they already read as considered rather than mechanical, and the owner's
+   * brief did not ask for them to change. If "expressive" is meant to reach those
+   * too, that is a real second decision, not this one - flagged rather than
+   * assumed, same as this file flags every other judgment call.
+   */
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+
+  /*
    * AND THIS IS THE PAIR THAT ACTUALLY DEPLOYS THEM.
    *
    * The four tokens above shipped and were then adopted almost nowhere: 122
@@ -281,6 +310,92 @@ details[open] .disclosure-body {
         opacity var(--motion-fast) linear,
         content-visibility var(--motion-fast) allow-discrete;
     }
+  }
+}
+
+/*
+ * ============================== ARRIVAL ==============================
+ *
+ * The app's one entrance animation for content that appears without the reader
+ * opening anything - a value/roster row rendering for the first time, a ledger
+ * annotation the reader just captured replacing the editor. `disclosure-in` above
+ * already owns the "reader tapped a summary" case; this owns the "the page (or a
+ * save) put something new in front of the reader" case, and it is deliberately the
+ * same shape everywhere - opacity plus a rise, one curve, one token of time - so a
+ * reader is never shown two different answers to "something just appeared."
+ *
+ * `--ease-spring` and a 10px rise rather than the plain `--ease-out` this block
+ * shipped with first: the owner's brief asked for this round to read as expressive
+ * - real spring physics, noticeable - not the invisible-subtle end of the scale,
+ * and a row that settles with a small overshoot reads as arriving where a linear
+ * ease-out on the same 10px reads as merely appearing. `--motion-slow` (260ms)
+ * rather than `--motion-base`, because a spring needs the room to overshoot and
+ * settle back or it just looks like a faster ease-out - see `--ease-spring`'s own
+ * definition above for why this curve exists on THIS element and not on press
+ * feedback or the drawer.
+ *
+ * `--arrive-delay` is a per-element stagger for the list case (`ValueAssetRow` in
+ * `components/ValuesList.jsx`, used by both /values and /roster): each row's own
+ * inline style sets it, capped short so a 60-row page settles inside half a second
+ * rather than visibly queueing. Sites with nothing to stagger (the ledger's
+ * captured quote) just don't set it and get 0ms - one declaration, two jobs, no
+ * second keyframe.
+ *
+ * THIS IS DISABLED OUTRIGHT UNDER REDUCED MOTION, NOT REDUCED TO OPACITY like the
+ * press-feedback and disclosure blocks above. That is a deliberate departure from
+ * this file's own "reduce, not remove" rule, and the reason is what the motion is
+ * FOR: press feedback answers a finger and a spinner reports live progress, so
+ * removing them outright would take away real information under the exact setting
+ * that asked to be treated carefully. A row fading in on first paint reports
+ * nothing - the data was already there the instant the page rendered, the fade is
+ * only decoration - so under `prefers-reduced-motion` it is pure content with
+ * nothing lost, which is what the spec's "remove non-essential motion" clause is
+ * actually for. The spring's overshoot is exactly the kind of motion that clause
+ * means to catch, if anything more so than the plain fade it replaced.
+ */
+@keyframes arrive {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.arrive {
+  animation: arrive var(--motion-slow) var(--ease-spring) both;
+  animation-delay: var(--arrive-delay, 0ms);
+}
+@media (prefers-reduced-motion: reduce) {
+  .arrive {
+    animation: none;
+  }
+}
+
+/*
+ * COPY CONFIRMATION. `CopyBlock`'s copy/copied icon used to swap in one frame - the
+ * one moment in the app where a tap's only proof is a glyph changing, and it had no
+ * more weight than a static icon would. A small pop (scale 0.5 -> 1 plus opacity) on
+ * the checkmark only, since that is the one glyph a tap actually produced - the
+ * plain copy icon is also this block's own first paint, and popping it there would
+ * fire for every manager's claim link on /commissioner at once rather than
+ * answering anything a reader did.
+ *
+ * Purely decorative (the icon change already carries the information; this is the
+ * "costs nothing" polish this file's press-feedback block argues for elsewhere), so
+ * it is disabled outright under reduced motion for the same reason `.arrive` is.
+ *
+ * `--ease-spring`, same as `.arrive` and for the same owner-directed reason: a
+ * 12px checkmark popping past full size and settling back reads as a satisfied
+ * "yes, that landed" in a way a linear scale-up does not, and a single small glyph
+ * is exactly the bounded, non-edge-attached case that curve's own definition
+ * scopes it to.
+ */
+@keyframes check-pop {
+  from { opacity: 0; transform: scale(0.4); }
+  to { opacity: 1; transform: scale(1); }
+}
+.copy-pop {
+  animation: check-pop var(--motion-base) var(--ease-spring) both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .copy-pop {
+    animation: none;
   }
 }
 

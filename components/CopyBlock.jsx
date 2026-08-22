@@ -23,7 +23,16 @@ export function CopyBlock({ text, label = "Copy for Sleeper" }) {
           }}
           className="inline-flex items-center gap-1 rounded px-1.5 py-1 text-meta font-semibold text-accent-text hover:bg-accent-wash"
         >
-          {copied ? <Check size={12} /> : <Copy size={12} />}
+          {/* Only the checkmark pops (`.copy-pop`, interaction.css) - it is the one
+                state a tap actually produced. The plain copy icon is also this
+                block's very first paint, and popping it on every mount would fire
+                for every manager's claim link on /commissioner at once. `key`
+                forces the remount that lets the animation replay on a second tap. */}
+          {copied ? (
+            <Check key="check" size={12} className="copy-pop" />
+          ) : (
+            <Copy size={12} />
+          )}
           {copied ? "copied" : "copy"}
         </button>
       </div>

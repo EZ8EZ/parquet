@@ -577,7 +577,7 @@ export default async function RosterPage() {
         player value · line = {TRAJECTORY_SEASONS}-season age-curve trajectory
       </p>
       <ul className="space-y-1">
-        {a.valued.map((v) => (
+        {a.valued.map((v, i) => (
           <ValueAssetRow
             // WHY HE IS HERE, in place. This is the page that asks the question, so
             // this is the page that answers it without a navigation: expanding a row
@@ -608,6 +608,7 @@ export default async function RosterPage() {
             trajectoryColor={
               v.age != null && v.age < 26 ? "var(--color-muted)" : undefined
             }
+            enterIndex={i}
           />
         ))}
       </ul>

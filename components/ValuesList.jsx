@@ -55,10 +55,22 @@ export function ValueAssetRow({
   trajectoryColor,
   focused,
   provenance,
+  enterIndex,
 }) {
   const [open, setOpen] = useState(!!focused);
   const [justArrived, setJustArrived] = useState(!!focused);
   const liRef = useRef(null);
+  // Staggered entrance (`.arrive`, interaction.css) for a first render only - a
+  // focused row already gets its own scroll+ring treatment above, and stacking a
+  // rise-and-spring under a smooth-scroll would be two answers to one arrival.
+  // 28ms/row so the stagger actually reads (the owner's brief asked for
+  // "noticeable," not the invisible-subtle end of the scale); capped at 9 rows so a
+  // 60-row /values page still settles in about half a second instead of visibly
+  // queueing - rows past the cap all fire together rather than queuing further.
+  const enterStyle =
+    enterIndex != null && !focused
+      ? { "--arrive-delay": `${Math.min(enterIndex, 9) * 28}ms` }
+      : undefined;
   useEffect(() => {
     if (!focused) return;
     liRef.current?.scrollIntoView({ behavior: "smooth", block: "center" });
@@ -69,12 +81,14 @@ export function ValueAssetRow({
     <li
       ref={liRef}
       id={playerId ? `value-row-${playerId}` : undefined}
+      style={enterStyle}
       className={cn(
         "overflow-hidden rounded-[--radius-sm] border transition-colors duration-700",
         open
           ? "border-border-strong bg-surface-2"
           : "border-border bg-surface hover:border-border-strong",
         justArrived && "ring-2 ring-accent",
+        enterStyle && "arrive",
       )}
     >
       {/*
@@ -484,6 +498,7 @@ export function ValuesList({ rows }) {
             consensusRank={r.consensusRank}
             meta={r.owner ?? undefined}
             focused={r.id === focusId}
+            enterIndex={i}
           />
         ))}
       </ul>
