@@ -466,7 +466,7 @@ export function RankingBoard({ players, scoring }) {
                   <span className="w-8 shrink-0 text-right figure text-meta text-secondary">
                     {idx + 1}
                   </span>
-                  <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-ink">
+                  <span className="min-w-0 flex-1 line-clamp-1 text-[13px] font-semibold text-ink">
                     {p.fullName}
                   </span>
                   <span className="shrink-0 figure text-meta text-faint">
