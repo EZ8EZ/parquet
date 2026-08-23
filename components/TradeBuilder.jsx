@@ -65,7 +65,7 @@ function PickerModal({
     >
       <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-4 pb-4 pt-3">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h3 className="min-w-0 truncate font-display text-lede leading-tight font-semibold text-ink">
+          <h3 className="min-w-0 line-clamp-1 font-display text-lede leading-tight font-semibold text-ink">
             {title}
           </h3>
           <button
@@ -100,10 +100,10 @@ function PickerModal({
               className="flex min-h-11 w-full items-center justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 text-left transition-colors hover:border-border-strong hover:bg-surface-2"
             >
               <span className="min-w-0">
-                <span className="block truncate text-body font-semibold leading-tight text-ink">
+                <span className="block line-clamp-1 text-body font-semibold leading-tight text-ink">
                   {o.name}
                 </span>
-                <span className="block truncate figure text-meta leading-tight text-secondary">
+                <span className="block line-clamp-1 figure text-meta leading-tight text-secondary">
                   {o.meta}
                 </span>
               </span>
@@ -134,10 +134,10 @@ function AssetRow({ label, meta, value, onRemove, player }) {
           />
         )}
         <span className="min-w-0">
-          <span className="block truncate text-body leading-tight text-ink">
+          <span className="block line-clamp-1 text-body leading-tight text-ink">
             {label}
           </span>
-          <span className="block truncate figure text-meta leading-tight text-secondary">
+          <span className="block line-clamp-1 figure text-meta leading-tight text-secondary">
             {meta ? `${meta} · ` : ""}
             {fmtValue(value)}
           </span>
@@ -626,7 +626,7 @@ function TradeResult({ r, leagueId, counterparty }) {
                     key={a.id}
                     className="flex items-baseline justify-between gap-1 text-meta leading-snug"
                   >
-                    <span className="min-w-0 truncate text-ink/85">
+                    <span className="min-w-0 line-clamp-1 text-ink/85">
                       {a.label}
                     </span>
                     <span className="shrink-0 figure text-meta text-secondary">

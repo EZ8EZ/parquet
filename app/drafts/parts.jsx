@@ -17,13 +17,13 @@ export function boardHref(season, pickNo) {
 function Hop({ from, to }) {
   return (
     <span className="flex min-w-0 items-center gap-1 text-meta text-faint">
-      <span className="truncate">{from}</span>
+      <span className="line-clamp-1">{from}</span>
       <MoveRight
         size={11}
         className="shrink-0 text-accent-text"
         aria-hidden="true"
       />
-      <span className="truncate font-medium text-muted">{to}</span>
+      <span className="line-clamp-1 font-medium text-muted">{to}</span>
     </span>
   );
 }
@@ -115,7 +115,7 @@ function LineageCardBody({ l, p, perspective = null }) {
             size="sm"
           />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-body font-semibold leading-tight text-ink">
+            <span className="block line-clamp-1 text-body font-semibold leading-tight text-ink">
               {l.playerName}
             </span>
             <span className="block line-clamp-2 text-meta leading-tight text-secondary">
@@ -202,10 +202,10 @@ export function BoardPickRow({ p, highlighted }) {
       )}
 
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-body font-semibold leading-tight text-ink">
+        <span className="block line-clamp-1 text-body font-semibold leading-tight text-ink">
           {p.playerName ?? "-"}
         </span>
-        <span className="block truncate text-meta leading-tight text-secondary">
+        <span className="block line-clamp-1 text-meta leading-tight text-secondary">
           {p.position ?? "-"}
           {p.team ? ` · ${p.team}` : ""}
           {p.age != null ? ` · ${p.age}y` : ""}

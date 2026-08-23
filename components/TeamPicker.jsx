@@ -170,7 +170,7 @@ export function TeamPicker({
                 />
                 <div className="min-w-0 flex-1">
                   <div className="flex items-center gap-2">
-                    <span className="truncate text-body leading-relaxed font-semibold text-ink">
+                    <span className="line-clamp-1 text-body leading-relaxed font-semibold text-ink">
                       {t.teamName}
                     </span>
                     {active && (
@@ -188,7 +188,7 @@ export function TeamPicker({
                     <span className="text-muted">{t.coreAgeBand}</span>
                   </div>
                   {t.tags.length > 0 && (
-                    <div className="mt-1.5 truncate text-meta text-muted">
+                    <div className="mt-1.5 line-clamp-1 text-meta text-muted">
                       {t.tags.slice(0, 3).join(" · ")}
                     </div>
                   )}

@@ -98,7 +98,7 @@ export default async function FormerManagerDetailPage({ params }) {
            `truncateTitle` on a freeform team name (see that file's own note). */
       >
         <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
-          <span className="truncate">{p.displayName}</span>
+          <span className="line-clamp-1">{p.displayName}</span>
           <span aria-hidden="true">·</span>
           <span>{identity.tenureLabel}</span>
           <span aria-hidden="true">·</span>
@@ -271,7 +271,7 @@ export default async function FormerManagerDetailPage({ params }) {
                         size="xs"
                         isMe={!t.isFormer && h.me.rosterId === tp.rosterId}
                       />
-                      <span className="min-w-0 flex-1 truncate text-note font-medium text-ink">
+                      <span className="min-w-0 flex-1 line-clamp-1 text-note font-medium text-ink">
                         {t.name}
                         {t.tenureLabel && (
                           <span className="text-meta font-normal text-secondary">

@@ -236,7 +236,7 @@ function LedgerRow({ entry, readOnly }) {
             className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
           />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-body leading-tight text-ink">
+            <span className="block line-clamp-1 text-body leading-tight text-ink">
               {entry.description}
             </span>
             <span className="block figure text-meta leading-tight text-secondary">

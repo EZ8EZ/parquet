@@ -102,11 +102,11 @@ function Side({ d, principal, isMe, titles }) {
       />
       <Link
         href={dossierHref(d)}
-        className="mt-1 flex min-h-11 items-center truncate text-body font-semibold leading-tight text-ink transition-colors hover:text-accent-text"
+        className="mt-1 flex min-h-11 items-center line-clamp-1 text-body font-semibold leading-tight text-ink transition-colors hover:text-accent-text"
       >
         {p.teamName ?? p.displayName}
       </Link>
-      <div className="truncate text-meta leading-tight text-secondary">
+      <div className="line-clamp-1 text-meta leading-tight text-secondary">
         {p.displayName}
       </div>
       {d.identity.kind === "former" && (
@@ -115,7 +115,7 @@ function Side({ d, principal, isMe, titles }) {
       {titles && (
         <div className="mt-1 flex items-center gap-1 text-meta font-semibold text-accent-text">
           <Trophy size={11} aria-hidden="true" className="shrink-0" />
-          <span className="truncate">{titles.label}</span>
+          <span className="line-clamp-1">{titles.label}</span>
         </div>
       )}
       {shown.length > 0 && (
@@ -550,7 +550,7 @@ export default async function CompareManagersPage({ searchParams }) {
       <div className="space-y-1.5">
         {[aD, bD].map((d) => (
           <div key={dossierHref(d)} className="min-w-0">
-            <p className="mb-0.5 truncate text-meta font-semibold uppercase tracking-wide text-secondary">
+            <p className="mb-0.5 line-clamp-1 text-meta font-semibold uppercase tracking-wide text-secondary">
               {d.profile.teamName ?? d.profile.displayName}
             </p>
             <ManagerRail

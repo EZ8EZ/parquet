@@ -162,11 +162,11 @@ export async function SeatLinks({ h }) {
             className="rounded-[--radius] border border-border bg-surface p-2.5"
           >
             <div className="mb-1.5 flex items-baseline gap-2">
-              <span className="min-w-0 truncate text-body font-semibold text-ink">
+              <span className="min-w-0 line-clamp-1 text-body font-semibold text-ink">
                 {m.displayName}
               </span>
               {m.teamName && (
-                <span className="min-w-0 truncate text-meta text-secondary">
+                <span className="min-w-0 line-clamp-1 text-meta text-secondary">
                   {m.teamName}
                 </span>
               )}

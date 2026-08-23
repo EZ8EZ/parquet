@@ -142,10 +142,10 @@ function PlayerLine({ p }) {
         <PlayerAvatar name={p.name} playerId={p.playerId} size="sm" />
       )}
       <span className="min-w-0 flex-1">
-        <span className="block truncate text-note font-semibold leading-tight text-ink">
+        <span className="block line-clamp-1 text-note font-semibold leading-tight text-ink">
           {p.name}
         </span>
-        <span className="block truncate text-micro leading-snug text-faint">
+        <span className="block line-clamp-1 text-micro leading-snug text-faint">
           {p.origin}
         </span>
       </span>

@@ -542,12 +542,12 @@ export default async function DealsPage({ searchParams }) {
                       className="flex min-h-11 w-full items-center gap-2 rounded-[--radius-sm] border border-border bg-surface px-3 py-1.5 transition-colors hover:bg-surface-2"
                     >
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-body leading-snug text-ink">
+                        <span className="block line-clamp-1 text-body leading-snug text-ink">
                           {a?.name ?? p.a}{" "}
                           <span className="text-secondary">&amp;</span>{" "}
                           {b?.name ?? p.b}
                         </span>
-                        <span className="block truncate text-meta leading-snug text-secondary">
+                        <span className="block line-clamp-1 text-meta leading-snug text-secondary">
                           {p.seasons.join(", ")}
                         </span>
                       </span>
@@ -587,7 +587,7 @@ export default async function DealsPage({ searchParams }) {
                       isMe={m.isMe}
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-body font-semibold leading-snug text-ink">
+                      <span className="block line-clamp-1 text-body font-semibold leading-snug text-ink">
                         {m.name}
                         {m.isMe && (
                           <span className="ml-1.5 text-accent-text">(you)</span>
@@ -598,7 +598,7 @@ export default async function DealsPage({ searchParams }) {
                           </span>
                         )}
                       </span>
-                      <span className="block truncate text-meta leading-snug text-secondary">
+                      <span className="block line-clamp-1 text-meta leading-snug text-secondary">
                         {m.handle}
                       </span>
                     </span>
@@ -663,7 +663,7 @@ function DealRow({ t, meRosterId, ticks = null }) {
               </span>
             ))}
           </span>
-          <span className="block truncate figure text-meta leading-tight text-secondary">
+          <span className="block line-clamp-1 figure text-meta leading-tight text-secondary">
             <LocalDate ts={t.created} /> · wk {t.week} · {dealPieces(t.assets)}
           </span>
         </span>

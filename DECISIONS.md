@@ -7128,3 +7128,133 @@ on an UNMODIFIED stash of this branch (`net::ERR_CONNECTION_RESET` on /roster + 
 this sandbox's proxy resetting an external fetch, not app behaviour - real CI is
 unaffected). axe-core: /deals and /deals/[id] clean in both themes. Before/after
 shot at 390px, dark and paper.
+## D111. THE SCOREBUG SHIPS (VISION.md M3), the managers auto-sentence is killed, and `truncate` becomes a lint error instead of a fourth cleanup pass
+
+D106 deferred the scorebug on two open questions; both are answered here.
+
+**THE DESK'S CONTEXT ROW IS NOW THE SCOREBUG**: a persistent one-line mono strip
+of the lens team's standing facts - `PK · 13-7 · #5/14 · TCI 57 · 2029-31` - the
+same on every route, tappable through to /league's seat card. The seat chip
+drops its printed name (the strip's leading team code already carries identity
+in words - D61's restatement rule) and keeps only the avatar and menu. Every
+figure is a published standing fact (D6): record and rank are the league's own
+arithmetic, TCI and window are the same readings /league prints for all
+fourteen rosters. The strip degrades by OMITTING segments it cannot print
+whole (no rank on a brand-new league, no window when `lib/metrics/window.js`
+refused one) rather than by dashing or truncating them - a dash would read as
+"no value here", and this row carries facts whole or not at all, by
+construction: its widest honest content plus the chip and capture link fits
+390px with room to spare, so `truncate` has no place on it on purpose.
+
+**Where the capture-count status went (D106's open question):** it keeps its
+own seat beside the strip rather than replacing it. Before this round the count
+REPLACED the standing facts whenever non-zero, so the row was either your
+record or your to-do, never both. D40 cuts both ways here: the count is real
+information (`recentUnannotated`, a figure that reaches zero through ordinary
+use) so it cannot be silently dropped, but it is a to-do, not a standing fact,
+so it does not belong inside a strip whose one meaning is "your seat, as the
+league sees it." It rides as a compact companion link - the ledger's own
+`ScrollText` mark plus the count, in the established to-do accent, its own
+destination, its own accessible sentence - present only while the count is
+non-zero. Zero is the goal state and it looks like the goal state: just the
+scorebug.
+
+**Cost, measured rather than assumed:** the scorebug adds two reads the old
+context row only paid on one branch (`currentFormByRoster`, `leagueWindows` via
+`cachedLeagueTimelines`). Timed against the fixture corpus: the first
+`leagueWindows` call per corpus pays ~43ms (the same one-time valuation +
+timeline pass most routes already trigger themselves) and every call after is
+~0.15ms - a warm map lookup on routes that already read the corpus, one
+timeline pass per 5-minute TTL on the few that do not.
+
+**KILL-LIST #2: the repeated/truncated managers auto-sentence.** `/managers`
+printed the same generated opener - "X is one of the most active traders..." -
+on ten of fourteen cards, clamped mid-sentence on every one, directly below
+tags already carrying the same reads as phrases. Copy that repeats ten times
+and never finishes is worse than no copy, so the index card drops it entirely.
+The full sentence still prints, unclamped, on every dossier surface it actually
+belongs to: `/managers/[rosterId]`, `/managers/former/[ownerId]`,
+`/managers/compare`.
+
+**KILL-LIST #8: `truncate` is now an ESLint error, not a house rule nobody
+enforces.** D72 hand-fixed six pages of mid-word name clipping
+("Julius Ran...", "Blockbu...", "strad...", screenshotted live on a 390px
+phone); the disease regrew on four more pages by this round, because a hand
+pass does not hold a line CI does not check. `no-restricted-syntax` now flags
+every `truncate` in a `className` (string literal or template quasi) with a
+message pointing at the fix: `line-clamp-*` for names and prose (clips at a
+word boundary instead of mid-word, since `-webkit-line-clamp` still runs the
+ordinary text-wrapping algorithm before it clips), or an
+`eslint-disable-next-line` stating why the clip is genuinely safe (an
+identifier/figure that fits by construction, a one-line preview restated in
+full nearby, fixed copy in bounded chrome).
+
+Every one of the 125 pre-existing `truncate` hits this rule found across the
+current tree was audited and fixed to `line-clamp-1` - the mechanical
+consequence of the rule's own message: none of the 125 sites were prose or
+names that needed to KEEP clipping mid-word, and `line-clamp-1` is a strict
+improvement over `truncate` for every one of them (single line, ellipsis, but
+clips at the last whole word) with zero behavioural cost on the sites where
+the content already fit by construction (a code, a short figure) - the
+ellipsis path simply never triggers there. No site needed a disable comment;
+none of the 125 were actually a case the exceptions above describe.
+
+**Verified:** `pnpm lint` clean (zero `no-restricted-syntax` hits across the
+whole tree); `pnpm test` 1380/1380; `rm -rf .next && pnpm build` clean; full
+`pnpm e2e` - 77 passed, 4 failed, all four the pre-existing
+`net::ERR_CONNECTION_RESET` Sleeper-CDN sandbox failures (3× depth.spec.js, 1×
+smoke.spec.js `/roster`), reconfirmed pre-existing this round the same way as
+every prior round.
+## D112. THE METHODOLOGY WALKTHROUGH (VISION.md M9) - the formula becomes a pinned chart over a scroll, drawn once for one real asset, no synthetic numbers anywhere on it
+
+/methodology stated the value model as a sentence and an equation, with every
+worked example (`baseExamples`, the age-curve table) a bare number with no
+picture attached until deep in the collapsed subsections. The Pudding's own
+grammar - a pinned chart the prose narrates as you scroll past it - replaces
+the top-of-page equation with a single real asset's price, carried through
+six steps.
+
+**ONE ASSET, PICKED BY A STATED RULE, NEVER A HAND-TYPED ONE.**
+`lib/methodology.js`'s `pickWalkthroughExample` takes the top 40 prices on
+today's board (`EXAMPLE_POOL`) and keeps whichever one exercises the MOST of
+the model's terms - each multiplier sitting off ×1.00 counts once, a
+production-backed rank counts once - breaking ties toward the higher price.
+An example whose every term is a no-op would light four steps with
+"×1.00, nothing happened," a true sentence and a useless illustration. Every
+figure drawn is `cachedValuePlayers`' own output for whoever wins (D19); the
+page states the selection rule next to the chart, so a reader knows the
+example was chosen and how, rather than suspecting it was cherry-picked for
+a flattering curve.
+
+**THE CHART IS DRAWN ONCE AND STAYS PINNED** (`components/MethodologyWalkthrough.jsx`,
+`position: sticky`) while six step sections scroll underneath it. An
+`IntersectionObserver` over a reading band just under the panel swaps which
+row takes the accent - a colour-only state change (`transition-colors`,
+disabled under `prefers-reduced-motion`), not a D105 motion-register
+choreography, since nothing translates, scales, or replays. Every number on
+the panel is also printed in HTML text beside its mark (rule 1: colour is
+never the only encoding), and every SVG in it is `aria-hidden` - the row
+label plus printed figure ARE the accessible reading, in document order.
+
+**THE PRODUCTION TERM IS DRAWN AS A GAP, NOT STATED AS A FACT.** The curve
+carries two dots when production actually moved the rank: a hollow dot at
+the consensus rank/base (`consensusBase`, restated in `lib/methodology.js`
+with the model's own `baseOfRank` so it can never drift from the curve it
+sits on) and the filled dot at the production-blended rank the price was
+actually computed from. The horizontal gap between them IS the production
+term, on the same axis the base-value step already drew.
+
+**NO VERDICT ANYWHERE (D6), stated explicitly at the last step**: the panel
+prints ranks, multipliers and a value for one real rostered player, and the
+walkthrough's closing sentence says out loud that this is a measurement of
+dynasty value under this league's settings, not a verdict on the player -
+the collapsed subsections below are the same arithmetic, opened out in full,
+for the reader who wants the whole derivation rather than one example.
+
+**Verified:** `pnpm lint` clean; `pnpm test` 1386/1386 (`lib/methodology.test.js`
+pins the selection rule, the drift-free curve, and the empty-corpus null
+case); `rm -rf .next && pnpm build` clean; manually driven against the
+fixture corpus with a throwaway Playwright script (deleted after) - the
+panel stays pinned through all six steps, the active row's accent tracks
+scroll position, un-pins itself once the appendix scrolls past, and prints
+zero console errors in either theme.

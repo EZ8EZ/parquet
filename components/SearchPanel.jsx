@@ -264,10 +264,10 @@ function PlayerRow({ p }) {
       >
         <PlayerAvatar name={p.name} team={p.team} playerId={p.id} size="sm" />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-body font-semibold leading-tight text-ink">
+          <div className="line-clamp-1 text-body font-semibold leading-tight text-ink">
             {p.name}
           </div>
-          <div className="truncate text-meta leading-tight text-secondary">
+          <div className="line-clamp-1 text-meta leading-tight text-secondary">
             {[p.position, p.team, p.age != null ? `${p.age}y` : null]
               .filter(Boolean)
               .join(" - ")}
@@ -310,11 +310,11 @@ function ManagerRow({ m }) {
         />
         <div className="min-w-0 flex-1">
           <div className="flex items-baseline gap-1.5">
-            <span className="truncate text-body font-semibold leading-tight text-ink">
+            <span className="line-clamp-1 text-body font-semibold leading-tight text-ink">
               {m.name}
             </span>
             {m.displayName !== m.name && (
-              <span className="min-w-0 shrink truncate text-meta leading-tight text-secondary">
+              <span className="min-w-0 shrink line-clamp-1 text-meta leading-tight text-secondary">
                 {m.displayName}
               </span>
             )}
@@ -359,7 +359,7 @@ function TradeRow({ t, expanded, onToggle }) {
           <div
             className={cn(
               "text-note leading-snug text-ink",
-              !expanded && "truncate",
+              !expanded && "line-clamp-1",
             )}
           >
             {t.description}
@@ -396,10 +396,10 @@ function PickRow({ p }) {
           className="shrink-0 text-faint"
         />
         <div className="min-w-0 flex-1">
-          <div className="truncate text-body font-semibold leading-tight text-ink">
+          <div className="line-clamp-1 text-body font-semibold leading-tight text-ink">
             {p.label}
           </div>
-          <div className="truncate text-meta leading-tight text-secondary">
+          <div className="line-clamp-1 text-meta leading-tight text-secondary">
             {p.resolved
               ? `${p.playerName ?? "no player"} - ${p.ownerName}`
               : `Not yet drafted - held by ${p.ownerName}`}
