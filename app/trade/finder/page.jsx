@@ -531,7 +531,7 @@ function PartnerRow({ r, h, bands, move }) {
         />
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span className="min-w-0 truncate text-body font-semibold leading-tight text-ink">
+            <span className="min-w-0 line-clamp-1 text-body font-semibold leading-tight text-ink">
               {r.name}
             </span>
             <Tag tone={stance.tone}>{stance.label}</Tag>
@@ -692,7 +692,7 @@ function WantRow({ p }) {
   return (
     <li className="px-2.5 py-1.5">
       <div className="flex items-baseline gap-2">
-        <span className="min-w-0 flex-1 truncate text-note font-semibold text-ink">
+        <span className="min-w-0 flex-1 line-clamp-1 text-note font-semibold text-ink">
           {a.label}
         </span>
         <span className="shrink-0 figure text-micro text-faint">{meta}</span>
@@ -1184,7 +1184,7 @@ function AssetTable({ title, side }) {
       <ul className="divide-y divide-border">
         {side.assets.map((a) => (
           <li key={a.id} className="flex items-center gap-2 px-2.5 py-1.5">
-            <span className="min-w-0 flex-1 truncate text-note text-ink">
+            <span className="min-w-0 flex-1 line-clamp-1 text-note text-ink">
               {a.label}
             </span>
             {a.tier && (

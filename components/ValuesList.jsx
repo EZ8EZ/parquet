@@ -176,7 +176,7 @@ export function ValueAssetRow({
           )}
           <span className="min-w-0 flex-1">
             <span className="flex items-center gap-1.5">
-              <span className="truncate text-[13px] font-semibold leading-tight text-ink">
+              <span className="line-clamp-1 text-[13px] font-semibold leading-tight text-ink">
                 {name}
               </span>
               {injury && (
@@ -556,10 +556,10 @@ function RankDumbbell({ consensusRank, pricedRank, axisMax, name }) {
 function Fact({ label, value }) {
   return (
     <div className="min-w-0">
-      <dt className="truncate text-meta uppercase tracking-wide text-secondary">
+      <dt className="line-clamp-1 text-meta uppercase tracking-wide text-secondary">
         {label}
       </dt>
-      <dd className="truncate figure text-meta font-semibold text-ink">
+      <dd className="line-clamp-1 figure text-meta font-semibold text-ink">
         {value}
       </dd>
     </div>
@@ -693,7 +693,7 @@ export function ValuesList({ rows }) {
       {/* Count and sort share a line: always visible, unlike a control parked at
             the end of the horizontally scrolling filter row. */}
       <div className="flex items-center justify-between gap-2">
-        <p className="min-w-0 truncate figure text-meta text-secondary">
+        <p className="min-w-0 line-clamp-1 figure text-meta text-secondary">
           {filtered.length} match{filtered.length === 1 ? "" : "es"} ·{" "}
           {Math.min(limit, filtered.length)} shown
         </p>

@@ -108,7 +108,7 @@ export function StreakPanel({ streaks: allStreaks, countedAt }) {
           {streaks.map((s) => (
             <li key={s.id} className="px-3 py-2.5">
               <div className="flex items-baseline justify-between gap-2">
-                <span className="min-w-0 truncate text-meta font-semibold uppercase tracking-wide text-muted">
+                <span className="min-w-0 line-clamp-1 text-meta font-semibold uppercase tracking-wide text-muted">
                   {s.label}
                 </span>
                 <StateDot state={s.state} />

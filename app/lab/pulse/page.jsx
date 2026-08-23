@@ -81,11 +81,11 @@ function PickRow({ p }) {
         className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-surface-2"
       >
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-body font-semibold leading-tight text-ink">
+          <span className="block line-clamp-1 text-body font-semibold leading-tight text-ink">
             {p.playerName}
             {p.position ? ` · ${p.position}` : ""}
           </span>
-          <span className="block truncate text-meta leading-tight text-secondary">
+          <span className="block line-clamp-1 text-meta leading-tight text-secondary">
             {p.label} &rarr; {p.mine ? "you" : p.ownerName}
           </span>
         </span>
@@ -106,7 +106,7 @@ function MoveRow({ m }) {
         className="flex min-h-11 items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-surface-2"
       >
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-body font-semibold leading-tight text-ink">
+          <span className="block line-clamp-1 text-body font-semibold leading-tight text-ink">
             {m.mine ? "You" : m.name}
           </span>
           <span className="block text-meta uppercase tracking-wide text-faint">

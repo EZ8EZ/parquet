@@ -157,7 +157,7 @@ export function RosterChip({ roster }) {
       }
     >
       <span className="figure text-micro text-faint">{roster.n}</span>
-      <span className="truncate">{roster.name}</span>
+      <span className="line-clamp-1">{roster.name}</span>
     </button>
   );
 }

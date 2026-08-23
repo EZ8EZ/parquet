@@ -95,7 +95,7 @@ export function DistributionStrip({
   const body = (
     <>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-0.5 truncate text-meta uppercase tracking-wide text-secondary">
+        <span className="flex min-w-0 items-center gap-0.5 line-clamp-1 text-meta uppercase tracking-wide text-secondary">
           {label}
           {href && (
             <ChevronRight size={11} aria-hidden="true" className="shrink-0" />

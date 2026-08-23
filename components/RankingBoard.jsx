@@ -441,7 +441,7 @@ export function RankingBoard({ players, scoring }) {
               )}
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5">
-                  <span className="truncate text-[13px] font-semibold leading-tight text-ink">
+                  <span className="line-clamp-1 text-[13px] font-semibold leading-tight text-ink">
                     {p.fullName}
                   </span>
                   {injury && (
@@ -495,10 +495,10 @@ export function RankingBoard({ players, scoring }) {
                 className="flex min-h-11 items-center gap-2.5 px-2.5 py-1.5"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+                  <span className="block line-clamp-1 text-[13px] font-semibold leading-tight text-ink">
                     {g.name}
                   </span>
-                  <span className="block truncate figure text-meta text-faint">
+                  <span className="block line-clamp-1 figure text-meta text-faint">
                     you #{g.yourRank} · consensus #{g.consensusRank}
                   </span>
                 </span>
@@ -515,10 +515,10 @@ function Figure({ label, value, sub }) {
   return (
     <div className="min-w-0 px-2.5 py-1.5">
       <dt className="text-meta uppercase tracking-wide text-faint">{label}</dt>
-      <dd className="truncate figure text-base font-semibold text-ink">
+      <dd className="line-clamp-1 figure text-base font-semibold text-ink">
         {value}
       </dd>
-      {sub && <dd className="truncate text-meta text-muted">{sub}</dd>}
+      {sub && <dd className="line-clamp-1 text-meta text-muted">{sub}</dd>}
     </div>
   );
 }

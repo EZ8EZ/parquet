@@ -169,10 +169,10 @@ function Figure({ label, value, sub }) {
       <dt className="text-meta uppercase tracking-wide text-secondary">
         {label}
       </dt>
-      <dd className="truncate figure text-lede leading-snug font-semibold text-ink">
+      <dd className="line-clamp-1 figure text-lede leading-snug font-semibold text-ink">
         {value}
       </dd>
-      {sub && <dd className="truncate text-meta text-muted">{sub}</dd>}
+      {sub && <dd className="line-clamp-1 text-meta text-muted">{sub}</dd>}
     </div>
   );
 }

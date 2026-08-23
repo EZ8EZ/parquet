@@ -133,7 +133,7 @@ function AwardCard({ award, meRosterId, userOf }) {
           voice and should never break like that; the stat is the flexible half,
           so it moves below rather than beside it.
         */}
-      <h3 className="truncate font-display text-lede font-semibold leading-tight text-ink">
+      <h3 className="line-clamp-1 font-display text-lede font-semibold leading-tight text-ink">
         {award.title}
       </h3>
       <p className="figure text-note font-semibold leading-snug text-accent-text">
@@ -163,7 +163,7 @@ function AwardCard({ award, meRosterId, userOf }) {
         />
         <span className="min-w-0 flex-1">
           <span className="flex items-baseline gap-1.5">
-            <span className="min-w-0 truncate text-body font-semibold text-ink">
+            <span className="min-w-0 line-clamp-1 text-body font-semibold text-ink">
               {w.label}
             </span>
             {isMe ? (
@@ -171,7 +171,7 @@ function AwardCard({ award, meRosterId, userOf }) {
             ) : w.isFormer ? (
               <Tag>former{w.tenureLabel ? ` ${w.tenureLabel}` : ""}</Tag>
             ) : (
-              <span className="min-w-0 shrink truncate text-meta text-secondary">
+              <span className="min-w-0 shrink line-clamp-1 text-meta text-secondary">
                 {w.displayName}
               </span>
             )}
@@ -239,7 +239,7 @@ function AwardGroup({ id, label, count, defaultOpen, children }) {
               aria-hidden="true"
               className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
             />
-            <h2 className="min-w-0 truncate text-note font-semibold uppercase tracking-[0.16em] text-muted">
+            <h2 className="min-w-0 line-clamp-1 text-note font-semibold uppercase tracking-[0.16em] text-muted">
               {label}
             </h2>
           </span>
@@ -296,7 +296,7 @@ function RunnerUpRow({ entrant, place, meRosterId, user, icon, tone }) {
         <span className="flex items-baseline gap-1.5">
           <span
             className={cn(
-              "min-w-0 truncate text-note",
+              "min-w-0 line-clamp-1 text-note",
               isMe ? "font-semibold text-accent-text" : "text-muted",
             )}
           >

@@ -118,7 +118,7 @@ export default async function PlanPage() {
         title="How to improve this team"
       >
         <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
-          <span className="truncate">{h.me.teamName ?? h.me.displayName}</span>
+          <span className="line-clamp-1">{h.me.teamName ?? h.me.displayName}</span>
           <span aria-hidden="true">·</span>
           <span>
             #{dx.valueRank} of {dx.teams} by asset value
@@ -382,7 +382,7 @@ export default async function PlanPage() {
                   className="shrink-0 text-info"
                 />
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-note font-semibold text-ink">
+                  <span className="block line-clamp-1 text-note font-semibold text-ink">
                     {m.moveAssetId
                       ? `Who would take ${m.give[0]}?`
                       : "Who has room for this?"}

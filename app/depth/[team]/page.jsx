@@ -268,7 +268,7 @@ export default async function DepthChartPage({ params, searchParams }) {
                     className="flex items-center gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-body font-semibold leading-tight text-ink">
+                      <span className="block line-clamp-1 text-body font-semibold leading-tight text-ink">
                         {href ? (
                           <Link href={href} className="hover:text-accent-text">
                             {entry.name}
@@ -277,7 +277,7 @@ export default async function DepthChartPage({ params, searchParams }) {
                           entry.name
                         )}
                       </span>
-                      <span className="block truncate figure text-meta leading-tight text-secondary">
+                      <span className="block line-clamp-1 figure text-meta leading-tight text-secondary">
                         {entry.listedPosition ?? "position not stated"}
                         {own
                           ? own.isMe

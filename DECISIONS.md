@@ -6781,3 +6781,81 @@ config (deleted after, per the visual-review skill); axe-core clean on `/` and
 `/teams` in both themes; before/after full-page and viewport screenshots at 390px
 in both themes, plus the superseded duotone variant pair. Fixture provider
 throughout - synthetic data, real layout.
+
+## D107. THE SCOREBUG SHIPS (VISION.md M3), the managers auto-sentence is killed, and `truncate` becomes a lint error instead of a fourth cleanup pass
+
+D106 deferred the scorebug on two open questions; both are answered here.
+
+**THE DESK'S CONTEXT ROW IS NOW THE SCOREBUG**: a persistent one-line mono strip
+of the lens team's standing facts - `PK · 13-7 · #5/14 · TCI 57 · 2029-31` - the
+same on every route, tappable through to /league's seat card. The seat chip
+drops its printed name (the strip's leading team code already carries identity
+in words - D61's restatement rule) and keeps only the avatar and menu. Every
+figure is a published standing fact (D6): record and rank are the league's own
+arithmetic, TCI and window are the same readings /league prints for all
+fourteen rosters. The strip degrades by OMITTING segments it cannot print
+whole (no rank on a brand-new league, no window when `lib/metrics/window.js`
+refused one) rather than by dashing or truncating them - a dash would read as
+"no value here", and this row carries facts whole or not at all, by
+construction: its widest honest content plus the chip and capture link fits
+390px with room to spare, so `truncate` has no place on it on purpose.
+
+**Where the capture-count status went (D106's open question):** it keeps its
+own seat beside the strip rather than replacing it. Before this round the count
+REPLACED the standing facts whenever non-zero, so the row was either your
+record or your to-do, never both. D40 cuts both ways here: the count is real
+information (`recentUnannotated`, a figure that reaches zero through ordinary
+use) so it cannot be silently dropped, but it is a to-do, not a standing fact,
+so it does not belong inside a strip whose one meaning is "your seat, as the
+league sees it." It rides as a compact companion link - the ledger's own
+`ScrollText` mark plus the count, in the established to-do accent, its own
+destination, its own accessible sentence - present only while the count is
+non-zero. Zero is the goal state and it looks like the goal state: just the
+scorebug.
+
+**Cost, measured rather than assumed:** the scorebug adds two reads the old
+context row only paid on one branch (`currentFormByRoster`, `leagueWindows` via
+`cachedLeagueTimelines`). Timed against the fixture corpus: the first
+`leagueWindows` call per corpus pays ~43ms (the same one-time valuation +
+timeline pass most routes already trigger themselves) and every call after is
+~0.15ms - a warm map lookup on routes that already read the corpus, one
+timeline pass per 5-minute TTL on the few that do not.
+
+**KILL-LIST #2: the repeated/truncated managers auto-sentence.** `/managers`
+printed the same generated opener - "X is one of the most active traders..." -
+on ten of fourteen cards, clamped mid-sentence on every one, directly below
+tags already carrying the same reads as phrases. Copy that repeats ten times
+and never finishes is worse than no copy, so the index card drops it entirely.
+The full sentence still prints, unclamped, on every dossier surface it actually
+belongs to: `/managers/[rosterId]`, `/managers/former/[ownerId]`,
+`/managers/compare`.
+
+**KILL-LIST #8: `truncate` is now an ESLint error, not a house rule nobody
+enforces.** D72 hand-fixed six pages of mid-word name clipping
+("Julius Ran...", "Blockbu...", "strad...", screenshotted live on a 390px
+phone); the disease regrew on four more pages by this round, because a hand
+pass does not hold a line CI does not check. `no-restricted-syntax` now flags
+every `truncate` in a `className` (string literal or template quasi) with a
+message pointing at the fix: `line-clamp-*` for names and prose (clips at a
+word boundary instead of mid-word, since `-webkit-line-clamp` still runs the
+ordinary text-wrapping algorithm before it clips), or an
+`eslint-disable-next-line` stating why the clip is genuinely safe (an
+identifier/figure that fits by construction, a one-line preview restated in
+full nearby, fixed copy in bounded chrome).
+
+Every one of the 125 pre-existing `truncate` hits this rule found across the
+current tree was audited and fixed to `line-clamp-1` - the mechanical
+consequence of the rule's own message: none of the 125 sites were prose or
+names that needed to KEEP clipping mid-word, and `line-clamp-1` is a strict
+improvement over `truncate` for every one of them (single line, ellipsis, but
+clips at the last whole word) with zero behavioural cost on the sites where
+the content already fit by construction (a code, a short figure) - the
+ellipsis path simply never triggers there. No site needed a disable comment;
+none of the 125 were actually a case the exceptions above describe.
+
+**Verified:** `pnpm lint` clean (zero `no-restricted-syntax` hits across the
+whole tree); `pnpm test` 1380/1380; `rm -rf .next && pnpm build` clean; full
+`pnpm e2e` - 77 passed, 4 failed, all four the pre-existing
+`net::ERR_CONNECTION_RESET` Sleeper-CDN sandbox failures (3× depth.spec.js, 1×
+smoke.spec.js `/roster`), reconfirmed pre-existing this round the same way as
+every prior round.

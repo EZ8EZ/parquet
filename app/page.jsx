@@ -127,11 +127,11 @@ export default async function HomePage() {
             className="shrink-0 text-accent-text"
           />
           <span className="min-w-0 flex-1">
-            <span className="block truncate text-body font-semibold leading-tight text-ink">
+            <span className="block line-clamp-1 text-body font-semibold leading-tight text-ink">
               {ledger.unannotatedNotable} decision
               {ledger.unannotatedNotable > 1 ? "s" : ""} to capture
             </span>
-            <span className="block truncate text-meta leading-tight text-muted">
+            <span className="block line-clamp-1 text-meta leading-tight text-muted">
               Log why you made them - while you still remember.
             </span>
           </span>
@@ -436,7 +436,7 @@ function Figure({ href, label, value, sub, className }) {
       href={href}
       className={`flex min-h-11 min-w-0 flex-col justify-center px-2.5 py-2 transition-colors hover:bg-surface-2 ${className ?? ""}`}
     >
-      <span className="truncate text-meta uppercase tracking-wide text-faint">
+      <span className="line-clamp-1 text-meta uppercase tracking-wide text-faint">
         {label}
       </span>
       {/* `text-display`, not `lede` (D88): these four ARE the hero figures that
@@ -445,20 +445,20 @@ function Figure({ href, label, value, sub, className }) {
           type at the key moment" was the flat-verdict fix every reference app
           agrees on. Semibold, per the house rule that numbers never take the
           headline's full bold. */}
-      <span className="truncate figure text-display font-semibold leading-tight text-ink">
+      <span className="line-clamp-1 figure text-display font-semibold leading-tight text-ink">
         {value}
       </span>
-      <span className="truncate text-meta leading-tight text-muted">{sub}</span>
+      <span className="line-clamp-1 text-meta leading-tight text-muted">{sub}</span>
     </Link>
   );
 }
 function Micro({ label, value }) {
   return (
     <div className="min-w-0">
-      <div className="truncate text-meta uppercase tracking-wide text-faint">
+      <div className="line-clamp-1 text-meta uppercase tracking-wide text-faint">
         {label}
       </div>
-      <div className="truncate figure text-body font-semibold text-ink">
+      <div className="line-clamp-1 figure text-body font-semibold text-ink">
         {value}
       </div>
     </div>

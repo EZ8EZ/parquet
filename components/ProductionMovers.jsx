@@ -244,7 +244,7 @@ export function ProductionMovers({
         {moves.map((m) => (
           <li key={m.id}>
             <div className="flex items-baseline justify-between gap-2">
-              <span className="min-w-0 truncate text-body font-semibold leading-tight text-ink">
+              <span className="min-w-0 line-clamp-1 text-body font-semibold leading-tight text-ink">
                 {m.name}
                 {m.injury ? (
                   <span className="font-normal text-secondary"> · {m.injury}</span>

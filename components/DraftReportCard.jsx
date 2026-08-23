@@ -38,10 +38,10 @@ function StandoutRow({ h, principals, label, tone, g, detail }) {
         >
           {label}
         </span>
-        <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+        <span className="block line-clamp-1 text-[13px] font-semibold leading-tight text-ink">
           {g.playerName}
         </span>
-        <span className="block truncate text-meta leading-tight text-secondary">
+        <span className="block line-clamp-1 text-meta leading-tight text-secondary">
           {meta.position ?? "-"}
           {meta.team ? ` · ${meta.team}` : ""}
           {meta.age != null ? ` · ${meta.age}y` : ""}

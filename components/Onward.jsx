@@ -32,10 +32,10 @@ export function Onward({ from, steps, className }) {
               className="group flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2 transition-colors hover:border-accent-edge hover:bg-surface-2"
             >
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-body font-semibold leading-tight text-ink group-hover:text-accent-text">
+                <span className="block line-clamp-1 text-body font-semibold leading-tight text-ink group-hover:text-accent-text">
                   {s.why}
                 </span>
-                <span className="block truncate text-meta leading-tight text-secondary">
+                <span className="block line-clamp-1 text-meta leading-tight text-secondary">
                   {s.label}
                 </span>
               </span>
