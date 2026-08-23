@@ -36,6 +36,7 @@ import {
   W_EXPOSURE,
   LOO_TOP_K,
 } from "@/lib/metrics/fragility";
+import { baseCurveSamples, pickWalkthroughExample } from "@/lib/methodology";
 import { PageHeader, Card } from "@/components/ui";
 import { LineChart } from "@/components/charts";
 import Link from "next/link";
@@ -44,6 +45,7 @@ import { Onward } from "@/components/Onward";
 import { RefusalMark } from "@/components/RefusalMark";
 import { ProductionEvidence } from "@/components/ProductionEvidence";
 import { ProductionMovers } from "@/components/ProductionMovers";
+import { MethodologyWalkthrough } from "@/components/MethodologyWalkthrough";
 export const dynamic = "force-dynamic";
 /**
  * TEN SECTIONS, EACH A DOOR. This page used to print every subsection's charts,
@@ -289,6 +291,157 @@ export default async function MethodologyPage() {
     { label: "33-year-old", d: playerDuration(33) },
     { label: "1st two seasons out", d: pickDuration(2) },
   ];
+  /*
+   * THE PINNED WALKTHROUGH (VISION.md M9): one real asset's price, drawn once and
+   * carried through six steps as the reader scrolls, instead of the formula printed
+   * as a sentence with no picture attached. `pickWalkthroughExample` and
+   * `baseCurveSamples` are pure functions of the SAME `valued`/`h.players` maps every
+   * other section on this page already reads (D25 - no request added), so the example
+   * is a real rostered asset on today's board, not a synthetic one.
+   *
+   * Null only when the corpus has nobody with both a positive value and a search
+   * rank - the fixture provider always clears that bar, and a real league does too
+   * once a single player is priced - so the walkthrough is skipped rather than
+   * printing a broken chart in the one theoretical case it is not.
+   */
+  const walkthroughExample = pickWalkthroughExample(valued, h.players);
+  const walkthroughCurve = baseCurveSamples();
+  const walkthroughModel = walkthroughExample && {
+    example: walkthroughExample,
+    curve: walkthroughCurve,
+    maxBase: walkthroughCurve[0].base,
+    productionWeight: cfg.productionWeight,
+    ceiling: valueCeiling,
+  };
+  const walkthroughSteps = walkthroughExample && [
+    {
+      id: "rank",
+      kicker: "1 · Base value",
+      title: "Value starts as a rank, bent through an exponential",
+      body: (
+        <p className="text-body leading-relaxed text-muted">
+          <span className="text-ink">{walkthroughExample.name}</span> sits at
+          consensus rank{" "}
+          <span className="figure text-ink">#{walkthroughExample.searchRank}</span>,
+          which prices at{" "}
+          <span className="figure text-ink">
+            {walkthroughExample.consensusBase.toLocaleString()}
+          </span>{" "}
+          on the curve above - studs are scarce, so value decays exponentially with
+          rank rather than in a straight line.
+        </p>
+      ),
+    },
+    {
+      id: "production",
+      kicker: "1a · In-league production",
+      title: "The rank is a blend, and the blend can move it",
+      body: (
+        <p className="text-body leading-relaxed text-muted">
+          {Math.round(cfg.productionWeight * 100)}% of the rank comes from what he has
+          actually banked in this league, not just consensus opinion.{" "}
+          {walkthroughExample.rank !== walkthroughExample.searchRank ? (
+            <>
+              For {walkthroughExample.name} that moves the working rank to{" "}
+              <span className="figure text-ink">#{walkthroughExample.rank}</span> -
+              base{" "}
+              <span className="figure text-ink">
+                {walkthroughExample.base.toLocaleString()}
+              </span>{" "}
+              instead of{" "}
+              <span className="figure text-ink">
+                {walkthroughExample.consensusBase.toLocaleString()}
+              </span>
+              , the gap between the hollow and filled dot above.
+            </>
+          ) : (
+            <>
+              For {walkthroughExample.name} the blend leaves the rank exactly where
+              consensus had it - production agreed.
+            </>
+          )}
+        </p>
+      ),
+    },
+    {
+      id: "age",
+      kicker: "2 · Age curve",
+      title: "Base value is bent by an age multiplier, measured from real careers",
+      body: (
+        <p className="text-body leading-relaxed text-muted">
+          At {walkthroughExample.age ?? "an unstated"} years old,{" "}
+          {walkthroughExample.name} carries an age multiplier of{" "}
+          <span className="figure text-ink">
+            ×{walkthroughExample.ageMultiplier.toFixed(2)}
+          </span>{" "}
+          - read off {AGE_CURVE_PROVENANCE.playerSeasons.toLocaleString()} real NBA
+          player-seasons, not hand-set.
+        </p>
+      ),
+    },
+    {
+      id: "injury",
+      kicker: "4 · Injury",
+      title: "A current injury flag prices forward risk, not history",
+      body: (
+        <p className="text-body leading-relaxed text-muted">
+          {walkthroughExample.injuryMultiplier !== 1 ? (
+            <>
+              A current flag charges {walkthroughExample.name} an injury multiplier of{" "}
+              <span className="figure text-ink">
+                ×{walkthroughExample.injuryMultiplier.toFixed(2)}
+              </span>
+              .
+            </>
+          ) : (
+            <>
+              {walkthroughExample.name} carries no current injury flag, so this term is{" "}
+              <span className="figure text-ink">×1.00</span> - a no-op, not an
+              assumption of full health forever.
+            </>
+          )}
+        </p>
+      ),
+    },
+    {
+      id: "rolepos",
+      kicker: "3 · Position · 5 · Role",
+      title: "Depth-chart role and scoring position bend the price two more times",
+      body: (
+        <p className="text-body leading-relaxed text-muted">
+          Role sits at{" "}
+          <span className="figure text-ink">
+            ×{walkthroughExample.roleMultiplier.toFixed(2)}
+          </span>{" "}
+          and position at{" "}
+          <span className="figure text-ink">
+            ×{walkthroughExample.positionMultiplier.toFixed(2)}
+          </span>{" "}
+          for {walkthroughExample.name}
+          {walkthroughExample.position ? ` (${walkthroughExample.position})` : ""} -
+          this league&apos;s own scoring settings decide what a position is worth here.
+        </p>
+      ),
+    },
+    {
+      id: "value",
+      kicker: "The output",
+      title: "Every term multiplies onto one price - never a grade",
+      body: (
+        <p className="text-body leading-relaxed text-muted">
+          {walkthroughExample.name} prices at{" "}
+          <span className="figure text-ink">
+            {walkthroughExample.value.toLocaleString()}
+          </span>
+          , against a ceiling of{" "}
+          <span className="figure text-ink">{valueCeiling.toLocaleString()}</span> on
+          today&apos;s board. That is a measurement of dynasty value under this
+          league&apos;s settings, not a verdict on the player - the sections below
+          are the same arithmetic, opened out in full.
+        </p>
+      ),
+    },
+  ];
   return (
     <div>
       <PageHeader
@@ -306,20 +459,29 @@ export default async function MethodologyPage() {
         }
       />
 
-      <Card className="mb-4">
-        <p className="text-body leading-relaxed text-ink">
-          A player&apos;s dynasty value is a base value from a rank, bent by
-          four multipliers. The rank is part consensus opinion and part what he
-          has actually produced in this league:
-        </p>
-        <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-body text-accent-text">
-          value = base(rank) × age × injury × role × position
-        </p>
-        <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-body text-accent-text">
-          rank = {Math.round((1 - cfg.productionWeight) * 100)}% consensus rank
-          + {Math.round(cfg.productionWeight * 100)}% in-league production
-        </p>
-      </Card>
+      {walkthroughModel ? (
+        <div className="mb-4">
+          <MethodologyWalkthrough model={walkthroughModel} steps={walkthroughSteps} />
+        </div>
+      ) : (
+        // The theoretical no-example case (see the comment above walkthroughModel):
+        // the formula still needs to be SAID somewhere, so it falls back to the
+        // sentence-plus-equation form the walkthrough replaced.
+        <Card className="mb-4">
+          <p className="text-body leading-relaxed text-ink">
+            A player&apos;s dynasty value is a base value from a rank, bent by
+            four multipliers. The rank is part consensus opinion and part what he
+            has actually produced in this league:
+          </p>
+          <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-body text-accent-text">
+            value = base(rank) × age × injury × role × position
+          </p>
+          <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-body text-accent-text">
+            rank = {Math.round((1 - cfg.productionWeight) * 100)}% consensus rank
+            + {Math.round(cfg.productionWeight * 100)}% in-league production
+          </p>
+        </Card>
+      )}
 
       {/* Jump rail: nine subsections is a long page - let people land on one
             rather than scroll every closed header on the way past. */}

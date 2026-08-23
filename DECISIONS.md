@@ -7205,3 +7205,56 @@ whole tree); `pnpm test` 1380/1380; `rm -rf .next && pnpm build` clean; full
 `net::ERR_CONNECTION_RESET` Sleeper-CDN sandbox failures (3× depth.spec.js, 1×
 smoke.spec.js `/roster`), reconfirmed pre-existing this round the same way as
 every prior round.
+## D112. THE METHODOLOGY WALKTHROUGH (VISION.md M9) - the formula becomes a pinned chart over a scroll, drawn once for one real asset, no synthetic numbers anywhere on it
+
+/methodology stated the value model as a sentence and an equation, with every
+worked example (`baseExamples`, the age-curve table) a bare number with no
+picture attached until deep in the collapsed subsections. The Pudding's own
+grammar - a pinned chart the prose narrates as you scroll past it - replaces
+the top-of-page equation with a single real asset's price, carried through
+six steps.
+
+**ONE ASSET, PICKED BY A STATED RULE, NEVER A HAND-TYPED ONE.**
+`lib/methodology.js`'s `pickWalkthroughExample` takes the top 40 prices on
+today's board (`EXAMPLE_POOL`) and keeps whichever one exercises the MOST of
+the model's terms - each multiplier sitting off ×1.00 counts once, a
+production-backed rank counts once - breaking ties toward the higher price.
+An example whose every term is a no-op would light four steps with
+"×1.00, nothing happened," a true sentence and a useless illustration. Every
+figure drawn is `cachedValuePlayers`' own output for whoever wins (D19); the
+page states the selection rule next to the chart, so a reader knows the
+example was chosen and how, rather than suspecting it was cherry-picked for
+a flattering curve.
+
+**THE CHART IS DRAWN ONCE AND STAYS PINNED** (`components/MethodologyWalkthrough.jsx`,
+`position: sticky`) while six step sections scroll underneath it. An
+`IntersectionObserver` over a reading band just under the panel swaps which
+row takes the accent - a colour-only state change (`transition-colors`,
+disabled under `prefers-reduced-motion`), not a D105 motion-register
+choreography, since nothing translates, scales, or replays. Every number on
+the panel is also printed in HTML text beside its mark (rule 1: colour is
+never the only encoding), and every SVG in it is `aria-hidden` - the row
+label plus printed figure ARE the accessible reading, in document order.
+
+**THE PRODUCTION TERM IS DRAWN AS A GAP, NOT STATED AS A FACT.** The curve
+carries two dots when production actually moved the rank: a hollow dot at
+the consensus rank/base (`consensusBase`, restated in `lib/methodology.js`
+with the model's own `baseOfRank` so it can never drift from the curve it
+sits on) and the filled dot at the production-blended rank the price was
+actually computed from. The horizontal gap between them IS the production
+term, on the same axis the base-value step already drew.
+
+**NO VERDICT ANYWHERE (D6), stated explicitly at the last step**: the panel
+prints ranks, multipliers and a value for one real rostered player, and the
+walkthrough's closing sentence says out loud that this is a measurement of
+dynasty value under this league's settings, not a verdict on the player -
+the collapsed subsections below are the same arithmetic, opened out in full,
+for the reader who wants the whole derivation rather than one example.
+
+**Verified:** `pnpm lint` clean; `pnpm test` 1386/1386 (`lib/methodology.test.js`
+pins the selection rule, the drift-free curve, and the empty-corpus null
+case); `rm -rf .next && pnpm build` clean; manually driven against the
+fixture corpus with a throwaway Playwright script (deleted after) - the
+panel stays pinned through all six steps, the active row's accent tracks
+scroll position, un-pins itself once the appendix scrolls past, and prints
+zero console errors in either theme.
