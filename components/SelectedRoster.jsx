@@ -56,7 +56,7 @@ export function SelectedRoster({ rosters, myOwnerId }) {
         (r.isMe ? "border-accent-edge bg-accent-wash" : "border-border bg-surface")
       }
     >
-      <p className="truncate text-body font-semibold leading-tight text-ink">
+      <p className="line-clamp-1 text-body font-semibold leading-tight text-ink">
         <span className="mr-1.5 figure text-meta text-secondary">{r.n}</span>
         {r.name}
         {r.isMe && (

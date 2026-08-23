@@ -77,7 +77,7 @@ export function PageHeader({
                 // voice for data (see `.figure`'s own header comment). Same token,
                 // different job, so the two are allowed to diverge on weight alone.
                 "min-w-0 font-display text-display font-bold leading-tight text-ink",
-                truncateTitle && "truncate",
+                truncateTitle && "line-clamp-1",
               )}
             >
               {title}

@@ -360,7 +360,7 @@ export default async function LeaguePage() {
   return (
     <div>
       <PageHeader
-        kicker={<span className="block truncate">{h.currentLeague.name}</span>}
+        kicker={<span className="block line-clamp-1">{h.currentLeague.name}</span>}
         title="The League"
         aside={
           <OpenInSleeper

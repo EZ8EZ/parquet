@@ -236,7 +236,7 @@ export default async function RosterPage() {
           />
         }
         kicker={
-          <span className="block truncate">{a.teamName ?? "Your team"}</span>
+          <span className="block line-clamp-1">{a.teamName ?? "Your team"}</span>
         }
         title={a.ownerName}
         truncateTitle
@@ -486,7 +486,7 @@ export default async function RosterPage() {
                     key={as.id}
                     className="flex items-baseline justify-between gap-2 text-meta leading-snug"
                   >
-                    <span className="min-w-0 truncate text-ink/85">
+                    <span className="min-w-0 line-clamp-1 text-ink/85">
                       {as.label}
                     </span>
                     <span className="shrink-0 figure text-meta text-muted">
@@ -605,7 +605,7 @@ export default async function RosterPage() {
           <span className="text-meta font-semibold uppercase tracking-wide text-secondary">
             Positional value
           </span>
-          <span className="truncate figure text-meta text-muted">
+          <span className="line-clamp-1 figure text-meta text-muted">
             {posCounts}
           </span>
         </div>

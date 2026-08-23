@@ -79,7 +79,7 @@ export function ManagerLink({ node, metric, isMe }) {
           isMe={isMe}
         />
         <span className="flex min-w-0 items-baseline gap-1">
-          <span className="truncate text-body font-semibold leading-snug text-ink group-hover:text-accent-text">
+          <span className="line-clamp-1 text-body font-semibold leading-snug text-ink group-hover:text-accent-text">
             {node.name}
           </span>
           {isMe ? (
@@ -129,7 +129,7 @@ export function PlayerNowRow({ assetKey, label, now, names }) {
             underneath a tree node that had already printed it - on a receipt it is
             the whole row, and the first live render showed a value with nobody
             attached to it. */}
-        <span className="block truncate text-body font-semibold leading-snug text-ink">
+        <span className="block line-clamp-1 text-body font-semibold leading-snug text-ink">
           {label}
         </span>
         <span className="block text-meta leading-snug text-muted">
@@ -139,7 +139,7 @@ export function PlayerNowRow({ assetKey, label, now, names }) {
           </span>{" "}
           today · {now.tier} · {now.duration.toFixed(1)}s
         </span>
-        <span className="block truncate text-meta leading-snug text-secondary">
+        <span className="block line-clamp-1 text-meta leading-snug text-secondary">
           {now.heldBy != null && names[now.heldBy]
             ? `now on ${names[now.heldBy]} · where he came from`
             : "where he came from"}

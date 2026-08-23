@@ -111,11 +111,11 @@ export default async function ManagersPage() {
                         an 11-character team name and a 9-character owner name never
                         needed to share in the first place.
                       */}
-                    <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+                    <span className="block line-clamp-1 text-[13px] font-semibold leading-tight text-ink">
                       {p.teamName ?? p.displayName}
                     </span>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
-                      <span className="min-w-0 truncate text-meta leading-tight text-secondary">
+                      <span className="min-w-0 line-clamp-1 text-meta leading-tight text-secondary">
                         {p.displayName}
                       </span>
                       {isFormer && d.identity.kind === "former" && (
@@ -131,7 +131,7 @@ export default async function ManagersPage() {
                           aria-hidden="true"
                           className="shrink-0"
                         />
-                        <span className="truncate">{titles.label}</span>
+                        <span className="line-clamp-1">{titles.label}</span>
                       </div>
                     )}
                     {shown.length > 0 && (
@@ -147,9 +147,15 @@ export default async function ManagersPage() {
                         )}
                       </div>
                     )}
-                    <p className="mt-0.5 line-clamp-2 text-meta leading-[1.45] text-muted">
-                      {d.read}
-                    </p>
+                    {/* No `d.read` here, deliberately (VISION.md kill-list #2,
+                        owner-approved). Ten of these fourteen cards printed the same
+                        generated opener - "X is one of the most active traders..." -
+                        clamped mid-sentence on every one, while the tags directly
+                        above already carry the same reads as phrases. Copy that
+                        repeats ten times and never finishes is worse than no copy.
+                        The full prose still renders, unclamped, on every dossier
+                        surface: /managers/[rosterId], /managers/former/[ownerId]
+                        and /managers/compare. */}
                     <div className="mt-1 flex flex-wrap items-center gap-x-2 figure text-meta text-secondary">
                       <span className="font-semibold text-muted">
                         {p.trades} trades

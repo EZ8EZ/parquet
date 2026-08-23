@@ -1103,7 +1103,7 @@ export default async function MethodologyPage() {
               key={e.label}
               className="flex items-baseline justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5"
             >
-              <span className="min-w-0 truncate text-note text-ink">
+              <span className="min-w-0 line-clamp-1 text-note text-ink">
                 {e.label}
               </span>
               <span className="shrink-0 figure text-note text-muted">
@@ -1135,7 +1135,7 @@ export default async function MethodologyPage() {
                 key={s.season}
                 className="flex items-baseline justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5"
               >
-                <span className="min-w-0 truncate figure text-note text-ink">
+                <span className="min-w-0 line-clamp-1 figure text-note text-ink">
                   {s.season} draft
                   <span className="text-secondary">
                     {" "}

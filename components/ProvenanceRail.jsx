@@ -1020,10 +1020,10 @@ function HopBody({ h, repeat }) {
           .join(" ")} Open the deal.`}
       >
         <span className="min-w-0">
-          <span className="block truncate text-body font-semibold leading-snug text-ink group-hover:text-accent-text">
+          <span className="block line-clamp-1 text-body font-semibold leading-snug text-ink group-hover:text-accent-text">
             Traded to {h.toName}
           </span>
-          <span className="block truncate text-meta leading-snug text-muted">
+          <span className="block line-clamp-1 text-meta leading-snug text-muted">
             by {h.fromName} · as {h.assetLabel}
           </span>
         </span>
@@ -1070,10 +1070,10 @@ function ResolutionBody({ r }) {
           className="mt-0.5"
         />
         <span className="min-w-0">
-          <span className="block truncate text-body font-semibold leading-snug text-info group-hover:underline">
+          <span className="block line-clamp-1 text-body font-semibold leading-snug text-info group-hover:underline">
             The pick became {r.playerName}
           </span>
-          <span className="block truncate text-meta leading-snug text-muted">
+          <span className="block line-clamp-1 text-meta leading-snug text-muted">
             {r.season} {ordinal(r.round)}
             {r.pickNo ? ` · pick #${r.pickNo}` : ""}
             {r.usedByName ? ` · used by ${r.usedByName}` : ""}

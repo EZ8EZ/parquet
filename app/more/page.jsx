@@ -83,10 +83,10 @@ export default function MorePage() {
                       className="shrink-0 text-accent-text"
                     />
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-body font-semibold leading-tight text-ink">
+                      <span className="block line-clamp-1 text-body font-semibold leading-tight text-ink">
                         {s.label}
                       </span>
-                      <span className="block truncate text-meta leading-snug text-secondary">
+                      <span className="block line-clamp-1 text-meta leading-snug text-secondary">
                         {s.sub}
                       </span>
                     </span>

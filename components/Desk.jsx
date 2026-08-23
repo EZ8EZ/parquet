@@ -66,6 +66,7 @@
  * dies. It is always exactly where it was.
  */
 import {
+  Fragment,
   Suspense,
   useCallback,
   useEffect,
@@ -81,6 +82,7 @@ import {
   ChevronUp,
   ExternalLink,
   Repeat,
+  ScrollText as LedgerIcon,
   Settings,
 } from "lucide-react";
 import { BrandMark } from "./Brand";
@@ -467,10 +469,10 @@ export function Desk({ data }) {
                                     )}
                                   />
                                   <span className="min-w-0 flex-1">
-                                    <span className="block truncate text-note font-semibold leading-tight text-ink">
+                                    <span className="block line-clamp-1 text-note font-semibold leading-tight text-ink">
                                       {s.label}
                                     </span>
-                                    <span className="mt-px block truncate text-micro leading-snug text-faint">
+                                    <span className="mt-px block line-clamp-1 text-micro leading-snug text-faint">
                                       {s.sub}
                                     </span>
                                   </span>
@@ -560,7 +562,30 @@ export function Desk({ data }) {
               />
             </button>
 
-            {/* --------------------------------------------------- the context row */}
+            {/* --------------------------------------------------- the scorebug row
+            VISION.md M3: the context row is the app's scorebug - a persistent
+            one-line strip of the lens team's standing facts (code, record,
+            standing, TCI, window), the same on every route, tappable through to
+            /league's seat card. The seat chip shrinks to its avatar (the strip's
+            leading team code carries the identity in words now - printing the full
+            name AND the code an inch apart would be the restatement D61 warns
+            about) and keeps the menu. The capture count rides beside the strip as
+            its own compact link - see lib/desk.js rule 1b for why it neither owns
+            the row anymore nor disappears (D40: the count is real information).
+
+            THE STRIP NEVER TRUNCATES, BY ARITHMETIC RATHER THAN BY CSS: its widest
+            honest content (2-char code, "40-12", "#14/14", "TCI 100", "2029-31",
+            four separators) plus the chip and the capture link fits 390px with
+            room to spare, and lib/desk.js omits segments it cannot print whole. A
+            scorebug that ellipsizes is a scorebug that lies, so there is no
+            `truncate` here on purpose.
+
+            MONO, DELIBERATELY, against globals.css's ".figure on quantities, mono
+            on identifiers only" rule: VISION.md's M3 (owner-approved) assigns this
+            one element the broadcast voice outright ("a persistent one-line mono
+            strip... the brand's tightest typography"), and the strip reads as one
+            composite identifier of your seat - a ticker line - not as figures in
+            prose. The exception is this row only. */}
             <div className="relative flex h-[44px] items-center gap-2 px-3.5">
               {data?.seat ? (
                 <>
@@ -568,9 +593,10 @@ export function Desk({ data }) {
                     type="button"
                     aria-expanded={seatMenu}
                     aria-controls={seatMenuId}
+                    aria-label={`${data.seat.label} - team menu`}
                     onClick={() => setSeatMenuOn(seatMenu ? null : pathname)}
                     className={cn(
-                      "flex min-h-0 shrink-0 items-center gap-1.5 rounded-full border bg-surface py-1 pl-1 pr-2.5 transition-colors",
+                      "flex min-h-0 shrink-0 items-center gap-1 rounded-full border bg-surface py-1 pl-1 pr-1.5 transition-colors",
                       seatMenu
                         ? "border-accent"
                         : "border-border hover:border-border-strong",
@@ -583,9 +609,6 @@ export function Desk({ data }) {
                       size="xs"
                       className="rounded-full"
                     />
-                    <span className="max-w-[8.5rem] truncate text-note font-semibold text-ink">
-                      {data.seat.label}
-                    </span>
                     <ChevronUp
                       size={12}
                       aria-hidden="true"
@@ -596,30 +619,49 @@ export function Desk({ data }) {
                     />
                   </button>
 
+                  {data.capture && (
+                    <Link
+                      href={data.capture.href}
+                      aria-label={data.capture.label}
+                      // `self-stretch`: the row is 44pt and so is the target. The
+                      // accent is this row's established to-do tone; the ledger's
+                      // own registry mark says WHERE in one glyph so the count can
+                      // stay a bare figure.
+                      className="flex shrink-0 items-center gap-1 self-stretch px-0.5 figure text-meta font-semibold text-accent-text transition-colors hover:text-ink"
+                    >
+                      <LedgerIcon
+                        size={12}
+                        aria-hidden="true"
+                        className="shrink-0"
+                      />
+                      {data.capture.count}
+                    </Link>
+                  )}
+
                   <Link
-                    href={data.status.href}
+                    href={data.bug.href}
+                    aria-label={data.bug.label}
                     // `self-stretch` rather than a bare inline link: the row is 44pt and
                     // so is the target, instead of a 17pt strip of text floating in the
                     // middle of it.
-                    className="flex min-w-0 flex-1 items-center justify-end gap-1 self-stretch truncate text-meta text-muted transition-colors hover:text-ink"
+                    className="flex min-w-0 flex-1 items-center justify-end gap-1 self-stretch whitespace-nowrap font-mono figure text-meta font-medium text-ink transition-colors hover:text-accent-text"
                   >
-                    <span className="truncate">
-                      <b
-                        className={cn(
-                          "font-semibold figure",
-                          data.status.tone === "todo"
-                            ? "text-accent-text"
-                            : "text-ink",
-                        )}
-                      >
-                        {data.status.lead}
-                      </b>{" "}
-                      {data.status.rest}
+                    <span>
+                      {data.bug.parts.map((part, i) => (
+                        <Fragment key={i}>
+                          {i > 0 && (
+                            <span aria-hidden="true" className="mx-0.5 text-faint">
+                              ·
+                            </span>
+                          )}
+                          {part}
+                        </Fragment>
+                      ))}
                     </span>
                     <ChevronRight
                       size={13}
                       aria-hidden="true"
-                      className="shrink-0"
+                      className="shrink-0 text-faint"
                     />
                   </Link>
                 </>
@@ -638,9 +680,9 @@ export function Desk({ data }) {
                   </span>
                   <Link
                     href="/teams"
-                    className="flex min-w-0 flex-1 items-center justify-end gap-1 self-stretch truncate text-meta font-semibold text-accent-text transition-colors hover:text-ink"
+                    className="flex min-w-0 flex-1 items-center justify-end gap-1 self-stretch line-clamp-1 text-meta font-semibold text-accent-text transition-colors hover:text-ink"
                   >
-                    <span className="truncate">Pick your team</span>
+                    <span className="line-clamp-1">Pick your team</span>
                     <ChevronRight
                       size={13}
                       aria-hidden="true"
@@ -652,7 +694,7 @@ export function Desk({ data }) {
                 // The corpus could not be read (lib/desk.ts returns null and says so in
                 // the server log). Navigation is registry-driven and does not depend on
                 // it, so the Desk keeps working with this row simply quiet.
-                <span className="flex-1 truncate text-meta text-faint">
+                <span className="flex-1 line-clamp-1 text-meta text-faint">
                   Parquet
                 </span>
               )}
@@ -721,7 +763,7 @@ export function Desk({ data }) {
                     )}
                   >
                     <Icon size={18} aria-hidden="true" className="shrink-0" />
-                    <span className="max-w-full truncate text-micro font-semibold leading-none">
+                    <span className="max-w-full line-clamp-1 text-micro font-semibold leading-none">
                       {s.short ?? s.label}
                     </span>
                   </Link>
@@ -755,7 +797,7 @@ export function Desk({ data }) {
                     <BrandMark size={18} gradientId="desk-mark" />
                   </span>
                 )}
-                <span className="max-w-full truncate text-micro font-semibold leading-none">
+                <span className="max-w-full line-clamp-1 text-micro font-semibold leading-none">
                   {expanded ? "Close" : "More"}
                 </span>
               </button>

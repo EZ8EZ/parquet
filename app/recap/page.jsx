@@ -256,7 +256,7 @@ export default async function RecapPage() {
                 />
               )}
               <span className="min-w-0 flex-1">
-                <span className="block truncate text-[13px] font-semibold leading-tight text-ink">
+                <span className="block line-clamp-1 text-[13px] font-semibold leading-tight text-ink">
                   {p.playerName}
                 </span>
                 {/* Was `truncate`: label + position + owner on one line clipped real

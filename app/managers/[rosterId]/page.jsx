@@ -142,7 +142,7 @@ export default async function ManagerDetailPage({ params }) {
            app already wraps rather than truncates. */
       >
         <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
-          <span className="truncate">{p.displayName}</span>
+          <span className="line-clamp-1">{p.displayName}</span>
           <span aria-hidden="true">·</span>
           <span>{p.trades} trades</span>
           <span aria-hidden="true">·</span>
@@ -223,7 +223,7 @@ export default async function ManagerDetailPage({ params }) {
                   <span className="block figure text-body font-semibold leading-snug text-ink line-clamp-2">
                     Their own {b.label}, back from {b.fromName}
                   </span>
-                  <span className="block truncate text-meta leading-tight text-secondary">
+                  <span className="block line-clamp-1 text-meta leading-tight text-secondary">
                     {b.recorded ? (
                       <>
                         <LocalDate ts={b.at} />
@@ -471,7 +471,7 @@ export default async function ManagerDetailPage({ params }) {
                         size="xs"
                         isMe={!t.isFormer && h.me.rosterId === tp.rosterId}
                       />
-                      <span className="min-w-0 flex-1 truncate text-note font-medium text-ink">
+                      <span className="min-w-0 flex-1 line-clamp-1 text-note font-medium text-ink">
                         {t.name}
                         {t.tenureLabel && (
                           <span className="text-meta font-normal text-secondary">

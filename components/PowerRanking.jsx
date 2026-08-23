@@ -114,7 +114,7 @@ function Row({ r }) {
         />
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span className="truncate text-body font-semibold leading-tight text-ink">
+            <span className="line-clamp-1 text-body font-semibold leading-tight text-ink">
               {r.name}
             </span>
             {r.isMe && (

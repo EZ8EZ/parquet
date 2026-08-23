@@ -101,7 +101,7 @@ function EntryCell({ entry, anchorId, holder, valueHref }) {
               entry.name
             )}
           </span>
-          <span className="figure block truncate text-meta leading-tight text-secondary">
+          <span className="figure block line-clamp-1 text-meta leading-tight text-secondary">
             {entry.offPosition
               ? `listed ${entry.listedPosition}`
               : (entry.listedPosition ?? "position not stated")}

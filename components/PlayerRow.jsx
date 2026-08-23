@@ -16,7 +16,7 @@ export function PlayerRow({
       <PlayerAvatar name={name} team={team} playerId={playerId} size="md" />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-1.5">
-          <span className="truncate text-sm font-semibold text-ink">
+          <span className="line-clamp-1 text-sm font-semibold text-ink">
             {name}
           </span>
           {injury && (

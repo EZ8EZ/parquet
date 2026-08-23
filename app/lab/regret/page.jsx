@@ -260,11 +260,11 @@ function WidestWeek({ w }) {
                   {s.label}
                 </span>
                 <span className="min-w-0 flex-1">
-                  <span className="block truncate text-micro leading-tight text-ink">
+                  <span className="block line-clamp-1 text-micro leading-tight text-ink">
                     {s.playerName ?? "(nobody)"}
                   </span>
                   {!s.empty && (
-                    <span className="block truncate text-micro leading-tight text-faint">
+                    <span className="block line-clamp-1 text-micro leading-tight text-faint">
                       {s.bankedOpponent
                         ? `vs ${s.bankedOpponent}`
                         : s.verified
@@ -295,7 +295,7 @@ function WidestWeek({ w }) {
                 key={g.playerId}
                 className="flex items-center gap-2 border-b border-border py-1 last:border-0"
               >
-                <span className="min-w-0 flex-1 truncate text-micro text-ink">
+                <span className="min-w-0 flex-1 line-clamp-1 text-micro text-ink">
                   {g.name}
                   {g.opponent && (
                     <span className="text-faint"> vs {g.opponent}</span>

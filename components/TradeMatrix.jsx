@@ -101,7 +101,7 @@ export function TradeMatrix({ matrix }) {
           labels being HTML rather than SVG). */}
       <ol className="mt-2 grid grid-cols-2 gap-x-2 gap-y-0.5 text-micro leading-snug text-secondary sm:grid-cols-3">
         {matrix.order.map((m, i) => (
-          <li key={m.ownerId} className="truncate">
+          <li key={m.ownerId} className="line-clamp-1">
             <span className="figure text-faint">{i + 1}.</span>{" "}
             <span className={m.isMe ? "font-semibold text-accent-text" : ""}>
               {m.name}

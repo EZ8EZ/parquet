@@ -256,7 +256,7 @@ export default async function DealPage({ params }) {
                         size="sm"
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block truncate text-body font-semibold leading-snug text-ink">
+                        <span className="block line-clamp-1 text-body font-semibold leading-snug text-ink">
                           {p?.fullName ?? `Player ${pid}`}
                         </span>
                         <span className="block text-meta leading-snug text-secondary">
@@ -279,7 +279,7 @@ export default async function DealPage({ params }) {
                     className="flex items-start gap-1.5 rounded-[--radius-sm] border border-border bg-surface px-2 py-1.5 transition-colors hover:bg-surface-2"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block truncate text-body font-semibold leading-snug text-ink">
+                      <span className="block line-clamp-1 text-body font-semibold leading-snug text-ink">
                         {dp.season} {ordinal(dp.round)}
                         {dp.rosterId !== dp.previousOwnerId &&
                         names[dp.rosterId]
@@ -287,7 +287,7 @@ export default async function DealPage({ params }) {
                           : ""}
                       </span>
                       {became ? (
-                        <span className="block truncate text-meta leading-snug text-info">
+                        <span className="block line-clamp-1 text-meta leading-snug text-info">
                           became {became}
                         </span>
                       ) : (
