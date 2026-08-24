@@ -117,7 +117,7 @@ export default async function TradeFinderPage({ searchParams }) {
    * The give pool is partner-driven by construction (see `searchPackages`), so an asset
    * nobody is asking for can be structurally invisible to every suggestion the finder
    * will ever make - including, most usefully, the asset(s) /plan's own timeline check
-   * already names as this roster's odd one out. Since D113 that can be a correlated
+   * already names as this roster's odd one out. Since D114 that can be a correlated
    * PAIR rather than a single asset, so the param carries a comma-joined id list.
    *
    * It is NEVER silent. A URL param that changed the results with no visible indicator
@@ -498,7 +498,7 @@ function namesOf(assets) {
  * The `move=` indicator. Persistent while the param is set, and dismissable by the only
  * honest means available: a link that drops the param and re-runs the search without it.
  * "Dismiss the chip but keep the filter" would be the invisible state this exists to
- * prevent. `assets` is 0, 1, or 2 long since D113 (a correlated pair can be named);
+ * prevent. `assets` is 0, 1, or 2 long since D114 (a correlated pair can be named);
  * empty means none of the requested ids resolved to something this roster owns.
  */
 function MoveChip({ assets, requested, clearHref, empty }) {
@@ -1068,7 +1068,7 @@ function namedWithSeasons(assets) {
  * recommendation: whether the asset(s) the package sends are the SAME asset(s) the
  * roster's own timeline already names as its odd one out (lib/metrics/duration.js,
  * `findTimelineBreak`, which can name a correlated pair rather than one asset since
- * D113). That function's docstring is explicit that a named asset is very often the
+ * D114). That function's docstring is explicit that a named asset is very often the
  * roster's best player and that holding one while a young core matures is a real
  * strategy, not a mistake - so the copy here states a coincidence of diagnoses and
  * stops. It never says the trade fixes anything, and the inverse case (the deal

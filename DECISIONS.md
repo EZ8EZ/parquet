@@ -7417,7 +7417,7 @@ worktree was cut (`7fed6c9`, D103); `origin/main` has since moved (through at le
 including an unrelated refusal-register copy change, D104, that renames what
 `refusalShort`/`refusalSentence` print but not their contract) and this D-number is
 chosen to not collide with that tip rather than with this file's own local copy of it.
-## D113. THE LEAVE-ONE-OUT SEARCH WAS BLIND TO ITS OWN CORRELATED PAIRS - `findTimelineBreak` names two assets on ten of fourteen real rosters, and `move=` learned to carry both
+## D114. THE LEAVE-ONE-OUT SEARCH WAS BLIND TO ITS OWN CORRELATED PAIRS - `findTimelineBreak` names two assets on ten of fourteen real rosters, and `move=` learned to carry both
 
 **The confirmed bug, measured rather than assumed.** `findTimelineBreak` (D-numberless,
 predates this log's coverage of it) names the single asset a roster's own timeline is

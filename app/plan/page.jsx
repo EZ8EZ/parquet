@@ -255,7 +255,7 @@ export default async function PlanPage() {
           {/*
            * THE BREAK WAS COMPUTED HERE ALL ALONG AND NEVER PRINTED.
            *
-           * `tl.timelineBreak` names the one asset - or, since D113, the correlated PAIR
+           * `tl.timelineBreak` names the one asset - or, since D114, the correlated PAIR
            * of assets - this roster's own timeline is least able to explain
            * (lib/metrics/duration.js), and /plan has been fetching it inside `tl` without
            * ever showing it. It is also the asset(s) the trade finder is STRUCTURALLY
