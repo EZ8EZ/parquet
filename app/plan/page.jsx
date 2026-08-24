@@ -3,7 +3,7 @@ import { AlertTriangle, ArrowRight, ChevronRight, Target } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildGamePlan } from "@/lib/gameplan";
 import { getPrincipals } from "@/lib/principals";
-import { cachedLeagueTimelines } from "@/lib/metrics/duration";
+import { breakAssetNames, cachedLeagueTimelines } from "@/lib/metrics/duration";
 import { leagueWindows, windowShort } from "@/lib/metrics/window";
 import { PageHeader, Tag } from "@/components/ui";
 import { MetricGloss } from "@/components/MetricGloss";
@@ -253,33 +253,43 @@ export default async function PlanPage() {
             </p>
           )}
           {/*
-           * THE BREAK ASSET WAS COMPUTED HERE ALL ALONG AND NEVER PRINTED.
+           * THE BREAK WAS COMPUTED HERE ALL ALONG AND NEVER PRINTED.
            *
-           * `tl.timelineBreak` names the single asset this roster's own timeline is
-           * least able to explain (lib/metrics/duration.js), and /plan has been
-           * fetching it inside `tl` without ever showing it. It is also the asset the
-           * trade finder is STRUCTURALLY LEAST LIKELY to suggest moving, because the
-           * finder's give pool is sorted by what a partner wants most rather than by
-           * what you would most like to be rid of - so the roster's own diagnosed
-           * problem could be invisible to every suggestion the app makes. The link
-           * carries `move=`, which forces this asset into every package the finder
-           * considers.
+           * `tl.timelineBreak` names the one asset - or, since D114, the correlated PAIR
+           * of assets - this roster's own timeline is least able to explain
+           * (lib/metrics/duration.js), and /plan has been fetching it inside `tl` without
+           * ever showing it. It is also the asset(s) the trade finder is STRUCTURALLY
+           * LEAST LIKELY to suggest moving, because the finder's give pool is sorted by
+           * what a partner wants most rather than by what you would most like to be rid
+           * of - so the roster's own diagnosed problem could be invisible to every
+           * suggestion the app makes. The link carries `move=`, comma-joined for a pair,
+           * which forces every named asset into every package the finder considers.
            *
            * Stated as a misfit, never as a mistake: `findTimelineBreak`'s own docstring
-           * is explicit that this is frequently the roster's best player.
+           * is explicit that this is frequently the roster's best player (or one of a
+           * named pair).
            */}
-          {tl.timelineBreak?.label && (
-            <p className="mt-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
-              One asset does not fit that story: {tl.timelineBreak.label},{" "}
-              {tl.timelineBreak.duration.toFixed(1)} seasons.{" "}
-              <Link
-                href={`/trade/finder?${new URLSearchParams({ move: String(tl.timelineBreak.id) }).toString()}`}
-                className="text-meta font-semibold text-accent-text underline-offset-2 hover:underline"
-              >
-                Find a deal that moves them
-              </Link>
-            </p>
-          )}
+          {breakAssetNames(tl.timelineBreak) &&
+            (() => {
+              const brk = tl.timelineBreak;
+              const plural = brk.assets.length > 1;
+              const lead = plural ? "Two assets do" : "One asset does";
+              const named = brk.assets
+                .map((a) => `${a.label}, ${a.duration.toFixed(1)} seasons`)
+                .join(", and ");
+              const moveIds = brk.assets.map((a) => String(a.id)).join(",");
+              return (
+                <p className="mt-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
+                  {lead} not fit that story: {named}.{" "}
+                  <Link
+                    href={`/trade/finder?${new URLSearchParams({ move: moveIds }).toString()}`}
+                    className="text-meta font-semibold text-accent-text underline-offset-2 hover:underline"
+                  >
+                    Find a deal that moves them
+                  </Link>
+                </p>
+              );
+            })()}
         </div>
       )}
       {/* The index appears here as a bare figure - give a first-time reader the
