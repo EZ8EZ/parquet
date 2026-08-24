@@ -7417,3 +7417,118 @@ worktree was cut (`7fed6c9`, D103); `origin/main` has since moved (through at le
 including an unrelated refusal-register copy change, D104, that renames what
 `refusalShort`/`refusalSentence` print but not their contract) and this D-number is
 chosen to not collide with that tip rather than with this file's own local copy of it.
+## D113. THE LEAVE-ONE-OUT SEARCH WAS BLIND TO ITS OWN CORRELATED PAIRS - `findTimelineBreak` names two assets on ten of fourteen real rosters, and `move=` learned to carry both
+
+**The confirmed bug, measured rather than assumed.** `findTimelineBreak` (D-numberless,
+predates this log's coverage of it) names the single asset a roster's own timeline is
+least able to explain, by leave-one-out: try removing each asset, keep whichever removal
+raises TCI the most. That search is structurally blind to CORRELATED pairs - two assets
+that are each only mildly out of place alone but are dated the SAME wrong way together,
+so neither one's individual removal moves the variance term much even though removing
+both would. A brute-force O(n^2) sweep over every pair, run against all fourteen real
+fixture rosters, confirms the shape: every roster carrying a published single-asset break
+has some pair that beats it, by a margin ranging +1 to +6 TCI points, which on the ten
+rosters where that margin clears +3 means the published single was understating the real
+best removal by 36% to 55% - Radio Silence's published break (Rudy Gobert, +5) real best
+pair is Rudy Gobert + a 2028 1st (+11, 55% understated); Win Now's published break
+(Stephen Curry, +5) real best pair is Curry + Kevin Durant (+10, 50% understated);
+Parquet Kings' published break (LeBron James, +7) real best pair is DeMar DeRozan + LeBron
+James (+11, 36% understated). Seven more rosters land in the same 36%-50% band. This was
+the exact shape /plan's own "one asset does not fit that story" sentence had been getting
+wrong on more than two-thirds of the real league since the feature shipped.
+
+**The fix runs a second, bounded search rather than replacing the first.**
+`findTimelineBreak` still finds the best single removal first, exactly as before, and
+only THEN runs a full O(n^2) sweep over every pair - not "the single-best asset plus its
+best partner" (an O(n) shortcut that would miss exactly the correlated-pair case the
+feature exists to catch, since the true best pair can consist of two assets neither of
+which is individually the single-best removal). The pair is reported instead of the
+single only when it buys at least `PAIR_MARGIN_MIN` (3) MORE TCI points than the single
+already found. That constant is not the same floor as `BREAK_MIN_DELTA` (1, the existing
+noise-vs-signal floor for a single removal) - a pair is chosen from a quadratically larger
+candidate set than a single, so it has strictly more chances to land a marginal
+"improvement" that is rounding noise rather than a second real problem, and the single
+floor's own calibration comment already records the smallest GENUINE single-asset
+improvement ever measured on this league as +2. Asking the second name to buy one point
+more than that (+3) is a real, measured cut: of the fourteen rosters, ten clear it and
+four do not (Future Assets +2, Do Not Disturb +2, Draft Vault +2, Second Wave +1) - those
+four keep their single name, correctly, because the second asset would not have bought a
+materially different reading. The pair search also never fires when the single-asset
+search itself found nothing worth naming (below `BREAK_MIN_DELTA`) - it REFINES an
+existing finding into two names, it does not invent one a stricter single-asset test
+already rejected.
+
+**Rejected: gating the O(n^2) sweep's cost, rather than gating what gets printed.** The
+instinct was to skip the pair sweep entirely on a roster whose single break is already
+"good enough" - some cutoff on the single's own delta, to save the extra O(n^2) work.
+Measured rather than assumed: the combined single+pair pass across the whole 14-roster
+league averages 3.8ms (20-run average, this machine), against real per-roster asset
+counts of 22-30. The sweep was never expensive enough to need gating; the actual thing
+that needed a decision was whether the SECOND name is worth the added sentence length,
+which is `PAIR_MARGIN_MIN`'s job and has nothing to do with computational cost. Gating on
+cost would have added a second, unmeasured cutoff doing the same job worse.
+
+**Rejected: reporting a pair whenever one technically beats the single, at any margin.**
+Since some pair beats some single on every one of the fourteen rosters, a margin-free
+version would print two names on 14 of 14 rosters, including the four where the extra
+asset buys only +1 or +2 - "yes, technically" noise rather than a real second finding.
+`PAIR_MARGIN_MIN` exists specifically to keep those four honest as one-asset findings.
+
+**Rejected: a third asset, or more.** The measured margins (+1 to +6) do not compound the
+way they would if triples were worth searching - a third asset buys additional cost
+(another factor of n per additional slot) for a sentence that is already naming two, and
+D19's own discipline against manufactured precision applies here too: a finding three
+names long reads as a paragraph, not a diagnosis. Not measured further because the
+two-asset margins already show diminishing, not compounding, returns.
+
+**The shape, generalized rather than special-cased.** `findTimelineBreak` now returns
+`{ assets: [...], delta }` - one or two entries, sorted by id string rather than by scan
+order (caught by the suite: computing the same pair against the same roster before and
+after an unrelated array sort produced the two names in a different order until the
+publish step stopped trusting index order for anything). `breakAssetNames(timelineBreak)`
+is the one place a break's assets become a name ("LeBron James" / "DeMar DeRozan and
+LeBron James"), shared by `/plan`'s sentence and `breakSentence`'s own copy so the two
+surfaces cannot drift into different joining logic for the same shape.
+
+**`lib/tradefinder/after.js`'s `departingBreak`/`arrivingBreak` report the TOUCHED
+subset, never an all-or-nothing match.** A two-asset break names both because together
+they explain more of a roster's incoherence than either alone, but a real trade can still
+send (or bring) only one of the two - `breakOverlap` filters the break's own asset list
+against the package's actual ids and returns exactly what was touched, dropping the
+`delta` field entirely on a partial touch (it is the improvement from removing every
+named asset TOGETHER, and attaching it to a one-asset touch would misattribute a
+two-asset finding's number). The trade finder's "After this trade" prose reads its
+grammar off `.assets.length` on the RESULT, not off whether the underlying break happened
+to name one or two - a departure of one asset from a named pair still reads as a clean,
+singular sentence.
+
+**`move=` extended to carry a comma-joined pair, not a new param.** The existing
+single-id convention (D101) stays byte-identical for every existing caller:
+`searchPackages`'s `forceGiveId` now accepts a bare string OR an array, `findTrades`'s
+and `partnerBoard`'s `move` option is parsed through the same `parseMoveIds` either way,
+and `findTrades`'s result keeps `move.asset` (singular, unchanged) while adding
+`move.assets` (the full resolved list, `null` - never a partial array - unless EVERY
+requested id is owned). A partial resolve (one of two ids owned) forces nothing at all,
+matching the existing single-id rule that an unowned id searches for nothing rather than
+silently narrowing to what IS owned - the same "never invents availability" discipline
+D101 established, generalized to N ids instead of one. `/plan`'s link now joins both
+break ids with a comma; the finder's `MoveChip` and its census line/refusal caveat all
+read off a shared `namesOf(assets)` join rather than each inventing their own.
+
+**Copy, singular and plural from one template rather than two.** `/plan`'s sentence
+("One asset does not fit that story" / "Two assets do not fit that story"),
+`breakSentence`'s posture-appended line, and the trade finder's "After this trade" prose
+all branch on `assets.length` inline rather than maintaining a second, parallel string
+for the pair case - the single-asset wording is untouched byte-for-byte where the shape
+is unchanged (checked directly: `breakSentence`'s one-asset output is character-identical
+to what it published before this entry).
+
+### Gate
+`pnpm lint`, `pnpm test` (1,393, up from 1,380 - 13 new cases covering the pair search,
+its determinism, its margin floor, and the extended `move=`), `pnpm build`, and `pnpm e2e`
+(81) all clean. `PAIR_MARGIN_MIN` and the 10-of-14 split are re-derived from
+`buildFixtureHistory()` directly (`getTimelineProfile` over every real fixture roster),
+not carried over from the brief's own numbers, which had drifted slightly from what this
+run measured (the brief's Radio Silence/Win Now examples matched; the general "~50%"
+shape held but the precise ten-of-fourteen split and the 3.8ms timing are this run's own
+figures).

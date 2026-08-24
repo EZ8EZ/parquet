@@ -16,7 +16,7 @@ import {
   partnerBoard,
   roomBand,
   roomBands,
-  viewerAsset,
+  viewerAssets,
 } from "@/lib/tradefinder";
 import { readCustomOrder } from "@/lib/rankings/customOrderServer";
 import { leagueTimelines } from "@/lib/metrics/duration";
@@ -112,20 +112,26 @@ export default async function TradeFinderPage({ searchParams }) {
     notFound();
   }
   /*
-   * `move=` FORCES ONE OF YOUR OWN ASSETS INTO EVERY PACKAGE.
+   * `move=` FORCES ONE OR TWO OF YOUR OWN ASSETS INTO EVERY PACKAGE.
    *
    * The give pool is partner-driven by construction (see `searchPackages`), so an asset
    * nobody is asking for can be structurally invisible to every suggestion the finder
-   * will ever make - including, most usefully, the asset /plan's own timeline check
-   * already names as this roster's odd one out. This param is the way in.
+   * will ever make - including, most usefully, the asset(s) /plan's own timeline check
+   * already names as this roster's odd one out. Since D113 that can be a correlated
+   * PAIR rather than a single asset, so the param carries a comma-joined id list.
    *
    * It is NEVER silent. A URL param that changed the results with no visible indicator
    * would leave a reader comparing two boards and unable to see why they differ, so
-   * whenever it is set the chip below is rendered, it names the asset, and it carries a
-   * link that clears it.
+   * whenever it is set the chip below is rendered, it names every asset, and it carries
+   * a link that clears it.
    */
   const move = typeof moveParam === "string" && moveParam ? moveParam : null;
-  const moveAsset = move ? viewerAsset(h, rosterId, move) : null;
+  // ALL-OR-NOTHING, matching `partnerBoard`'s own gating: a partial resolve (one of two
+  // requested ids owned, say) is not "the chip names one asset" - `partnerBoard` forces
+  // nothing at all in that case, so a chip naming the one that DID resolve would claim a
+  // constraint the search never applied.
+  const moveResolved = move ? viewerAssets(h, rosterId, move) : [];
+  const moveAssets = moveResolved.length && moveResolved.every(Boolean) ? moveResolved : [];
   // ------------------------------------------------------------ the board view
   if (partnerId == null) {
     const rows = partnerBoard(h, principals, rosterId, { move });
@@ -141,7 +147,7 @@ export default async function TradeFinderPage({ searchParams }) {
           subtitle="Grouped by whether a leaguemate's value peaks in the same seasons yours does, because that is what makes a deal possible. Not ranked: this reads their behaviour and their holes alongside the values, and none of that adds up to a verdict about who to call first."
         />
         <MoveChip
-          asset={moveAsset}
+          assets={moveAssets}
           requested={move}
           clearHref="/trade/finder"
           empty={move != null && live.length === 0}
@@ -156,7 +162,7 @@ export default async function TradeFinderPage({ searchParams }) {
           <Stat
             label="a package works both ways"
             value={`${live.length} of ${rows.length}`}
-            sub={move && moveAsset ? `including ${moveAsset.label}` : "leaguemates"}
+            sub={move && moveAssets.length ? `including ${namesOf(moveAssets)}` : "leaguemates"}
           />
           <Stat
             label="sit opposite your window"
@@ -197,8 +203,8 @@ export default async function TradeFinderPage({ searchParams }) {
               summary={`${dead.length} leaguemate${dead.length === 1 ? "" : "s"} with no package either way`}
             >
               <p className="mb-1.5">
-                {move && moveAsset
-                  ? `No package with these teams includes ${moveAsset.label} and still works for both sides. That is a real answer rather than an empty list.`
+                {move && moveAssets.length
+                  ? `No package with these teams includes ${namesOf(moveAssets)} and still works for both sides. That is a real answer rather than an empty list.`
                   : "Either both rosters want the same things or the value does not line up. A forced offer here is a wasted ask."}
               </p>
               <ul className="space-y-1">
@@ -263,6 +269,11 @@ export default async function TradeFinderPage({ searchParams }) {
     if (move) p.set("move", move);
     return `/trade/finder?${p.toString()}`;
   };
+  // `result.move` is priced through THIS partner's appetite, so it is preferred over
+  // the page-level `moveAssets` lookup whenever a move was actually requested here -
+  // `null` (not all requested ids owned) reads as "none", never a silent fallback to a
+  // differently-sourced guess.
+  const chipAssets = result.move ? (result.move.assets ?? []) : moveAssets;
   return (
     <div>
       <Link
@@ -299,7 +310,7 @@ export default async function TradeFinderPage({ searchParams }) {
       </PageHeader>
 
       <MoveChip
-        asset={result.move?.asset ?? moveAsset}
+        assets={chipAssets}
         requested={move}
         clearHref={`/trade/finder?with=${partnerId}`}
         empty={move != null && result.packages.length === 0}
@@ -475,24 +486,37 @@ function byName(rows) {
   return [...rows].sort((a, b) => String(a.name).localeCompare(String(b.name)));
 }
 /**
+ * "LeBron James" for one asset, "DeMar DeRozan and LeBron James" for two - joins a
+ * `move=` chip's resolved assets the one way, shared by every place on this page that
+ * has to name them (the chip itself, the census sub-line, the "nothing clears the bar"
+ * caveat), so they cannot drift into different wording for the same list.
+ */
+function namesOf(assets) {
+  return assets.map((a) => a.label).join(" and ");
+}
+/**
  * The `move=` indicator. Persistent while the param is set, and dismissable by the only
  * honest means available: a link that drops the param and re-runs the search without it.
  * "Dismiss the chip but keep the filter" would be the invisible state this exists to
- * prevent.
+ * prevent. `assets` is 0, 1, or 2 long since D113 (a correlated pair can be named);
+ * empty means none of the requested ids resolved to something this roster owns.
  */
-function MoveChip({ asset, requested, clearHref, empty }) {
+function MoveChip({ assets, requested, clearHref, empty }) {
   if (!requested) return null;
   return (
     <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 rounded-[--radius-sm] border border-info-edge bg-info-wash px-2.5 py-1.5">
       <span className="text-note leading-snug text-info">
-        {asset ? (
+        {assets.length ? (
           <>
             Only packages that include{" "}
-            <span className="font-semibold">{asset.label}</span>
+            <span className="font-semibold">{namesOf(assets)}</span>
             {empty && " · none found"}
           </>
         ) : (
-          <>That asset is not on your roster, so nothing here was filtered.</>
+          <>
+            {requested.includes(",") ? "Those assets are" : "That asset is"} not on
+            your roster, so nothing here was filtered.
+          </>
         )}
       </span>
       <Link
@@ -1027,22 +1051,41 @@ function PackageDetail({ pkg, hasRanking }) {
   );
 }
 /**
+ * "LeBron James, 0.0 seasons out" for one asset, "DeMar DeRozan, 1.3 seasons out, and
+ * LeBron James, 0.0 seasons out" for two - the one place `departingBreak.assets` /
+ * `arrivingBreak.assets` become prose in this component, joined identically wherever
+ * they are named.
+ */
+function namedWithSeasons(assets) {
+  return assets
+    .map((asset) => `${asset.label}, ${asset.duration.toFixed(1)} seasons out`)
+    .join(", and ");
+}
+/**
  * AFTER THIS TRADE - the roster's own timeline, either side of the package.
  *
  * The highest-value thing this feature can say, and it is a reading rather than a
- * recommendation: whether the asset the package sends is the SAME asset the roster's own
- * timeline already names as its odd one out (lib/metrics/duration.js,
- * `findTimelineBreak`). That function's docstring is explicit that the named asset is
- * very often the roster's best player and that holding one while a young core matures is
- * a real strategy, not a mistake - so the copy here states a coincidence of diagnoses
- * and stops. It never says the trade fixes anything, and the inverse case (the deal
+ * recommendation: whether the asset(s) the package sends are the SAME asset(s) the
+ * roster's own timeline already names as its odd one out (lib/metrics/duration.js,
+ * `findTimelineBreak`, which can name a correlated pair rather than one asset since
+ * D113). That function's docstring is explicit that a named asset is very often the
+ * roster's best player and that holding one while a young core matures is a real
+ * strategy, not a mistake - so the copy here states a coincidence of diagnoses and
+ * stops. It never says the trade fixes anything, and the inverse case (the deal
  * IMPORTS the outlier, TCI falls) gets the identical register and no colour.
+ *
+ * `departingBreak`/`arrivingBreak` (lib/tradefinder/after.js) already report only the
+ * assets THIS package actually touches, which can be one of a named pair rather than
+ * both - the grammar below reads off however many that turns out to be, not off
+ * whether the underlying break happened to name one or two.
  */
 function AfterTrade({ pt }) {
   if (!pt) return null;
   const { before: b, after: a, departingBreak, arrivingBreak } = pt;
   const core = pt.coreDurationWithoutDeparting;
   const coreAfter = pt.coreDurationWithoutArriving;
+  const depPlural = departingBreak && departingBreak.assets.length > 1;
+  const arrPlural = arrivingBreak && arrivingBreak.assets.length > 1;
   const windows =
     b.window?.state === "window" && a.window?.state === "window"
       ? { b: b.window, a: a.window }
@@ -1052,10 +1095,10 @@ function AfterTrade({ pt }) {
     `plus or minus one standard deviation of ${b.dispersion.toFixed(2)} seasons. After this trade: TCI ${a.tci}, centred ` +
     `${a.rosterDuration.toFixed(1)} seasons out, band ${a.dispersion.toFixed(2)} seasons.` +
     (departingBreak
-      ? ` ${departingBreak.label}, at ${departingBreak.duration.toFixed(1)} seasons out, is the asset this roster's own timeline names as its odd one out, and this package sends him.`
+      ? ` ${namedWithSeasons(departingBreak.assets)} ${depPlural ? "are" : "is"} the asset${depPlural ? "s" : ""} this roster's own timeline names as its odd one${depPlural ? "s" : ""} out, and this package sends ${depPlural ? "them" : "him"}.`
       : "") +
     (arrivingBreak
-      ? ` ${arrivingBreak.label}, arriving at ${arrivingBreak.duration.toFixed(1)} seasons out, would become the asset the roster's timeline reads as its odd one out.`
+      ? ` ${namedWithSeasons(arrivingBreak.assets)}, arriving, would become the asset${arrPlural ? "s" : ""} the roster's timeline reads as its odd one${arrPlural ? "s" : ""} out.`
       : "");
   return (
     <>
@@ -1077,24 +1120,26 @@ function AfterTrade({ pt }) {
 
         {departingBreak && (
           <p className="mt-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
-            The piece you are sending is the one your own timeline reads as the odd
-            one out - {departingBreak.label},{" "}
-            {departingBreak.duration.toFixed(1)} seasons
+            The piece{depPlural ? "s" : ""} you are sending {depPlural ? "are" : "is"}{" "}
+            the one{depPlural ? "s" : ""} your own timeline reads as the odd
+            one{depPlural ? "s" : ""} out - {namedWithSeasons(departingBreak.assets)}
             {core != null ? ` against a core at ${core.toFixed(1)}` : ""}. That is
             a coincidence of two readings, not a verdict: the odd one out is often a
             roster&apos;s best player, and holding one while a younger core matures is
             a deliberate strategy rather than an error. What it says is that the deal
-            and the diagnosis are pointing at the same asset.
+            and the diagnosis are pointing at the same asset{depPlural ? "s" : ""}.
           </p>
         )}
         {arrivingBreak && (
           <p className="mt-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
-            This deal brings one in: {arrivingBreak.label} would become the asset
-            your timeline reads as the odd one out,{" "}
-            {arrivingBreak.duration.toFixed(1)} seasons
-            {coreAfter != null ? ` against a core at ${coreAfter.toFixed(1)}` : ""}.
-            Same register as above - buying one misaligned piece on purpose is a real
-            strategy, and this is the number it costs, not a reason to refuse.
+            This deal brings {arrPlural ? "two" : "one"} in:{" "}
+            {namedWithSeasons(arrivingBreak.assets)} would become the
+            asset{arrPlural ? "s" : ""} your timeline reads as the odd
+            one{arrPlural ? "s" : ""} out
+            {coreAfter != null ? `, against a core at ${coreAfter.toFixed(1)}` : ""}.
+            Same register as above - buying misaligned piece
+            {arrPlural ? "s" : ""} on purpose is a real strategy, and this is the
+            number {arrPlural ? "they cost" : "it costs"}, not a reason to refuse.
           </p>
         )}
 
