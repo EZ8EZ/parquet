@@ -399,7 +399,7 @@ export default async function CompareManagersPage({ searchParams }) {
               sub: "value-weighted",
             },
           },
-          ...(aFr && bFr
+          ...(aFr?.fragility != null && bFr?.fragility != null
             ? [
                 {
                   label: "Fragility",

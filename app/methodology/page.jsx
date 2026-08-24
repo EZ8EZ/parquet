@@ -1520,8 +1520,11 @@ export default async function MethodologyPage() {
           and folding pick capital in would make the most extreme teardown in
           the league read as robust, which is the opposite of true. And RFI is
           not a quality score - low fragility is not the same as good. A
-          torn-down roster with nothing to lose scores mid-pack, because there
-          is nothing left to fail.
+          torn-down roster can score low for the same reason a healthy one
+          does: nothing left on it is load-bearing enough to fail. The most
+          torn-down rosters do not score at all - below four valued assets the
+          index and its components are reading the count rather than the
+          roster, so RFI declines the figure rather than publish one.
         </p>
         <p className="mt-2 text-meta leading-relaxed text-secondary">
           Bands (resilient / balanced / brittle) are league-relative quartiles,

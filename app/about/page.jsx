@@ -10,8 +10,9 @@
  * Deliberately static: it makes no claims that need live data, so it should load
  * instantly and identically for a visitor whose league hasn't even been fetched yet.
  * The honesty caveats are the pitch, not the fine print - "a torn-down roster scores
- * mid-pack because there is nothing left to fail" earns more trust than any
- * confident number would (see DECISIONS D19/D23/D24 for the record behind each one).
+ * low because there is nothing left to fail, and the most torn-down rosters do not
+ * score at all" earns more trust than any confident number would (see DECISIONS
+ * D19/D23/D24/D113 for the record behind each one).
  */
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
@@ -152,11 +153,12 @@ export default function AboutPage() {
             What it deliberately does not measure:
           </span>{" "}
           quality. Low fragility is not the same as good. A torn-down roster
-          with nothing to lose scores mid-pack, because there is nothing left to
-          fail. Uniformly weak is robustly weak, and the index says so rather
-          than pretending otherwise. Picks are excluded too: a future first
-          cannot fill a lineup slot tonight, so it cannot make this season less
-          fragile.
+          can score low for the same reason a healthy one does: nothing left
+          on it is load-bearing enough to fail. The most torn-down rosters do
+          not score at all - too little left on them to read anything from,
+          so the index declines the figure rather than publish one. Picks are
+          excluded too: a future first cannot fill a lineup slot tonight, so
+          it cannot make this season less fragile.
         </p>
       </Card>
 
