@@ -353,7 +353,11 @@ export default async function TradeFinderPage({ searchParams }) {
                 them{" "}
                 <span className="font-semibold text-ink">{theirTl.tci}</span>{" "}
                 TCI · {theirTl.posture}
-                {theirFr && (
+                {// `theirFr` is now always an object (leagueFragility answers for
+                // every roster), so the guard has to be on the number, not the
+                // object - `Math.round(null)` is 0, which would have printed the
+                // exact fabricated-zero this app refuses to make elsewhere.
+                theirFr?.fragility != null && (
                   <>
                     {" "}
                     ·{" "}
@@ -367,7 +371,7 @@ export default async function TradeFinderPage({ searchParams }) {
               <span>
                 you <span className="font-semibold text-ink">{myTl.tci}</span>{" "}
                 TCI · {myTl.posture}
-                {myFr && (
+                {myFr?.fragility != null && (
                   <>
                     {" "}
                     ·{" "}

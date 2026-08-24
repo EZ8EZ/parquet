@@ -40,8 +40,10 @@ export const METRIC_GLOSS = {
       "him? Built by deleting each player and re-solving the best legal lineup " +
       "from who is left, plus how concentrated the value is and how much sits in " +
       "bodies that miss games. Low is not the same as good: a torn-down roster " +
-      "with nothing to lose scores mid-pack, because there is nothing left to " +
-      "fail. Picks are excluded - a future first cannot fill a lineup slot tonight.",
+      "can score low for the same reason a healthy one does, nothing left on it " +
+      "is load-bearing enough to fail - and the most torn-down rosters do not " +
+      "score at all, because there is too little left to read anything from. " +
+      "Picks are excluded - a future first cannot fill a lineup slot tonight.",
   },
 };
 /**

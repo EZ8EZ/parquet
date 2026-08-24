@@ -7258,3 +7258,162 @@ fixture corpus with a throwaway Playwright script (deleted after) - the
 panel stays pinned through all six steps, the active row's accent tracks
 scroll position, un-pins itself once the appendix scrolls past, and prints
 zero console errors in either theme.
+## D113. RFI HAD THE mirror-IMAGE OF D102's BUG, UNTOUCHED - a zero-asset roster read as the sturdiest team in the league, and 1-3 assets read as nearly the worst, with the ordering backwards both ways
+
+**What this is.** D102 fixed a zero-asset roster fabricating TCI's worst posture
+(`straddling`). RFI had the identical failure on its own axis, never fixed: a zero-
+valued-asset roster returned `fragility: 0, band: "resilient"` - the sturdiest roster in
+the league, fabricated for a roster this app cannot read at all. Paired with a second,
+previously unrecorded bug - `looScore` and `concentrationScore` both saturate at their
+ceiling for any roster holding `LOO_TOP_K` (3) or fewer valued assets, *regardless of
+composition* - the two bugs together put the ordering backwards in both directions: a
+0-asset roster read as the safest team in the league (0, resilient) while a 1-3-asset
+roster read as nearly the worst (raw 80, brittle), and neither number meant anything at
+that sample size.
+
+### The zero-asset bug, fixed the way D95/D102 already established
+`buildProfile`'s zero-asset branch (`lib/metrics/fragility.js`) now returns a `NO_RECORD`
+refusal from the closed register (`lib/refusal.js`) instead of a fabricated 0/resilient,
+mirroring D102's fix rather than inventing a fourth "unread" sentinel string the way TCI
+did. The difference from TCI's fix is deliberate, not an oversight: TCI's zero-asset case
+kept `tci: 0` as a real, floor-consistent number and only changed the *posture word*,
+because 0 is the honest bottom of TCI's own scale. RFI's old `fragility: 0` was not a
+floor - paired with `band: "resilient"` it read as a *positive claim* ("sturdiest roster
+in the league"), which is the opposite of what a roster the app cannot read at all is
+entitled to claim. So RFI refuses the number outright rather than keeping a floor value.
+
+### The low-n bug, measured before a threshold was chosen
+Measured directly against the real fixture league, not asserted: every one of its
+fourteen rosters, stripped to its own top 1, 2 or 3 assets by value - whichever three,
+in whatever combination, including a synthetic one-dominant-asset-plus-three-negligible
+case - reads `topKDamageShare` exactly `1.000` and `concentrationScore` exactly `100`.
+Proven, not just observed: even the most *even* possible 2-or-3-asset split still clears
+`CONCENTRATION_REF` (a reference calibrated for this league's real 15-to-32-asset
+rosters), and `topKDamageShare` is exactly 1.0 by construction whenever every asset on a
+roster is also every asset in its own top-`LOO_TOP_K` - there is no roster left outside
+the "top three" to compare it to. Between them those two components are 0.8 of the
+index's weight, so `raw` has a mechanical floor of 80 at three assets or fewer no matter
+who is on the roster. It is not flat at *exactly* 80 in every case - the remaining 0.2
+(exposure) is real signal and does move when the surviving 1-3 assets happen to carry
+age or injury risk, and two of the fourteen fixture rosters read 85-88 rather than 80 for
+exactly that reason - but 80% of the number's weight cannot tell any of these rosters
+apart at this sample size, which is the property that made this a bug and not a reading.
+
+`MIN_ASSETS_FOR_FRAGILITY = LOO_TOP_K + 1` (4) is the floor: a genuine fourth asset
+outside the top three exists at that point, and the number starts moving with
+composition again (measured spread 66.6-84.1 raw across the fourteen rosters' own
+top-4). It is not a promise of a well-calibrated number at n=4 - the same synthetic
+lopsided case still reads 80.0 there too, correctly, because three-quarters of it really
+is negligible - only a floor below which the number is provably reading the count and
+not the roster. Checked against the real league before committing: every one of its
+fourteen rosters carries 16 valued assets, so this floor changes nothing observable on
+the live product today. Latent, the same status D102 recorded for TCI's mirror bug.
+
+Below the floor, `refusedProfile` returns `INSUFFICIENT_SAMPLE` citing the real n against
+the real floor. Not every field goes null: `startableValue`, `playerValue` and
+`depthBeyondStarters` are sums and a solved lineup, true at any n including zero, so they
+stay real numbers; what is null is exactly the set this file's own measurement showed is
+an artefact below the floor - the index, its three components, the shares and HHI
+underneath them, the percentile and band, and the single point of failure (the same
+"top three is the whole roster" problem, one player wide).
+
+### The ladder had to be re-fenced, or the fix would have corrupted every other roster's band
+`leagueFragility` builds a `fragilityLadder` from every roster's rounded raw score to
+decide percentile and band. A refused roster's raw score is still computed internally
+(cheap, and a useful sort key) but never joins that ladder now - if it did, its own
+mechanically-inflated number would move every OTHER roster's percentile cutoff off a data
+point nobody is willing to publish. Pinned by test: splicing a 3-asset roster into the
+fixture league leaves the other thirteen rosters' bands and fragility numbers byte-
+identical to the un-spliced league. The final sort also had to stop using `0` or `-1` as
+a refused roster's fallback key - either one sorts it to an end of the list that implies a
+claim ("safest" or "most fragile") the roster is not entitled to; refused rosters now sort
+strictly after every readable one regardless of their own internal number.
+
+### Every consumer found and checked, not just the two functions that compute the number
+- `lib/metrics/quadrant.js` (`buildQuadrantView`): a refused roster is dropped from the
+  board's `points`/median/quadrant the same way an unscored roster already was ("drops
+  rosters the fragility pass did not score rather than plotting them at zero" - an
+  existing, tested rule this just had to be extended to cover). Including it would have
+  corrupted `fragilityMid`'s sort (comparing against `null`) for every other roster on the
+  chart, and there is no coordinate to plot it at that would not be a fabrication.
+- `app/league/page.jsx`'s power ranking is a list, not a chart, and joins against the raw
+  (unfiltered) fragility pass instead, printing the refusal's code in the RFI slot -
+  mirroring exactly how the same row already prints a refused *window's* code rather than
+  leaving the cell blank.
+- `app/recap/page.jsx`'s fragility tile and `app/trade/finder/page.jsx`'s two RFI badges
+  both guarded on the *object* existing rather than the *number*, which used to be the
+  same check and no longer is: `Math.round(null)` is `0`, so the finder's card would have
+  silently printed a fabricated 0 for a refused side of a trade. Both now guard on
+  `.fragility != null`.
+- `app/managers/compare/page.jsx`'s fragility row already used the file's own established
+  idiom of omitting a comparison row it cannot build; that guard is extended one field
+  deeper (`aFr?.fragility != null && bFr?.fragility != null`) rather than replaced.
+- `components/TradeParts.jsx`, `app/deals/[transactionId]/page.jsx`,
+  `app/roster/page.jsx`, `components/SelectedRoster.jsx`, `components/PowerRanking.jsx`
+  and `components/CoherenceFragilityQuadrant.jsx` needed no change at all, checked rather
+  than assumed: each already guards on `.fragility != null` / `.singlePointOfFailure`
+  being present, or is fed exclusively from a source (`board.points`) that the
+  `quadrant.js` fix above already keeps refusal-free.
+- `lib/superlatives/index.js`'s "House of Cards" award already treats a null score as
+  disqualifying (`score == null` is filtered before ranking), so the only change there is
+  the subtitle copy, below.
+
+### The digest marker needed its own sentinel, or a visit could report a fabricated swing
+`lib/digest/index.js` encodes a compact per-roster snapshot into a cookie to describe
+"what moved since your last visit." It fell back to `?? 0` for a roster missing from the
+fragility pass - which, after this fix, now also catches a roster RFI legitimately
+refuses to score, and would have printed "fragility moved from 48 to 0, -48" the next
+time that manager visited: the exact fabricated swing this app refuses to state anywhere
+else. `UNREAD_INDEX` (-1) is a new sentinel in the marker codec, distinct from every real
+clamped index (0..100); `currentMetrics` emits it for a refused roster, the codec's
+encode/decode round-trips it losslessly, and the move-detection loop skips a metric
+whenever either endpoint is the sentinel - the identical treatment already given to "a
+roster with no baseline has not moved, it has appeared." TCI never needs this (D102's fix
+keeps `tci: 0` as a real number for its own zero-asset case), so the sentinel only ever
+appears in the fragility slot on real data, but the codec is shared and is defined once.
+
+### The methodology copy claim, and five other copies of the identical false claim found alongside it
+The assigned bug: `app/methodology/page.jsx` claimed "a torn-down roster with nothing to
+lose scores mid-pack." Measured, this was false under both bugs - a fully torn-down
+roster (0 assets) scored 0/resilient, not mid-pack, and a nearly-torn-down one (1-3
+assets) scored 80/brittle, also not mid-pack. Grepping for the same phrase found it
+copied, with small variations, into five more places that all needed the same correction:
+`app/about/page.jsx` (twice - a docstring and the visible copy), `components/
+MetricGloss.jsx`'s in-app RFI glossary, `lib/superlatives/index.js`'s "House of Cards"
+subtitle, and `lib/metrics/quadrant.js`'s own module docstring. Each now says a torn-down
+roster *can* score low for the same reason a healthy one does (nothing load-bearing
+enough to fail), and that the *most* torn-down rosters do not score at all - true under
+the fix, and the second half of that sentence is the part none of the six copies had ever
+said, because it was never true until this round.
+
+### What was rejected
+**A `NO_RECORD`-style bare-zero floor for RFI, mirroring TCI's `tci: 0` exactly.** TCI's
+0 is honestly the bottom of its own scale; RFI's 0 was never a floor, it was the "least
+fragile" end of a scale that reads *positively*, so pairing it with `resilient` asserted
+a good roster rather than an unread one. Rejected on that asymmetry, not out of a desire
+to be different from D102 for its own sake.
+
+**Printing the mechanically-inflated raw score as the refusal's `withheld` figure**,
+the way `windowOf`'s `SPLIT_ROSTER` case prints its centroid beside its own disproof.
+Rejected because that pattern is for a real, computable figure being declined on
+principle (the centroid of a genuine disagreement); RFI's raw-80 at n≤3 is not a
+principled decline of a real figure, it is the literal artefact under investigation, and
+printing "80, and is not published" would read as though 80 were the honest number
+withheld for policy rather than a number with zero explanatory content at that count.
+
+**A fifth quadrant / colour treatment on the coherence-fragility board for a refused
+roster**, rather than dropping it from the plotted points entirely. Rejected because the
+board already had the right answer for "the fragility pass did not score this roster" -
+drop it - and a refused roster is exactly that case; inventing a visual treatment for it
+would have been a second, inconsistent answer to a question this board had already
+settled.
+
+### Gate
+`pnpm lint` clean. `pnpm test`: 1,392/1,392 (1,380 on this branch's base + 12 new: 9 in
+`fragility.test.js`, 3 in `digest.test.js`). `rm -rf .next && pnpm build` clean. `pnpm e2e`
+(`E2E_PORT=3601`, to avoid colliding with another concurrent worktree's dev server on the
+default port): 81/81. This branch is based on the true `origin/main` tip at the time this
+worktree was cut (`7fed6c9`, D103); `origin/main` has since moved (through at least D112,
+including an unrelated refusal-register copy change, D104, that renames what
+`refusalShort`/`refusalSentence` print but not their contract) and this D-number is
+chosen to not collide with that tip rather than with this file's own local copy of it.

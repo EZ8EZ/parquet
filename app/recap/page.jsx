@@ -13,6 +13,7 @@ import { ordinal } from "@/lib/derive/describe";
 import { loadSeasonRecap } from "@/lib/recap";
 import { notableWaiverLabel } from "@/lib/ledger";
 import { fragilityTone } from "@/lib/metrics/fragility";
+import { refusalShort } from "@/lib/refusal";
 import {
   EmptyState,
   PageHeader,
@@ -355,20 +356,31 @@ export default async function RecapPage() {
             fragility
           </div>
           <div className="mt-0.5 figure text-xl font-semibold text-ink">
-            {fragilityToday ? fragilityToday.fragility.toFixed(0) : "-"}
+            {fragilityToday
+              ? fragilityToday.fragility != null
+                ? fragilityToday.fragility.toFixed(0)
+                : // Too little on this roster to score, not a fragility of zero -
+                  // the bare code, `refusalShort`'s own use case for a cell with no
+                  // room for a sentence.
+                  refusalShort(fragilityToday.refusal)
+              : "-"}
           </div>
           <div className="mt-0.5 text-meta leading-snug text-muted">
             {fragilityToday ? (
-              // Posture-conditioned: brittle is an alarm on a roster playing for this
-              // season and a plain description on one that has already sold (D23).
-              <Tag
-                tone={fragilityTone(
-                  fragilityToday.band,
-                  timelineToday?.posture,
-                )}
-              >
-                {fragilityToday.band}
-              </Tag>
+              fragilityToday.fragility != null ? (
+                // Posture-conditioned: brittle is an alarm on a roster playing for this
+                // season and a plain description on one that has already sold (D23).
+                <Tag
+                  tone={fragilityTone(
+                    fragilityToday.band,
+                    timelineToday?.posture,
+                  )}
+                >
+                  {fragilityToday.band}
+                </Tag>
+              ) : (
+                "no reading"
+              )
             ) : (
               "no roster data"
             )}

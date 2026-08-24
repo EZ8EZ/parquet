@@ -12,7 +12,7 @@ import {
 } from "@/lib/metrics/window";
 import { leagueFragility } from "@/lib/metrics/fragility";
 import { QUADRANTS, buildQuadrantView } from "@/lib/metrics/quadrant";
-import { refusal, refusalSentence } from "@/lib/refusal";
+import { refusal, refusalSentence, refusalShort } from "@/lib/refusal";
 import { LeagueBoard } from "@/components/LeagueBoard";
 import { LeagueSelectionProvider } from "@/components/LeagueSelection";
 import { PowerRanking } from "@/components/PowerRanking";
@@ -134,6 +134,12 @@ export default async function LeaguePage() {
     })),
   };
   const metricByRoster = new Map(board.points.map((p) => [p.rosterId, p]));
+  // The board drops a refused fragility read entirely (it has no coordinate to plot -
+  // see buildQuadrantView), but the power ranking below is a list, not a chart, and a
+  // list can still carry a row for every roster. So it joins against the RAW pass
+  // rather than the board's filtered one, the same way `windowByRoster` already does
+  // for TCI's own refused states.
+  const fragilityByRoster = new Map(fragility.map((f) => [f.rosterId, f]));
   const windowByRoster = new Map(windows.rows.map((w) => [w.rosterId, w]));
   const nameOf = (id) =>
     windowByRoster.get(id)?.teamName ??
@@ -326,6 +332,7 @@ export default async function LeaguePage() {
     const user = ownerId ? h.usersById.get(ownerId) : undefined;
     const f = form.get(r.rosterId);
     const m = metricByRoster.get(r.rosterId);
+    const frag = fragilityByRoster.get(r.rosterId);
     const w = windowByRoster.get(r.rosterId);
     return {
       rosterId: r.rosterId,
@@ -349,7 +356,10 @@ export default async function LeaguePage() {
       // derivation declined to make.
       window: w ? windowShort(w) : null,
       tci: m?.tci ?? null,
-      fragility: m?.fragility ?? null,
+      // A refused fragility read prints its code the same way a refused window
+      // already does above - never the bare number's absence, which reads as a
+      // missing value rather than a stated refusal.
+      fragility: frag?.fragility ?? (frag?.refusal ? refusalShort(frag.refusal) : null),
       posture: m?.posture ?? null,
       totalValue: r.totalValue,
       extraFirsts: r.picks.extraFirsts,
