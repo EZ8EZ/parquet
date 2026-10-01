@@ -3,6 +3,8 @@
 Lessons from past tasks, newest first. Read before starting; append when done.
 
 ## 2026-10-01
+- Never name an options key `valueOf`: `{}`.valueOf is Object.prototype.valueOf and silently wins. Use `valueFn`.
+- Ranked "disagreement" lists need a relevance pool and a relative (log-ratio) sort, or the deep tail dominates.
 - Only one `next dev` can run per directory; a second refuses. Reuse the running :3000 server (it serves the working tree) and curl with -b "parquet_roster=N".
 - Turbopack refuses symlinked node_modules in hand-made worktrees; pnpm there tries to reinstall. Use ./node_modules/.bin/vitest and eslint directly, or work in the main checkout on owned files.
 - Thresholds on the value scale must be valueAtRank(N) (D116), never literals.

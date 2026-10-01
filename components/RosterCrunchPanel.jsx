@@ -14,7 +14,7 @@ import { Card, SectionHeader, Stat, Tag } from "@/components/ui";
  *
  * It measures; it does not choose (D6). "Cut candidate" means "lowest value on this
  * roster", nothing more; the engine's own header lists what it ignores (positional
- * slot fit, taxi_allow_vets, acquisition-date taxi rules, IR validity). Players with
+ * slot fit, taxi_allow_vets, acquisition-date taxi rules, validity of players already on IR). Players with
  * yearsExp 0 are treated as just drafted: listed last, labelled, and never counted as
  * likely releases - an owner may still cut one, we just do not predict it (D19).
  *
@@ -51,7 +51,9 @@ export function crunchFor(h, rosterId) {
 export function crunchIsRelevant(c) {
   return (
     c != null &&
-    (c.overBy > 0 || (c.taxiOpen > 0 && c.taxiSuggestions.length > 0))
+    (c.overBy > 0 ||
+      (c.taxiOpen > 0 && c.taxiDeadline?.passed !== true && c.taxiSuggestions.length > 0) ||
+      (c.reserveOpen > 0 && (c.irSuggestions ?? []).length > 0))
   );
 }
 
@@ -97,17 +99,32 @@ export function RosterCrunchPanel({ h, rosterId, onlyWhenRelevant = false, class
     c.overBy > 0 ? `${c.overBy} over` : c.openSpots > 0 ? `${c.openSpots} open` : "full";
 
   // One standfirst line: a count, not a command.
+  const relief = [
+    c.taxiMoves > 0 ? `${c.taxiMoves} can go to taxi` : null,
+    c.irMoves > 0 ? `${c.irMoves} to IR` : null,
+  ].filter(Boolean);
   const standfirst =
     c.overBy > 0
       ? `Sleeper will require ${plural(c.overBy, "move")} before lock` +
-        (c.taxiMoves > 0
-          ? ` - ${c.taxiMoves} can go to taxi, ${plural(c.mustCut, "release")} by count.`
+        (relief.length > 0
+          ? ` - ${relief.join(", ")}, ${plural(c.mustCut, "release")} by count.`
           : ".")
       : `${c.counts.active} of ${limit} active spots used; ${plural(c.taxiOpen, "taxi slot")} open.`;
 
-  const stash = c.taxiOpen > 0 ? c.taxiSuggestions.slice(0, Math.max(c.taxiOpen, 2)) : [];
+  // Taxi deadline, as a fact: closed (no taxi moves counted), or when it closes.
+  const deadline = c.taxiDeadline ?? { week: null, passed: false };
+  const deadlineNote =
+    deadline.week == null
+      ? null
+      : deadline.passed === true
+        ? `Taxi moves closed after week ${deadline.week}; none are counted.`
+        : `Taxi moves close after week ${deadline.week}.`;
+
+  const irList = c.reserveOpen > 0 ? (c.irSuggestions ?? []).slice(0, Math.max(c.reserveOpen, 2)) : [];
+
+  const stash = c.taxiOpen > 0 && deadline.passed !== true ? c.taxiSuggestions.slice(0, Math.max(c.taxiOpen, 2)) : [];
   const unprotected = c.cutCandidates.filter(
-    (p) => !p.protected && !p.reasonFlags.includes("taxiStash"),
+    (p) => !p.protected && !p.reasonFlags.includes("taxiStash") && !p.reasonFlags.includes("irStash"),
   );
   const cuts = unprotected.slice(0, Math.max(c.mustCut + 2, 3));
   const rookies = c.cutCandidates.filter((p) => p.protected).slice(0, 3);
@@ -133,6 +150,9 @@ export function RosterCrunchPanel({ h, rosterId, onlyWhenRelevant = false, class
           sub={`${c.taxiOpen} open`}
         />
       </div>
+      {deadlineNote && (
+        <p className="mt-1.5 text-meta leading-snug text-faint">{deadlineNote}</p>
+      )}
 
       {stash.length > 0 && (
         <>
@@ -142,6 +162,19 @@ export function RosterCrunchPanel({ h, rosterId, onlyWhenRelevant = false, class
               <NameRow key={p.playerId} name={p.name} value={p.value}>
                 {p.reasonFlags.includes("rookie") && <Tag>just drafted</Tag>}
                 {p.reasonFlags.includes("injured") && <Tag tone="warn">injured</Tag>}
+              </NameRow>
+            ))}
+          </ul>
+        </>
+      )}
+
+      {irList.length > 0 && (
+        <>
+          <SectionHeader title="IR-eligible, with an open IR slot" />
+          <ul className="divide-y divide-border">
+            {irList.map((p) => (
+              <NameRow key={p.playerId} name={p.name} value={p.value}>
+                <Tag tone="warn">{h.players?.get?.(p.playerId)?.injuryStatus ?? "injured"}</Tag>
               </NameRow>
             ))}
           </ul>
@@ -186,7 +219,7 @@ export function RosterCrunchPanel({ h, rosterId, onlyWhenRelevant = false, class
             </p>
           )}
           <p className="mt-1.5 text-meta leading-snug text-faint">
-            Each over-limit roster&apos;s lowest-value players after taxi, by count -
+            Each over-limit roster&apos;s lowest-value players after taxi and IR, by count -
             not a report of what any owner will do. Just-drafted rookies are never
             counted.
           </p>

@@ -19,6 +19,8 @@ import { Onward } from "@/components/Onward";
 import { DigestBeacon } from "@/components/DigestBeacon";
 import { Wordmark } from "@/components/Brand";
 import { RosterCrunchPanel } from "@/components/RosterCrunchPanel";
+import { ActionQueue } from "@/components/ActionQueue";
+import { actionQueue } from "@/lib/actions";
 import {
   Card,
   Tag,
@@ -71,6 +73,8 @@ export default async function HomePage() {
   const form = (await currentFormByRoster(h)).get(p.rosterId);
   const digest = await loadDigest(h);
   const { streaks } = liveStreaks(h, p.rosterId);
+  // At most three decisions, in season-phase priority (lib/actions).
+  const actions = actionQueue(h, p.rosterId, principals);
   const holdYears =
     p.avgHoldingDays != null ? (p.avgHoldingDays / 365).toFixed(1) : null;
   const partners = p.tradePartners.slice(0, 3);
@@ -177,6 +181,10 @@ export default async function HomePage() {
           </span>
         </Link>
       </section>
+
+      {/* THE ACTION QUEUE: what to decide, before what you did. Counts and the game
+            plan's own move text only; renders nothing when the queue is empty. */}
+      <ActionQueue items={actions} className="mb-3" />
 
       {/* Before tip-off: renders only when this roster is over the active limit or
             has an open taxi slot with a stash candidate (see RosterCrunchPanel). */}

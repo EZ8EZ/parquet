@@ -5,7 +5,6 @@ One row per task. Tokens are the subagent totals the harness reported at complet
 | date | agent | model | task | tokens | wall time | outcome |
 |---|---|---|---|---|---|---|
 | 2026-10-01 | postdoc-market-analyst | sonnet | Market anchor study Q1-Q5 + red-team follow-ups | 306,470 | ~18 min | Changed the shipped design (blend w=0.45, age exponent 0.63). High value. |
-| 2026-10-01 | postdoc-rookie-scout | sonnet | NBA draft + college dataset 2020-2026, rookie prior study | (running at handoff) | - | Not yet folded in. |
 | 2026-10-01 | phd-value-curve | opus | Value-vs-rank curve on surplus over replacement | 104,622 | 3.5 min | Shipped as D117. High value. |
 | 2026-10-01 | phd-pick-curve | opus | Rookie pick curve, bootstrap by class | 109,769 | 3.3 min | Shipped (refit by lead on model scale). |
 | 2026-10-01 | fullstack-engineer | opus | Post-draft pick fix D115 (worktree) | 130,835 | 8.2 min | Merged. |
@@ -22,6 +21,11 @@ One row per task. Tokens are the subagent totals the harness reported at complet
 | 2026-10-01 | docs-recorder | opus | Team definitions, TEAM.md, dashboard | 150,314 | 9.7 min | Merged. |
 | 2026-10-01 | docs-recorder | sonnet | Dashboard statuses + TEAM.md threads | 118,643 | 2.9 min | Merged. |
 | 2026-10-01 | scout | sonnet | 5 parallel codebase maps | 430,317 total (78-91k each) | ~30-50 s each | Cheap, fast, enough to plan. |
+| 2026-10-01 | fullstack-engineer | opus | Home action queue (lib/actions + ActionQueue) | 114,751 | 3.2 min | Merged. |
+| 2026-10-01 | fullstack-engineer | opus | Model vs market on /values (lib/marketgap) | 102,731 | 1.9 min | Merged after lead fixed deep-tail sort (relevant pool + log ratio). |
+| 2026-10-01 | fullstack-engineer | opus | Crunch: taxi deadline + IR relief | 100,882 | 1.8 min | Merged. |
+| 2026-10-01 | fullstack-engineer | opus | Trade evaluator measured consolidation read | 93,088 | 1.6 min | Merged. |
+| 2026-10-01 | postdoc-rookie-scout | sonnet | NBA draft + college dataset, rookie prior study | 253,189 | 33 min | Shipped as D118. College stats measured to add nothing; NBA pick strongest signal. |
 
 ## Read-outs (2026-10-01)
 - Opus implementation tasks with a tight brief cost ~85-130k tokens and 1-8 minutes each; the brief quality, not the model, decided whether they merged cleanly.

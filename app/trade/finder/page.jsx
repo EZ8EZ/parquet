@@ -1011,8 +1011,21 @@ function PackageDetail({ pkg, hasRanking }) {
           text={e.keyAssumption}
           accent
         />
-        {e.consolidationNote && (
-          <Read label="Consolidation" text={e.consolidationNote} />
+        {e.consolidation ? (
+          <Read
+            label="Consolidation"
+            text={e.consolidation.note.split(" (D117).")[0] + " (D117)."}
+            numbers={[
+              `${e.consolidation.side === "you" ? "You get" : "They get"} top: ${e.consolidation.bestAsset.name} ${Math.round(e.consolidation.bestAsset.value).toLocaleString()}`,
+              `In ${e.consolidation.countIn} · ${Math.round(e.consolidation.sumGet).toLocaleString()}`,
+              `Out ${e.consolidation.countOut} · ${Math.round(e.consolidation.sumGive).toLocaleString()}`,
+              `Top share of incoming ${Math.round(e.consolidation.topShareGet * 100)}%`,
+            ]}
+          />
+        ) : (
+          e.consolidationNote && (
+            <Read label="Consolidation" text={e.consolidationNote} />
+          )
         )}
         <Read label="Against your own record" text={e.historyCheck} />
         {pkg.fragility && (
@@ -1200,7 +1213,7 @@ function Bullets({ lines }) {
     </ul>
   );
 }
-function Read({ label, text, accent }) {
+function Read({ label, text, accent, numbers }) {
   return (
     <div
       className={
@@ -1215,6 +1228,11 @@ function Read({ label, text, accent }) {
         {label}
       </div>
       <p className="mt-0.5 text-note leading-snug text-muted">{text}</p>
+      {numbers?.length > 0 && (
+        <p className="mt-1 font-mono text-micro tabular-nums text-faint">
+          {numbers.join("  ·  ")}
+        </p>
+      )}
     </div>
   );
 }

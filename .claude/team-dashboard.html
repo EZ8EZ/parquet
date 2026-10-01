@@ -1,0 +1,675 @@
+<title>Parquet Front Office</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Barlow:wght@400;500;600&family=Fraunces:ital,opsz,wght@0,9..144,500;0,9..144,700;0,9..144,900;1,9..144,500&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: an arena game-program roster. Cover band of parquet planks, a stat line, then the roster grouped by department, then the day's box score. */
+:root{
+  --bg:#EEF1F3; --surface:#FFFFFF; --surface-2:#E3E8ED; --ink:#142131; --muted:#4D5B6B; --line:#CBD3DB;
+  --accent:#8A6200; --accent-soft:#F3E6C4; --court:#1F4E8C;
+  --wood-a:#C88A4E; --wood-b:#A96F3B; --wood-c:#D9A066;
+  --oncall:#1C7547; --oncall-soft:#D7EEDF; --benched:#66717D; --disc:#DCE3EA;
+  /* character inks, same in both themes */
+  --skin1:#F2C9A5; --skin2:#B97B52; --skin3:#E2B486; --skin4:#7A4A2E;
+  --hair1:#231C1A; --hair2:#6B4426; --hair3:#B9BDC2; --hair4:#E7D08C;
+  --fink:#1D1B22; --gear:#2E3440; --paper:#FBFAF6; --chalk:#F1F1EA; --board:#2F4A3F;
+  --screen:#1B2A3A; --lens:#CFE6F5; --metal:#B9C2CC; --redc:#C8372D; --tape:#F2C94C;
+  --c-rhea:#D4A23A; --c-ty:#2E7D57; --c-juno:#2A8C82; --c-ada:#2D5DA8; --c-otis:#D9692B;
+  --c-mo:#4A5868; --c-sasha:#B4532A; --c-vera:#FBFAF6; --c-benny:#A33A64; --c-pearl:#7A4E2D; --c-kit:#6B7A3A;
+  --f-display:"Fraunces", Georgia, "Times New Roman", serif;
+  --f-label:"Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  --f-body:"Barlow", "Helvetica Neue", Arial, sans-serif;
+  --f-mono:"JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0E1319; --surface:#161E27; --surface-2:#1F2934; --ink:#EDE7DA; --muted:#9DA8B4; --line:#2C3844;
+    --accent:#E3B54C; --accent-soft:#3A3018; --court:#7FAAE8;
+    --wood-a:#8E5E33; --wood-b:#6E4626; --wood-c:#A26E3E;
+    --oncall:#56C68E; --oncall-soft:#173326; --benched:#8C97A3; --disc:#25313D;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0E1319; --surface:#161E27; --surface-2:#1F2934; --ink:#EDE7DA; --muted:#9DA8B4; --line:#2C3844;
+  --accent:#E3B54C; --accent-soft:#3A3018; --court:#7FAAE8;
+  --wood-a:#8E5E33; --wood-b:#6E4626; --wood-c:#A26E3E;
+  --oncall:#56C68E; --oncall-soft:#173326; --benched:#8C97A3; --disc:#25313D;
+  color-scheme:dark;
+}
+
+*{box-sizing:border-box}
+body{background:var(--bg); color:var(--ink); font-family:var(--f-body); font-size:16px; line-height:1.5; margin:0}
+.wrap{max-width:1180px; margin:0 auto; padding-inline:16px; padding-block:0 56px}
+@media (min-width:720px){ .wrap{padding-inline:32px} }
+
+/* cover */
+.floor{height:30px; display:grid; grid-template-rows:1fr 1fr; overflow:hidden}
+.floor span{display:block; background:repeating-linear-gradient(90deg,var(--wood-a) 0 54px,var(--wood-b) 54px 56px,var(--wood-c) 56px 110px,var(--wood-b) 110px 112px)}
+.floor span + span{background-position:28px 0; border-top:2px solid var(--wood-b)}
+.baseline{height:4px; background:var(--accent)}
+header.cover{display:grid; gap:20px; padding-block:28px 8px}
+.eyebrow{font-family:var(--f-label); font-weight:700; text-transform:uppercase; letter-spacing:.14em; font-size:14px; color:var(--accent); margin:0}
+h1{font-family:var(--f-display); font-weight:900; font-size:clamp(40px,9vw,76px); line-height:.95; letter-spacing:-.02em; margin:0; text-wrap:balance; font-variation-settings:"opsz" 144}
+h1 em{font-style:italic; font-weight:500; color:var(--court)}
+.lede{max-width:62ch; color:var(--muted); font-size:17px; margin:0}
+
+.statline{display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); border-top:2px solid var(--ink); border-bottom:1px solid var(--line); margin:0}
+@media (min-width:720px){ .statline{grid-template-columns:repeat(4,minmax(0,1fr))} }
+.statline div{padding:12px 12px 14px 0; min-width:0}
+.statline div + div{padding-left:12px; border-left:1px solid var(--line)}
+@media (max-width:719px){ .statline div:nth-child(3){padding-left:0; border-left:0} .statline div:nth-child(n+3){border-top:1px solid var(--line)} }
+.statline dt{font-family:var(--f-label); font-weight:600; text-transform:uppercase; letter-spacing:.1em; font-size:13px; color:var(--muted)}
+.statline dd{margin:2px 0 0; font-family:var(--f-mono); font-weight:600; font-size:clamp(17px,3.2vw,24px); font-variant-numeric:tabular-nums; overflow-wrap:anywhere}
+.statline dd small{font-weight:400; font-size:13px; color:var(--muted)}
+
+/* departments */
+section.dept{margin-top:40px}
+.dept-head{display:flex; flex-wrap:wrap; align-items:baseline; gap:6px 14px; border-bottom:1px solid var(--line); padding-bottom:8px; margin-bottom:16px}
+h2{font-family:var(--f-label); font-weight:700; text-transform:uppercase; letter-spacing:.12em; font-size:20px; margin:0}
+.dept-head p{margin:0; color:var(--muted); font-size:15px}
+.grid{display:grid; gap:16px; grid-template-columns:repeat(auto-fill,minmax(min(100%,330px),1fr))}
+
+.card{background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:16px; display:grid; gap:14px; align-content:start; min-width:0; transition:transform .18s ease, border-color .18s ease}
+.card:hover{transform:translateY(-2px); border-color:var(--accent)}
+.card:hover .av{transform:rotate(-3deg)}
+.top{display:grid; grid-template-columns:92px minmax(0,1fr); gap:14px; align-items:center}
+.av{width:92px; height:92px; display:block; transition:transform .25s ease}
+.id{min-width:0; display:grid; gap:4px}
+.no{font-family:var(--f-label); font-weight:700; font-size:14px; letter-spacing:.08em; color:var(--muted)}
+.no b{font-size:20px; color:var(--ink); margin-right:2px}
+h3{font-family:var(--f-display); font-weight:700; font-size:21px; line-height:1.15; margin:0; text-wrap:balance; font-variation-settings:"opsz" 36}
+h3 .nick{display:block; font-style:italic; font-weight:500; font-size:16px; color:var(--court)}
+.role{margin:0; font-size:14.5px; color:var(--muted); line-height:1.35}
+.chips{display:flex; flex-wrap:wrap; gap:6px}
+.badge,.status{font-family:var(--f-mono); font-size:12px; font-weight:600; letter-spacing:.04em; padding:3px 8px; border-radius:3px; border:1px solid var(--line); color:var(--ink); background:var(--surface-2); text-transform:uppercase}
+.badge.opus{background:var(--accent-soft); border-color:var(--accent); color:var(--ink)}
+.status{display:inline-flex; align-items:center; gap:6px}
+.status::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--benched)}
+.status.on{background:var(--oncall-soft); border-color:var(--oncall); color:var(--ink)}
+.status.on::before{background:var(--oncall)}
+.status.off{border-style:dashed; color:var(--muted); background:transparent}
+.invoke{font-family:var(--f-mono); font-size:12px; color:var(--muted); overflow-wrap:anywhere}
+
+.quals{list-style:none; margin:0; padding:0; display:grid; gap:4px}
+.quals li{font-size:15px; padding-left:16px; position:relative}
+.quals li::before{content:""; position:absolute; left:0; top:.62em; width:8px; height:2px; background:var(--accent)}
+.kv{display:grid; gap:2px; margin:0}
+.kv dt{font-family:var(--f-label); font-weight:600; text-transform:uppercase; letter-spacing:.1em; font-size:12.5px; color:var(--muted)}
+.kv dd{margin:0; font-size:15px; overflow-wrap:anywhere}
+.today{border-top:1px dashed var(--line); padding-top:10px}
+.today dd{font-weight:500}
+.off-today dd{color:var(--muted); font-weight:400}
+code,.m{font-family:var(--f-mono); font-size:.88em}
+
+/* box score */
+.box{display:grid; gap:16px; grid-template-columns:minmax(0,1fr)}
+@media (min-width:900px){ .box{grid-template-columns:minmax(0,1.4fr) minmax(0,1fr)} }
+.ledger{background:var(--surface); border:1px solid var(--line); border-radius:6px; padding:4px 16px; margin:0; list-style:none}
+.ledger li{display:grid; grid-template-columns:72px minmax(0,1fr); gap:12px; padding:12px 0; border-bottom:1px solid var(--line)}
+.ledger li:last-child{border-bottom:0}
+.tag{font-family:var(--f-mono); font-weight:600; font-size:13px; color:var(--accent); padding-top:2px}
+.ledger p{margin:0; font-size:15.5px}
+.ledger .sub{color:var(--muted); font-size:14px; margin-top:2px}
+.formula{display:block; margin-top:6px; padding:8px 10px; background:var(--surface-2); border-radius:4px; overflow-x:auto; white-space:nowrap; font-family:var(--f-mono); font-size:13.5px}
+.side{display:grid; gap:16px; align-content:start}
+.panel{border:1px solid var(--line); border-radius:6px; padding:14px 16px; background:var(--surface)}
+.panel h4{font-family:var(--f-label); text-transform:uppercase; letter-spacing:.1em; font-size:15px; margin:0 0 8px}
+.panel ul{margin:0; padding-left:18px; display:grid; gap:4px; font-size:15px}
+.panel pre{margin:0; font-family:var(--f-mono); font-size:13px; white-space:pre-wrap; overflow-wrap:anywhere; color:var(--ink)}
+footer{margin-top:40px; color:var(--muted); font-size:14px; border-top:1px solid var(--line); padding-top:14px}
+
+/* svg character classes: every shape gets an explicit fill */
+.sk1{fill:var(--skin1)} .sk2{fill:var(--skin2)} .sk3{fill:var(--skin3)} .sk4{fill:var(--skin4)}
+.h1{fill:var(--hair1)} .h2{fill:var(--hair2)} .h3{fill:var(--hair3)} .h4{fill:var(--hair4)}
+.dsc{fill:var(--disc)} .fk{fill:var(--fink)} .gr{fill:var(--gear)} .pp{fill:var(--paper)} .ck{fill:var(--chalk)}
+.bd{fill:var(--board)} .scr{fill:var(--screen)} .ln{fill:var(--lens)} .mt{fill:var(--metal)} .rd{fill:var(--redc)}
+.tp{fill:var(--tape)} .wd{fill:var(--wood-a)} .gd{fill:var(--c-rhea)}
+.sig{fill:var(--sig)} .sigd{fill:color-mix(in srgb,var(--sig) 68%,#000)}
+.st{fill:none; stroke:var(--fink); stroke-width:2.2; stroke-linecap:round; stroke-linejoin:round}
+.stg{fill:none; stroke:var(--gear); stroke-width:3; stroke-linecap:round}
+.stc{fill:none; stroke:var(--chalk); stroke-width:2; stroke-linecap:round}
+.stp{fill:none; stroke:var(--paper); stroke-width:2; stroke-linecap:round}
+.stf{fill:none; stroke:var(--metal); stroke-width:1.4; stroke-linecap:round}
+.str{fill:none; stroke:var(--redc); stroke-width:2.4; stroke-linecap:round}
+.sts{fill:none; stroke:var(--sig); stroke-width:2.4}
+.mono-t{font-family:var(--f-mono); font-weight:600}
+
+a{color:var(--court)}
+:focus-visible{outline:3px solid var(--accent); outline-offset:2px}
+@media (prefers-reduced-motion: reduce){
+  .card,.av{transition:none}
+  .card:hover{transform:none}
+  .card:hover .av{transform:none}
+}
+</style>
+
+<div class="floor" aria-hidden="true"><span></span><span></span></div>
+<div class="baseline" aria-hidden="true"></div>
+
+<div class="wrap">
+  <header class="cover">
+    <p class="eyebrow">Official program &middot; 2026&ndash;27 dynasty season &middot; NSL Fantasy Hoops</p>
+    <h1>Parquet <em>Front Office</em></h1>
+    <p class="lede">The analytics department behind Parquet, run like a basketball front office. A chief of staff calls the timeouts, the research bench measures the market and draws the curves, the floor crew builds and checks every surface, and an official reviews it all before it ships. Every member is a standing Claude Code agent with a name, a job, and the house rules: no verdicts, nothing fabricated, every number with its n.</p>
+    <dl class="statline">
+      <div><dt>Agents on the roster</dt><dd>11 <small>1 hired today</small></dd></div>
+      <div><dt>On call today</dt><dd>11 <small>of 11</small></dd></div>
+      <div><dt>Decisions shipped today</dt><dd>D115 &middot; D116 &middot; D117 &middot; D118</dd></div>
+      <div><dt>Branch</dt><dd>main <small>merged</small></dd></div>
+    </dl>
+  </header>
+
+  <!-- FRONT OFFICE -->
+  <section class="dept" aria-labelledby="d-fo">
+    <div class="dept-head"><h2 id="d-fo">Front office</h2><p>Talks to Eric, routes the work, owns the merge.</p></div>
+    <div class="grid">
+      <article class="card" style="--sig:var(--c-rhea)">
+        <div class="top">
+          <svg class="av" viewBox="0 0 120 120" role="img" aria-label="Caricature of Rhea Calloway with a headset and clipboard">
+            <defs><clipPath id="cp-rhea"><circle cx="60" cy="60" r="58"/></clipPath></defs>
+            <circle class="dsc" cx="60" cy="60" r="58"/>
+            <g clip-path="url(#cp-rhea)">
+              <path class="sig" d="M16 122 C18 96 38 86 60 86 C82 86 102 96 104 122 Z"/>
+              <path class="pp" d="M51 86 L60 101 L69 86 Z"/>
+              <rect class="sk2" x="52" y="70" width="16" height="18" rx="4"/>
+              <circle class="h1" cx="60" cy="19" r="10"/>
+              <circle class="sk2" cx="35" cy="54" r="6"/><circle class="sk2" cx="85" cy="54" r="6"/>
+              <ellipse class="sk2" cx="60" cy="51" rx="25" ry="28"/>
+              <path class="h1" d="M35 48 C34 27 47 22 60 22 C73 22 86 27 85 48 C80 37 71 33 60 33 C49 33 40 37 35 48 Z"/>
+              <circle class="fk" cx="51" cy="50" r="2.6"/><circle class="fk" cx="69" cy="50" r="2.6"/>
+              <path class="st" d="M46 43 L55 42 M65 42 L74 43"/>
+              <path class="st" d="M60 52 q-3 7 1 8"/>
+              <path class="st" d="M51 64 q9 6 18 0"/>
+              <path class="stg" d="M32 52 C32 16 88 16 88 52" style="stroke-width:4"/>
+              <rect class="gr" x="27" y="45" width="10" height="16" rx="4"/>
+              <rect class="gr" x="83" y="45" width="10" height="16" rx="4"/>
+              <path class="stg" d="M32 60 C35 70 43 71 49 68"/>
+              <circle class="gr" cx="51" cy="68" r="3.2"/>
+              <rect class="wd" x="72" y="88" width="30" height="32" rx="3"/>
+              <rect class="pp" x="76" y="95" width="22" height="24"/>
+              <rect class="gr" x="81" y="85" width="12" height="6" rx="2"/>
+              <path class="stf" d="M79 101 h16 M79 106 h16 M79 111 h10"/>
+              <path class="st" d="M88 112 l3 3 l6 -7" style="stroke:var(--c-rhea)"/>
+            </g>
+          </svg>
+          <div class="id">
+            <span class="no"><b>00</b> Chief of staff</span>
+            <h3>Rhea Calloway<span class="nick">&ldquo;Timeout&rdquo;</span></h3>
+            <div class="chips"><span class="badge opus">Opus</span><span class="status on">On call</span></div>
+          </div>
+        </div>
+        <p class="role">Owns communication with Eric, routes work to specialists, merges, reports outcomes faithfully, keeps TEAM.md current.</p>
+        <ul class="quals"><li>Calm under the shot clock</li><li>Reports what happened, not what was hoped</li><li>Routes to the right specialist</li></ul>
+        <dl class="kv"><dt>Signature move</dt><dd>The full timeout: reads TEAM.md, the DECISIONS.md tail and git log, then sends the right five back out.</dd></dl>
+        <dl class="kv today"><dt>Today&rsquo;s contribution</dt><dd>Coordinated D115&ndash;D118, ran the red-team gate before every merge, merged to main, hired a product lead.</dd></dl>
+        <span class="invoke">use the chief-of-staff agent</span>
+      </article>
+      <article class="card" style="--sig:var(--c-sasha)">
+        <div class="top">
+          <svg class="av" viewBox="0 0 120 120" role="img" aria-label="Caricature of Sasha Okafor holding a clipboard covered in user-journey arrows">
+            <defs><clipPath id="cp-sasha"><circle cx="60" cy="60" r="58"/></clipPath></defs>
+            <circle class="dsc" cx="60" cy="60" r="58"/>
+            <g clip-path="url(#cp-sasha)">
+              <path class="sig" d="M16 122 C18 96 38 86 60 86 C82 86 102 96 104 122 Z"/>
+              <path class="sigd" d="M60 86 L52 122 L68 122 Z"/>
+              <rect class="sk4" x="52" y="70" width="16" height="18" rx="4"/>
+              <circle class="sk4" cx="35" cy="54" r="6"/><circle class="sk4" cx="85" cy="54" r="6"/>
+              <ellipse class="sk4" cx="60" cy="51" rx="25" ry="28"/>
+              <path class="h1" d="M34 50 C30 22 50 16 60 18 C74 16 92 26 86 50 C84 40 78 30 60 30 C44 30 37 40 34 50 Z"/>
+              <circle class="h1" cx="40" cy="26" r="7"/><circle class="h1" cx="54" cy="18" r="7"/><circle class="h1" cx="70" cy="18" r="7"/><circle class="h1" cx="82" cy="27" r="7"/>
+              <circle class="fk" cx="51" cy="50" r="2.6"/><circle class="fk" cx="69" cy="50" r="2.6"/>
+              <path class="st" d="M46 44 L55 45 M65 45 L74 44"/>
+              <path class="st" d="M60 52 q-3 7 1 8"/>
+              <path class="st" d="M52 64 q8 4 16 -1"/>
+              <rect class="wd" x="14" y="84" width="34" height="36" rx="3"/>
+              <rect class="pp" x="18" y="91" width="26" height="28"/>
+              <rect class="gr" x="25" y="81" width="12" height="6" rx="2"/>
+              <path class="sts" d="M22 112 C26 100 32 112 36 100 L40 96"/>
+              <path class="sts" d="M36 96 L40 96 L40 100"/>
+              <circle class="sig" cx="22" cy="112" r="2.4"/>
+            </g>
+          </svg>
+          <div class="id">
+            <span class="no"><b>60</b> Product lead &middot; new hire</span>
+            <h3>Sasha Okafor<span class="nick">&ldquo;Sixth Man&rdquo;</span></h3>
+            <div class="chips"><span class="badge opus">Opus</span><span class="status on">On call</span></div>
+          </div>
+        </div>
+        <p class="role">Owns the user journey: what each page leads with, which number a manager needs today, and what they tap next.</p>
+        <ul class="quals"><li>Thinks in moments, not pages</li><li>Cuts more than adds</li><li>Every number answers &ldquo;compared to what?&rdquo;</li></ul>
+        <dl class="kv"><dt>Signature move</dt><dd>The sixth-man spark: walks in mid-game, reads the floor, and changes what the page leads with.</dd></dl>
+        <dl class="kv today"><dt>Today&rsquo;s contribution</dt><dd>Hired after the product review showed nobody owned the journey. First assignment: the Home action queue and model-vs-market lists.</dd></dl>
+        <span class="invoke">use the product-lead agent</span>
+      </article>
+    </div>
+  </section>
+
+  <!-- RESEARCH BENCH -->
+  <section class="dept" aria-labelledby="d-rb">
+    <div class="dept-head"><h2 id="d-rb">Research bench</h2><p>Two postdocs gather the data, two PhDs draw the curves.</p></div>
+    <div class="grid">
+
+      <article class="card" style="--sig:var(--c-ty)">
+        <div class="top">
+          <svg class="av" viewBox="0 0 120 120" role="img" aria-label="Caricature of Ty Marchetti with a loosened tie and a curl of ticker tape">
+            <defs><clipPath id="cp-ty"><circle cx="60" cy="60" r="58"/></clipPath></defs>
+            <circle class="dsc" cx="60" cy="60" r="58"/>
+            <g clip-path="url(#cp-ty)">
+              <path class="sig" d="M16 122 C18 96 38 86 60 86 C82 86 102 96 104 122 Z"/>
+              <path class="pp" d="M50 86 L60 98 L70 86 Z"/>
+              <path class="gd" d="M57 89 L63 89 L66 108 L60 114 L54 108 Z"/>
+              <rect class="sk1" x="52" y="70" width="16" height="18" rx="4"/>
+              <circle class="sk1" cx="35" cy="54" r="6"/><circle class="sk1" cx="85" cy="54" r="6"/>
+              <ellipse class="sk1" cx="60" cy="51" rx="25" ry="28"/>
+              <path class="h2" d="M35 46 C34 25 47 21 60 21 C74 21 87 26 85 46 L81 34 C70 30 50 30 39 34 Z"/>
+              <circle class="fk" cx="51" cy="51" r="2.6"/><circle class="fk" cx="69" cy="51" r="2.6"/>
+              <path class="st" d="M45 44 L55 45 M65 42 Q70 38 75 41"/>
+              <path class="st" d="M60 53 q-3 7 1 8"/>
+              <path class="st" d="M52 65 q6 3 15 -1"/>
+              <path class="pp" d="M4 100 C28 90 48 108 72 98 C88 91 100 98 118 90 L118 100 C102 107 90 100 74 107 C50 117 28 100 4 110 Z"/>
+              <text class="mono-t fk" x="14" y="106" font-size="7" transform="rotate(-6 14 106)">ADP 11.4</text>
+              <path class="sig" d="M58 104 l4 -6 l4 6 Z" transform="rotate(-8 62 101)"/>
+              <text class="mono-t fk" x="76" y="103" font-size="7" transform="rotate(-10 76 103)">&#961; &minus;.02</text>
+            </g>
+          </svg>
+          <div class="id">
+            <span class="no"><b>11</b> Postdoc, markets</span>
+            <h3>Dr. Ty Marchetti<span class="nick">&ldquo;Tape&rdquo;</span></h3>
+            <div class="chips"><span class="badge">Sonnet</span><span class="status on">On call</span></div>
+          </div>
+        </div>
+        <p class="role">Empirical market and anchor studies on Sleeper data: dynasty ADP from the projections endpoint, season stats.</p>
+        <ul class="quals"><li>Skeptical of every fresh signal</li><li>Reports nulls as nulls</li><li>Small, re-runnable studies</li></ul>
+        <dl class="kv"><dt>Signature move</dt><dd>The partial correlation: a new signal has to beat the market, not just move with it.</dd></dl>
+        <dl class="kv today"><dt>Today&rsquo;s contribution</dt><dd>Measured the room&rsquo;s draft order against the market: partial &rho; &minus;0.022, n=126. It adds nothing.</dd></dl>
+        <span class="invoke">use the postdoc-market-analyst agent</span>
+      </article>
+
+      <article class="card" style="--sig:var(--c-juno)">
+        <div class="top">
+          <svg class="av" viewBox="0 0 120 120" role="img" aria-label="Caricature of Juno Park in a cap with a stopwatch and tape measure">
+            <defs><clipPath id="cp-juno"><circle cx="60" cy="60" r="58"/></clipPath></defs>
+            <circle class="dsc" cx="60" cy="60" r="58"/>
+            <g clip-path="url(#cp-juno)">
+              <path class="sig" d="M16 122 C18 96 38 86 60 86 C82 86 102 96 104 122 Z"/>
+              <path class="h1" d="M80 36 C98 38 102 60 93 74 C90 60 86 48 78 44 Z"/>
+              <rect class="sk3" x="52" y="70" width="16" height="18" rx="4"/>
+              <circle class="sk3" cx="35" cy="54" r="6"/><circle class="sk3" cx="85" cy="54" r="6"/>
+              <ellipse class="sk3" cx="60" cy="51" rx="25" ry="28"/>
+              <path class="h1" d="M35 50 C34 38 38 34 44 33 L80 33 C84 36 86 42 85 50 C80 42 70 40 60 40 C50 40 40 42 35 50 Z"/>
+              <path class="sig" d="M34 38 C34 18 86 18 86 38 Z"/>
+              <rect class="sigd" x="26" y="35" width="40" height="6" rx="3"/>
+              <circle class="sigd" cx="60" cy="21" r="3"/>
+              <circle class="fk" cx="51" cy="51" r="2.6"/><circle class="fk" cx="69" cy="51" r="2.6"/>
+              <path class="st" d="M60 53 q-3 6 1 7"/>
+              <path class="st" d="M52 64 q8 5 16 0"/>
+              <path class="stp" d="M50 87 L58 101 M70 87 L62 101"/>
+              <rect class="gr" x="57" y="97" width="6" height="4" rx="1"/>
+              <circle class="pp" cx="60" cy="109" r="9"/>
+              <circle class="sts" cx="60" cy="109" r="9" style="stroke:var(--gear)"/>
+              <path class="st" d="M60 109 L60 103 M60 109 L64 111"/>
+              <rect class="tp" x="10" y="94" width="22" height="20" rx="5"/>
+              <circle class="gr" cx="21" cy="104" r="4.5"/>
+              <rect class="tp" x="31" y="108" width="17" height="5"/>
+              <path class="stf" d="M35 108 v3 M39 108 v2 M43 108 v3 M47 108 v2" style="stroke:var(--gear)"/>
+            </g>
+          </svg>
+          <div class="id">
+            <span class="no"><b>12</b> Postdoc, rookies</span>
+            <h3>Dr. Juno Park<span class="nick">&ldquo;Combine&rdquo;</span></h3>
+            <div class="chips"><span class="badge">Sonnet</span><span class="status on">On call</span></div>
+          </div>
+        </div>
+        <p class="role">Rookie prior datasets: NBA draft slot, college stats, age at draft, and mapping every prospect to a Sleeper id.</p>
+        <ul class="quals"><li>Auditable, deterministic joins</li><li>Match rate on every dataset</li><li>Missing stays missing</li></ul>
+        <dl class="kv"><dt>Signature move</dt><dd>The combine: every prospect measured the same way, every column sourced and dated.</dd></dl>
+        <dl class="kv today"><dt>Today&rsquo;s contribution</dt><dd>Built the 2020&ndash;2026 NBA draft and college dataset, mapped to Sleeper ids, for the rookie prior study.</dd></dl>
+        <span class="invoke">use the postdoc-rookie-scout agent</span>
+      </article>
+
+      <article class="card" style="--sig:var(--c-ada)">
+        <div class="top">
+          <svg class="av" viewBox="0 0 120 120" role="img" aria-label="Caricature of Ada Whitlow with glasses, chalk-dusted sleeves and a chalkboard curve">
+            <defs><clipPath id="cp-ada"><circle cx="60" cy="60" r="58"/></clipPath></defs>
+            <circle class="dsc" cx="60" cy="60" r="58"/>
+            <g clip-path="url(#cp-ada)">
+              <path class="sig" d="M16 122 C18 96 38 86 60 86 C82 86 102 96 104 122 Z"/>
+              <path class="pp" d="M52 86 L60 96 L68 86 Z"/>
+              <circle class="ck" cx="26" cy="108" r="1.6"/><circle class="ck" cx="31" cy="114" r="1.3"/><circle class="ck" cx="35" cy="104" r="1.2"/>
+              <circle class="ck" cx="92" cy="110" r="1.6"/><circle class="ck" cx="87" cy="103" r="1.2"/><circle class="ck" cx="96" cy="116" r="1.4"/>
+              <rect class="sk1" x="52" y="70" width="16" height="18" rx="4"/>
+              <circle class="sk1" cx="35" cy="54" r="6"/><circle class="sk1" cx="85" cy="54" r="6"/>
+              <ellipse class="sk1" cx="60" cy="51" rx="25" ry="28"/>
+              <circle class="h3" cx="38" cy="38" r="9"/><circle class="h3" cx="46" cy="27" r="9"/><circle class="h3" cx="58" cy="23" r="10"/>
+              <circle class="h3" cx="71" cy="25" r="9"/><circle class="h3" cx="81" cy="34" r="9"/><circle class="h3" cx="85" cy="45" r="6"/><circle class="h3" cx="35" cy="47" r="6"/>
+              <circle class="ln" cx="51" cy="51" r="7" fill-opacity="0.55"/><circle class="ln" cx="69" cy="51" r="7" fill-opacity="0.55"/>
+              <circle class="stg" cx="51" cy="51" r="7" style="stroke-width:2"/><circle class="stg" cx="69" cy="51" r="7" style="stroke-width:2"/>
+              <path class="stg" d="M58 51 h4" style="stroke-width:2"/>
+              <circle class="fk" cx="51" cy="51" r="2.4"/><circle class="fk" cx="69" cy="51" r="2.4"/>
+              <path class="st" d="M60 56 q-3 6 1 7"/>
+              <path class="st" d="M52 67 q8 5 16 0"/>
+              <rect class="wd" x="4" y="78" width="48" height="36" rx="3"/>
+              <rect class="bd" x="8" y="82" width="40" height="28"/>
+              <path class="stc" d="M12 84 V106 H45" style="stroke-width:1.4"/>
+              <path class="stc" d="M14 85 C18 98 26 102 44 104"/>
+              <circle class="sk1" cx="50" cy="113" r="5"/>
+            </g>
+          </svg>
+          <div class="id">
+            <span class="no"><b>21</b> PhD, value curve</span>
+            <h3>Prof. Ada Whitlow<span class="nick">&ldquo;Arc&rdquo;</span></h3>
+            <div class="chips"><span class="badge opus">Opus</span><span class="status on">On call</span></div>
+          </div>
+        </div>
+        <p class="role">Value-vs-rank curve, surplus over replacement, rank-anchored thresholds and consolidation math.</p>
+        <ul class="quals"><li>Shows every curve at real ranks</li><li>Ties each parameter to a measurement</li><li>Patient explainer</li></ul>
+        <dl class="kv"><dt>Signature move</dt><dd>The rank table: #1, #12, #50 and #150 before and after, so a curve change reads as consequences.</dd></dl>
+        <dl class="kv today"><dt>Today&rsquo;s contribution</dt><dd>Replaced <code>exp(&minus;0.021r)</code> with the hybrid curve and rank-anchored the thresholds via <code>valueAtRank</code>.</dd></dl>
+        <span class="invoke">use the phd-value-curve agent</span>
+      </article>
+
+      <article class="card" style="--sig:var(--c-otis)">
+        <div class="top">
+          <svg class="av" viewBox="0 0 120 120" role="img" aria-label="Caricature of Otis Fennimore with a bow tie and a hopper of lottery balls">
+            <defs><clipPath id="cp-otis"><circle cx="60" cy="60" r="58"/></clipPath></defs>
+            <circle class="dsc" cx="60" cy="60" r="58"/>
+            <g clip-path="url(#cp-otis)">
+              <path class="sig" d="M16 122 C18 96 38 86 60 86 C82 86 102 96 104 122 Z"/>
+              <path class="pp" d="M50 86 L60 98 L70 86 Z"/>
+              <path class="gd" d="M50 88 L59 92 L50 97 Z M70 88 L61 92 L70 97 Z"/>
+              <circle class="gd" cx="60" cy="92" r="2.4"/>
+              <rect class="sk4" x="52" y="70" width="16" height="18" rx="4"/>
+              <circle class="sk4" cx="35" cy="54" r="6"/><circle class="sk4" cx="85" cy="54" r="6"/>
+              <ellipse class="sk4" cx="60" cy="50" rx="25" ry="28"/>
+              <ellipse class="h3" cx="37" cy="44" rx="4" ry="9"/><ellipse class="h3" cx="83" cy="44" rx="4" ry="9"/>
+              <circle class="ln" cx="51" cy="49" r="6.5" fill-opacity="0.45"/><circle class="ln" cx="69" cy="49" r="6.5" fill-opacity="0.45"/>
+              <circle class="stg" cx="51" cy="49" r="6.5" style="stroke-width:2; stroke:var(--c-rhea)"/><circle class="stg" cx="69" cy="49" r="6.5" style="stroke-width:2; stroke:var(--c-rhea)"/>
+              <path class="stg" d="M57.5 49 h5" style="stroke-width:2; stroke:var(--c-rhea)"/>
+              <circle class="fk" cx="51" cy="49" r="2.4"/><circle class="fk" cx="69" cy="49" r="2.4"/>
+              <path class="h3" d="M49 61 C54 56 66 56 71 61 C66 63 54 63 49 61 Z"/>
+              <path class="st" d="M54 67 q6 3 12 0"/>
+              <rect class="gr" x="86" y="112" width="14" height="8" rx="2"/>
+              <circle class="ln" cx="93" cy="97" r="17" fill-opacity="0.6"/>
+              <circle class="pp" cx="86" cy="102" r="5"/><circle class="sig" cx="96" cy="104" r="5"/><circle class="gd" cx="92" cy="93" r="5"/><circle class="pp" cx="101" cy="94" r="4.5"/>
+              <text class="mono-t fk" x="84" y="104" font-size="5.5">1</text>
+              <text class="mono-t fk" x="89.6" y="95" font-size="5.5">8</text>
+              <circle class="stg" cx="93" cy="97" r="17" style="stroke-width:2.4"/>
+            </g>
+          </svg>
+          <div class="id">
+            <span class="no"><b>22</b> PhD, pick curve</span>
+            <h3>Prof. Otis Fennimore<span class="nick">&ldquo;Lottery&rdquo;</span></h3>
+            <div class="chips"><span class="badge opus">Opus</span><span class="status on">On call</span></div>
+          </div>
+        </div>
+        <p class="role">Rookie pick curve, class strength and future-pick discounting, with uncertainty from a bootstrap by draft class.</p>
+        <ul class="quals"><li>Thinks in distributions</li><li>Resamples classes, not picks</li><li>Prices the spread, not just the point</li></ul>
+        <dl class="kv"><dt>Signature move</dt><dd>The class bootstrap: one freak draft class cannot pass for signal.</dd></dl>
+        <dl class="kv today"><dt>Today&rsquo;s contribution</dt><dd>Refit the pick curve onto the dynasty-ADP scale after the 2026 draft.</dd></dl>
+        <span class="invoke">use the phd-pick-curve agent</span>
+      </article>
+    </div>
+  </section>
+
+  <!-- FLOOR CREW -->
+  <section class="dept" aria-labelledby="d-fc">
+    <div class="dept-head"><h2 id="d-fc">Floor crew</h2><p>Builds the surfaces, replays them at 390px, keeps the scorebook.</p></div>
+    <div class="grid">
+
+      <article class="card" style="--sig:var(--c-mo)">
+        <div class="top">
+          <svg class="av" viewBox="0 0 120 120" role="img" aria-label="Caricature of Mo Adeyemi in a beanie with a laptop and a wrench">
+            <defs><clipPath id="cp-mo"><circle cx="60" cy="60" r="58"/></clipPath></defs>
+            <circle class="dsc" cx="60" cy="60" r="58"/>
+            <g clip-path="url(#cp-mo)">
+              <path class="sig" d="M16 122 C18 96 38 86 60 86 C82 86 102 96 104 122 Z"/>
+              <path class="sigd" d="M44 88 C50 96 70 96 76 88 C70 92 50 92 44 88 Z"/>
+              <path class="stp" d="M54 92 v10 M66 92 v10"/>
+              <rect class="sk2" x="52" y="70" width="16" height="18" rx="4"/>
+              <circle class="sk2" cx="35" cy="54" r="6"/><circle class="sk2" cx="85" cy="54" r="6"/>
+              <ellipse class="sk2" cx="60" cy="51" rx="25" ry="28"/>
+              <path class="h1" d="M37 56 C39 75 49 80 60 80 C71 80 81 75 83 56 C79 66 71 70 60 70 C49 70 41 66 37 56 Z"/>
+              <path class="sig" d="M34 42 C34 15 86 15 86 42 Z"/>
+              <rect class="sigd" x="32" y="36" width="56" height="9" rx="4"/>
+              <circle class="gd" cx="60" cy="15" r="5"/>
+              <circle class="fk" cx="51" cy="52" r="2.6"/><circle class="fk" cx="69" cy="52" r="2.6"/>
+              <path class="st" d="M60 54 q-3 6 1 7"/>
+              <path class="stp" d="M53 66 q7 4 14 0"/>
+              <rect class="gr" x="35" y="84" width="50" height="26" rx="2"/>
+              <rect class="scr" x="38" y="87" width="44" height="20"/>
+              <text class="mono-t" x="49" y="101" font-size="10" style="fill:var(--c-rhea)">&lt;/&gt;</text>
+              <path class="gr" d="M28 110 H92 L98 120 H22 Z"/>
+              <path class="stg" d="M99 86 L108 74" style="stroke-width:4"/>
+              <circle class="gr" cx="110" cy="71" r="5"/>
+              <circle class="dsc" cx="112" cy="69" r="2"/>
+            </g>
+          </svg>
+          <div class="id">
+            <span class="no"><b>30</b> Full-stack engineer</span>
+            <h3>Mo Adeyemi<span class="nick">&ldquo;Hardwood&rdquo;</span></h3>
+            <div class="chips"><span class="badge opus">Opus</span><span class="status on">On call</span></div>
+          </div>
+        </div>
+        <p class="role">Next.js 16 server components, Tailwind v4, mobile-first at 390px. Reads <code>node_modules/next/dist/docs</code> before writing a line.</p>
+        <ul class="quals"><li>Reads the framework docs first</li><li>Mobile-first at 390px</li><li>Never truncates a name</li></ul>
+        <dl class="kv"><dt>Signature move</dt><dd>Logic in <code>lib/</code>, composition in <code>app/</code>: pages compose, they never compute.</dd></dl>
+        <dl class="kv today"><dt>Today&rsquo;s contribution</dt><dd>Shipped the Before tip-off roster crunch panel, the draft-night recap on <code>/drafts/[season]</code>, and the game plan&rsquo;s protection for developmental players.</dd></dl>
+        <span class="invoke">use the fullstack-engineer agent</span>
+      </article>
+
+      <article class="card" style="--sig:var(--c-benny)">
+        <div class="top">
+          <svg class="av" viewBox="0 0 120 120" role="img" aria-label="Caricature of Benny Lindqvist peering through a magnifier with a phone showing a replay">
+            <defs><clipPath id="cp-benny"><circle cx="60" cy="60" r="58"/></clipPath></defs>
+            <circle class="dsc" cx="60" cy="60" r="58"/>
+            <g clip-path="url(#cp-benny)">
+              <path class="sig" d="M16 122 C18 96 38 86 60 86 C82 86 102 96 104 122 Z"/>
+              <path class="pp" d="M52 86 L60 95 L68 86 Z"/>
+              <rect class="sk3" x="52" y="70" width="16" height="18" rx="4"/>
+              <circle class="sk3" cx="35" cy="54" r="6"/><circle class="sk3" cx="85" cy="54" r="6"/>
+              <ellipse class="sk3" cx="60" cy="51" rx="25" ry="28"/>
+              <circle class="h2" cx="40" cy="34" r="8"/><circle class="h2" cx="50" cy="26" r="8"/><circle class="h2" cx="61" cy="23" r="8"/>
+              <circle class="h2" cx="72" cy="26" r="8"/><circle class="h2" cx="80" cy="35" r="7"/>
+              <circle class="fk" cx="50" cy="51" r="2.6"/>
+              <path class="st" d="M45 44 L55 43"/>
+              <path class="st" d="M58 55 q-3 6 1 7"/>
+              <path class="st" d="M50 66 q7 3 13 -1"/>
+              <circle class="ln" cx="70" cy="50" r="11" fill-opacity="0.5"/>
+              <circle class="fk" cx="70" cy="50" r="4.6"/><circle class="pp" cx="71.6" cy="48.4" r="1.4"/>
+              <circle class="stg" cx="70" cy="50" r="11"/>
+              <path class="stg" d="M78 58 L92 73" style="stroke-width:5"/>
+              <circle class="sk3" cx="93" cy="76" r="5.5"/>
+              <rect class="gr" x="16" y="84" width="22" height="36" rx="4"/>
+              <rect class="scr" x="18.5" y="89" width="17" height="25"/>
+              <path class="gd" d="M23 96 L31 100.5 L23 105 Z"/>
+              <text class="mono-t" x="20" y="111.5" font-size="5.5" style="fill:var(--paper)">390</text>
+              <circle class="sk3" cx="38" cy="104" r="5"/>
+            </g>
+          </svg>
+          <div class="id">
+            <span class="no"><b>41</b> QA engineer</span>
+            <h3>Benny Lindqvist<span class="nick">&ldquo;Replay&rdquo;</span></h3>
+            <div class="chips"><span class="badge">Sonnet</span><span class="status on">On call</span></div>
+          </div>
+        </div>
+        <p class="role">Crawls routes for 500s, runs the <code>visual-review</code> skill at 390px in both themes, sanity-checks shown numbers against their source.</p>
+        <ul class="quals"><li>Evidence before opinion</li><li>Both themes, every time</li><li>Traces numbers to source</li></ul>
+        <dl class="kv"><dt>Signature move</dt><dd>The replay: route, theme, viewport, screenshot, expected against observed.</dd></dl>
+        <dl class="kv today"><dt>Today&rsquo;s contribution</dt><dd>Swept 47 routes across 3 rosters (all 200s, zero NaN or undefined) and ran an axe-clean 390px visual review in both themes. Caught the pick/player scale mismatch and unconverted thresholds mid-flight.</dd></dl>
+        <span class="invoke">use the qa-engineer agent</span>
+      </article>
+
+      <article class="card" style="--sig:var(--c-pearl)">
+        <div class="top">
+          <svg class="av" viewBox="0 0 120 120" role="img" aria-label="Caricature of Pearl Tanaka in a scorer's visor with a pen behind her ear and an open scorebook">
+            <defs><clipPath id="cp-pearl"><circle cx="60" cy="60" r="58"/></clipPath></defs>
+            <circle class="dsc" cx="60" cy="60" r="58"/>
+            <g clip-path="url(#cp-pearl)">
+              <path class="sig" d="M16 122 C18 96 38 86 60 86 C82 86 102 96 104 122 Z"/>
+              <path class="pp" d="M52 86 L60 95 L68 86 Z"/>
+              <rect class="sk4" x="52" y="70" width="16" height="18" rx="4"/>
+              <path class="h1" d="M33 62 C28 30 44 20 60 20 C76 20 92 30 87 62 C84 50 82 42 78 38 L42 38 C38 42 36 50 33 62 Z"/>
+              <circle class="sk4" cx="35" cy="54" r="6"/><circle class="sk4" cx="85" cy="54" r="6"/>
+              <ellipse class="sk4" cx="60" cy="52" rx="25" ry="27"/>
+              <rect class="sig" x="35" y="33" width="50" height="6" rx="3"/>
+              <path class="sigd" d="M30 40 C42 31 78 31 90 40 L86 46 C76 39 44 39 34 46 Z"/>
+              <rect class="rd" x="84" y="28" width="4" height="22" rx="1.5" transform="rotate(22 86 39)"/>
+              <circle class="fk" cx="51" cy="53" r="2.6"/><circle class="fk" cx="69" cy="53" r="2.6"/>
+              <path class="st" d="M60 55 q-3 6 1 7"/>
+              <path class="stp" d="M52 66 q8 4 16 0" style="stroke:var(--fink)"/>
+              <path class="pp" d="M20 96 L60 101 L60 121 L20 119 Z"/>
+              <path class="pp" d="M60 101 L100 96 L100 119 L60 121 Z"/>
+              <path class="stf" d="M24 102 L56 106 M24 108 L56 111 M24 114 L56 116 M64 106 L96 102 M64 111 L96 108 M64 116 L96 114" style="stroke:var(--gear); stroke-width:.9"/>
+              <path class="st" d="M70 104 v6 M73 104 v6 M76 104 v6 M79 104 v6 M68 109 l13 -4" style="stroke-width:1.4"/>
+              <path class="stg" d="M60 101 V121" style="stroke-width:1.6"/>
+            </g>
+          </svg>
+          <div class="id">
+            <span class="no"><b>42</b> Docs recorder</span>
+            <h3>Pearl Tanaka<span class="nick">&ldquo;Scorebook&rdquo;</span></h3>
+            <div class="chips"><span class="badge">Sonnet</span><span class="status on">On call</span></div>
+          </div>
+        </div>
+        <p class="role">Writes the Dxxx entries in DECISIONS.md and keeps README, API_NOTES, PROGRESS and TEAM.md in step with the code.</p>
+        <ul class="quals"><li>Writes only what shipped</li><li>Verifies claims against code</li><li>Keeps the Dxxx numbering straight</li></ul>
+        <dl class="kv"><dt>Signature move</dt><dd>The Gate section: lint, test, build and e2e counts exactly as they ran.</dd></dl>
+        <dl class="kv today"><dt>Today&rsquo;s contribution</dt><dd>Logged D115: seasons whose rookie draft is complete leave every pick enumeration.</dd></dl>
+        <span class="invoke">use the docs-recorder agent</span>
+      </article>
+    </div>
+  </section>
+
+  <!-- OFFICIALS + SCOUTING -->
+  <section class="dept" aria-labelledby="d-of">
+    <div class="dept-head"><h2 id="d-of">Officials and advance scouting</h2><p>Read-only. One reviews every group, one maps the floor.</p></div>
+    <div class="grid">
+
+      <article class="card" style="--sig:var(--c-vera)">
+        <div class="top">
+          <svg class="av" viewBox="0 0 120 120" role="img" aria-label="Caricature of Vera Strand in a striped referee shirt with a whistle">
+            <defs>
+              <clipPath id="cp-vera"><circle cx="60" cy="60" r="58"/></clipPath>
+              <clipPath id="cp-vera-shirt"><path d="M16 122 C18 96 38 86 60 86 C82 86 102 96 104 122 Z"/></clipPath>
+            </defs>
+            <circle class="dsc" cx="60" cy="60" r="58"/>
+            <g clip-path="url(#cp-vera)">
+              <path class="pp" d="M16 122 C18 96 38 86 60 86 C82 86 102 96 104 122 Z"/>
+              <g clip-path="url(#cp-vera-shirt)">
+                <rect class="fk" x="20" y="84" width="7" height="40"/><rect class="fk" x="34" y="84" width="7" height="40"/>
+                <rect class="fk" x="48" y="84" width="7" height="40"/><rect class="fk" x="62" y="84" width="7" height="40"/>
+                <rect class="fk" x="76" y="84" width="7" height="40"/><rect class="fk" x="90" y="84" width="7" height="40"/>
+              </g>
+              <path class="fk" d="M49 86 L60 97 L71 86 Z"/>
+              <rect class="sk1" x="52" y="70" width="16" height="18" rx="4"/>
+              <circle class="sk1" cx="35" cy="54" r="6"/><circle class="sk1" cx="85" cy="54" r="6"/>
+              <ellipse class="sk1" cx="60" cy="51" rx="25" ry="28"/>
+              <path class="h4" d="M32 58 C29 27 45 19 60 19 C76 19 91 27 88 58 C85 46 83 38 77 34 C66 38 51 38 42 34 C37 39 35 46 32 58 Z"/>
+              <circle class="fk" cx="51" cy="51" r="2.6"/><circle class="fk" cx="69" cy="51" r="2.6"/>
+              <path class="st" d="M45 45 L55 46 M64 43 Q69 38 75 41"/>
+              <path class="st" d="M60 53 q-3 6 1 7"/>
+              <path class="st" d="M53 66 h14"/>
+              <path class="str" d="M47 87 L56 103 M73 87 L64 103"/>
+              <rect class="mt" x="53" y="102" width="17" height="10" rx="5"/>
+              <rect class="mt" x="68" y="104" width="9" height="5" rx="1"/>
+              <circle class="fk" cx="58" cy="107" r="1.8"/>
+            </g>
+          </svg>
+          <div class="id">
+            <span class="no"><b>40</b> Red team</span>
+            <h3>Vera Strand<span class="nick">&ldquo;Whistle&rdquo;</span></h3>
+            <div class="chips"><span class="badge opus">Opus</span><span class="status on">On call</span></div>
+          </div>
+        </div>
+        <p class="role">Read-only reviewer who challenges every group&rsquo;s work before it merges and returns a prioritized MUST / SHOULD / NICE list.</p>
+        <ul class="quals"><li>Fair and blunt</li><li>Cites the file and the line</li><li>Never calls a foul she can&rsquo;t show</li></ul>
+        <dl class="kv"><dt>Signature move</dt><dd>MUST / SHOULD / NICE, closed out with what she checked and found clean.</dd></dl>
+        <dl class="kv today"><dt>Today&rsquo;s contribution</dt><dd>Caught that a pure dynasty-ADP anchor wasn&rsquo;t supported by the data (it&rsquo;s a 0.45 blend), the below-market cliff that would have priced July rookies as dead weight, pick-curve circularity, and the silent-fallback risk on failed fetches. 12 prioritized challenges, all MUST items addressed.</dd></dl>
+        <span class="invoke">use the red-team-reviewer agent</span>
+      </article>
+
+      <article class="card" style="--sig:var(--c-kit)">
+        <div class="top">
+          <svg class="av" viewBox="0 0 120 120" role="img" aria-label="Caricature of Kit Romero looking through binoculars with a clipboard of Xs and Os">
+            <defs><clipPath id="cp-kit"><circle cx="60" cy="60" r="58"/></clipPath></defs>
+            <circle class="dsc" cx="60" cy="60" r="58"/>
+            <g clip-path="url(#cp-kit)">
+              <path class="sig" d="M16 122 C18 96 38 86 60 86 C82 86 102 96 104 122 Z"/>
+              <path class="sigd" d="M50 86 L60 94 L70 86 Z"/>
+              <rect class="sk2" x="52" y="70" width="16" height="18" rx="4"/>
+              <circle class="sk2" cx="35" cy="54" r="6"/><circle class="sk2" cx="85" cy="54" r="6"/>
+              <ellipse class="sk2" cx="60" cy="51" rx="25" ry="28"/>
+              <path class="h1" d="M35 50 C34 40 36 36 40 34 L80 34 C84 36 86 40 85 50 C82 42 72 40 60 40 C48 40 38 42 35 50 Z"/>
+              <path class="sig" d="M34 38 C34 17 86 17 86 38 Z"/>
+              <ellipse class="sigd" cx="60" cy="38" rx="31" ry="5"/>
+              <rect class="gr" x="39" y="43" width="18" height="15" rx="6"/>
+              <rect class="gr" x="63" y="43" width="18" height="15" rx="6"/>
+              <rect class="gr" x="55" y="47" width="10" height="6" rx="2"/>
+              <circle class="ln" cx="48" cy="50.5" r="5"/><circle class="ln" cx="72" cy="50.5" r="5"/>
+              <circle class="pp" cx="46" cy="48.5" r="1.6"/><circle class="pp" cx="70" cy="48.5" r="1.6"/>
+              <circle class="sk2" cx="37" cy="60" r="5.5"/><circle class="sk2" cx="83" cy="60" r="5.5"/>
+              <path class="fk" d="M53 65 q7 7 14 0 Z"/>
+              <rect class="wd" x="80" y="88" width="28" height="30" rx="3"/>
+              <rect class="pp" x="84" y="94" width="20" height="22"/>
+              <rect class="gr" x="88" y="85" width="12" height="6" rx="2"/>
+              <path class="str" d="M87 98 l5 5 M92 98 l-5 5" style="stroke-width:1.8"/>
+              <circle class="sts" cx="99" cy="110" r="3.2" style="stroke:var(--court); stroke-width:1.8"/>
+              <path class="stf" d="M91 106 Q96 102 98 106" style="stroke:var(--gear)"/>
+            </g>
+          </svg>
+          <div class="id">
+            <span class="no"><b>50</b> Advance scout</span>
+            <h3>Kit Romero<span class="nick">&ldquo;Advance&rdquo;</span></h3>
+            <div class="chips"><span class="badge">Haiku</span><span class="status on">On call</span></div>
+          </div>
+        </div>
+        <p class="role">Fast, read-only mapping of the codebase: where a function lives, which surfaces read it, which tests cover it.</p>
+        <ul class="quals"><li>Fast and cheap</li><li>Exact paths, every time</li><li>No speculation</li></ul>
+        <dl class="kv"><dt>Signature move</dt><dd>The one-page advance report: answer first, file and line second.</dd></dl>
+        <dl class="kv today"><dt>Today&rsquo;s contribution</dt><dd>Five parallel codebase maps in five minutes: searchRank blast radius, gameplan move logic, roster and taxi data, home page structure, fixture players and drafts.</dd></dl>
+        <span class="invoke">use the scout agent</span>
+      </article>
+    </div>
+  </section>
+
+  <!-- BOX SCORE -->
+  <section class="dept" aria-labelledby="d-bx">
+    <div class="dept-head"><h2 id="d-bx">Box score &middot; October 1, 2026</h2><p>Everything below is merged to <code>main</code>. Memory files and a token ledger for every member live in <code>.claude/agent-memory/</code>.</p></div>
+    <div class="box">
+      <ol class="ledger">
+        <li><span class="tag">DRAFT</span><div><p>The 2026 NSL rookie draft is complete.</p><p class="sub">Sleeper draft 1347007735828324352: 42 picks, 3 rounds, linear.</p></div></li>
+        <li><span class="tag">D115</span><div><p>Spent picks no longer count as capital.</p><p class="sub">Seasons whose rookie draft is complete leave every pick enumeration. After the 2026 draft, 2027 picks are one season out.</p></div></li>
+        <li><span class="tag">D116</span><div><p>The price anchor moved from Sleeper redraft <code>search_rank</code> to Sleeper dynasty ADP (<code>adp_dynasty</code>, projections endpoint).</p><p class="sub">The age curve is attenuated on dynasty-anchored prices, since dynasty ADP already prices age (exponent refined to 0.63 in D117). New hybrid base curve:</p><span class="formula">10000 &middot; r<sup>&minus;0.35</sup> &middot; e<sup>&minus;0.015(r&minus;1)</sup> &nbsp;replaces&nbsp; exp(&minus;0.021r)</span></div></li>
+        <li><span class="tag">D116</span><div><p>Thresholds are rank-anchored via <code>valueAtRank</code>, and the pick curve was refit to the same scale.</p></div></li>
+        <li><span class="tag">D117</span><div><p>The measured hybrid base curve: the price anchor is a dynasty/redraft blend, w = 0.45, not pure dynasty ADP.</p><p class="sub">Age exponent 0.63. The pick curve is measured as draft-night conversion value. Red team found the pure-dynasty anchor unsupported by the data.</p></div></li>
+        <li><span class="tag">STUDY</span><div><p>The room&rsquo;s own draft order adds nothing over the market.</p><p class="sub">Partial &rho; = &minus;0.022, n = 126: the room&rsquo;s draft order adds no detectable edge over the market.</p></div></li>
+        <li><span class="tag">SHIP</span><div><p>New surfaces: the Before tip-off roster crunch panel (home and roster), the class valued today on <code>/drafts/[season]</code>, and a game plan that protects developmental players.</p></div></li>
+      </ol>
+      <div class="side">
+        <div class="panel">
+          <h4>House rules every agent carries</h4>
+          <ul>
+            <li>No grades or verdicts (D6)</li>
+            <li>Never fabricate; say &ldquo;unknown&rdquo; (D19)</li>
+            <li>Every measurement ships with its n and caveats</li>
+            <li>Plain JavaScript</li>
+            <li>Derivations run offline; outputs are committed constants</li>
+            <li>Decisions logged in DECISIONS.md as Dxxx</li>
+          </ul>
+        </div>
+        <div class="panel">
+          <h4>Calling a play</h4>
+          <pre>use the phd-value-curve agent to show
+the curve at ranks 1, 12, 50 and 150</pre>
+        </div>
+        <div class="panel">
+          <h4>Where the team lives</h4>
+          <pre>.claude/agents/*.md   definitions
+TEAM.md               roster + handoff</pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer>On call means the agent had logged work in the October 1 handoff. Benched agents are ready and carry the same house rules. Roster and handoff are kept in TEAM.md by the chief of staff.</footer>
+</div>

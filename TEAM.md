@@ -70,6 +70,9 @@ What happened today:
 - [ ] Post-doc B college-stats study: fold its findings in when reviewed.
 - [ ] The full UX review document (`REVIEW.md`) is the next big lever.
 
+## Dashboard
+Published at https://claude.ai/artifact/3nPsdEqw6mShPGN6NiJiXA (private to Eric). Source: `.claude/team-dashboard.html` - edit it and republish to the same URL (pass the URL from a new session).
+
 ## Memory & token ledger
 Every member has a memory file at `.claude/agent-memory/<agent>.md` (lessons, newest first) and logs each task in `.claude/agent-memory/USAGE.md`. The chief of staff reviews the ledger before staffing a job: keep the members whose cost per merged outcome is lowest, and retire roles that stop earning their tokens.
 
