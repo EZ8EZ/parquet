@@ -7532,3 +7532,24 @@ not carried over from the brief's own numbers, which had drifted slightly from w
 run measured (the brief's Radio Silence/Win Now examples matched; the general "~50%"
 shape held but the precise ten-of-fourteen split and the 3.8ms timing are this run's own
 figures).
+
+## D115. A SPENT PICK IS NOT CAPITAL - seasons whose rookie draft is `complete` leave every pick enumeration
+
+NSL Fantasy Hoops' 2026 rookie draft completed on Sleeper (draft 1347007735828324352,
+42 picks, 3 rounds, linear), but `/league/{id}/traded_picks` still lists 2026 rows, and
+`futureSeasons()` admitted every season >= the current one. Every already-used 2026 pick
+therefore kept counting as pick capital - one roster read "13 picks · 9 firsts" with 4
+of those firsts spent - inflating total value, power ranking, TCI/duration, the trade
+builder/evaluator/finder and the game plan, all of which price picks via `pickCapital`.
+
+The corpus now carries `completedDraftSeasons` (lib/history.js), read off the CURRENT
+league's own drafts' `status` - the only signal Sleeper gives that a season's picks are
+spent - via the already-memoized `getDrafts`. A provider without draft data (CSV), or a
+failed fetch, degrades to an empty set: "no draft is known to have run", the pre-D115
+behaviour, never a guess (D19). `tradeablePickSeasons()` / `isPickSeasonSpent()` in
+lib/picks.js are the one place seasons are enumerated; the empty-snapshot fallback is the
+first UNDRAFTED season, so it can no longer resurrect a spent one. `/api/trade` refuses a
+body naming a spent season rather than pricing a dead asset. Historical readers
+(lineage, agency buybacks/departures) keep reading the snapshots unfiltered - a spent
+pick's history is still history. `seasonsOut` is unchanged: after the 2026 draft, 2027
+picks are one season out.
