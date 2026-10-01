@@ -53,34 +53,12 @@ started on the first.
 - /plan's numbered moves with a stated cost, and the trade finder's grouping.
 - The editorial voice. It just needs to sit on top of a decision, not instead of one.
 
-## Next, ranked (each is shippable on its own)
+## Shipped in the same session (follow-ups)
 
-1. **Home leads with an action queue in season-phase order** - at most three cards, each a
-   decision with its number and its tap target: roster crunch before lock; taxi moves
-   before the taxi deadline (week 4); trade window (from /plan's top move); waiver
-   targets (likely releases). The behavioral numbers move below the fold. The calendar is
-   all in league settings already (`taxi_deadline`, `trade_deadline`, `playoff_week_start`).
-2. **Model vs market, as a list.** The app now carries both its own price and Sleeper's
-   market ordinal for every player. The gap is the most actionable signal in dynasty:
-   "Parquet is higher than the market on X (buy), lower on Y (sell)". A /values filter and
-   a Home card. It is a measurement of disagreement, not a verdict, so it is D6-clean.
-3. **Every value states what it is compared to.** On rows: tier + league rank + market
-   rank, and the source (blend / dynasty / redraft) with an as-of date.
-4. **Cut the long-scroll prose by half on /roster and /plan.** Lead each section with its
-   one sentence and number; put the method behind "how this works". /roster is ~4k px;
-   the decision content fits in the first 900.
-5. **Trade evaluator: show the consolidation effect explicitly** - "you get the best
-   player in the deal; on this curve that is worth +N" - now that the curve is right.
-6. **Draft recap, frozen.** Snapshot values on draft night so "value over slot" stops
-   drifting daily, and show both the frozen and today's numbers.
-7. **Taxi deadline and IR relief in the crunch engine** (it counts, but does not yet know
-   that taxi moves become impossible after week 4, or that an OUT player can free a spot).
-
-## Open statistical work (not product, but it gates trust)
-
-- Re-measure the 0.23 production weight against the blended anchor (measured against
-  redraft only).
-- Star-tier age adjustment is still keyed on the redraft rank.
-- Snapshot `/projections/nba/regular/{season}` on a schedule to see ADP behaviour from June
-  to September (one live file cannot show it).
-- Next year's NBA draft row for the rookie prior (D118) has to be pasted after the draft.
+- **Home action queue** - at most three decision cards in season-phase order (roster
+  crunch, taxi before the deadline, the plan's top move, waiver targets).
+- **Model vs market** on /values - where Parquet prices a player above or below Sleeper's
+  market, with the reason (production, rookie prior, model), as a measurement.
+- **Roster crunch knows the taxi deadline and IR relief.**
+- **Trade evaluator states the consolidation effect** with the deal's numbers on the
+  measured curve.

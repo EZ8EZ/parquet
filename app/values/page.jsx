@@ -15,6 +15,8 @@ import { VALUE_ROWS } from "@/lib/values/url";
 import { fmtValue } from "@/lib/ui";
 import { Onward } from "@/components/Onward";
 import { PageHeader } from "@/components/ui";
+import { MarketGapList } from "@/components/MarketGapList";
+import { marketGaps, marketSourceCounts } from "@/lib/marketgap";
 export const dynamic = "force-dynamic";
 export default async function ValuesPage({ searchParams }) {
   const sp = await searchParams;
@@ -98,6 +100,24 @@ export default async function ValuesPage({ searchParams }) {
   const top = rows[0];
   const median = rows.length ? rows[Math.floor(rows.length / 2)].value : 0;
   const franchise = rows.filter((r) => r.tier === "Franchise").length;
+  // Model vs market, whole league (lib/marketgap). Owner labels come off the corpus;
+  // the viewer's own rows are marked in the list, not filtered to.
+  const gaps = marketGaps(h, { values });
+  const ownerName = new Map(
+    h.rosters.map((r) => {
+      const u = r.ownerId ? h.usersById.get(r.ownerId) : undefined;
+      return [r.rosterId, u?.teamName || u?.displayName || `Roster ${r.rosterId}`];
+    }),
+  );
+  // Which market the priced ordinals start from, stated once rather than per row.
+  const sources = marketSourceCounts(values);
+  const sourceLine = [
+    sources.blend && `${sources.blend} dynasty/redraft blend`,
+    sources.dynasty && `${sources.dynasty} dynasty ADP only`,
+    sources.redraft && `${sources.redraft} redraft rank only`,
+  ]
+    .filter(Boolean)
+    .join(", ");
   return (
     <div>
       <PageHeader
@@ -133,6 +153,16 @@ export default async function ValuesPage({ searchParams }) {
           />
         </dl>
       </PageHeader>
+      {sourceLine && (
+        <p className="mt-1.5 text-meta leading-snug text-muted">
+          Market ordinal: Sleeper, as of today ({sourceLine}).
+        </p>
+      )}
+      <MarketGapList
+        gaps={gaps}
+        ownerName={ownerName}
+        myRosterId={h.me?.rosterId ?? null}
+      />
 
       {/* This is somebody else's board (Sleeper's search rank). /rank is where
             that stops being true - drag your own order in and blend it against
