@@ -52,12 +52,12 @@ export function DraftRecap({ h, board }) {
   return (
     <section aria-labelledby="draft-night-measured" className="mb-4">
       <SectionHeader
-        title={<span id="draft-night-measured">Draft night, measured</span>}
+        title={<span id="draft-night-measured">The class, valued today</span>}
       />
       <p className="mb-2 text-meta leading-relaxed text-muted">
         Each pick&rsquo;s value over slot is the player&rsquo;s model value today
-        minus what the pick curve says that slot costs, so these numbers move as
-        player values do.
+        minus what the pick curve says that slot costs. Both are today&rsquo;s
+        numbers, not a draft-night snapshot, so they move as values move.
       </p>
 
       <p className="mb-2 figure text-meta text-secondary">
@@ -112,13 +112,13 @@ export function DraftRecap({ h, board }) {
       </ul>
 
       <MoverList
-        title="The room let these slide"
-        note="taken later than their value rank in the class"
+        title="Taken later than their value rank"
+        note="by value rank within this class, today"
         picks={biggestFallers}
       />
       <MoverList
-        title="Taken ahead of the market"
-        note="taken earlier than their value rank in the class"
+        title="Taken earlier than their value rank"
+        note="by value rank within this class, today"
         picks={biggestReaches}
       />
 

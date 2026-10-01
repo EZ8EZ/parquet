@@ -14,6 +14,7 @@ import {
   STAR_AGE_ADJUSTMENT_PROVENANCE,
   STAR_SEARCH_RANK_CUTOFF,
   ageMultiplier,
+  baseAtRank,
   firstCliffAge,
   pickValue,
   cachedValuePlayers,
@@ -109,7 +110,7 @@ export default async function MethodologyPage() {
   const posMults = positionMultipliers(scoring);
   const baseExamples = [1, 10, 25, 50, 100, 150, 220].map((rank) => ({
     label: `#${rank}`,
-    value: Math.round(cfg.maxValue * Math.exp(-cfg.rankDecay * (rank - 1))),
+    value: Math.round(baseAtRank(rank, cfg)),
   }));
   // PRODUCTION COVERAGE, counted off the live corpus rather than restated from the
   // derivation's own run notes. The point of this page is that the model is auditable;
@@ -498,14 +499,16 @@ export default async function MethodologyPage() {
         ))}
       </nav>
 
-      <Subsection id="base" title="1 · Base value from consensus rank" defaultOpen>
+      <Subsection id="base" title="1 · Base value from the dynasty market rank" defaultOpen>
       <Card>
         <p className="mb-3 text-body leading-relaxed text-muted">
-          Value decays exponentially with rank (studs are scarce):
+          Value falls steeply off the top of the dynasty market and then decays
+          exponentially through the middle (studs are scarcer than a pure exponential
+          says - D116):
           <span className="font-mono text-ink">
             {" "}
-            base = {cfg.maxValue.toLocaleString()} · e^(−{cfg.rankDecay} ·
-            (rank−1))
+            base = {cfg.maxValue.toLocaleString()} · rank^(−{cfg.rankPower}) · e^(−
+            {cfg.rankDecay} · (rank−1))
           </span>
         </p>
         <LineChart data={baseExamples} format={(n) => n.toLocaleString()} />
