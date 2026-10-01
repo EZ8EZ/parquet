@@ -7532,3 +7532,463 @@ not carried over from the brief's own numbers, which had drifted slightly from w
 run measured (the brief's Radio Silence/Win Now examples matched; the general "~50%"
 shape held but the precise ten-of-fourteen split and the 3.8ms timing are this run's own
 figures).
+
+## D115. A SPENT PICK IS NOT CAPITAL - seasons whose rookie draft is `complete` leave every pick enumeration
+
+NSL Fantasy Hoops' 2026 rookie draft completed on Sleeper (draft 1347007735828324352,
+42 picks, 3 rounds, linear), but `/league/{id}/traded_picks` still lists 2026 rows, and
+`futureSeasons()` admitted every season >= the current one. Every already-used 2026 pick
+therefore kept counting as pick capital - one roster read "13 picks · 9 firsts" with 4
+of those firsts spent - inflating total value, power ranking, TCI/duration, the trade
+builder/evaluator/finder and the game plan, all of which price picks via `pickCapital`.
+
+The corpus now carries `completedDraftSeasons` (lib/history.js), read off the CURRENT
+league's own drafts' `status` - the only signal Sleeper gives that a season's picks are
+spent - via the already-memoized `getDrafts`. A provider without draft data (CSV), or a
+failed fetch, degrades to an empty set: "no draft is known to have run", the pre-D115
+behaviour, never a guess (D19). `tradeablePickSeasons()` / `isPickSeasonSpent()` in
+lib/picks.js are the one place seasons are enumerated; the empty-snapshot fallback is the
+first UNDRAFTED season, so it can no longer resurrect a spent one. `/api/trade` refuses a
+body naming a spent season rather than pricing a dead asset. Historical readers
+(lineage, agency buybacks/departures) keep reading the snapshots unfiltered - a spent
+pick's history is still history. `seasonsOut` is unchanged: after the 2026 draft, 2027
+picks are one season out.
+
+## D116. THE PRICE ANCHOR MOVES OFF SLEEPER'S REDRAFT ORDINAL AND ONTO ITS DYNASTY MARKET - every value threshold becomes a rank, and rookies get priced (the base-curve change is split out as D117)
+
+**The finding that started it.** Every price in this app descended from `search_rank` on
+`/players/nba` (D5, D55 and everything after). Checked against the sibling endpoint
+`/projections/nba/regular/{season}` on the 2026 snapshot, `search_rank` is Sleeper's
+REDRAFT ADP under another name - it tracks `adp_std` almost exactly (Cameron Boozer 25 vs
+25.1, AJ Dybantsa 53 vs 53.6) - and a redraft ADP answers a one-season question. The same
+projections payload carries `adp_dynasty`, Sleeper's dynasty-draft ADP, for ~836 players
+(the rest carry the 999 "no ADP" sentinel), plus a per-game projected line for ~530 of
+them. Sleeper keeps one snapshot per season, 2021 through 2026, and the ADPs in them are
+point-in-time rather than rewritten: Victor Wembanyama is 7.8 in the 2023 snapshot and
+1.9 in 2024; Scoot Henderson is 35 in 2023 and 103 in 2024. (A re-fetch on 2026-10-01
+found zero changed rows in the 2021, 2024 and 2026 snapshots, so they are frozen.) The
+stat LINES in the 2021-2025 snapshots are not point-in-time - they match the realized
+season at rho 0.99, so they are hindsight and are never used as a projection (API_NOTES,
+"Projections"). The model had been pricing dynasty assets off the redraft market for its
+entire life, while the dynasty market sat one endpoint over.
+
+**The live failure that made it urgent.** NSL Fantasy Hoops' 2026 rookie draft ran
+(D115). Priced off the redraft ordinal, the owner's three first-round rookies came out
+at Keaton Wagler (1.07) = 222, Mikel Brown (1.08) = 498 and Caleb Wilson (1.03) = 1,469 -
+Wagler below the dead-weight line two weeks after a top-7 pick was spent on him - and
+`/plan` duly advised cutting Wagler and packaging Darryn Peterson (1.04) as sale stock.
+A 19-year-old with no NBA minutes is a poor redraft pick and an expensive dynasty one,
+and the two ordinals disagree about rookies more than about anyone: Peterson is 42nd in
+redraft and 18th in dynasty, Wagler 180th and 66th. With the market anchor in, at the
+interim curve exponent, the same four read Peterson ~6.8k, Wilson ~5.8k, Brown ~3.5k,
+Wagler ~2.4k. Those exact numbers will move with the final base curve and pick refit
+below, and should not be quoted from this entry; what does not move is the shape - all
+four are priced as the real dynasty assets the room paid for, in roughly the order the
+market holds them, and none of them is a cut. (The gameplan's separate refusal to cut or
+sell first- and second-season players, `lib/gameplan`, landed in the same stretch and is
+a policy on top of the price, not a substitute for it.)
+
+### What the anchor is
+
+`lib/valuation/market.js`, `marketRanks(players)`: every player with a dynasty ADP is
+ordered and given an ordinal 1..k on the SAME scale `search_rank` used, so the base
+curve and everything calibrated against an ordinal keeps meaning what it meant. Ties
+break on the redraft ordinal then the id (deterministic across renders). The market
+arrives through `provider.getMarket(season)` (Sleeper only; one ~190KB request, memoized
+an hour) and `lib/history.js` attaches `dynastyAdp` / `redraftAdp` / `projection` to a
+COPY of each player, never the memoized original.
+
+**It is a blend of the two markets, not a swap - measured.** The obvious
+implementation of "price off the dynasty market" is a straight replacement of one
+ordinal with the other, and the first cut of this change did exactly that. The data
+does not support it. Scored against era-normalized fantasy
+production over the next three seasons (zero for a season not played), pooled over the
+2021-2023 snapshots (n = 986): dynasty ADP rho 0.738, redraft ADP rho 0.751 - a
+difference inside its own noise, whose sign flips by year (2022 favours redraft clearly;
+2021 and 2023 are even). But each carries what the other does not: partial rho of
+dynasty given redraft 0.231 [0.162, 0.299], of redraft given dynasty 0.309. The best
+weight on the dynasty side in log-ADP space is 0.50 [0.35, 0.65] over 2021-2023 and 0.45
+[0.30, 0.60] over 2021-2024, on a curve that is flat from 0.25 to 0.65; the dynasty side
+gains about +0.01 rho per added season of horizon, and a dynasty price is about the long
+horizon. So the rank key is the geometric blend `exp(0.45 ln dyn + 0.55 ln std)`
+(`DYNASTY_WEIGHT`). Rookies alone gave 0.30 [0, 0.63] (n = 186), a CI that contains
+0.45, so one weight is used for everyone rather than a second, noisier constant for one
+cohort. This is still "the price descends from the dynasty market" in the sense that
+matters for the failure above: a player Sleeper's dynasty drafters want and its redraft
+drafters do not now moves up, by about half the gap in log space.
+
+**Rejected: the pure dynasty ordinal.** On the numbers above it is no better than the
+redraft one on its own and strictly worse than the blend, and it throws away the
+redraft market's real, independent information about the near seasons - which a
+contender's price needs.
+
+**Rejected: blending in this league's own draft order.** Across the 126 picks of the
+2023-2025 rookie drafts, the room's order predicted era-normalized production through
+2025 at rho 0.545 against the market's 0.628; the two agree at 0.881; the partial
+correlation of the room's order given the market's is -0.022 (z = -0.24); and the best
+blend weight on the room is 0.05, worth +0.0004 of rho. This league does not out-draft
+Sleeper's dynasty market. The room's order is therefore published as a MEASUREMENT on
+the draft recap (`lib/draftrecap`: who the room let slide, who it took early, against
+the market) and kept out of the price entirely.
+
+**A player priced by one market keeps that market's key** (`source: "dynasty"` or
+`"redraft"`) rather than being ranked below everyone priced by both. The first cut did
+the latter (`"below-market"`), and the red team found the cliff it made: in July, and
+again at the season rollover, Sleeper's dynasty ADPs thin out before the redraft ones
+do, and a rostered starter with a redraft ADP and no dynasty ADP fell past every
+deep-bench name that had both. The gate is now a COVERAGE RATIO, not a pool size: the
+market is used only when at least `MIN_MARKET_COVERAGE` (90%) of the redraft top 200
+carry a dynasty ADP (`MIN_MARKET_POOL` 150 is retired). Below it the market is treated
+as absent - a payload that parsed but came back thin is a broken or early-season fetch,
+not a market. Measured on 2026: every top-200 `search_rank` player has a dynasty ADP. **With no market at all - fixture, CSV, a
+failed fetch - every player keeps `search_rank` exactly and the model is bit-for-bit its
+pre-D116 self** (`source: "redraft"`), which is also what every pre-D116 test pins. The
+market is an input the model prefers, never one the corpus depends on (D19).
+
+**What still reads `search_rank`.** D74's star-tier age adjustment selects its cohort
+with `isStarTier(player.searchRank)`, unchanged and deliberately so for the same reason
+production.js gives: re-pointing it would change which players the adjustment selects
+without re-measuring the adjustment against the new cohort. Production (below) now
+permutes the market ordinals rather than the redraft ones.
+
+### Age on a dynasty-anchored price
+
+A dynasty ADP has already priced age - it is the market's answer to "how many good
+seasons are left" - so the full age curve on top of it double-counts. Measured as the
+exponent gamma that best explains future production given the anchor
+(`E[T] = exp(a + f(anchor) + gamma * log m(age))`, horizon-matched age curve re-derived
+from 2013-2019, zeros for seasons not played): on the REDRAFT anchor gamma is ~1 (0.72-
+1.08 at 3-5 seasons) - the full curve was right for the input it was built for - and on
+the DYNASTY anchor it is ~0.42-0.57 at a 5-season horizon (2021 snapshot, n = 317),
+falling toward 0 at 3 seasons (pooled 2021-2023: -0.15 to -0.07, n = 986).
+`marketAgeExponent = 0.5`, applied only when `source === "dynasty"`; a redraft-anchored
+or below-market price keeps the whole curve, exactly as before.
+
+**Rejected: 0, the 3-season estimate.** A short horizon under-credits exactly the young
+players the curve favours - a 20-year-old's value is mostly in seasons four through
+eight, which a three-season target cannot see - and a dynasty price is about the
+longest horizon the data reaches. 0.5 is the middle of the 5-season estimates. It is
+also the number in this entry resting on the fewest independent draws: one snapshot.
+
+**OPEN, and the first red-team question for this section.** gamma was measured against
+the PURE dynasty anchor. The shipped anchor is the 0.45 blend, and the measurement that
+conditions on both ADPs reads higher (0.90 at a 5-season horizon in 2021, n = 317; 0.29-
+0.34 pooled at 3 seasons). If the blend inherits the redraft side's need for the age
+curve, 0.5 under-applies age on the shipped anchor.
+**Resolved: `marketAgeExponent = 0.63`, applied to `blend`- and `dynasty`-sourced
+prices; a redraft-only price keeps exponent 1.** The red-team post-doc's recommendation
+for a blended anchor is gamma ~ 0.9 - 0.6 w, which at the shipped w = 0.45 is 0.63; the
+model conditioning on BOTH ADPs reads 0.90 at 5 seasons and 0.29-0.34 at 3; the band the
+measurements support is roughly 0.35-0.63, and 0.63 is its top because every estimate
+here is a horizon-conditional LOWER bound (the target truncates exactly the late seasons
+age governs). The uncertainty is about +-0.3 and it still rests on one cohort (2021,
+n = 317), so 0.63 is labelled in code as a POLICY CHOICE WITHIN A MEASURED BAND, not as
+a measured point. Rejected: keeping 0.5 - it was measured against an anchor that does
+not ship, and on the shipped one it sits inside the band but below the recommendation
+for no stated reason.
+
+### The base curve: measured here, shipped as D117
+
+D116 ships on the unchanged exponential base, `10000 * e^(-0.021 (r - 1))`, and every
+D116 number quoted below as "at the D116 state" is on it. The study that measured the
+replacement is recorded here because it was run alongside the anchor work; the change
+itself is D117, so that the anchor move and the curve move are separately attributable.
+The study's summary, for context:
+
+Fitted to REALIZED SURPLUS OVER REPLACEMENT: for the top 250 dynasty-ADP players in each
+of the 2021, 2022 and 2023 snapshots (n = 750 player-snapshots), the discounted (0.9 per
+season) sum of fantasy points per game above the 112th-best scorer, availability-
+weighted (`min(gp, 70) / 70`), zero for a season not played, through 2025. Individual-
+level R^2: the old curve 0.57-0.66 across replacement levels; the best pure exponential
+0.65-0.67 (k ~0.035-0.044); the hybrid ~0.71, the best form tried (power, exponential +
+floor and the hybrid were all fitted; the floor came out ~0 everywhere).
+
+The old curve was too flat at BOTH ends. In the data #1 is worth ~2.5x #10; the old
+curve said 1.2x (the hybrid says 2.56x). In the data #100 is worth 1.5-4% of #1; the old
+curve said 12.5% (the hybrid 4.5%). The consequence a manager feels is consolidation:
+the old curve priced a #10 at 0.76 of two #30s, so every 2-for-1 looked like a win for
+the side taking depth; the data puts that trade near even and the hybrid at 0.99. A
+pure-exponential fit overshoots the other way (1.21) - it fixes the tail by
+over-steepening the middle - which is the reason for the extra parameter.
+
+`rankDecay` is stable at 0.015-0.017 across replacement levels 98-140; `rankPower` moves
+0.25-0.40 over the same range, and the head it governs (ranks 1-3) rests on ~9
+player-snapshots, so `rankPower` is the softer of the two numbers and the first to
+revisit when another snapshot matures. Replacement 112 was chosen because lock-in plus a
+nine-man bench means injured starters are covered by players ranked roughly 99-140.
+Script and full table: `scripts/calibration/curve/`.
+
+### Every value threshold becomes a rank
+
+D55's standing complaint - an absolute threshold on a rescalable scale is a defect on
+sight - stopped being theoretical: a curve that is 2x steeper at the head and 3x lower in
+the tail would have silently redefined "star" and "dead weight" in every engine that
+compares a value to a literal. `valueAtRank(N)` (lib/valuation) is the base value of the
+N-th asset on the live curve, and every such literal is restated through it at the rank
+where the OLD curve put it - which is exact, not approximate, because the old literals
+were the old curve at those ranks:
+
+    star (gameplan)         4500  =  old base(39)   ->  valueAtRank(39)    hybrid ~1,569
+    star (trade finder)     3000  =  old base(58)   ->  valueAtRank(58)    hybrid ~1,027
+    mid-tier (gameplan)      700  =  old base(128)  ->  valueAtRank(128)   hybrid   ~272
+    vet floor (gameplan)     400  =  old base(154)  ->  valueAtRank(154)   hybrid   ~173
+    dead weight (gameplan)   250  =  old base(177)  ->  valueAtRank(177)   hybrid   ~117
+
+(The hybrid column is the D117 curve; at the D116 state the restated thresholds equal
+the old literals exactly.) So a curve change moves prices without moving what the tiers MEAN - a "star" is still
+the top ~39 assets, "dead weight" still below the ~177th - and any future curve change
+inherits the same property for free.
+
+### Rookie picks: "a pick is worth what it converts into on draft night"
+
+The pick curve (`pick.topPickValue / slotDecay / floor`, hand-set at 5000 / 0.155 / 70)
+is refit to what each slot actually turned into: every pick of the four linear rookie
+drafts 2023-2026 (the 2022 startup excluded) priced as the base value of the drafted
+player's rank in THAT season's dynasty-ADP snapshot, fitted as
+`floor + (top - floor) e^(-d (k - 1))` to the per-slot means (a pick's value is its
+expected value, so the mean is the estimand) by quasi-Poisson WLS (variance proportional
+to the mean - raw LS lets round 1 drag the floor up to 102 against observed round-3 means
+near 30; log LS lets the near-zero third round underprice 1.01 by ~45%), with the exact
+by-class bootstrap (all 4^4 = 256 resamples of the four classes, 5-95%).
+
+On the OLD base curve that gives top 5,760 [4,110-7,400], decay 0.204 [0.184-0.235],
+floor 37 [17-77]. Against it the hand-set curve was close at the very top and overpriced
+from about 1.05 down: ~1.5x in late round 1, 1.5-2x in round 2, 3-5x in round 3. The
+study's hybrid-base run gives top 2,428 [1,694-3,148], decay 0.226 [0.189-0.301], floor
+33 [20-66]. Neither is what ships: both price the drafted player off his raw dynasty-ADP
+rank on the base curve, which is not what the model would charge for him.
+
+**Shipped, on the exponential base: `pick.topPickValue` 4,250 [2,850-5,700],
+`pick.slotDecay` 0.256 [0.244-0.276], `pick.floor` 32 [24-60].** The target is the
+MODEL's own value of the player taken at each slot: his blended rank (w = 0.45) in that
+class's snapshot, on the base curve, times the model's multiplier ratio as measured on
+the 2026 class (median 0.825 - age, production and position together take about a sixth
+off a drafted rookie's base). Same quasi-Poisson WLS, same by-class bootstrap. No 1.01
+bump: the 1.01 premium over 1.02/1.03 is 0.88-2.40 by class, a bump would rest on four
+draws.
+
+This is the pick's MARKET price - what it converts into on draft night, as the model
+itself would value the conversion - and it is circular with the player model by design:
+a trade that swaps 1.04 for the player drafted at 1.04 should read near even, which is
+what trade fairness wants. It is not realized value. Realized, round 2 earned ~16% of its
+classes' value against a market share of ~9% (above); a realized-value pick curve is a
+different estimand, and the wrong one for pricing a trade.
+
+Live, NSL Fantasy Hoops: the owner's pick capital goes 20,987 -> 4,739 - the spent 2026
+picks removed by D115 plus the measured curve's lower prices from about 1.05 down. The
+four rookies, at the D116 state: Darryn Peterson (1.04) 5,350, Caleb Wilson (1.03) 3,030,
+Mikel Brown (1.08) 1,468, Keaton Wagler (1.07) 825, against slot costs of 1,989, 2,560,
+735 and 940 respectively. Three of the four are priced above what the room paid for them;
+Wagler is priced at 0.88 of his slot, above the dead-weight line and no longer a cut.
+Cameron Boozer reads 6,635, #11 overall.
+
+**Class strength is a round-1 phenomenon, and the 2026 entry is retired.** Class mean
+over pooled mean, by round: R1 1.00, 0.47, 0.93, 1.60 for 2023-2026 (SD 0.46); R2 and R3
+SD 0.12-0.13. Nearly all class-to-class variance is in the first round - an unknown-class
+future first carries roughly +-45% value uncertainty, a second or third almost none. The
+`classStrength` 2026 entry ({ top: 1.0, depth: 1.15 }) priced picks that no longer exist
+once that draft ran (D115) and is removed; the map is empty on purpose, and the next
+class opinion belongs in `top`, with evidence, not in `depth` by default.
+
+**A realized check, for the shape only.** On the 2023-2025 classes, NBA production
+through 2025 mapped back through the value scale gives round shares R1 0.82 / R2 0.16 /
+R3 0.02 against the draft-night market's 0.89 / 0.09 / 0.02: the market's shape holds up,
+with round 2 earning somewhat more than it was priced at. Levels are far below the
+market's (one to three rookie seasons), so only the shape is informative.
+
+### Production weight: reused, unmeasured - the first thing to re-measure
+
+`productionWeight` 0.23 (production.js) is the standardized OLS weight in-league
+production earned against `search_rank` - the REDRAFT anchor - on a three-season target.
+It is reused unchanged on the market anchor, and that reuse is not measured. There are
+reasons to expect it to fall (the dynasty side already carries some of the "seasons
+after next" information production was adding) and reasons it might not (production is
+in-league and scoring-specific; neither market is). The permutation property is
+unaffected - production still only reorders who sits where on the scale - but the
+number itself is now an assumption.
+**OPEN.** 0.23 ships unchanged and has NOT been re-measured on the blended anchor. The
+re-measure is `scripts/derive-production.js`'s dynasty-target regression with the
+blended market ordinal as the incumbent; 0 is a legitimate answer, and if it comes back
+near 0 the production blend should be switched off rather than kept at a number measured
+against something else.
+
+### Known limits, and what would change this
+
+- **Few independent draws.** Three overlapping snapshots (2021-2023) share most of their
+  target seasons. "n = 750" and "n = 986" are many player-rows and few market draws;
+  every interval above is conditional on those three markets being representative.
+- **The horizon is short of the question.** The 2023 snapshot sees three seasons of
+  outcome, 2022 four, 2021 five. Back-loaded (young) value is truncated, which is why the
+  age exponent was taken from the 5-season estimate, and why rookies are the cohort
+  this model can measure least.
+- **Not this league's market.** Sleeper's dynasty ADP pools every Sleeper dynasty league
+  at every scoring setting; per-game targets ignore lock-in's best-of-week option value.
+  The production blend is the only league-specific input, and its weight is now
+  unmeasured on this anchor (above).
+- **The pick refit's multiplier ratio is one class's** (2026, median 0.825), applied to
+  all four; a class whose rookies the age or production terms treat differently would
+  shift it.
+- **The head of the base curve rests on ~9 player-snapshots.**
+- **What would change the decision:** a 2024 snapshot maturing to four seasons that moves
+  the best dynasty weight outside [0.30, 0.60]; an age exponent measured on a second cohort
+  outside 0.35-0.63; a production weight that collapses on the market anchor (then the blend
+  should be switched off rather than kept at a number measured against something else);
+  or the dynasty market losing coverage (pool under `MIN_MARKET_POOL`), which already
+  falls back to the redraft ordinal by construction.
+
+### Red team: what it changed, and what it left open
+
+Addressed in this decision:
+- **Blend, not swap.** The first cut replaced the redraft ordinal with the dynasty one;
+  the measurement above replaced that with the 0.45 blend.
+- **Single-market fallbacks replace the below-market cliff.** The July / rollover
+  failure (dynasty ADPs thin first, rostered starters fell below the bench) is closed by
+  keying a one-market player on that market.
+- **Coverage-ratio gate.** The market is used only at >= 90% coverage of the redraft top
+  200, replacing a pool-size floor that a thin early-season payload could pass.
+- **Last-good caches** for the market payload and for completed-draft seasons, so a
+  failed fetch serves the last good read rather than dropping to the redraft ordinal
+  (market) or resurrecting spent picks (D115).
+- **The age exponent is labelled a policy inside a band** (0.35-0.63, +-0.3), not a
+  measured point.
+- **The room-vs-market claim is softened.** n = 126 picks puts a band of about +-0.17 on
+  a rho difference; "this league does not out-draft the market" is what the data fails
+  to reject, not a measured gap.
+- **Recap copy is rank-relative and dated:** the draft recap compares picks to market
+  RANKS, not prices, and is headed "The class, valued today", so a later price move is
+  not read as a judgement the recap made on draft night.
+
+Open:
+- the production weight re-measure (above);
+- the star-tier flag (D74) is still keyed on the redraft rank;
+- `taxi_deadline` and reserve-slot relief are not modelled in the crunch engine;
+- ADPs freeze in-season, so in-season movement is corrected only by production;
+- scheduled projection snapshots are needed to see June-September coverage, which is
+  when the coverage gate is most likely to trip and least observed.
+
+### Gate
+Lint clean; 1,454 tests green at commit 6c24b32. The studies themselves are in
+`scripts/calibration/` (README there: what each asks, its inputs, how to re-fetch the
+snapshots, where its numbers were pasted).
+
+## D117. THE BASE CURVE BECOMES THE MEASURED HYBRID - `base(r) = 10000 * r^-0.35 * e^(-0.015 (r - 1))` replaces the hand-set exponential
+
+    base(r) = 10000 * r^-0.35 * e^(-0.015 (r - 1))     (was 10000 * e^(-0.021 (r - 1)))
+
+**Why a separate decision from D116.** D116 moved the anchor (which ordinal a player
+sits at); this moves the curve (what an ordinal is worth). Shipped together, any change
+in a roster's read could not be attributed to either. One change per diff, so each is.
+
+### Evidence
+
+From the PhD value-curve study (`scripts/calibration/curve/`, summarized in D116):
+realized SURPLUS OVER REPLACEMENT - fantasy points per game above the 112th-best scorer,
+availability-weighted (`min(gp, 70) / 70`), discounted 0.9 per season, zero for a season
+not played - for the top 250 dynasty-ADP players in each of the 2021, 2022 and 2023
+snapshots, n = 750 player-snapshots.
+
+- **The head.** In the data #1 is worth ~2.5x #10; the old curve said 1.2x, the hybrid
+  2.56x.
+- **The tail.** In the data #100 is worth 1.5-4% of #1; the old curve said 12.5%, the
+  hybrid 4.5%.
+- **Fit.** Individual-level R^2: old curve 0.57-0.66 across replacement levels; best
+  pure exponential 0.65-0.67; hybrid ~0.71, the best form tried.
+- **Stability.** `rankDecay` 0.015-0.017 over replacement levels 98-140; `rankPower`
+  0.25-0.40 over the same range, and the head it governs rests on ~9 player-snapshots,
+  so it is the softer number.
+- **The trade a manager feels.** "#10 for two #30s" priced at 0.76 on the old curve -
+  every 2-for-1 read as a win for the side taking depth - and 0.99 on the hybrid, which
+  is where the data puts it.
+
+**Rejected: the best pure exponential.** It repairs the tail by over-steepening the
+middle (the same 2-for-1 reads 1.21, now a win for the consolidator) and fits worse.
+**Rejected: an exponential plus a floor.** The floor fitted to ~0 at every replacement
+level; it is the exponential under another name. **Rejected: keeping the hand-set
+curve.** It is the worst-fitting form tried and too flat at both ends.
+
+### Before / after, all 14 live rosters
+
+D116's rank-anchored thresholds are held, so a "star" is still the top ~39 assets and
+"dead weight" still below the ~177th; the comparison isolates the curve.
+
+- Star and dead-weight counts are nearly unchanged - the expected consequence of
+  thresholds that are ranks, not values.
+- Value ranks move 1-3 places, and the movers are the top-heavy rosters, which gain:
+  a steeper head is worth more to a team that owns it.
+- The owner's team is unchanged: `ascend`, #1 by value.
+- Two directions change. **yagev** goes `rebuild` -> `contend`: its value rank moves
+  8 -> 7, which is exactly the top-half line the stance rule draws, so the flip is the
+  rule working at its boundary, not a new opinion. **Sweet Home Wembanyama** goes
+  `retool` -> `ascend`.
+
+### The pick curve is refit on the hybrid base
+
+Same model-consistent method as D116 - the model's own value of the player taken at each
+slot (blended rank, multiplier ratio 0.825), quasi-Poisson WLS, by-class bootstrap - on
+the new base: `pick.topPickValue` 1,700 [1,175-2,400], `pick.slotDecay` 0.270
+[0.258-0.339], `pick.floor` 24 [20-48]. A pick has to be priced on the same curve as the
+player it becomes, so the pick constants move with the base, never independently of it.
+
+### Tests that changed, and why
+
+All four are fixture-coupled, not regressions - each asserted a consequence of the old
+curve's shape rather than the property it was meant to guard:
+
+- **Gameplan tests** pick their rosters by the stance rule's inputs (value rank against
+  the top-half line) instead of hard-coded roster ids, which the curve legitimately
+  reorders.
+- **The production shortcut test** uses the base ratio for whatever curve shape is
+  live, rather than the exponential's constant ratio between adjacent ranks.
+- **The fragility percentile test** asserts the real invariant - a refused roster is
+  absent from the ladder - instead of equality with an unspliced league, which only held
+  while the curve left the neighbouring percentiles in place.
+- **Consolidation tests** use a balanced roster. On the fixture's Luka-dominated roster,
+  giving away the anchor genuinely relieves concentration once the head is priced
+  steeply, so the old expectation was the wrong one.
+
+### Known limits, and what would change this
+
+- **Three overlapping snapshots.** n = 750 is many rows and three market draws sharing
+  most of their target seasons. A 2024 snapshot maturing to four seasons is the next
+  independent check; `rankPower` is the first number it should move.
+- **Replacement level is a choice.** 112 follows from lock-in plus a nine-man bench;
+  `rankDecay` is insensitive to it over 98-140, `rankPower` is not. A league-settings
+  change (bench size, lineup slots) should move the replacement level and refit.
+- **Estimand: production, not trade price.** The curve is fitted to what ranks
+  PRODUCED. A dynasty trade market may pay a premium at the head beyond production
+  (scarcity, hope) or discount it; if trade-price data ever becomes available and
+  disagrees, the question is which estimand the app is answering, not which fit is
+  better.
+- **What would change the decision:** a matured snapshot that puts #1/#10 back near the
+  old 1.2x, or a pure exponential overtaking the hybrid on R^2 at the stable replacement
+  levels.
+
+### Gate
+
+Lint clean; 1,456 tests green (74 files) on the hybrid curve. The two consolidation reads and the move= path are pinned in both directions now: from a balanced roster a 3-for-1 into a star creates a single point of failure, and from the Luka-dominated fixture roster giving the anchor away relieves one.
+
+## D118. ROOKIES WITH COLLEGE MINUTES AND NO NBA ONES ARE PRICED ON THE MARKET PLUS NBA DRAFT CAPITAL - and college box-score production is deliberately left out, because it was measured and adds nothing
+
+**The question.** The owner asked how the model should price a rookie with a college record and no NBA game time. After D116 such a player is priced off the blended dynasty/redraft market and nothing else: the in-league production table cannot have seen him (D19).
+
+**Measured** (post-doc study, `scripts/calibration/rookie/`): the 2020-2026 NBA draft classes, 413 draftees, every one mapped to a Sleeper id (360 high-confidence, 318 of those verified against NBA games played); outcome = three seasons of this league's fantasy points, era-normalized, ranked within class; validated leave-one-class-out (LOCO).
+
+| predictor | rho vs outcome | out-of-sample |
+|---|---|---|
+| NBA draft pick | -0.667 (n = 236) | LOCO R^2 0.40 vs 0.28 for dynasty ADP (n = 192) |
+| dynasty ADP | -0.580 (n = 192) | |
+| college fantasy points / 40 | +0.225 (n = 185) | adds +0.004 R^2 to the market, -0.007 to slot + age (n = 162) |
+| age at draft | -0.159 | slot-mediated and horizon-biased; left neutral |
+
+- **College production is not in the price.** Its partial given the market swings by class (-0.11, 0.26, 0.31, 0.53) and its class-block CI includes zero once 2024-25 are added. The NBA's own draft has already read the college film, the medicals and the interviews; a box-score summary of the same season adds nothing measurable on top. Rejected alternative: a college-FP/40 multiplier - it would have been the most "data-driven"-looking term in the model and the least supported one.
+- **NBA draft capital is.** P(pick) = 0.936 e^(-pick/43.8) (A [0.88, 0.99], tau [38.6, 50.3]; LOCO R^2 0.456), the expected within-class outcome percentile, with a measured -0.16 for a non-college pick after #14 (draft-and-stash and Ignite players produce less early: CI [-0.23, -0.10], n = 54 vs 215). Blended 50/50 with the market's own within-class percentile, which stayed within 0.02 of the optimal R^2 in every cut and always beat the market alone. The fitted best market weight was 0.20-0.30 [~0, 0.6], but the archived ADP is coarse (2022 covers 31 of 58 draftees) while the live 2026 ADP covers 57 of 60, so the market's weight is if anything understated by the fit; 0.5 is the round number inside both readings.
+- **It enters as a reordering within the class** (`lib/valuation/rookiePrior.js`, `reorderRookieClass`): the class keeps exactly the set of market ordinals it already held, and the blend decides who sits where. The evidence is about ordering, and a permutation cannot move any threshold or tier break on the value scale - the same property D55/D116 rely on.
+- **It expires on its own.** It applies only at `yearsExp === 0`. Sleeper increments that at the next season, when the in-league production index and the live market have NBA games to read (D116's graduation study: observed production displaces a pre-debut prior within K ~ 3-8 games).
+
+**Live effect (2026 class, D117 curve).** Dybantsa (NBA #1) moves ahead of Boozer (NBA #3) within the class; Wagler (NBA #5) moves from market #114 to #99; Brown (NBA #6) holds at #85; Nate Ament (this league's 1.06, the NBA's #13) stays where the market had him.
+
+**Known limits.** Six classes of ~50-60 players; 2024-25 outcomes truncated; usage, TS%, conference and position untested; p-values not multiplicity-adjusted. The table is the 2026 draft only - next year's class needs its row pasted the same way.
+
+### Gate
+
+Lint clean; 1,460 tests green.

@@ -197,6 +197,47 @@ Three workstreams, all landed in the same session:
   source, per-season `/users` as the only place a departed manager's name survives, `ppts`
   presence by season status, and roster-id stability across the chain.
 
+## 2026-10-01 - After the 2026 rookie draft: spent picks, the dynasty market, rookies priced (D115, D116)
+NSL Fantasy Hoops' 2026 rookie draft ran (42 picks, 3 rounds, linear) and broke two
+assumptions the model had been living on.
+
+- **Spent picks stopped counting as capital (D115).** Sleeper keeps listing a season in
+  `traded_picks` after its draft completes, so every 2026 pick was still being priced -
+  one roster read "13 picks, 9 firsts" with 4 of those firsts already used. The corpus
+  now reads each draft's `status` (`completedDraftSeasons`), every pick enumeration goes
+  through `tradeablePickSeasons()`, and `/api/trade` refuses a spent season.
+- **The price anchor moved off the redraft ordinal (D116).** `search_rank` turned out to
+  be Sleeper's redraft ADP (`adp_std`) under another name; the dynasty ADP sits on
+  `/projections/nba/regular/{season}`. Priced off redraft, the owner's new 1.07 (Keaton
+  Wagler) was worth 222 and `/plan` told him to cut him. The anchor is now a measured
+  0.45/0.55 log-space blend of dynasty and redraft ADP (`lib/valuation/market.js`), with a
+  bit-for-bit fallback to `search_rank` when no market loads (fixture, CSV, failed fetch).
+  The age curve is applied at exponent 0.5 on a dynasty-anchored price (the market already
+  prices age).
+- **The base curve was refit** to realized surplus over replacement (2021-23 snapshots,
+  n = 750): `10000 * r^-0.35 * e^(-0.015 (r-1))` replaces the hand-set
+  `e^(-0.021 (r-1))`, which was too flat at both ends and made every 2-for-1 depth trade
+  look like a win. Every value threshold (star, finder star, mid-tier, vet floor, dead
+  weight) is now `valueAtRank(N)` at the rank the old literal sat at, so tiers keep
+  their meaning.
+- **The rookie pick curve is being refit** to "what a pick converts into on draft night"
+  (2023-26 classes, quasi-Poisson WLS, exact 256-resample by-class bootstrap). The old
+  hand-set curve overpriced everything from about 1.05 down. The stale 2026
+  `classStrength` entry is retired. Final constants: see D116's TODO.
+- **This league's draft room was measured against the market and loses** (126 picks,
+  partial rho -0.022), so the room's order is published on the new draft recap
+  (`lib/draftrecap`, `/drafts/[season]`) rather than blended into price.
+- **Game plan stopped telling a rebuild to cut or sell just-drafted rookies**, and a
+  roster-crunch panel ("before tip-off") landed on the board and roster pages
+  (`lib/crunch`, `components/RosterCrunchPanel.jsx`).
+- **Research kept in-repo**: the four calibration studies, with how to re-fetch their
+  Sleeper snapshots, are under `scripts/calibration/`. `API_NOTES.md` now documents the
+  projections and season-stats endpoints, including that past snapshots' stat lines are
+  hindsight (their ADPs are not).
+- **Open, in priority order** (from D116): re-measure the production weight (0.23) on the
+  market anchor - it was measured on the redraft one; re-measure the age exponent on the
+  shipped blend rather than the pure dynasty anchor; land the final pick constants.
+
 ## FINAL STATE
 
 ### What works (end to end, zero external deps on fixtures)

@@ -251,7 +251,8 @@ lib/
   ingest.js               chain walk + idempotent archival persistence (optional)
   ledger.js  roster.js    ledger + roster/league analysis
 prisma/schema.prisma      Postgres-portable (no SQLite-only types)
-scripts/                  ingest, seed, claim-links, gen-icons
+scripts/                  ingest, seed, claim-links, gen-icons, derive-* (age curve,
+                          production); calibration/ = the D116 studies, reference only
 ```
 
 **Data flow.** Reads are DB-free by construction. A provider normalizes any

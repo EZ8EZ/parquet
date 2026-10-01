@@ -30,6 +30,7 @@ import {
 } from "@/lib/agency";
 import { loadDraftOrderFidelity, loadPickSlots } from "@/lib/agency/source";
 import { PickAgencyPanel } from "@/components/PickAgencyPanel";
+import { RosterCrunchPanel } from "@/components/RosterCrunchPanel";
 export const dynamic = "force-dynamic";
 /*
  * CORE AGE, SAYING ONLY WHAT IT MEASURES.
@@ -284,6 +285,10 @@ export default async function RosterPage() {
           </>
         }
       />
+
+      {/* Before tip-off: active count vs limit, taxi room, lowest-value players and
+            league-wide likely releases - counts from lib/crunch, not advice. */}
+      <RosterCrunchPanel h={h} rosterId={rosterId} className="mb-3" />
 
       {/*
        * THE HEADLINE NUMBERS, WITH THE ONLY THING THAT MAKES THEM MEAN ANYTHING.

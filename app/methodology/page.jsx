@@ -1,4 +1,5 @@
 import { getLeagueHistory } from "@/lib/history";
+import { isPickSeasonSpent } from "@/lib/picks";
 import { loadDraftOrderFidelity } from "@/lib/agency/source";
 import { VALUATION_CONFIG } from "@/lib/valuation/config";
 import {
@@ -13,6 +14,7 @@ import {
   STAR_AGE_ADJUSTMENT_PROVENANCE,
   STAR_SEARCH_RANK_CUTOFF,
   ageMultiplier,
+  baseAtRank,
   firstCliffAge,
   pickValue,
   cachedValuePlayers,
@@ -108,7 +110,7 @@ export default async function MethodologyPage() {
   const posMults = positionMultipliers(scoring);
   const baseExamples = [1, 10, 25, 50, 100, 150, 220].map((rank) => ({
     label: `#${rank}`,
-    value: Math.round(cfg.maxValue * Math.exp(-cfg.rankDecay * (rank - 1))),
+    value: Math.round(baseAtRank(rank, cfg)),
   }));
   // PRODUCTION COVERAGE, counted off the live corpus rather than restated from the
   // derivation's own run notes. The point of this page is that the model is auditable;
@@ -497,14 +499,16 @@ export default async function MethodologyPage() {
         ))}
       </nav>
 
-      <Subsection id="base" title="1 · Base value from consensus rank" defaultOpen>
+      <Subsection id="base" title="1 · Base value from the dynasty market rank" defaultOpen>
       <Card>
         <p className="mb-3 text-body leading-relaxed text-muted">
-          Value decays exponentially with rank (studs are scarce):
+          Value falls steeply off the top of the dynasty market and then decays
+          exponentially through the middle (studs are scarcer than a pure exponential
+          says - D116):
           <span className="font-mono text-ink">
             {" "}
-            base = {cfg.maxValue.toLocaleString()} · e^(−{cfg.rankDecay} ·
-            (rank−1))
+            base = {cfg.maxValue.toLocaleString()} · rank^(−{cfg.rankPower}) · e^(−
+            {cfg.rankDecay} · (rank−1))
           </span>
         </p>
         <LineChart data={baseExamples} format={(n) => n.toLocaleString()} />
@@ -676,14 +680,31 @@ export default async function MethodologyPage() {
             </ul>
           </div>
         ) : null}
-        <p className="mt-3 text-body leading-relaxed text-muted">
-          That share is high for a temporary reason, and it is stated as a fraction rather
-          than drawn as a full ring or a near-complete bar on purpose: those shapes assert
-          &ldquo;essentially done&rdquo;, and this one is about to stop being true. The{" "}
-          {h.currentLeague.season} rookie draft has not run yet, so every roster is still
-          last season&apos;s roster. Once it runs, every rookie taken will be a player
-          this table cannot price, and {backedPct}% will fall on its own.
-        </p>
+        {/*
+         * D115: this paragraph used to assert unconditionally that the current rookie
+         * draft "has not run yet". Once it has (NSL Fantasy Hoops' 2026 draft is
+         * complete on Sleeper), the rookies are on these rosters already, so the copy
+         * branches on the draft's real status instead of on the calendar.
+         */}
+        {isPickSeasonSpent(h, h.currentLeague.season) ? (
+          <p className="mt-3 text-body leading-relaxed text-muted">
+            It is stated as a fraction rather than drawn as a full ring or a
+            near-complete bar on purpose: those shapes assert &ldquo;essentially
+            done&rdquo;. The {h.currentLeague.season} rookie draft has run, so the
+            rookies it took are on these rosters now - and none of them has a
+            production record in this league yet. Every one this table prices counts
+            against the {backedPct}% until he logs rostered weeks here.
+          </p>
+        ) : (
+          <p className="mt-3 text-body leading-relaxed text-muted">
+            That share is high for a temporary reason, and it is stated as a fraction rather
+            than drawn as a full ring or a near-complete bar on purpose: those shapes assert
+            &ldquo;essentially done&rdquo;, and this one is about to stop being true. The{" "}
+            {h.currentLeague.season} rookie draft has not run yet, so every roster is still
+            last season&apos;s roster. Once it runs, every rookie taken will be a player
+            this table cannot price, and {backedPct}% will fall on its own.
+          </p>
+        )}
         <p className="mt-3 text-body leading-relaxed text-muted">
           <span className="text-ink">
             And {backedPct}% is the rostered share, which is the most flattering

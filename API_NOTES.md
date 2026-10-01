@@ -200,6 +200,10 @@ injury_body_part, depth_chart_position, depth_chart_order, search_rank`, plus
 external IDs for other platforms are present but unused by this app (espn_id notably
 for optional headshot CDN behind a flag).
 
+`search_rank` is Sleeper's **REDRAFT** ordinal - it tracks `adp_std` on the projections
+endpoint almost exactly (below). It was the model's price anchor until D116; it is now
+the fallback when the dynasty market is unavailable, and the D74 star-tier selector.
+
 #### The depth chart fields, measured (2026-08-19)
 
 `depth_chart_position` + `depth_chart_order` are a real, live depth chart, and this app
@@ -359,8 +363,68 @@ by the API's own `pick_no` and never reconstruct it.
   if a player later drops out of `/players/nba`. Prefer `h.players` for display and
   fall back to `metadata`.
 
+### Projections - `/projections/nba/regular/{season}` (the dynasty market, D116)
+`200`, **object keyed by `player_id`**, ~2,100 keys, **~190 KB** for 2026 (170-255 KB for
+2021-2025). Unauthenticated, one request. Read by `SleeperProvider.getMarket(season)`
+(memoized 1h) and parsed by `RawProjectionMap` / `toMarketEntry` in
+`lib/providers/sleeper/schemas.js`. Every value is a flat map of numbers; ~270 keys map
+to `{}` (a player with no market and no line) and must not fail the parse.
+
+Two families of key, meaning different things:
+
+- **`adp_dynasty`** - average draft position in Sleeper's dynasty drafts. **The only
+  place Sleeper publishes its dynasty market.** 836 players carry a real value on the
+  2026 snapshot (1.3, 2.7, 3.5 ...: a two-decimal mean, so ties happen).
+- **`adp_std`** - redraft ADP. 935 real values on 2026. Tracks `search_rank` on
+  `/players/nba` so closely it is the same signal (Boozer `search_rank` 25 vs `adp_std`
+  25.1; Dybantsa 53 vs 53.6) - which is the finding behind D116.
+- **`999` is the "no ADP" sentinel on both**, never a position (990 rows carry
+  `adp_dynasty: 999` on 2026). `toMarketEntry` maps anything `<= 0` or `>= 999` to `null`.
+- **The per-game projected line** - `pts reb ast stl blk to tpm dd td`, `sp` (SECONDS
+  played; `/60` for minutes), `fgm/fga/ftm/fta/tpa`, plus composite keys (`pts_reb_ast`,
+  `pts_std`, ...) - on ~530 players for 2026. **`gp` is `1.0` on every row that has it**:
+  the line is PER GAME, not a season total, and there is no projected games-played
+  anywhere in the payload, so a season total (`fppg * gp`) is not constructible.
+  `toMarketEntry` only builds a projection when `sp > 0` and `pts` is present.
+
+**One snapshot per season, 2021-2026, and the ADPs are point-in-time.** Victor
+Wembanyama is `adp_dynasty` 7.8 in the 2023 snapshot and 1.9 in 2024; Scoot Henderson
+35 then 103. Dynasty-ADP coverage grows by season (2021: 345 real values; 2024: 540;
+2026: 836). A re-fetch on 2026-10-01 found **0 changed rows** in the 2021, 2024 and 2026
+snapshots, so past seasons are frozen (the CURRENT season's ADPs move daily until tip-off).
+
+**⚠️ The STAT LINES in past snapshots are hindsight, not projections.** In 2021-2025 the
+per-game line matches the realized season at rho 0.99 (median abs difference 0.06; `pts`
+within 0.06 of the actual per-game figure on ~86% of rows). Sleeper overwrote them with
+actuals. Only the 2026 line is a genuine projection (rho 0.93 against 2025 actuals). Any
+backtest must use the ADPs from a past snapshot and never its stat line.
+
+Coverage vs the rostered universe (2026): every top-200 `search_rank` player has a
+dynasty ADP; every top-300 player without one is a teamless free agent.
+
+### Season stats - `/stats/nba/regular/{season}`
+`200`, **object keyed by `player_id`**, ~1,850 keys, 140-320 KB per season (2013-2025
+checked). SEASON TOTALS, not per game: `gp`, `gs`, `sp` (seconds), `pts reb ast stl blk
+to tpm dd td tf ff`, shooting splits, plus rank/defense composites (`rank_std`,
+`pos_rank_std`, `pts_allowed`, ...). Read by `scripts/derive-age-curve.js` and the D116
+calibration studies (`scripts/calibration/`); nothing in the request path reads it.
+
+- **30 `TEAM_XXX` pseudo-ids** (`TEAM_BOS`, ...) carry team lines with `gp` populated.
+  Filter to numeric ids before treating a key as a player.
+- **`bonus_pt_40p` / `bonus_pt_50p` are not counts of 40/50-point games** - they appear
+  as a ~0/1 flag on hundreds of rows per season, including low-scoring ones. Exclude them
+  from any fantasy-point computation built off this blob.
+- **The season in progress is empty**: `stats2026` (preseason, 2026-10-01) is ~1,800 keys
+  mapping to `{}`. Sleeper season `Y` = NBA season `Y-(Y+1)`, so `stats2025` is 2025-26.
+- `/stats/nba/regular/{season}/{week}` is a TRAP - it returns only the last game of the
+  week for ~557 players (see `lib/lab/regret/source.js`). Per-game box scores live at
+  `https://api.sleeper.app/stats/nba/player/{id}?season_type=regular&season={s}&grouping=week`
+  (no `/v1`).
+
 ## Stats provider decision
-Sleeper stats/projections endpoints are unreliable; **not used** for valuation.
-See DECISIONS.md - v1 valuation runs on Sleeper's `search_rank` + age/role signals,
-abstracted behind a `StatsProvider` interface with a fixture implementation so a
-real stats source (a free external stats API) can be swapped in without touching callers.
+*Superseded in part (D116).* The original call was that Sleeper's stats/projections
+endpoints were unreliable and **not used** for valuation, with v1 running on
+`search_rank` + age/role behind a `StatsProvider` interface. That still holds for the
+stat LINES (see the hindsight warning above). It no longer holds for the market: since
+D116 the price anchor is read from `adp_dynasty` / `adp_std` on the projections
+endpoint, falling back to `search_rank` exactly when that endpoint is unavailable.
