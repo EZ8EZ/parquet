@@ -1,0 +1,5 @@
+# Sleeper snapshots (~9 MB) and regenerated outputs. Fetch with anchor/fetch.mjs or the
+# curl commands in README.md; the numbers that matter are recorded in DECISIONS.md D116.
+data/
+results*.json
+out_*.txt
