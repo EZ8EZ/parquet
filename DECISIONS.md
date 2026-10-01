@@ -7966,3 +7966,29 @@ curve's shape rather than the property it was meant to guard:
 ### Gate
 
 Lint clean; 1,456 tests green (74 files) on the hybrid curve. The two consolidation reads and the move= path are pinned in both directions now: from a balanced roster a 3-for-1 into a star creates a single point of failure, and from the Luka-dominated fixture roster giving the anchor away relieves one.
+
+## D118. ROOKIES WITH COLLEGE MINUTES AND NO NBA ONES ARE PRICED ON THE MARKET PLUS NBA DRAFT CAPITAL - and college box-score production is deliberately left out, because it was measured and adds nothing
+
+**The question.** The owner asked how the model should price a rookie with a college record and no NBA game time. After D116 such a player is priced off the blended dynasty/redraft market and nothing else: the in-league production table cannot have seen him (D19).
+
+**Measured** (post-doc study, `scripts/calibration/rookie/`): the 2020-2026 NBA draft classes, 413 draftees, every one mapped to a Sleeper id (360 high-confidence, 318 of those verified against NBA games played); outcome = three seasons of this league's fantasy points, era-normalized, ranked within class; validated leave-one-class-out (LOCO).
+
+| predictor | rho vs outcome | out-of-sample |
+|---|---|---|
+| NBA draft pick | -0.667 (n = 236) | LOCO R^2 0.40 vs 0.28 for dynasty ADP (n = 192) |
+| dynasty ADP | -0.580 (n = 192) | |
+| college fantasy points / 40 | +0.225 (n = 185) | adds +0.004 R^2 to the market, -0.007 to slot + age (n = 162) |
+| age at draft | -0.159 | slot-mediated and horizon-biased; left neutral |
+
+- **College production is not in the price.** Its partial given the market swings by class (-0.11, 0.26, 0.31, 0.53) and its class-block CI includes zero once 2024-25 are added. The NBA's own draft has already read the college film, the medicals and the interviews; a box-score summary of the same season adds nothing measurable on top. Rejected alternative: a college-FP/40 multiplier - it would have been the most "data-driven"-looking term in the model and the least supported one.
+- **NBA draft capital is.** P(pick) = 0.936 e^(-pick/43.8) (A [0.88, 0.99], tau [38.6, 50.3]; LOCO R^2 0.456), the expected within-class outcome percentile, with a measured -0.16 for a non-college pick after #14 (draft-and-stash and Ignite players produce less early: CI [-0.23, -0.10], n = 54 vs 215). Blended 50/50 with the market's own within-class percentile, which stayed within 0.02 of the optimal R^2 in every cut and always beat the market alone. The fitted best market weight was 0.20-0.30 [~0, 0.6], but the archived ADP is coarse (2022 covers 31 of 58 draftees) while the live 2026 ADP covers 57 of 60, so the market's weight is if anything understated by the fit; 0.5 is the round number inside both readings.
+- **It enters as a reordering within the class** (`lib/valuation/rookiePrior.js`, `reorderRookieClass`): the class keeps exactly the set of market ordinals it already held, and the blend decides who sits where. The evidence is about ordering, and a permutation cannot move any threshold or tier break on the value scale - the same property D55/D116 rely on.
+- **It expires on its own.** It applies only at `yearsExp === 0`. Sleeper increments that at the next season, when the in-league production index and the live market have NBA games to read (D116's graduation study: observed production displaces a pre-debut prior within K ~ 3-8 games).
+
+**Live effect (2026 class, D117 curve).** Dybantsa (NBA #1) moves ahead of Boozer (NBA #3) within the class; Wagler (NBA #5) moves from market #114 to #99; Brown (NBA #6) holds at #85; Nate Ament (this league's 1.06, the NBA's #13) stays where the market had him.
+
+**Known limits.** Six classes of ~50-60 players; 2024-25 outcomes truncated; usage, TS%, conference and position untested; p-values not multiplicity-adjusted. The table is the 2026 draft only - next year's class needs its row pasted the same way.
+
+### Gate
+
+Lint clean; 1,460 tests green.
