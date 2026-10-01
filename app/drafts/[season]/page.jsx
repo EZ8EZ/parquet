@@ -7,6 +7,7 @@ import { getPrincipals } from "@/lib/principals";
 import { EmptyState, PageHeader } from "@/components/ui";
 import { cn } from "@/lib/ui";
 import { BoardPickRow } from "../parts";
+import { DraftRecap } from "./recap";
 export const dynamic = "force-dynamic";
 export default async function DraftBoardPage({ params, searchParams }) {
   const { season } = await params;
@@ -39,6 +40,15 @@ export default async function DraftBoardPage({ params, searchParams }) {
   const mine = board.picks.filter((p) => p.isMine);
   const traded = board.picks.filter((p) => p.wasTraded);
   const highlighted = board.picks.find((p) => p.pickNo === highlight);
+  // The recap runs on a COMPLETE draft that is not the chain's oldest one - the oldest
+  // is taken to be the startup, where a rookie pick curve is the wrong yardstick (see
+  // recap.jsx). `seasons` is newest first, so the oldest is the last entry.
+  const oldestSeason = seasons.at(-1)?.season;
+  const showRecap =
+    board.status === "complete" &&
+    board.picks.length > 0 &&
+    seasons.length > 1 &&
+    season !== oldestSeason;
   return (
     <div>
       {/* Negative margin keeps the 44px tap target from adding visual space. */}
@@ -157,6 +167,7 @@ export default async function DraftBoardPage({ params, searchParams }) {
         </EmptyState>
       ) : (
         <>
+          {showRecap && <DraftRecap h={h} board={board} />}
           {[...rounds.entries()].map(([round, picks]) => {
             const yours = picks.filter((p) => p.isMine).length;
             return (

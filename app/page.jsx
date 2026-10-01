@@ -18,6 +18,7 @@ import { canCapture, readSeat } from "@/lib/auth/server";
 import { Onward } from "@/components/Onward";
 import { DigestBeacon } from "@/components/DigestBeacon";
 import { Wordmark } from "@/components/Brand";
+import { RosterCrunchPanel } from "@/components/RosterCrunchPanel";
 import {
   Card,
   Tag,
@@ -176,6 +177,15 @@ export default async function HomePage() {
           </span>
         </Link>
       </section>
+
+      {/* Before tip-off: renders only when this roster is over the active limit or
+            has an open taxi slot with a stash candidate (see RosterCrunchPanel). */}
+      <RosterCrunchPanel
+        h={h}
+        rosterId={p.rosterId}
+        onlyWhenRelevant
+        className="mb-3"
+      />
 
       {report.contradictions.length > 0 ? (
         <div className="mt-3 space-y-2">
