@@ -1,4 +1,5 @@
 import { getLeagueHistory } from "@/lib/history";
+import { isPickSeasonSpent } from "@/lib/picks";
 import { loadDraftOrderFidelity } from "@/lib/agency/source";
 import { VALUATION_CONFIG } from "@/lib/valuation/config";
 import {
@@ -676,14 +677,31 @@ export default async function MethodologyPage() {
             </ul>
           </div>
         ) : null}
-        <p className="mt-3 text-body leading-relaxed text-muted">
-          That share is high for a temporary reason, and it is stated as a fraction rather
-          than drawn as a full ring or a near-complete bar on purpose: those shapes assert
-          &ldquo;essentially done&rdquo;, and this one is about to stop being true. The{" "}
-          {h.currentLeague.season} rookie draft has not run yet, so every roster is still
-          last season&apos;s roster. Once it runs, every rookie taken will be a player
-          this table cannot price, and {backedPct}% will fall on its own.
-        </p>
+        {/*
+         * D115: this paragraph used to assert unconditionally that the current rookie
+         * draft "has not run yet". Once it has (NSL Fantasy Hoops' 2026 draft is
+         * complete on Sleeper), the rookies are on these rosters already, so the copy
+         * branches on the draft's real status instead of on the calendar.
+         */}
+        {isPickSeasonSpent(h, h.currentLeague.season) ? (
+          <p className="mt-3 text-body leading-relaxed text-muted">
+            It is stated as a fraction rather than drawn as a full ring or a
+            near-complete bar on purpose: those shapes assert &ldquo;essentially
+            done&rdquo;. The {h.currentLeague.season} rookie draft has run, so the
+            rookies it took are on these rosters now - and none of them has a
+            production record in this league yet. Every one this table prices counts
+            against the {backedPct}% until he logs rostered weeks here.
+          </p>
+        ) : (
+          <p className="mt-3 text-body leading-relaxed text-muted">
+            That share is high for a temporary reason, and it is stated as a fraction rather
+            than drawn as a full ring or a near-complete bar on purpose: those shapes assert
+            &ldquo;essentially done&rdquo;, and this one is about to stop being true. The{" "}
+            {h.currentLeague.season} rookie draft has not run yet, so every roster is still
+            last season&apos;s roster. Once it runs, every rookie taken will be a player
+            this table cannot price, and {backedPct}% will fall on its own.
+          </p>
+        )}
         <p className="mt-3 text-body leading-relaxed text-muted">
           <span className="text-ink">
             And {backedPct}% is the rostered share, which is the most flattering
