@@ -1,7 +1,7 @@
 /**
  * The redirect itself, through the real proxy and a real NextRequest.
  *
- * `lib/auth/entry.test.ts` pins the decision; this pins the WIRING - that the lens
+ * `lib/auth/entry.test.js` pins the decision; this pins the WIRING - that the lens
  * cookie is the one being read, that a redirect response actually comes back, and
  * that the matcher's exclusions are not silently doing the opposite of what they say.
  * The decision being correct in a module nobody calls would be no comfort at all.

@@ -232,7 +232,7 @@ describe("PERSISTENCE HONESTY - a rejected write must never look like a saved on
  * the behaviour WITHIN one module registry, which is the contract this module is written
  * to and the only one it can honour on its own.
  *
- * `getUsers` is the spy target for the same reason lib/history.test.ts uses it: it is
+ * `getUsers` is the spy target for the same reason lib/history.test.js uses it: it is
  * called exactly once per assembly and nowhere else on this path, so its call count IS
  * the assembly count. Both halves have to hold together - dropping the invalidation
  * without publishing the row would make the write cheap and invisible, which is worse.

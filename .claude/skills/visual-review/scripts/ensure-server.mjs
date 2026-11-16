@@ -3,7 +3,7 @@
 // URL to stdout on the LAST line so callers can `$(node ensure-server.mjs)`.
 //
 // Next 16 refuses a second `next dev` for the same directory even on a different
-// port (see e2e/constants.ts), so this always reuses whatever is already up on
+// port (see e2e/constants.js), so this always reuses whatever is already up on
 // the requested port rather than trying to spawn a redundant one.
 import { spawn } from "node:child_process";
 import { setTimeout as sleep } from "node:timers/promises";

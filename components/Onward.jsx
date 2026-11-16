@@ -1,7 +1,7 @@
 /**
  * THE END OF EVERY PAGE.
  *
- * One row of next steps, driven by the registry (`onwardFrom` in lib/nav.ts) rather
+ * One row of next steps, driven by the registry (`onwardFrom` in lib/nav.js) rather
  * than by a hand-kept array at each call site - the same repair the surface registry
  * itself was for. A page passes its own path and nothing else.
  *

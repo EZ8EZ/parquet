@@ -7,7 +7,7 @@ import {
   watchConsole,
 } from "./helpers";
 /**
- * REGISTRY-DRIVEN SMOKE - one test per entry in lib/nav.ts's `ALL_SURFACES`.
+ * REGISTRY-DRIVEN SMOKE - one test per entry in lib/nav.js's `ALL_SURFACES`.
  *
  * Generated FROM the registry rather than hand-listed on purpose: `ALL_SURFACES`
  * is the single source of truth round 6 made for every real destination in the

@@ -32,11 +32,11 @@ const execPath = process.env.VISUAL_REVIEW_CHROMIUM; // set this if the sandbox'
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
 
-  // Same cookie e2e/helpers.ts's primeLens sets, so a fresh browser skips the
+  // Same cookie e2e/helpers.js's primeLens sets, so a fresh browser skips the
   // first-run team picker instead of screenshotting it on every route.
   await context.addCookies([{ name: "parquet_roster", value: String(roster), url: base }]);
 
-  // The boot script in app/layout.tsx reads this key before first paint (lib/theme.ts).
+  // The boot script in app/layout.jsx reads this key before first paint (lib/theme.js).
   await page.addInitScript(
     ([key, value]) => {
       try {

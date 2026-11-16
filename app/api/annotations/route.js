@@ -20,7 +20,7 @@ const Body = z.object({
  * It used to stamp `h.me.userId` - the "viewing as" lens, which is a non-httpOnly
  * cookie any reader can rewrite. That made the author field forgeable: flip the
  * cookie, write a note as a leaguemate, edit theirs while you were there. The stamp
- * now comes from the SIGNED seat instead (lib/auth/seat.ts), and the lens is not
+ * now comes from the SIGNED seat instead (lib/auth/seat.js), and the lens is not
  * consulted here at all.
  *
  * In legacy mode (no AUTH_SECRET) `writeAuthorId` returns the lens exactly as before,

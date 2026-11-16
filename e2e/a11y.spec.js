@@ -4,7 +4,7 @@ import { ALL_SURFACES } from "../lib/nav";
 import { THEME_STORAGE_KEY } from "../lib/theme";
 import { primeLens } from "./helpers";
 /**
- * REGISTRY-DRIVEN ACCESSIBILITY SCAN, same shape as smoke.spec.ts: one entry per
+ * REGISTRY-DRIVEN ACCESSIBILITY SCAN, same shape as smoke.spec.js: one entry per
  * `ALL_SURFACES` route rather than a hand-kept list, so a route this file forgot
  * to add is a route the registry itself was always going to miss too.
  *

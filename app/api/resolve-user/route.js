@@ -79,7 +79,7 @@ export async function POST(req) {
     maxAge: 60 * 60 * 24 * 365,
   });
   // No `invalidateHistory()` here on purpose — see the docstring on
-  // app/api/viewing-as/route.ts's POST: the corpus is identity-independent by
+  // app/api/viewing-as/route.js's POST: the corpus is identity-independent by
   // construction, so switching the lens can never stale it.
   return res;
 }

@@ -14,8 +14,8 @@ async function main() {
   const { prisma } = await import("../lib/db.js");
   await ingestAll({ log: () => {} });
   // The 2022 rebuild trade — user's STATED strategy at the moment of conviction.
-  // Authored by "u1", the fixture's own EZ8 seat (see providers/fixture/generate.ts
-  // and history.ts's FIXTURE_SEED_ANNOTATIONS, which this mirrors).
+  // Authored by "u1", the fixture's own EZ8 seat (see providers/fixture/generate.js
+  // and history.js's FIXTURE_SEED_ANNOTATIONS, which this mirrors).
   const demo = {
     transactionId: "fx-2022-rebuildA",
     ownerId: "u1",
