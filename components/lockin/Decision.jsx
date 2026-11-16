@@ -16,7 +16,7 @@ export function LeanChip({ lean }) {
     <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
       {v.conditional && <span className="text-meta text-secondary">If not already locked</span>}
       <Chip tone={v.nearlyEven ? "neutral" : "accent"} icon={v.value === "lock" ? Lock : Hourglass}>
-        Leans {v.value} · {v.confidence}
+        Model leans {v.value} · {v.confidence}
       </Chip>
     </span>
   );

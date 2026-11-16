@@ -23,7 +23,7 @@ test.describe("lock-or-hold board", () => {
     await expect(holden).toContainText("Expected if held");
     await expect(holden).toContainText("Later game beats it");
     await expect(holden).toContainText("If not already locked");
-    await expect(holden).toContainText(/Leans (lock|hold) · (marginal|moderate|clear)/);
+    await expect(holden).toContainText(/Model leans (lock|hold) · (marginal|moderate|clear)/);
     await holden.getByRole("button", { name: /charts, record and method/ }).click();
     const sheet = page.locator("dialog[open]");
     await expect(sheet.getByRole("heading", { name: "Bryce Holden" })).toBeVisible();

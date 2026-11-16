@@ -29,7 +29,7 @@ export function PlayerRow({ card }) {
               )}
               {v && (
                 <Chip tone={v.nearlyEven ? "neutral" : "accent"} size="sm">
-                  Leans {v.value}
+                  {v.conditional ? "If not already locked, model leans" : "Model leans"} {v.value} · {v.confidence}
                 </Chip>
               )}
             </>
