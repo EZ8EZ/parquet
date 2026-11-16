@@ -24,10 +24,10 @@ export default function NotFound() {
       <div className="mt-3 flex gap-2">
         <ButtonLink href="/" className="flex-1">
           <Home size={15} aria-hidden="true" />
-          Home
+          This Week
         </ButtonLink>
-        <ButtonLink href="/more" variant="ghost" className="flex-1">
-          See everything
+        <ButtonLink href="/settings" variant="ghost" className="flex-1">
+          Search
         </ButtonLink>
       </div>
       <p className="mt-4 text-center text-meta leading-relaxed text-secondary">

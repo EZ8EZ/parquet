@@ -1,5 +1,6 @@
 import { cachedValuePlayers } from "@/lib/valuation";
 import { leagueCrunch } from "@/lib/crunch";
+import { seasonPhase } from "@/lib/actions";
 import { fmtValue } from "@/lib/ui";
 import { Card, SectionHeader, Stat, Tag } from "@/components/ui";
 /**
@@ -133,7 +134,7 @@ export function RosterCrunchPanel({ h, rosterId, onlyWhenRelevant = false, class
   return (
     <Card className={className}>
       <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
-        Before tip-off
+        {seasonPhase(h).phase === "preseason" ? "Before tip-off" : "Roster limits"}
       </p>
       <p className="mt-1 text-body leading-snug text-ink">{standfirst}</p>
 

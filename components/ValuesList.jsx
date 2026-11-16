@@ -219,11 +219,11 @@ export function ValueAssetRow({
             />
           )}
           <span className="min-w-0 flex-1">
-            <span className="flex items-center gap-1.5">
+            <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
               <span
                 className={cn(
-                  "line-clamp-1 font-semibold leading-tight text-ink",
-                  hero === "lead" ? "text-lede" : "text-[13px]",
+                  "min-w-0 break-words font-semibold leading-tight text-ink",
+                  hero === "lead" ? "text-[15px]" : "text-[13px]",
                 )}
               >
                 {name}
@@ -302,7 +302,7 @@ export function ValueAssetRow({
               </span>
             )}
           </span>
-          {trajectory && trajectory.length > 1 && (
+          {trajectory && trajectory.length > 1 && hero !== "lead" && (
             <span className="shrink-0" aria-hidden="true">
               <Sparkline
                 values={trajectory}

@@ -10,6 +10,7 @@ import {
   Stat,
 } from "@/components/ui";
 import { ExperimentBadge } from "@/components/ExperimentBadge";
+import { Onward } from "@/components/Onward";
 export const dynamic = "force-dynamic";
 export const metadata = {
   title: "Positional leverage - Parquet Lab",
@@ -132,7 +133,7 @@ export default async function LeveragePage() {
     return (
       <div>
         <PageHeader
-          kicker="The Lab"
+          kicker="Trade · experiment"
           title="Where you can actually deal from"
           action={<ExperimentBadge />}
         />
@@ -145,7 +146,7 @@ export default async function LeveragePage() {
   return (
     <div>
       <PageHeader
-        kicker="The Lab"
+        kicker="Trade · experiment"
         title="Where you can actually deal from"
         subtitle={`${mine.teamName ?? mine.ownerName}, measured against this league's own positional mix.`}
         action={<ExperimentBadge />}
@@ -273,6 +274,7 @@ export default async function LeveragePage() {
         hold up, and unlike Dynasty Duration and the Fragility Index it has not
         earned a permanent page yet.
       </p>
+      <Onward from="/lab/leverage" />
     </div>
   );
 }
