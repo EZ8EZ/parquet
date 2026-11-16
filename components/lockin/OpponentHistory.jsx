@@ -19,7 +19,7 @@ export function OpponentHistory({ v }) {
               <li key={r.date} className="grid grid-cols-[5rem_1fr_3rem] items-center gap-2 text-note">
                 <span className="figure text-secondary">{r.label}</span>
                 <span className="block h-2 rounded-full bg-elevated" aria-hidden="true">
-                  <span className="block h-full rounded-full bg-[var(--color-secondary)]" style={{ width: `${r.widthPct}%` }} />
+                  <span className="block h-full rounded-full bg-secondary" style={{ width: `${r.widthPct}%` }} />
                 </span>
                 <span className="figure text-right font-semibold text-ink">{fmt(r.fp)}</span>
               </li>

@@ -2,7 +2,7 @@ import { cn } from "@/lib/ui";
 import { DeckTrigger } from "./PlayerDeck";
 
 const CELL = {
-  banked: "figure font-bold text-ink underline decoration-[var(--color-accent)] decoration-2 underline-offset-[3px]",
+  banked: "figure font-bold text-ink underline decoration-accent decoration-2 underline-offset-[3px]",
   played: "figure text-secondary",
   dnp: "text-secondary",
   pending: "text-secondary",
@@ -13,8 +13,8 @@ const CELL = {
 
 function Swatch({ kind }) {
   if (kind === "upcoming") return <span aria-hidden="true" className="inline-block h-3.5 w-6 rounded-[4px] bg-elevated" />;
-  if (kind === "banked") return <span aria-hidden="true" className="inline-block h-[3px] w-6 rounded-full bg-[var(--color-accent)]" />;
-  return <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-[var(--color-secondary)]" />;
+  if (kind === "banked") return <span aria-hidden="true" className="inline-block h-[3px] w-6 rounded-full bg-accent" />;
+  return <span aria-hidden="true" className="inline-block size-1.5 rounded-full bg-secondary" />;
 }
 
 /** Who plays which night. `grid` is weekGrid() or playerWeekGrid() output. */

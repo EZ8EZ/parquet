@@ -26,7 +26,7 @@ export function SlotCells({ slots }) {
           return (
             <li key={s.index} className="min-w-0">
               {s.playerId ? (
-                <DeckTrigger playerId={s.playerId} label={`${spoken}. Show details`} className="rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--color-accent)]">
+                <DeckTrigger playerId={s.playerId} label={`${spoken}. Show details`} className="rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
                   {face}
                 </DeckTrigger>
               ) : (
