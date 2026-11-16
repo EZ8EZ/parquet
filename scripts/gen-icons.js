@@ -10,7 +10,7 @@ const svg = readFileSync(resolve(pub, "icon.svg"));
 // Maskable icon needs safe padding: render the mark smaller on a full bg square.
 const maskableSvg =
   Buffer.from(`<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512">
-     <rect width="512" height="512" fill="#0b0c0e"/>
+     <rect width="512" height="512" fill="#0b0d10"/>
      <g transform="translate(64 64) scale(0.75)">${readFileSync(resolve(pub, "icon.svg"), "utf8").replace(/<\?xml.*?\?>/, "")}</g>
    </svg>`);
 async function main() {

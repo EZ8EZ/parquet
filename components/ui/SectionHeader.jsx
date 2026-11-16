@@ -10,7 +10,7 @@ import { cn } from "@/lib/ui";
 export function SectionHeader({ title, action, href, cta, id, className }) {
   return (
     <div className={cn("mb-2 mt-6 flex min-h-11 items-end justify-between gap-3", className)}>
-      <h2 id={id} className="min-w-0 pb-1.5 text-lede font-semibold tracking-tight text-ink">
+      <h2 id={id} className="min-w-0 scroll-mt-16 pb-1.5 text-lede font-semibold tracking-tight text-ink">
         {title}
       </h2>
       {action}

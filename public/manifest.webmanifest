@@ -1,11 +1,11 @@
 {
-  "name": "Parquet — Dynasty Memory",
+  "name": "Parquet - Dynasty Memory",
   "short_name": "Parquet",
   "description": "A dynasty fantasy basketball companion that remembers your decisions, audits your strategy, and scouts your leaguemates.",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0b0c0e",
-  "theme_color": "#0b0c0e",
+  "background_color": "#0b0d10",
+  "theme_color": "#0b0d10",
   "orientation": "portrait",
   "icons": [
     { "src": "/icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },

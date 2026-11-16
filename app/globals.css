@@ -212,16 +212,19 @@ a[role="button"],
     background-position: 200% 0;
   }
 }
-.skeleton {
-  background: linear-gradient(
-    90deg,
-    var(--color-surface-2) 25%,
-    var(--color-elevated) 37%,
-    var(--color-surface-2) 63%
-  );
-  background-size: 200% 100%;
-  animation: shimmer 1.4s ease-in-out 3 both;
-  border-radius: var(--radius-sm);
+/* In a layer so a `rounded-full` utility on a skeleton (avatars, chips) wins. */
+@layer components {
+  .skeleton {
+    background: linear-gradient(
+      90deg,
+      var(--color-surface-2) 25%,
+      var(--color-elevated) 37%,
+      var(--color-surface-2) 63%
+    );
+    background-size: 200% 100%;
+    animation: shimmer 1.4s ease-in-out 3 both;
+    border-radius: var(--radius-sm);
+  }
 }
 @media (prefers-reduced-motion: reduce) {
   .skeleton {
