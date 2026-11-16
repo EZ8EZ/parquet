@@ -1,9 +1,9 @@
 import Link from "next/link";
-import { ArrowLeft, GraduationCap } from "lucide-react";
+import { ChevronLeft, GraduationCap } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getPrincipals } from "@/lib/principals";
 import { seasonDraftGrades } from "@/lib/metrics/draftGrades";
-import { PageHeader, EmptyState } from "@/components/ui";
+import { Disclosure, PageHeader, EmptyState } from "@/components/ui";
 import { DraftReportCard } from "@/components/DraftReportCard";
 import { Onward } from "@/components/Onward";
 export const dynamic = "force-dynamic";
@@ -16,17 +16,21 @@ export default async function DraftGradesPage() {
       {/* Negative margin keeps the 44px tap target from adding visual space. */}
       <Link
         href="/drafts"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
+        className="-ml-2 inline-flex min-h-11 items-center gap-1 px-2 text-note font-semibold text-secondary transition-colors hover:text-accent-text"
       >
-        <ArrowLeft size={13} aria-hidden="true" />
-        Pick lineage
+        <ChevronLeft size={16} aria-hidden="true" />
+        Drafts
       </Link>
 
       <PageHeader
         kicker="Draft report cards"
         title="How every draft graded"
-        subtitle="Every completed draft, graded pick by pick against the players still on the board when each pick was made. Hindsight pricing: valued at today's numbers, not what was knowable on draft day."
+        subtitle="Each pick against the players still on the board"
       />
+      <Disclosure summary="Hindsight pricing">
+        Every completed draft, graded pick by pick against the players still on the board when each pick was made,
+        valued at today&apos;s numbers, not what was knowable on draft day.
+      </Disclosure>
 
       {grades.length === 0 ? (
         <EmptyState
@@ -38,7 +42,7 @@ export default async function DraftGradesPage() {
             : "No completed draft has enough picks behind it to grade yet."}
         </EmptyState>
       ) : (
-        <div className="mt-3 space-y-2.5">
+        <div className="mt-2 space-y-3">
           {grades.map((g) => (
             <DraftReportCard
               key={g.draftId}

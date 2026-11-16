@@ -80,10 +80,10 @@ export function iconForAward(id) {
 }
 const TONE_BG = {
   accent: "bg-accent-wash border-accent-edge",
-  positive: "bg-positive/16 border-positive/30",
-  negative: "bg-negative/16 border-negative/30",
-  info: "bg-info/16 border-info/30",
-  warn: "bg-warn/16 border-warn/30",
+  positive: "bg-positive-wash border-positive-edge",
+  negative: "bg-negative-wash border-negative-edge",
+  info: "bg-info-wash border-info-edge",
+  warn: "bg-warn-wash border-warn-edge",
 };
 const TONE_ICON = {
   accent: "text-accent-text",
@@ -101,19 +101,15 @@ export function AwardBadge({ icon: Icon, tone, rank, size, className }) {
       aria-hidden="true"
       className={cn(
         "inline-flex shrink-0 items-center justify-center rounded-full border",
-        isWinner ? TONE_BG[tone] : "border-border bg-surface-2",
+        isWinner ? cn(TONE_BG[tone], "ring-2 ring-accent") : "border-transparent bg-surface-2",
         className,
       )}
-      style={{
-        width: dim,
-        height: dim,
-        boxShadow: isWinner ? "0 0 0 2px var(--color-accent)" : undefined,
-      }}
+      style={{ width: dim, height: dim }}
     >
       <Icon
         size={iconSize}
         strokeWidth={2}
-        className={isWinner ? TONE_ICON[tone] : "text-faint"}
+        className={isWinner ? TONE_ICON[tone] : "text-secondary"}
       />
     </span>
   );
