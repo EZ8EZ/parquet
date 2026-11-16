@@ -105,7 +105,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
         {desk.status === "between_weeks" && desk.nextWeek ? (
           <BetweenWeeks desk={desk} />
         ) : (
-          <EmptyState icon={CalendarDays} title={{ offseason: "No lock-in week", no_matchup: "No matchup this week", unavailable: "Lock-in data unavailable" }[desk.status] ?? "Nothing to show"}>
+          <EmptyState icon={<CalendarDays size={28} aria-hidden="true" />} title={{ offseason: "No lock-in week", no_matchup: "No matchup this week", unavailable: "Lock-in data unavailable" }[desk.status] ?? "Nothing to show"}>
             {desk.message}
           </EmptyState>
         )}
@@ -154,7 +154,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
       {heroes.map((c) => (
         <DecisionHero key={c.playerId} card={c} />
       ))}
-      {!groups.live.length && (fu ? <FirstUp fu={fu} tappable className="mt-2" /> : <EmptyState icon={CalendarDays} title="Nothing to decide">No score is waiting on a lock-or-hold call.</EmptyState>)}
+      {!groups.live.length && (fu ? <FirstUp fu={fu} tappable className="mt-2" /> : <EmptyState icon={<CalendarDays size={28} aria-hidden="true" />} title="Nothing to decide">No score is waiting on a lock-or-hold call.</EmptyState>)}
     </div>
   );
   const nights = (
