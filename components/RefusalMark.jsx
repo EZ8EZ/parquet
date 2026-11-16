@@ -8,7 +8,7 @@
  * skeleton one iteration in - and that failure mode is worth naming precisely, because
  * avoiding it is the whole design problem: `.skeleton` (app/globals.css) is a solid,
  * ANIMATED, gradient-filled RECTANGLE, shimmering to say "the shape is known, the
- * values are not" (components/PageSkeleton.tsx). A dashed rectangle - the obvious
+ * values are not" (components/PageSkeleton.jsx). A dashed rectangle - the obvious
  * first guess for "unknown" - keeps two of those three properties (rectangular,
  * static-gray) and reads as the same object mid-animation.
  *

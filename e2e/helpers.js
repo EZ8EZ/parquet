@@ -45,13 +45,13 @@ export function expectNoConsoleErrors(guard) {
 }
 /**
  * The one assertion every route in the registry has to satisfy - deliberately
- * free of any page-specific copy (see e2e/smoke.spec.ts's header for why pinning
+ * free of any page-specific copy (see e2e/smoke.spec.js's header for why pinning
  * per-page text here would make this suite brittle by design):
  *
  *   - The app's stable chrome rendered: the primary bottom nav, present in the
- *     root layout (app/layout.tsx) on every route with no per-page opt-out.
- *   - Neither the app's own root error boundary (app/error.tsx) nor its 404
- *     (app/not-found.tsx) fired - a registry entry whose route doesn't actually
+ *     root layout (app/layout.jsx) on every route with no per-page opt-out.
+ *   - Neither the app's own root error boundary (app/error.jsx) nor its 404
+ *     (app/not-found.jsx) fired - a registry entry whose route doesn't actually
  *     resolve, or whose page throws, fails here instead of being mistaken for a
  *     clean render.
  *
@@ -73,15 +73,15 @@ export async function expectStableChrome(page) {
 }
 /**
  * Set the app's "lens" cookie so navigation skips the first-run team picker
- * (middleware.ts / lib/auth/entry.ts: a browser with no `parquet_roster` cookie
+ * (proxy.js / lib/auth/entry.js: a browser with no `parquet_roster` cookie
  * is redirected to `/teams` for every page except the handful that must work
  * before a lens exists). Every spec in this suite calls this before its first
  * `page.goto` - without it, EVERY registry route would redirect to the picker
  * and the smoke suite would just be re-testing that one redirect 20-odd times.
  *
- * Defaults to roster 1 (EZ8, `u1`) - the same identity `lib/history.ts` falls
+ * Defaults to roster 1 (EZ8, `u1`) - the same identity `lib/history.js` falls
  * back to with no cookie at all, and the author of the fixture's one seeded
- * ledger annotation (see e2e/core-flow.spec.ts), so priming this cookie doesn't
+ * ledger annotation (see e2e/core-flow.spec.js), so priming this cookie doesn't
  * change WHOSE data the suite is looking at, only whether the picker intercepts
  * the very first request.
  */

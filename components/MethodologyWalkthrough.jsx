@@ -229,7 +229,7 @@ function ValueModelChart({ model, active }) {
             liveBlend ? "font-semibold text-accent-text" : "text-secondary",
           )}
         >
-          {Math.round(pw * 100)}% prod.
+          {pw > 0 ? `${Math.round(pw * 100)}% prod.` : "prod. off"}
         </span>
         <MultRow label="age" live={active === "age"} m={ex.ageMultiplier} x={mx} />
         <MultRow

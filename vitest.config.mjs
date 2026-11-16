@@ -10,7 +10,7 @@ export default defineConfig({
     environment: "node",
     globals: true,
     include: ["**/*.test.js", "**/*.test.jsx"],
-    // e2e/ holds Playwright specs (*.spec.ts) - the include glob above already
+    // e2e/ holds Playwright specs (*.spec.js) - the include glob above already
     // wouldn't match that naming, but this is belt-and-suspenders: Playwright
     // specs must never run under vitest's node environment (no browser, no
     // webServer), so the directory is excluded outright rather than relying on

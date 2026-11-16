@@ -26,6 +26,7 @@ One row per task. Tokens are the subagent totals the harness reported at complet
 | 2026-10-01 | fullstack-engineer | opus | Crunch: taxi deadline + IR relief | 100,882 | 1.8 min | Merged. |
 | 2026-10-01 | fullstack-engineer | opus | Trade evaluator measured consolidation read | 93,088 | 1.6 min | Merged. |
 | 2026-10-01 | postdoc-rookie-scout | sonnet | NBA draft + college dataset, rookie prior study | 253,189 | 33 min | Shipped as D118. College stats measured to add nothing; NBA pick strongest signal. |
+| 2026-11-16 | docs-recorder | opus | Docs realignment: README rewrite, D119-D133 + index, methodology production/lock-in, API_NOTES, SHELVED S1, QUESTIONS 10, TEAM handoff, .env.example, TS-era refs | not reported to agent | ~1.5 h | Committed on worktree branch for review; gates green. |
 
 ## Read-outs (2026-10-01)
 - Opus implementation tasks with a tight brief cost ~85-130k tokens and 1-8 minutes each; the brief quality, not the model, decided whether they merged cleanly.

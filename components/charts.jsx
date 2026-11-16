@@ -18,7 +18,7 @@ const MUTED = CHART_FAINT;
  * something went up, which is the job `--color-positive` exists for. Signed CHART
  * FILLS do not: `BarChart signed` used the same two tokens as bar colours, and a
  * red/green bar pair is the one encoding that is unreadable to the ~8% of men with a
- * red-green deficiency. Those moved to the diverging pair in lib/chart-colors.ts.
+ * red-green deficiency. Those moved to the diverging pair in lib/chart-colors.js.
  */
 const POS = "var(--color-positive)";
 const NEG = "var(--color-negative)";
@@ -141,7 +141,7 @@ export function BarChart({
         const cx = padX + i * ((W - padX * 2) / data.length) + 4;
         const h = Math.abs(d.value) * scale;
         const yTop = d.value >= 0 ? zeroY - h : zeroY;
-        // Diverging pair for the sign (CVD-safe, see lib/chart-colors.ts rule 3);
+        // Diverging pair for the sign (CVD-safe, see lib/chart-colors.js rule 3);
         // the bar's own length and its printed number carry the same value, so the
         // hue is the third encoding rather than the only one.
         const color = signed ? divergingFill(d.value) : ACCENT;

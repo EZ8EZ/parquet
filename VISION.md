@@ -1,3 +1,5 @@
+> **Historical (2026-11-16).** Kept for the record; it no longer describes the product. Start with [README.md](README.md).
+
 # VISION_DRAFT — "The Program"
 
 *A proposal, not a change. Nothing here is built. Screenshots referenced below were shot

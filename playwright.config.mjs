@@ -15,7 +15,7 @@ import { BASE_URL, E2E_PORT } from "./e2e/constants.js";
  *   - LEAGUE_PROVIDER=fixture needs no network and no league credentials.
  *   - DATABASE_URL is a syntactically valid placeholder Prisma never dials at
  *     runtime (annotation reads/writes degrade to "not persisted" without a real
- *     one - see app/api/annotations/route.ts - so the suite never needs a database).
+ *     one - see app/api/annotations/route.js - so the suite never needs a database).
  *   - NEXT_PUBLIC_USE_PLAYER_PHOTOS is forced off so nothing in the suite depends on
  *     Sleeper's CDN. LLM_BASE_URL/LLM_API_KEY were pinned empty here for the same
  *     reason until /analyst was shelved (SHELVED.md, S7); the app makes no outbound

@@ -7,9 +7,8 @@ session.
 
 House rules every agent carries: no grades or verdicts (D6), never fabricate (D19),
 measurements ship with n and caveats, plain JS, derivations are offline scripts whose
-outputs are committed constants, decisions logged in `DECISIONS.md` as Dxxx, and git
-runs through `/Library/Developer/CommandLineTools/usr/bin/git` (plain `/usr/bin/git`
-hits an Xcode license wall).
+outputs are committed constants, decisions logged in `DECISIONS.md` as Dxxx, and use the
+system git.
 
 ## Roster
 
@@ -30,45 +29,29 @@ hits an Xcode license wall).
 Usual flow for a change: scout maps -> specialist builds or measures -> red team reviews
 -> QA verifies -> docs records -> chief of staff merges and reports to Eric.
 
-## HANDOFF - 2026-10-01
+## HANDOFF - 2026-11-16
 
-Branch: all of today's work is on **`dynasty-v2`**, to be merged to **`main`**.
+Branch: `claude/parquet-redesign-3b7kcp`. Owner reviews and merges.
 
-What happened today:
-
-- **2026 rookie draft complete.** NSL Fantasy Hoops' draft ran on Sleeper (draft
-  1347007735828324352, 42 picks, 3 rounds, linear).
-- **D115, spent picks no longer counted.** Seasons whose rookie draft is `complete` leave
-  every pick enumeration. `tradeablePickSeasons()` / `isPickSeasonSpent()` in
-  `lib/picks.js` are the single place seasons are enumerated; `/api/trade` refuses a
-  spent season. After the 2026 draft, 2027 picks are one season out.
-- **D116, price anchor moved** from Sleeper redraft `search_rank` to **Sleeper dynasty
-  ADP** (`adp_dynasty` on the projections endpoint). Along with it:
-  - age curve **attenuated (exponent 0.5, refined to 0.63 in D117)** on dynasty-anchored prices, since dynasty ADP
-    already prices age;
-  - new **hybrid base curve** `10000 * r^-0.35 * e^(-0.015 (r - 1))`, replacing
-    `exp(-0.021 r)`;
-  - thresholds **rank-anchored via `valueAtRank`**;
-  - **pick curve refit** onto the same scale;
-  - the room's own draft order was **measured to add nothing over the market**
-    (partial rho -0.022, n=126).
-- **D117, measured hybrid base curve.** Price anchor is a dynasty/redraft blend
-  (w = 0.45), age exponent 0.63, pick curve measured as draft-night conversion value.
-  Red team challenges (12) had all MUST items addressed; QA swept 47 routes x 3 rosters clean.
-- **New surfaces:**
-  - "Before tip-off" roster crunch panel on home and `/roster`;
-  - the class valued today on `/drafts/[season]`;
-  - the game plan now protects developmental players.
+- **Direction (D119):** the spine is this week's lock-in decisions; ledger, strategy and
+  trade/valuation surfaces stay but are deprioritised. D91 (no AI) stands. D120: a
+  forward-looking lean is allowed, labelled as the model's.
+- **Merged, wrong-advice fixes:** production term off (D121); future picks slotted by
+  this season (D122); contend needs top-half standing (D123); plan moves are finder
+  packages (D124); replacement-line cuts and one tier ladder (D125); two copy fixes (D126).
+- **Merged, data layer:** one Sleeper client with timeouts and a cache table, visible
+  gaps (D127); Prisma off the read path, `proxy.js`, /league bundle, dead code (D128);
+  hourly lineup snapshots to a `data` branch (D129).
+- **Merged, engine:** `lib/lockin/` (D130-D133). No page reads it yet.
+- **Not merged:** four-tab nav (This Week, Team, Trade, League), rebuilt Home, lock-or-hold
+  cards and charts. README and SHELVED S1 say so.
 
 ## Open threads
 
-- [ ] Merge `dynasty-v2` -> `main` after the D117 gate.
-- [ ] Re-measure the production weight (0.23) against the blended anchor.
-- [ ] Star-tier flag is still keyed on the redraft rank.
-- [ ] Roster crunch ignores `taxi_deadline` and IR relief.
-- [ ] Snapshot `/projections/nba/regular/{season}` on a schedule (June-September coverage unknown).
-- [ ] Post-doc B college-stats study: fold its findings in when reviewed.
-- [ ] The full UX review document (`REVIEW.md`) is the next big lever.
+- [ ] Re-measure the production weight against the blended anchor (D121).
+- [ ] Merge the snapshot workflow to `main` so the schedule runs (D129).
+- [ ] Re-test the average teammate-out lift (+1.7) in the backtest before using it (D133).
+- [ ] Star-tier flag still keyed on the redraft rank; `/drafts/grades` conflicts with D6.
 
 ## Dashboard
 Published at https://claude.ai/artifact/3nPsdEqw6mShPGN6NiJiXA (private to Eric). Source: `.claude/team-dashboard.html` - edit it and republish to the same URL (pass the URL from a new session).

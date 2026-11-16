@@ -11,7 +11,7 @@
 // dev-only false positive worth knowing by name: "Missing source maps for
 // large first-party JavaScript" fires against `next dev`'s Turbopack output
 // and says nothing about the production build. Accessibility/SEO scores are
-// the stable ones and worth acting on directly - they're what e2e/a11y.spec.ts's
+// the stable ones and worth acting on directly - they're what e2e/a11y.spec.js's
 // axe pass doesn't cover (viewport meta, heading order, touch target size,
 // deprecated APIs, etc.).
 //

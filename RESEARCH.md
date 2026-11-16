@@ -1,3 +1,5 @@
+> **Historical (2026-11-16).** Kept for the record; it no longer describes the product. Start with [README.md](README.md).
+
 # RESEARCH.md - Dynasty Fantasy Basketball Companion (Competitive Research)
 
 _Prepared 2026-07-28. Sources are public marketing pages, free tool surfaces, GitHub repos, app-store listings, and third-party reviews. No proprietary or paid datasets were scraped. Several fantasy sites (the category-planning site, the dynasty-focused host platform, a subscription editorial site) return HTTP 403 to automated fetching; those details are corroborated from search-indexed snippets and reputable third-party reviews and are flagged inline._

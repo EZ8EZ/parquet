@@ -36,6 +36,18 @@ answer standing beside a searched one, with nothing pinning them together.
 
 ## S1. The start line — the nightly board and the ten-game log
 
+**Revived, rebuilt (2026-11-16, D119 and D130-D133).** Revival condition 1 is met: the
+league is in a live week and per-week history is loaded for the live provider. The rebuild
+is `lib/lockin/`, and it differs from the shelved page in the way that mattered: it puts a
+number on the decision. For each open starter it gives expected-if-held, the chance a
+later game beats the score he has now, and a lineup-aware lean labelled as the model's,
+with its backtest record (+9.4 points per team-week, 95% interval +5.5 to +14.7, n=240
+active team-weeks). The objections below are answered as follows: out of season the
+engine returns a status and a one-line message, not a board of zeros; every undocumented
+endpoint is Zod-validated and a failed or mismatched response is a named gap, never a
+bare `catch {}`; and lineups are snapshotted hourly (D129). No page reads it yet; the
+lock-or-hold cards are on another branch. The original entry follows unchanged.
+
 **What it was.** `/lab/startline`, an in-season lineup surface: a seven-day nightly
 board showing who plays when with back-to-backs marked, a pick-one-player ten-game log
 annotated with minutes and third-quarter margins, the week's slot state as seven chips,

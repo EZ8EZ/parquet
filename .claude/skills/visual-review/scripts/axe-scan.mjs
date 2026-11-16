@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Ad hoc axe-core accessibility scan against a running dev server - the same
-// check e2e/a11y.spec.ts runs in CI, but for one page at a time against
+// check e2e/a11y.spec.js runs in CI, but for one page at a time against
 // whatever data the dev server is actually showing (fixture OR live), useful
 // while iterating on a specific page rather than waiting on the full suite.
 //

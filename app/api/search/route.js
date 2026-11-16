@@ -25,7 +25,7 @@ const LIMIT = 8;
 // used to memoize the identical computation separately; see DECISIONS for the
 // cold-start pass that consolidated it). Tiers are cheap to rebuild from an already-
 // cached value map, so only the tier resolver is memoized here, still keyed and
-// TTL'd the same way lib/principals.ts and lib/lineage memo the corpus derivations
+// TTL'd the same way lib/principals.js and lib/lineage memo the corpus derivations
 // they build on - a keystroke-driven endpoint has no business rebuilding it per key.
 let tierCache = null;
 const TIER_TTL_MS = 5 * 60_000;
@@ -96,7 +96,7 @@ async function searchManagers(h, needle) {
       tenureLabel: tenureLabel(p) ?? null,
       avatar: p.avatar,
       teamLogoUrl: p.teamLogoUrl,
-      // Mirrors the exact href logic in app/managers/page.tsx - a former principal
+      // Mirrors the exact href logic in app/managers/page.jsx - a former principal
       // has no roster to point at, only their own frozen file.
       href: p.isFormer
         ? `/managers/former/${p.ownerId}`

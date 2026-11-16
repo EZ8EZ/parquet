@@ -1,3 +1,5 @@
+> **Historical (2026-11-16).** Kept for the record; it no longer describes the product. Start with [README.md](README.md).
+
 # Product review - 2026-10-01, the morning after the rookie draft
 
 A read of Parquet the way someone who has shipped consumer fantasy product would read it:
