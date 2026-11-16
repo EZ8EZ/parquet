@@ -8,11 +8,11 @@
  * other twenty-eight prefetched an empty 185-byte payload, so a tap on the Desk's
  * Roster or Record slot showed the reader nothing at all until the server came back.
  *
- * A route with a genuinely different shape still overrides this (see `/plan`,
+ * A route with a genuinely different shape still overrides this (see `/roster`, `/plan`,
  * `/league`, `/trade/finder`, `/lab/regret`, `/lab/counterfactual`). This is the
  * default, not a ceiling.
  *
- * See components/PageSkeleton.tsx for the measurement and the shape argument.
+ * See components/PageSkeleton.jsx for the measurement and the shape argument.
  */
 import { LoadingPage } from "@/components/PageSkeleton";
 export default function Loading() {

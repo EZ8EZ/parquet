@@ -7,7 +7,15 @@ export { List, ListRow } from "./ListRow";
 export { Disclosure } from "./Disclosure";
 export { Button, ButtonLink, buttonClasses } from "./Button";
 export { EmptyState } from "./EmptyState";
-export { SkeletonLine, SkeletonCard, SkeletonRows, SkeletonStats } from "./Skeleton";
+export {
+  SkeletonLine,
+  SkeletonCard,
+  SkeletonRows,
+  SkeletonStat,
+  SkeletonStats,
+  SkeletonHeader,
+  SkeletonTabs,
+} from "./Skeleton";
 export { Sheet } from "./Sheet";
 export { Tabs } from "./Tabs";
 export { Segmented } from "./Segmented";

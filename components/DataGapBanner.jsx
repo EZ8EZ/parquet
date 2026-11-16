@@ -9,16 +9,20 @@
  */
 import { getDataGaps } from "@/lib/history";
 import { describeGaps } from "@/lib/util/gaps";
+import { AlertTriangle } from "lucide-react";
 
 export async function DataGapBanner() {
   const sentence = describeGaps(await getDataGaps());
   if (!sentence) return null;
+  // Warn wash and edge tokens (text on the wash is 8.1:1), and an icon so the
+  // warning never rests on colour alone.
   return (
     <p
       role="status"
-      className="mb-4 rounded-md border border-[var(--color-warn)] bg-[var(--color-surface)] px-3 py-2 text-sm text-[var(--color-ink)]"
+      className="mb-4 flex items-start gap-2 rounded-control border border-warn-edge bg-warn-wash px-3 py-2.5 text-note text-ink"
     >
-      {sentence}
+      <AlertTriangle size={16} aria-hidden="true" className="mt-px shrink-0 text-warn" />
+      <span className="min-w-0">{sentence}</span>
     </p>
   );
 }
