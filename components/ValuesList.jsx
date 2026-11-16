@@ -370,6 +370,8 @@ export function ValuesList({ rows }) {
                 className={cn(r.id === focusId && "bg-surface-2")}
               >
                 <Sheet
+                  // A `?focus=` deep link (search) opens that player's sheet on load.
+                  defaultOpen={r.id === focusId}
                   triggerLabel={`${r.name}, value ${fmtValue(r.value)}. Show details`}
                   title={r.name}
                   subtitle={`${meta} · ${fmtValue(r.value)}${r.tier ? ` · ${r.tier}` : ""}`}

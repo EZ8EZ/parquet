@@ -204,6 +204,46 @@ export default function DesignPage() {
           { value: "field", label: "Field" },
         ]}
       />
+      <p className="mt-4 text-note text-secondary">
+        Four or five options with counts: the rail scrolls sideways, fades the hidden edge
+        and keeps the active option in view.
+      </p>
+      <Tabs
+        className="mt-2"
+        variant="segmented"
+        label="Four segmented tabs with counts"
+        defaultId="t3"
+        items={[
+          { id: "t1", label: "Targets", count: 12, content: <p className="text-body text-muted">Four tabs, the third active on load.</p> },
+          { id: "t2", label: "Sellers", count: 7, content: <p className="text-body text-muted">Panel two.</p> },
+          { id: "t3", label: "Fits", count: 23, content: <p className="text-body text-muted">Panel three.</p> },
+          { id: "t4", label: "Watching", count: 4, content: <p className="text-body text-muted">Panel four.</p> },
+        ]}
+      />
+      <Tabs
+        className="mt-4"
+        variant="segmented"
+        label="Five segmented tabs with counts"
+        defaultId="f5"
+        items={[
+          { id: "f1", label: "All", count: 210, content: <p className="text-body text-muted">Five tabs, the last active on load.</p> },
+          { id: "f2", label: "Guards", count: 74, content: <p className="text-body text-muted">Panel two.</p> },
+          { id: "f3", label: "Wings", count: 61, content: <p className="text-body text-muted">Panel three.</p> },
+          { id: "f4", label: "Bigs", count: 48, content: <p className="text-body text-muted">Panel four.</p> },
+          { id: "f5", label: "Rookies", count: 27, content: <p className="text-body text-muted">Panel five.</p> },
+        ]}
+      />
+      <Segmented
+        className="mt-4"
+        label="Five-option segmented control"
+        options={[
+          { value: "value", label: "Value" },
+          { value: "age", label: "Age" },
+          { value: "duration", label: "Duration" },
+          { value: "consensus", label: "Consensus" },
+          { value: "production", label: "Production" },
+        ]}
+      />
 
       <SectionHeader title="Disclosure" />
       <Disclosure summary="How this is measured">
