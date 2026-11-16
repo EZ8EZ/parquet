@@ -51,7 +51,7 @@ function FirstUp({ fu, title, tappable = false, className, moreHref = null }) {
             <li key={p.playerId}>{row}</li>
           );
         })}
-        {more > 0 && <li>{moreHref ? <ListRow href={moreHref} title={`${more} more on ${fu.day}`} meta="Every player and night" /> : <ListRow title={`${more} more on ${fu.day}`} meta="All on the Players tab" />}</li>}
+        {more > 0 && <li>{moreHref ? <ListRow href={moreHref} title={`${more} more ${fu.tonight ? "tonight" : `on ${fu.day}`}`} meta="Every player and night" /> : <ListRow title={`${more} more ${fu.tonight ? "tonight" : `on ${fu.day}`}`} meta="All on the Players tab" />}</li>}
       </List>
     </>
   );
