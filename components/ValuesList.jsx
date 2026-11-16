@@ -240,7 +240,7 @@ function Fact({ label, value }) {
 /* List                                                                */
 /* ------------------------------------------------------------------ */
 const FILTERS = VALUE_FILTERS;
-const PAGE = 60;
+const PAGE = 30;
 const SORTS = [
   { value: "value", label: "By value" },
   { value: "age", label: "By age" },
