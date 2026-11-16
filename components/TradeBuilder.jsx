@@ -26,7 +26,6 @@ import { parseTradeParams, tradeQueryString } from "@/lib/trade/url";
 import { fmtValue, fold } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTradeUrl } from "@/lib/sleeperLinks";
-import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { ManagerRail } from "@/components/ManagerRail";
 import { Button, Disclosure } from "@/components/ui";
 function PickerModal({
@@ -114,22 +113,10 @@ function PickerModal({
     </div>
   );
 }
-function AssetRow({ label, meta, value, onRemove, player }) {
+function AssetRow({ label, meta, value, onRemove }) {
   return (
     <div className="flex min-h-11 items-center justify-between gap-1.5 rounded-control bg-surface-2 py-1 pl-2">
       <span className="flex min-w-0 items-center gap-1.5">
-        {player && (
-          <PlayerAvatar
-            name={player.name}
-            team={player.team}
-            playerId={player.playerId}
-            size="sm"
-            // The give/get rows never print a team abbreviation - `meta` below is
-            // position and age only - so a crest here is new information, not a
-            // louder copy of text already on the row.
-            teamBadge
-          />
-        )}
         <span className="min-w-0">
           <span className="block text-body font-semibold leading-tight text-ink">{label}</span>
           <span className="block figure text-meta leading-tight text-secondary">
@@ -172,12 +159,11 @@ function SideColumn({
           <AssetRow
             key={p.id}
             label={p.name}
-            meta={[p.position, p.age != null ? `${p.age}y` : null]
+            meta={[p.position, p.team, p.age != null ? `${p.age}y` : null]
               .filter(Boolean)
               .join(" · ")}
             value={p.value}
             onRemove={() => onRemovePlayer(p.id)}
-            player={{ name: p.name, team: p.team, playerId: p.id }}
           />
         ))}
         {picks.map((pk) => (

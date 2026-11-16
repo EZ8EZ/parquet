@@ -159,7 +159,7 @@ export default async function TradeFinderPage({ searchParams }) {
           <StatTile label="Opposite window" value={`${opposite.length} of ${live.length}`} sub="of those" />
         </div>
 
-        {tabs.length > 0 && <Tabs className="mt-4" variant="segmented" label="Partners by timing" items={tabs} />}
+        {tabs.length > 0 && <Tabs className="mt-4" label="Partners by timing" items={tabs} />}
 
         <Disclosure className="mt-2" summary="How room is measured">
           Room is the smaller of the two sides&apos; fit gain on the best package found, so
@@ -467,10 +467,11 @@ function WantRow({ p }) {
     p.taker.reasons
       .filter((r) => r.sign > 0)
       .map((r) => r.text)
-      .join(" · ") || "No stated fit reason: the gap is the difference in what the two of you price him at.";
+      .join(" · ") || null;
   return (
     <li>
-      <ListRow title={a.label} meta={`${meta} · ${reason}`} />
+      {/* No reason means the gap is only the difference in what the two of you price him at. */}
+      <ListRow title={a.label} meta={reason ? `${meta} · ${reason}` : `${meta} · price gap only`} />
     </li>
   );
 }
@@ -518,10 +519,9 @@ function PackageDetail({ pkg, hasRanking }) {
 
       {/* Neither a pro nor a con: the condition both cases are priced under. */}
       {pkg.windowThesis && (
-        <Card pad="sm" className="mt-3">
-          <p className="text-meta text-secondary">Timing</p>
-          <p className="text-note text-ink">{pkg.windowThesis}</p>
-        </Card>
+        <Disclosure className="mt-2" summary="Timing">
+          {pkg.windowThesis}
+        </Disclosure>
       )}
 
       <ConvictionBlock notes={pkg.conviction} hasRanking={hasRanking} />
