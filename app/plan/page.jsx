@@ -192,7 +192,7 @@ export default async function PlanPage() {
       <div className="grid grid-cols-3 gap-2">
         <StatTile
           size="sm"
-          label="Stars"
+          label={`${dx.starLine.tier} or better`}
           value={dx.starCount}
           sub={`valued ${fmtValue(dx.starLine.value)}+`}
         />
