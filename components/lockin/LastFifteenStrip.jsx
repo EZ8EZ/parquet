@@ -69,7 +69,7 @@ export function LastFifteenStrip({ g, name }) {
             aria-label={p.text + (p.annotations.length ? `. ${p.annotations.map((a) => a.text).join(". ")}` : "")}
             onClick={() => setSel(p.i)}
             onFocus={() => setSel(p.i)}
-            className="absolute top-0 h-full rounded-sm focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-[var(--color-accent)]"
+            className="absolute top-0 h-full rounded-sm focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-accent"
             style={{ left: pctX(p.hitX, g.W), width: pctX(p.hitW, g.W) }}
           />
         ))}
