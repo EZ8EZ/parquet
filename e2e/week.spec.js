@@ -2,11 +2,11 @@ import { expect, test } from "@playwright/test";
 import { expectNoConsoleErrors, expectStableChrome, primeLens, watchConsole } from "./helpers";
 
 /**
- * THIS WEEK under the fixture provider, which has no Sleeper lock-in feed: the page
- * must still render the week header, the seven slots and the Lock Desk's reason, and
+ * THIS WEEK under the fixture provider, which serves the lock-in engine's synthetic
+ * week: the page renders the week header, the seven slots and the live decisions, and
  * none of the lifetime statistics that used to fill Home.
  */
-test("This Week renders without lock-in data and carries no lifetime stats", async ({
+test("This Week renders the engine fixture week and carries no lifetime stats", async ({
   page,
 }) => {
   const guard = watchConsole(page);
@@ -15,7 +15,8 @@ test("This Week renders without lock-in data and carries no lifetime stats", asy
   await expectStableChrome(page);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.getByRole("list", { name: "Your starting slots this week" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Lock or hold" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /^Live now/ })).toBeVisible();
+  await expect(page.locator("[data-lockin-board=compact]")).toHaveAttribute("data-status", "in_season");
   await expect(page.getByText("How you deal, in three numbers")).toHaveCount(0);
   await expect(page.getByText(/decisions? to capture/)).toHaveCount(0);
   expectNoConsoleErrors(guard);
