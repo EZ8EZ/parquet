@@ -9,9 +9,9 @@ import { Check, Copy } from "lucide-react";
 export function CopyBlock({ text, label = "Copy for Sleeper" }) {
   const [copied, setCopied] = useState(false);
   return (
-    <div className="rounded-[--radius-sm] border border-border bg-bg/60">
+    <div className="rounded-control bg-surface-2">
       <div className="flex items-center justify-between border-b border-border px-2.5 py-1.5">
-        <span className="text-micro uppercase tracking-wide text-faint">
+        <span className="text-meta font-medium text-secondary">
           {label}
         </span>
         <button

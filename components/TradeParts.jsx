@@ -38,7 +38,7 @@ function ManagerMetricPills({ metric, rosterId }) {
     <span className="inline-flex flex-wrap items-center gap-1">
       <Link
         href="/league"
-        className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-1.5 py-0.5 text-micro font-semibold leading-normal text-muted transition-colors hover:text-ink"
+        className="inline-flex items-center gap-1 rounded-full bg-elevated px-2 py-0.5 text-micro font-semibold leading-normal text-muted transition-colors hover:text-ink"
       >
         <PostureTag posture={metric.posture}>{metric.tci} TCI</PostureTag>
         <span className="text-faint">{metric.posture}</span>
@@ -46,7 +46,7 @@ function ManagerMetricPills({ metric, rosterId }) {
       {metric.fragility != null && metric.fragilityBand && (
         <Link
           href={`/managers/${rosterId}`}
-          className="inline-flex items-center gap-1 rounded-full border border-border bg-surface-2 px-1.5 py-0.5 text-micro font-semibold leading-normal text-muted transition-colors hover:text-ink"
+          className="inline-flex items-center gap-1 rounded-full bg-elevated px-2 py-0.5 text-micro font-semibold leading-normal text-muted transition-colors hover:text-ink"
         >
           <Layers size={10} aria-hidden="true" className="shrink-0" />
           <Tag tone={fragilityTone(metric.fragilityBand, metric.posture)}>
@@ -79,7 +79,7 @@ export function ManagerLink({ node, metric, isMe }) {
           isMe={isMe}
         />
         <span className="flex min-w-0 items-baseline gap-1">
-          <span className="line-clamp-1 text-body font-semibold leading-snug text-ink group-hover:text-accent-text">
+          <span className="min-w-0 text-body font-semibold leading-snug text-ink group-hover:text-accent-text">
             {node.name}
           </span>
           {isMe ? (
@@ -111,7 +111,7 @@ export function PlayerNowRow({ assetKey, label, now, names }) {
   return (
     <Link
       href={playerLineageHref(pid)}
-      className="mt-1.5 flex items-center gap-1.5 rounded-[--radius-sm] border border-border bg-surface px-2 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
+      className="mt-1.5 flex min-h-11 items-center gap-1.5 rounded-control bg-surface-2 px-3 py-2 transition-colors hover:bg-elevated"
       aria-label={`${label}: worth ${fmtValue(now.value)} today. Open where he came from.`}
     >
       {/* The receipt never prints the player's NBA team anywhere in this row (value,
@@ -129,7 +129,7 @@ export function PlayerNowRow({ assetKey, label, now, names }) {
             underneath a tree node that had already printed it - on a receipt it is
             the whole row, and the first live render showed a value with nobody
             attached to it. */}
-        <span className="block line-clamp-1 text-body font-semibold leading-snug text-ink">
+        <span className="block text-body font-semibold leading-snug text-ink">
           {label}
         </span>
         <span className="block text-meta leading-snug text-muted">
@@ -139,7 +139,7 @@ export function PlayerNowRow({ assetKey, label, now, names }) {
           </span>{" "}
           today · {now.tier} · {now.duration.toFixed(1)}s
         </span>
-        <span className="block line-clamp-1 text-meta leading-snug text-secondary">
+        <span className="block text-meta leading-snug text-secondary">
           {now.heldBy != null && names[now.heldBy]
             ? `now on ${names[now.heldBy]} · where he came from`
             : "where he came from"}
