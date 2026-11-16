@@ -12,8 +12,8 @@ export function InjuredStarters({ injured }) {
       <SectionHeader id="injured-title" title="Injured starters" />
       <List>
         {injured.map((s) => (
+          <li key={s.playerId}>
           <ListRow
-            key={s.playerId}
             leading={s.label}
             title={s.name}
             badge={
@@ -25,6 +25,7 @@ export function InjuredStarters({ injured }) {
             value={s.gamesLeft}
             valueSub={`${s.gamesLeft === 1 ? "game" : "games"} left${s.nextDay ? `, ${s.nextDay}` : ""}`}
           />
+          </li>
         ))}
       </List>
     </section>

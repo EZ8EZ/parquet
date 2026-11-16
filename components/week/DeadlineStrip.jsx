@@ -19,7 +19,9 @@ export function DeadlineStrip({ deadlines, window }) {
       <SectionHeader id="deadlines-title" title="Deadlines ahead" />
       <List>
         {deadlines.map((d) => (
-          <ListRow key={d.id} title={d.label} meta={`${d.at === "end" ? "End of week" : "Week"} ${d.week}`} value={whenText(d, window)} />
+          <li key={d.id}>
+            <ListRow title={d.label} meta={`${d.at === "end" ? "End of week" : "Week"} ${d.week}`} value={whenText(d, window)} />
+          </li>
         ))}
       </List>
     </section>

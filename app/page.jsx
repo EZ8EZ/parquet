@@ -61,11 +61,13 @@ export default async function ThisWeekPage({ searchParams }) {
         <>
           <RosterCrunchPanel h={h} rosterId={rosterId} className="mb-3" />
           <List>
-            <ListRow
-              href={`/drafts/${season}`}
-              title={h.completedDraftSeasons?.has?.(season) ? `The ${season} draft is done: see the class` : `The ${season} draft has not run yet`}
-              meta="Rookie draft"
-            />
+            <li>
+              <ListRow
+                href={`/drafts/${season}`}
+                title={h.completedDraftSeasons?.has?.(season) ? `The ${season} draft is done: see the class` : `The ${season} draft has not run yet`}
+                meta="Rookie draft"
+              />
+            </li>
           </List>
         </>
       ) : rosterId != null ? (
