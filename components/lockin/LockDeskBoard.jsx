@@ -31,7 +31,7 @@ function Gaps({ desk }) {
   );
 }
 
-function FirstUp({ fu, title, tappable = false, className }) {
+function FirstUp({ fu, title, tappable = false, className, moreHref = null }) {
   if (!fu) return null;
   const shown = fu.players.slice(0, 4);
   const more = fu.players.length - shown.length;
@@ -51,7 +51,7 @@ function FirstUp({ fu, title, tappable = false, className }) {
             <li key={p.playerId}>{row}</li>
           );
         })}
-        {more > 0 && <li><ListRow title={`${more} more on ${fu.day}`} meta="All on the Players tab" /></li>}
+        {more > 0 && <li>{moreHref ? <ListRow href={moreHref} title={`${more} more on ${fu.day}`} meta="Every player and night" /> : <ListRow title={`${more} more on ${fu.day}`} meta="All on the Players tab" />}</li>}
       </List>
     </>
   );
@@ -137,7 +137,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
               </div>
             </>
           ) : (
-            <FirstUp fu={fu} tappable />
+            <FirstUp fu={fu} tappable moreHref={fullHref} />
           )}
           <Link href={fullHref} className="mt-3 flex min-h-11 items-center justify-between rounded-card bg-surface px-4 text-note font-semibold text-accent-text">
             All players and nights
