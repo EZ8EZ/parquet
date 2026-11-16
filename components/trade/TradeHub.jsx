@@ -44,7 +44,7 @@ export function PartnersRow({ partners }) {
               href={`/managers/${p.rosterId}`}
               aria-label={`${p.name}: dossier`}
               title={p.name}
-              className="flex min-h-11 items-center justify-center rounded-full transition-opacity hover:opacity-80"
+              className="flex min-h-11 items-center justify-center rounded-full transition-colors hover:bg-surface-2"
             >
               <TeamAvatar
                 name={p.name}

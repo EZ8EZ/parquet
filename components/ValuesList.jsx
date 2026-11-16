@@ -220,7 +220,7 @@ function RankDumbbell({ consensusRank, pricedRank, axisMax, name }) {
           want (D6, and the same discipline that leaves `betterEnd` unset on
           components/DistributionStrip.jsx wherever the direction is not a judgement).
           The sentence describes the axis; it does not grade a position on it. */}
-      <p className="text-micro leading-snug text-faint">
+      <p className="text-meta text-secondary">
         <span aria-hidden="true">○</span> consensus{" "}
         <span aria-hidden="true">●</span> priced · rank 1 to {axisMax}, 1 at the left
       </p>

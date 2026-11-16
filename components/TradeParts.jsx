@@ -69,7 +69,7 @@ export function ManagerLink({ node, metric, isMe }) {
     <span className="inline-flex min-w-0 max-w-full flex-col items-start gap-0.5">
       <Link
         href={href}
-        className="group -m-1 inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-[--radius-sm] p-1 text-left transition-colors hover:bg-surface-2"
+        className="group -m-1 inline-flex min-h-11 max-w-full items-center gap-1.5 rounded-control p-1 text-left transition-colors hover:bg-surface-2"
       >
         <TeamAvatar
           name={node.name}
