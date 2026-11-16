@@ -3,7 +3,7 @@ import { AlertTriangle, CalendarDays, ChevronRight } from "lucide-react";
 import { Disclosure, EmptyState, List, ListRow, SectionHeader, StatTile, Tabs } from "@/components/ui";
 import { loadLockDesk } from "@/lib/lockin/source";
 import { compactLive, firstUp, gapLines, groupCards, playerSubtitle, resultLine, shortDate, weekGrid } from "@/lib/lockin/view";
-import { PlayerDeck } from "./PlayerDeck";
+import { DeckTrigger, PlayerDeck } from "./PlayerDeck";
 import { PlayerPanel } from "./PlayerDetail";
 import { SlotCells } from "./SlotCells";
 import { DecisionHero } from "./DecisionHero";
@@ -31,18 +31,27 @@ function Gaps({ desk }) {
   );
 }
 
-function FirstUp({ fu, title }) {
+function FirstUp({ fu, title, tappable = false, className }) {
   if (!fu) return null;
   const shown = fu.players.slice(0, 4);
   const more = fu.players.length - shown.length;
   return (
     <>
-      <SectionHeader title={title ?? (fu.tonight ? "First up tonight" : `First up ${fu.day} ${shortDate(fu.date)}`)} />
+      <SectionHeader className={className} title={title ?? (fu.tonight ? "First up tonight" : `First up ${fu.day} ${shortDate(fu.date)}`)} />
       <List>
-        {shown.map((p) => (
-          <ListRow key={p.playerId} leading={p.slotLabel ?? "BN"} title={p.name} meta={`${p.away ? "at" : "vs"} ${p.opponent ?? "unknown"}`} />
-        ))}
-        {more > 0 && <ListRow title={`${more} more on ${fu.day}`} />}
+        {shown.map((p) => {
+          const row = <ListRow as={tappable ? "span" : undefined} chevron={tappable} leading={p.slotLabel ?? "BN"} title={p.name} meta={`${p.away ? "at" : "vs"} ${p.opponent ?? "unknown"}`} />;
+          return tappable ? (
+            <li key={p.playerId}>
+              <DeckTrigger playerId={p.playerId} label={`${p.name}. Show details`}>
+                {row}
+              </DeckTrigger>
+            </li>
+          ) : (
+            <li key={p.playerId}>{row}</li>
+          );
+        })}
+        {more > 0 && <li><ListRow title={`${more} more on ${fu.day}`} meta="All on the Players tab" /></li>}
       </List>
     </>
   );
@@ -55,7 +64,7 @@ function BetweenWeeks({ desk }) {
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
         <StatTile label={`Week ${desk.week}`} value={bw?.result ? bw.result.outcome : "Final"} sub={line ? line.replace(/^Week \d+: \w+ /, "") : "result not loaded"} />
-        <StatTile label={`Week ${desk.nextWeek.week} starts`} value={shortDate(desk.nextWeek.start)} sub={desk.message.split(". ")[1] ? `${desk.nextWeek.start}` : null} />
+        <StatTile label={`Week ${desk.nextWeek.week} starts`} value={shortDate(desk.nextWeek.start)} />
       </div>
       {bw?.firstGames && <FirstUp fu={{ ...bw.firstGames, tonight: false, players: bw.firstGames.players.map((p) => ({ ...p, slotLabel: null })) }} title={`First up ${bw.firstGames.day} ${shortDate(bw.firstGames.date)}`} />}
     </div>
@@ -128,7 +137,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
               </div>
             </>
           ) : (
-            <FirstUp fu={fu} />
+            <FirstUp fu={fu} tappable />
           )}
           <Link href={fullHref} className="mt-3 flex min-h-11 items-center justify-between rounded-card bg-surface px-4 text-note font-semibold text-accent-text">
             All players and nights
@@ -145,7 +154,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
       {heroes.map((c) => (
         <DecisionHero key={c.playerId} card={c} />
       ))}
-      {!groups.live.length && (fu ? <FirstUp fu={fu} /> : <EmptyState icon={CalendarDays} title="Nothing to decide">No score is waiting on a lock-or-hold call.</EmptyState>)}
+      {!groups.live.length && (fu ? <FirstUp fu={fu} tappable className="mt-2" /> : <EmptyState icon={CalendarDays} title="Nothing to decide">No score is waiting on a lock-or-hold call.</EmptyState>)}
     </div>
   );
   const nights = (

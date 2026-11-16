@@ -21,7 +21,7 @@ export async function HomeWeek({ h, rosterId, replay = null }) {
       {desk && (
         <div className="mb-3 flex items-start justify-between gap-3">
           <p className="min-w-0 pt-1 figure text-note text-secondary">
-            {hd ? [bh.week, hd.range, `${hd.locked} locked`, `${hd.open} open`, `${hd.points} pts`].filter(Boolean).join(" · ") : bh?.kicker}
+            {hd ? [bh.week, `${hd.locked} locked`, `${hd.open} open`, `${hd.points} pts`].filter(Boolean).join(" · ") : bh?.kicker}
           </p>
           <RefreshControl rosterId={rosterId} asOf={desk.generatedAt} live={bh.live} updating={bh.updating} disabled={!!replay || isFixtureDesk(desk)} />
         </div>
