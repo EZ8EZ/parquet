@@ -1,3 +1,5 @@
+> **Historical (2026-11-16).** Kept for the record; it no longer describes the product. Start with [README.md](README.md).
+
 # PROGRESS.md - Running log
 
 > **Pushing from a different machine?** The repo is live at

@@ -1,3 +1,5 @@
+> **Historical (2026-11-16).** Kept for the record; it no longer describes the product. Start with [README.md](README.md).
+
 # BRAINSTORM.md - Next-feature ideas, the org chart, and how the vote went
 
 This file exists so brainstormed ideas survive past whichever ones get built.
