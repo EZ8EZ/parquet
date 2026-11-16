@@ -52,7 +52,7 @@ export function Standings({ standings, details = {} }) {
                   badge={r.isMe ? <Chip tone="accent" size="sm">You</Chip> : null}
                   meta={`Value #${r.valueRank}`}
                   value={record}
-                  valueSub={r.pointsFor != null ? `${Math.round(r.pointsFor).toLocaleString("en-US")} PF` : null}
+                  valueSub={r.pointsFor != null ? `${r.pointsFor.toLocaleString("en-US", { maximumFractionDigits: 1 })} PF` : null}
                 />
               }
             >
@@ -62,7 +62,7 @@ export function Standings({ standings, details = {} }) {
                   className="bg-surface-2"
                   size="sm"
                   label="Points for"
-                  value={r.pointsFor != null ? Math.round(r.pointsFor).toLocaleString("en-US") : "unknown"}
+                  value={r.pointsFor != null ? r.pointsFor.toLocaleString("en-US", { maximumFractionDigits: 1 }) : "unknown"}
                   sub={r.pfRank ? `${ordinal(r.pfRank)} most` : null}
                 />
                 <StatTile className="bg-surface-2" size="sm" label="Value" value={`#${r.valueRank}`} sub={d ? fmtValue(d.totalValue) : null} />
