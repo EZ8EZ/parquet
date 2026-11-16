@@ -104,7 +104,7 @@ function rungs(html) {
     .slice(1)
     .map((chunk) => {
       const li = chunk.split("</li>")[0];
-      return [...li.matchAll(/leading-tight text-ink">(?:<a[^>]*>)?([^<]+)</g)].map((m) =>
+      return [...li.matchAll(/font-semibold text-ink">(?:<a[^>]*>)?([^<]+)</g)].map((m) =>
         // React escapes the apostrophe in "Royce O'Neale" to `&#x27;`, correctly.
         m[1].replace(/&#x27;/g, "'").replace(/&amp;/g, "&"),
       );
@@ -185,7 +185,8 @@ describe("what the geometry refuses to say", () => {
       // Every cell in the ladder carries the identical ground when nobody owns
       // anybody and there is no anchor: no accent, no emphasis, no exception.
       expect(new Set(cells).size).toBe(1);
-      expect(cells[0]).toContain("border-border");
+      // Tone, not lines (DESIGN.md): every unowned, un-anchored cell is the same tile.
+      expect(cells[0]).toContain("bg-surface-2");
       expect(cells[0]).not.toContain("accent");
     }
   });
@@ -233,14 +234,15 @@ describe("ownership, and the one place a colour is allowed", () => {
   const rival = () => ({ rosterId: 2, isMe: false, name: "Rival" });
   it("marks the viewer's other players with the border and never the wash", () => {
     const html = draw("MEM", "C", { holder: mine });
-    // `border-accent-edge bg-surface` is app/league/page.jsx's own treatment for the
-    // viewer's row. The wash stays reserved for the anchor.
-    expect(html).toContain("border-accent-edge bg-surface");
+    // The viewer's own player gets a quiet accent edge on the tile (plus "your
+    // roster" in words). The wash stays reserved for the anchor.
+    expect(html).toContain("bg-surface-2 shadow-[inset_3px_0_0_var(--color-accent-dim)]");
+    expect(html).toContain("your roster");
     expect(html).not.toContain("bg-accent-wash");
   });
   it("gives the anchor the wash, and aria-current, and no redundant tag", () => {
     const html = draw("MEM", "C", { anchorId: "p6" });
-    expect(html).toContain("border-accent-edge bg-accent-wash");
+    expect(html).toContain("rounded-control px-3 py-2 bg-accent-wash");
     expect(html).toContain('aria-current="true"');
     // The "Him" pill is gone: the anchor is already named in the h2 above, washed,
     // and aria-current. A fifth marker was the redundancy, not the safety net.
