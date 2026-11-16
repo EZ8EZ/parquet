@@ -1,6 +1,7 @@
 import { Fraunces, Inter, JetBrains_Mono } from "next/font/google";
 import "./globals.css";
 import { APP_CONTENT_ID, Desk } from "@/components/Desk";
+import { DataGapBanner } from "@/components/DataGapBanner";
 import { getDeskData } from "@/lib/desk";
 import { DEFAULT_THEME, THEME_CHROME, themeBootScript } from "@/lib/theme";
 const inter = Inter({
@@ -114,6 +115,7 @@ export default async function RootLayout({ children }) {
             className="parquet-ground pointer-events-none absolute inset-0 -z-10"
           />
           <main className="flex-1 px-4 pb-[calc(env(safe-area-inset-bottom)+8.5rem)] pt-5 sm:px-6">
+            <DataGapBanner />
             {children}
           </main>
         </div>

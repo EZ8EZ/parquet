@@ -209,15 +209,18 @@ function ValueModelChart({ model, active }) {
             rx={2}
             fill={CHART_GRID}
           />
-          <rect
-            x={r1(2 + split + 1.5)}
-            y={3}
-            width={r1((RW - 4) - split - 1.5)}
-            height={8}
-            rx={2}
-            className={swap}
-            fill={liveBlend ? CHART_ACCENT : CHART_MARK}
-          />
+          {/* No production segment when its weight is 0: the gap would go negative. */}
+          {pw > 0 && (
+            <rect
+              x={r1(2 + split + 1.5)}
+              y={3}
+              width={r1(Math.max(0, RW - 4 - split - 1.5))}
+              height={8}
+              rx={2}
+              className={swap}
+              fill={liveBlend ? CHART_ACCENT : CHART_MARK}
+            />
+          )}
         </svg>
         <span
           className={cn(
