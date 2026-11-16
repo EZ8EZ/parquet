@@ -1,5 +1,5 @@
 /**
- * The redirect itself, through the real middleware and a real NextRequest.
+ * The redirect itself, through the real proxy and a real NextRequest.
  *
  * `lib/auth/entry.test.ts` pins the decision; this pins the WIRING - that the lens
  * cookie is the one being read, that a redirect response actually comes back, and
@@ -8,7 +8,7 @@
  */
 import { describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
-import { middleware, config } from "./middleware";
+import { proxy, config } from "./proxy";
 function request(path, cookie) {
   const req = new NextRequest(new URL(`http://localhost:3000${path}`));
   if (cookie) req.cookies.set("parquet_roster", cookie);
@@ -16,23 +16,23 @@ function request(path, cookie) {
 }
 describe("the front door", () => {
   it("REDIRECTS a fresh browser to the picker", () => {
-    const res = middleware(request("/"));
+    const res = proxy(request("/"));
     expect(res.status).toBe(307);
     expect(new URL(res.headers.get("location")).pathname).toBe("/teams");
   });
   it("lets a returning reader straight through to Home", () => {
-    const res = middleware(request("/", "3"));
+    const res = proxy(request("/", "3"));
     expect(res.headers.get("location")).toBeNull();
   });
   it("carries a deep link through the detour so a shared link survives", () => {
-    const res = middleware(request("/web?trade=abc"));
+    const res = proxy(request("/web?trade=abc"));
     const location = new URL(res.headers.get("location"));
     expect(location.pathname).toBe("/teams");
     expect(location.searchParams.get("next")).toBe("/web?trade=abc");
   });
   it("does not bounce the picker, the claim link, or the explainer", () => {
     for (const path of ["/teams", "/claim", "/claim/invalid", "/about"]) {
-      expect(middleware(request(path)).headers.get("location")).toBeNull();
+      expect(proxy(request(path)).headers.get("location")).toBeNull();
     }
   });
   it("excludes API routes and static files from the matcher", () => {
