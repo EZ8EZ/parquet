@@ -2,383 +2,147 @@ import Link from "next/link";
 import { ChevronRight, Scale, Trophy } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { AWARD_GROUPS, awardsPageData } from "@/lib/superlatives";
-import { Tag, Disclosure, EmptyState, PageHeader } from "@/components/ui";
+import { Card, Chip, Disclosure, EmptyState, List, ListRow, PageHeader, Sheet, StatTile, Tabs } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { AwardBadge, GROUP_TONE, iconForAward } from "@/components/AwardBadge";
 import { AwardPoster } from "@/components/AwardTitleCard";
-import { cn } from "@/lib/ui";
 import { Onward } from "@/components/Onward";
 export const dynamic = "force-dynamic";
+/*
+ * THE SUPERLATIVES. The page answers "who leads each of the league's awards?": the
+ * counts behind them as tiles, your own awards first, then the awards by group as
+ * rows (badge, title, winner, stat line) that open a sheet with the title card, the
+ * award's definition, the winner and the runners-up. Every figure is a published
+ * measurement from lib/superlatives; the copy states what happened (D6).
+ */
 const PLACE = ["2nd", "3rd", "4th"];
+
 /**
- * Links an entrant to their dossier. A departed manager now has their own dossier
- * route, keyed by owner id rather than the roster they no longer hold - that roster's
- * `/managers/{id}` page describes their successor instead. Only the (theoretical)
- * case of a former entrant with no recorded owner id falls back to plain text, since
- * there is nothing to build a route from.
+ * A departed manager's dossier is keyed by owner id; the roster they left now
+ * describes their successor. A former entrant with no owner id has no route.
  */
-function EntrantLink({ entrant, className, ariaLabel, children }) {
-  if (entrant.isFormer) {
-    if (!entrant.ownerId) {
-      return (
-        <div className={className} aria-label={ariaLabel}>
-          {children}
-        </div>
-      );
-    }
+function entrantHref(e) {
+  if (e.isFormer) return e.ownerId ? `/managers/former/${e.ownerId}` : undefined;
+  return `/managers/${e.rosterId}`;
+}
+
+function isMine(e, meRosterId) {
+  return meRosterId != null && !e.isFormer && (e.rosterId === meRosterId || e.partnerRosterId === meRosterId);
+}
+
+function EntrantBadge({ e, me }) {
+  if (me)
     return (
-      <Link
-        href={`/managers/former/${entrant.ownerId}`}
-        aria-label={ariaLabel}
-        className={className}
-      >
-        {children}
-      </Link>
+      <Chip size="sm" tone="accent">
+        You
+      </Chip>
     );
-  }
-  return (
-    <Link
-      href={`/managers/${entrant.rosterId}`}
-      aria-label={ariaLabel}
-      className={className}
-    >
-      {children}
-    </Link>
-  );
+  if (e.isFormer) return <Chip size="sm">former{e.tenureLabel ? ` ${e.tenureLabel}` : ""}</Chip>;
+  return null;
 }
-/**
- * Sentence one, then the rest.
- *
- * Splits on a full stop followed by whitespace and a capital, which is what keeps
- * "taking the consensus number one at 1.01" in one piece - a naive split on "." breaks
- * that subtitle mid-clause, and it is one of the ones this exists to rescue.
- */
-function firstSentence(text) {
-  const m = /(?<=[.!?])\s+(?=[A-Z])/.exec(text);
-  if (!m) return [text, ""];
-  return [text.slice(0, m.index), text.slice(m.index + m[0].length)];
-}
-/**
- * THE AWARD SUBTITLE, which used to be `line-clamp-2`.
- *
- * Two lines is the worst of both worlds at this length: it cost 514px across the
- * twenty cards on this page AND cut seven of them off mid-sentence, so the honesty
- * caveats D23 puts in these subtitles - "Hindsight pricing", "the number cannot tell
- * them apart", "a torn-down roster has little to lose" - were the exact words being
- * thrown away. They are the point of the subtitle, not the overflow.
- *
- * So: the claim stays on the card, always, unclamped. Everything after the first
- * sentence is one tap away in the house disclosure rather than deleted by CSS. Awards
- * whose subtitle is a single sentence render as a plain paragraph and pay no chrome at
- * all, which is most of the behavioural half of this page.
- */
-function AwardSubtitle({ text }) {
-  const [head, rest] = firstSentence(text);
-  if (!rest) {
-    return <p className="mt-0.5 text-meta leading-snug text-muted">{text}</p>;
-  }
-  return (
-    <details className="group mt-0.5">
-      {/*
-          `min-h-11` and real vertical padding, because this was the worst target in the
-          app: a `py-1` summary on a 12px line is a ~20px strip, and it is the only
-          control in Parquet that sits inline in a running sentence rather than in a row
-          of its own. It also has to carry `min-h-11` explicitly rather than lean on the
-          `summary` arm of the press-feedback selector, since `min-h-11` is the app's own
-          stated convention for "this text is a control" and the one thing a reviewer
-          greps for. The cost is real - a one-line subtitle now reserves 44px instead of
-          20px - and it is the cost of the target being hittable at all; the awards whose
-          subtitle is a single sentence never enter this branch and pay none of it.
-        */}
-      <summary className="block min-h-11 cursor-pointer list-none py-3 text-meta leading-snug text-muted">
-        {head}{" "}
-        <span className="whitespace-nowrap font-semibold text-accent-text">
-          more
-          <ChevronRight
-            size={11}
-            aria-hidden="true"
-            className="disclosure-chevron inline align-[-1px] group-open:rotate-90"
-          />
-        </span>
-      </summary>
-      <p className="disclosure-body pb-1 text-meta leading-snug text-muted">
-        {rest}
-      </p>
-    </details>
-  );
-}
-function AwardCard({ award, meRosterId, userOf }) {
+
+function AwardDetail({ award, meRosterId, userOf }) {
   const w = award.winner;
-  const isMe =
-    meRosterId != null &&
-    !w.isFormer &&
-    (w.rosterId === meRosterId || w.partnerRosterId === meRosterId);
+  const me = isMine(w, meRosterId);
   const user = userOf(w);
-  const icon = iconForAward(award.id);
-  const tone = GROUP_TONE[award.group];
   return (
-    <article
-      className={cn(
-        "overflow-hidden rounded-[--radius] border",
-        isMe ? "border-accent-edge" : "border-border",
-      )}
-    >
-      {/*
-          THE TITLE CARD (VISION M7). The award's 30-for-30 name finally gets the
-          poster it deserved: name huge in Fraunces on the poster ground, the stat
-          line as the deck (it used to be a 12px gold line under a truncating
-          17px title - now it is the sub on the artwork), the winner's team mark.
-          Twelve distinct posters instead of twelve identical tables. Everything on
-          it is a published measurement (D6): the deck is the same `statLine` this
-          card always printed, promoted rather than rewritten. The ranked list below
-          is unchanged in content - the winner row stays there too, because it is
-          the tappable dossier link and the poster is not a control.
-        */}
-      <AwardPoster title={award.title} deck={award.statLine}>
-        <div className="mt-3 flex items-center gap-2">
-          <TeamAvatar
-            name={w.label}
-            avatarId={user?.avatar}
-            teamLogoUrl={user?.teamLogoUrl}
-            size="xs"
-            isMe={isMe}
+    <>
+      <div className="overflow-hidden rounded-card">
+        <AwardPoster as="p" title={award.title} deck={award.statLine} />
+      </div>
+      <p className="mt-3 text-note text-muted">{award.subtitle}</p>
+      <List className="mt-3 bg-surface-2" aria-label="Standings">
+        <li>
+          <ListRow
+            href={entrantHref(w)}
+            highlight={me}
+            leading="1"
+            avatar={<TeamAvatar name={w.label} avatarId={user?.avatar} teamLogoUrl={user?.teamLogoUrl} size="sm" isMe={me} />}
+            title={w.label}
+            badge={<EntrantBadge e={w} me={me} />}
+            meta={w.isFormer ? null : w.displayName}
           />
-          <span className="min-w-0 text-body font-semibold leading-tight text-ink">
-            {w.label}
-          </span>
-          {isMe ? (
-            <Tag tone="accent">you</Tag>
-          ) : w.isFormer ? (
-            <Tag>former{w.tenureLabel ? ` ${w.tenureLabel}` : ""}</Tag>
-          ) : null}
-        </div>
-      </AwardPoster>
-
-      <div className={cn("p-2.5 pt-1.5", isMe ? "bg-accent-wash" : "bg-surface")}>
-
-      <AwardSubtitle text={award.subtitle} />
-
-      <EntrantLink
-        entrant={w}
-        ariaLabel={
-          w.isFormer ? `Former manager: ${w.label}` : `Dossier: ${w.label}`
-        }
-        className={cn(
-          "mt-1.5 flex min-h-11 items-center gap-2 rounded-[--radius-sm] border px-2 py-1.5 transition-colors",
-          isMe
-            ? "border-accent-edge bg-accent-wash hover:border-accent"
-            : "border-border-strong bg-surface-2 hover:bg-elevated",
-        )}
-      >
-        <AwardBadge icon={icon} tone={tone} rank="winner" />
-        <TeamAvatar
-          name={w.label}
-          avatarId={user?.avatar}
-          teamLogoUrl={user?.teamLogoUrl}
-          size="xs"
-          isMe={isMe}
-        />
-        <span className="min-w-0 flex-1">
-          <span className="flex items-baseline gap-1.5">
-            <span className="min-w-0 line-clamp-1 text-body font-semibold text-ink">
-              {w.label}
-            </span>
-            {isMe ? (
-              <Tag tone="accent">you</Tag>
-            ) : w.isFormer ? (
-              <Tag>former{w.tenureLabel ? ` ${w.tenureLabel}` : ""}</Tag>
-            ) : (
-              <span className="min-w-0 shrink line-clamp-1 text-meta text-secondary">
-                {w.displayName}
-              </span>
-            )}
-          </span>
-        </span>
-        {!w.isFormer && (
-          <ChevronRight
-            size={13}
-            aria-hidden="true"
-            className="shrink-0 text-faint"
-          />
-        )}
-      </EntrantLink>
-
+        </li>
+        {award.runnersUp.map((r, i) => {
+          const rme = isMine(r, meRosterId);
+          const ru = userOf(r);
+          return (
+            <li key={`${r.ownerId ?? r.rosterId}-${r.partnerRosterId ?? ""}`}>
+              <ListRow
+                href={entrantHref(r)}
+                highlight={rme}
+                aria-label={`${PLACE[i] ?? `${i + 2}th`}: ${r.label}, ${r.stat}`}
+                leading={String(i + 2)}
+                avatar={<TeamAvatar name={r.label} avatarId={ru?.avatar} teamLogoUrl={ru?.teamLogoUrl} size="sm" isMe={rme} />}
+                title={r.label}
+                badge={<EntrantBadge e={r} me={rme} />}
+                meta={<span className="figure">{r.stat}</span>}
+              />
+            </li>
+          );
+        })}
+      </List>
       {w.partnerRosterId != null && (
         <Link
           href={`/managers/${w.partnerRosterId}`}
-          className="-my-1 flex min-h-11 items-center gap-1 px-2 text-meta font-semibold text-accent-text"
+          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text"
         >
-          also see {w.partnerLabel}
-          <ChevronRight size={12} aria-hidden="true" />
+          Also see {w.partnerLabel}
+          <ChevronRight size={16} aria-hidden="true" />
         </Link>
       )}
+    </>
+  );
+}
 
-      {award.runnersUp.length > 0 && (
-        <ol className="mt-1 divide-y divide-border/70">
-          {/* Keyed on the owner, not the roster: two principals share a roster id
-                across a handover and can both place in the same award. */}
-          {award.runnersUp.map((r, i) => (
-            <li key={`${r.ownerId ?? r.rosterId}-${r.partnerRosterId ?? ""}`}>
-              <RunnerUpRow
-                entrant={r}
-                place={PLACE[i] ?? `${i + 2}th`}
-                meRosterId={meRosterId}
-                user={userOf(r)}
-                icon={icon}
-                tone={tone}
-              />
-            </li>
-          ))}
-        </ol>
-      )}
-      </div>
-    </article>
-  );
-}
-/**
- * ONE GROUP, FOLDABLE. Same `<details>` idiom the commissioner audit log and the
- * ledger rows already use: a group's name and count are the whole affordance shut,
- * and every award inside is one tap away, never removed.
- *
- * The first two groups arrive open - "On the merits" and "At the trade desk" are
- * the two a first-time reader came for, and a page that opened to five closed
- * headers would read as empty rather than dense. The other three (draft capital,
- * taste and timing, working the margins) are the ones a reader picks off the jump
- * rail above rather than scrolls past, so they start shut.
- */
-function AwardGroup({ id, label, count, defaultOpen, children }) {
+function AwardRow({ award, meRosterId, userOf }) {
+  const w = award.winner;
+  const me = isMine(w, meRosterId);
   return (
-    <section id={id} className="scroll-mt-3">
-      <details className="group" open={defaultOpen || undefined}>
-        <summary className="mb-1.5 mt-4 flex min-h-11 cursor-pointer list-none items-center justify-between gap-2">
-          <span className="flex min-w-0 items-center gap-1.5">
-            <ChevronRight
-              size={13}
-              aria-hidden="true"
-              className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
-            />
-            <h2 className="min-w-0 line-clamp-1 text-note font-semibold uppercase tracking-[0.16em] text-muted">
-              {label}
-            </h2>
-          </span>
-          <span className="shrink-0 figure text-meta text-secondary">
-            {count}
-          </span>
-        </summary>
-        <div className="disclosure-body space-y-1.5">{children}</div>
-      </details>
-    </section>
-  );
-}
-function RunnerUpRow({ entrant, place, meRosterId, user, icon, tone }) {
-  const isMe =
-    meRosterId != null &&
-    !entrant.isFormer &&
-    (entrant.rosterId === meRosterId || entrant.partnerRosterId === meRosterId);
-  return (
-    <EntrantLink
-      entrant={entrant}
-      ariaLabel={`${place}: ${entrant.label}, ${entrant.stat}`}
-      className={cn(
-        "flex min-h-11 items-start gap-2 rounded-[--radius-sm] px-1.5 py-1 transition-colors",
-        isMe ? "bg-accent-wash" : "hover:bg-surface-2",
-      )}
-    >
-      <span
-        aria-hidden="true"
-        className="mt-[3px] w-3 shrink-0 figure text-meta text-faint"
+    <li>
+      <Sheet
+        triggerLabel={`${award.title}: ${w.label}, ${award.statLine}. Show details`}
+        title={award.title}
+        subtitle={w.label}
+        trigger={
+          <ListRow
+            as="span"
+            chevron
+            highlight={me}
+            avatar={<AwardBadge icon={iconForAward(award.id)} tone={GROUP_TONE[award.group]} rank="winner" size={36} />}
+            title={award.title}
+            badge={<EntrantBadge e={w} me={me} />}
+            meta={
+              <>
+                <span className="font-medium text-muted">{w.label}</span>
+                <span className="figure"> · {award.statLine}</span>
+              </>
+            }
+          />
+        }
       >
-        {place.replace(/\D/g, "")}
-      </span>
-      <AwardBadge icon={icon} tone={tone} rank="runner-up" size={18} />
-      <TeamAvatar
-        name={entrant.label}
-        avatarId={user?.avatar}
-        teamLogoUrl={user?.teamLogoUrl}
-        size="xs"
-        isMe={isMe}
-      />
-      {/*
-          THIS USED TO BE ONE ROW: place number, badge, avatar, name and stat all on
-          one baseline. A stat like "3,509 pts benched · 94.3% started" is real
-          multi-fact text, not a short label, and giving it `shrink` while the name
-          sat on `flex-1` still left the name only what was left AFTER three fixed
-          circles and the whole stat string claimed their width - which on the live
-          league crushed real team names to "Par...", "Win...", "Dra..." (Parquet
-          Kings, Win Now, Draft Vault). Stacking the stat under the name instead of
-          beside it gives each its own line at close to the row's full width, which
-          is what "adjust the layout" means here rather than shrinking either one
-          further.
-        */}
-      <span className="min-w-0 flex-1">
-        <span className="flex items-baseline gap-1.5">
-          <span
-            className={cn(
-              "min-w-0 line-clamp-1 text-note",
-              isMe ? "font-semibold text-accent-text" : "text-muted",
-            )}
-          >
-            {entrant.label}
-          </span>
-          {entrant.tenureLabel && (
-            <span className="shrink-0 text-micro text-faint">
-              {entrant.tenureLabel}
-            </span>
-          )}
-        </span>
-        {/* Some awards' stat string is two short facts ("94.3% started · 5
-              seasons"); others carry a name plus pick plus rank ("Brayden Adeyemi
-              · pick 35, 21st best in 2023") that a single truncating line still
-              cut mid-number ("...21st best in ...", "...in 2...", screenshotted on
-              the live list even after moving the stat to its own line). Wrap
-              instead of truncating further - `line-clamp-2` is never reached by
-              the shorter stats and bounds the longer ones at two lines. */}
-        <span className="line-clamp-2 block figure text-meta text-secondary">
-          {entrant.stat}
-        </span>
-      </span>
-    </EntrantLink>
+        <AwardDetail award={award} meRosterId={meRosterId} userOf={userOf} />
+      </Sheet>
+    </li>
   );
 }
+
 export default async function AwardsPage() {
   const h = await getLeagueHistory();
   const { awards, summary } = await awardsPageData(h);
   const meRosterId = h.me.rosterId;
-  // A departed manager shares a roster id with whoever took the team over, so keying
-  // imagery off the roster would put the current owner's logo on the former owner's
-  // award. Resolve by owner id and let the avatar fall back to a monogram.
   const userOf = (entrant) => {
     if (entrant.ownerId) return h.usersById.get(entrant.ownerId);
     const r = h.rostersById.get(entrant.rosterId);
     return r?.ownerId ? h.usersById.get(r.ownerId) : undefined;
   };
-  const mine = awards.filter(
-    (a) =>
-      meRosterId != null &&
-      !a.winner.isFormer &&
-      (a.winner.rosterId === meRosterId ||
-        a.winner.partnerRosterId === meRosterId),
+  const mine = awards.filter((a) => isMine(a.winner, meRosterId));
+  const groups = AWARD_GROUPS.map((g) => ({ ...g, items: awards.filter((a) => a.group === g.id) })).filter(
+    (g) => g.items.length > 0,
   );
-  const groups = AWARD_GROUPS.map((g) => ({
-    ...g,
-    items: awards.filter((a) => a.group === g.id),
-  })).filter((g) => g.items.length > 0);
   return (
     <div>
-      <PageHeader
-        kicker="League awards"
-        kickerAction={
-          <Link
-            href="/league"
-            className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
-          >
-            the league
-            <ChevronRight size={12} aria-hidden="true" />
-          </Link>
-        }
-        title="The Superlatives"
-        subtitle="Earned, not voted. Judged purely on what they actually did."
-      />
+      <PageHeader kicker="League awards" title="The Superlatives" subtitle="Earned, not voted" />
 
       {awards.length === 0 ? (
         <EmptyState
@@ -386,126 +150,60 @@ export default async function AwardsPage() {
           title="Not enough history yet"
           cta={{ href: "/league", label: "See the league" }}
         >
-          There aren&rsquo;t enough recorded transactions to hand out awards.
-          Come back once the league has some deals on the books.
+          Not enough recorded transactions to hand out awards yet.
         </EmptyState>
       ) : (
         <>
-          {/* Figures inline, hairline-separated: three cards cost 90px for four numbers. */}
-          <div className="flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface">
-            {[
-              { v: awards.length, l: "awards", t: undefined },
-              {
-                v: summary.managers,
-                l: "managers",
-                // Not the number of teams: a team that changed hands contributes two
-                // managers, and the one who left is still eligible for their seasons.
-                // This used to be an asterisk pointing at a 30-word footnote at the
-                // bottom of a very long page - a permanent tax on every reader to
-                // explain one number to the reader who wondered. It is a definition,
-                // so it lives on the definition, and /about carries the long form.
-                t:
-                  summary.formerManagers > 0
-                    ? `${summary.managers} managers across ${summary.managers - summary.formerManagers} teams: ${summary.formerManagers} team${summary.formerManagers === 1 ? " has" : "s have"} changed hands, and each manager is judged only on the seasons they actually ran.`
-                    : undefined,
-              },
-              { v: summary.trades, l: "trades", t: undefined },
-              { v: summary.moves.toLocaleString(), l: "moves", t: undefined },
-            ].map((s, i) => (
-              <div key={s.l} className="flex-1 px-1 py-1.5 text-center">
-                <div
-                  className={cn(
-                    "figure text-lede font-semibold leading-tight",
-                    i === 0 ? "text-accent-text" : "text-ink",
-                  )}
-                >
-                  {s.v}
-                </div>
-                <div className="text-meta uppercase tracking-wide text-secondary">
-                  {s.t ? (
-                    <abbr
-                      title={s.t}
-                      className="cursor-help underline decoration-dotted underline-offset-2"
-                    >
-                      {s.l}
-                    </abbr>
-                  ) : (
-                    s.l
-                  )}
-                </div>
-              </div>
-            ))}
+          <div className="grid grid-cols-4 gap-2">
+            <StatTile size="sm" label="Awards" value={String(awards.length)} tone="accent" />
+            <StatTile size="sm" label="Managers" value={String(summary.managers)} />
+            <StatTile size="sm" label="Trades" value={String(summary.trades)} />
+            <StatTile size="sm" label="Moves" value={summary.moves.toLocaleString()} />
           </div>
 
-          {/* Jump rail: 13 awards is a long page - let people land on a category. */}
-          <nav
-            aria-label="Award categories"
-            className="mt-2 flex flex-wrap gap-1.5"
-          >
-            {groups.map((g) => (
-              <a
-                key={g.id}
-                href={`#${g.id}`}
-                className="inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-surface px-2.5 text-note font-medium text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
-              >
-                {g.label}
-                <span className="figure text-meta text-secondary">
-                  {g.items.length}
-                </span>
-              </a>
-            ))}
-          </nav>
-
           {mine.length > 0 && (
-            <p className="mt-2 rounded-[--radius] border border-accent-edge bg-accent-wash px-2.5 py-1.5 text-meta leading-snug text-muted">
-              <span className="font-semibold text-ink">Your mantel:</span>{" "}
-              {mine.map((a) => a.title).join(", ")}.
-            </p>
+            <Card tone="accent" className="mt-2">
+              <p className="text-meta font-medium text-secondary">Your mantel</p>
+              <ul className="mt-1.5 flex flex-wrap gap-1.5">
+                {mine.map((a) => (
+                  <li key={a.id}>
+                    <Chip tone="accent" icon={iconForAward(a.id)}>
+                      {a.title}
+                    </Chip>
+                  </li>
+                ))}
+              </ul>
+            </Card>
           )}
 
-          {groups.map((g, i) => (
-            <AwardGroup
-              key={g.id}
-              id={g.id}
-              label={g.label}
-              count={g.items.length}
-              defaultOpen={i < 2}
-            >
-              {g.items.map((a) => (
-                <AwardCard
-                  key={a.id}
-                  award={a}
-                  meRosterId={meRosterId}
-                  userOf={userOf}
-                />
-              ))}
-            </AwardGroup>
-          ))}
-
-          {/* The rules of the competition, which every reader needs exactly once and
-                no reader needs on the way past. Collapsed into the house idiom rather
-                than deleted: a page that hands out thirteen verdicts owes the reader a
-                way to check how ties and blanks were settled. */}
-          <Disclosure
-            summary="How these are settled"
-            icon={<Scale size={12} />}
+          <Tabs
             className="mt-4"
-          >
+            label="Award groups"
+            items={groups.map((g) => ({
+              id: g.id,
+              label: g.label,
+              count: g.items.length,
+              content: (
+                <List aria-label={g.label}>
+                  {g.items.map((a) => (
+                    <AwardRow key={a.id} award={a} meRosterId={meRosterId} userOf={userOf} />
+                  ))}
+                </List>
+              ),
+            }))}
+          />
+
+          <Disclosure summary="How these are settled" icon={<Scale size={14} />} className="mt-3">
             <p>
-              Derived from {summary.moves.toLocaleString()} recorded
-              transactions across {summary.seasons} seasons. Ties break to the
-              lower roster number. Awards with no real signal behind them are
-              left unawarded rather than handed to the least-bad entrant.
+              Derived from {summary.moves.toLocaleString()} recorded transactions across {summary.seasons} seasons.
+              Ties break to the lower roster number. Awards with no real signal behind them are left unawarded
+              rather than handed to the least-bad entrant.
             </p>
             {summary.formerManagers > 0 && (
               <p className="mt-2">
-                {summary.managers} managers across{" "}
-                {summary.managers - summary.formerManagers} teams:{" "}
-                {summary.formerManagers} team
-                {summary.formerManagers === 1 ? " has" : "s have"} changed
-                hands, and each manager is judged only on the seasons they
-                actually ran. A former manager keeps their own dossier, because
-                the roster they left now describes their successor.
+                {summary.managers} managers across {summary.managers - summary.formerManagers} teams:{" "}
+                {summary.formerManagers} team{summary.formerManagers === 1 ? " has" : "s have"} changed hands, and
+                each manager is judged only on the seasons they actually ran.
               </p>
             )}
           </Disclosure>
