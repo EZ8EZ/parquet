@@ -101,7 +101,8 @@ export function DecisionCard({ card, record, today, open = false, methodHref }) 
 export function QuietCard({ card, today, open = false }) {
   const key = slotKeyOf(card);
   const fc = card.forecast;
-  const line = card.decision.kind === "none" ? card.decision.text : gamesLeftText(card);
+  const raw = card.decision.kind === "none" ? card.decision.text : gamesLeftText(card);
+  const line = key && raw === SLOT_STATES[key].label ? "" : raw;
   return (
     <article id={`lk-${card.playerId}`} className="scroll-mt-4">
       <details data-player-detail className="group" open={open}>
@@ -114,8 +115,7 @@ export function QuietCard({ card, today, open = false }) {
             </span>
             <span className="flex items-center gap-1 text-micro leading-snug text-muted">
               {key && <StateIcon state={key} />}
-              {key ? `${SLOT_STATES[key].label} · ` : ""}
-              {line}
+              {[key ? SLOT_STATES[key].label : null, line].filter(Boolean).join(" · ")}
             </span>
           </span>
           {card.banked != null && <span className="figure shrink-0 text-lede font-semibold text-ink">{fmt(card.banked)}</span>}

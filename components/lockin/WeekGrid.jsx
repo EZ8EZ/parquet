@@ -12,7 +12,7 @@ const CELL = {
 /** Who plays which night. `grid` is weekGrid() output; one row per player. */
 export function WeekGrid({ grid, caption, single = false }) {
   if (!grid || !grid.nights.length) return <p className="text-meta text-muted">No nights left this week.</p>;
-  if (!grid.rows.length) return <p className="text-meta text-muted">Nobody still to play.</p>;
+  if (!grid.rows.length && !grid.bench) return <p className="text-meta text-muted">Nobody still to play.</p>;
   return (
     <div>
       <table className="w-full table-fixed border-collapse text-micro">
@@ -66,6 +66,21 @@ export function WeekGrid({ grid, caption, single = false }) {
               ))}
             </tr>
           ))}
+          {grid.bench && (
+            <tr className="border-t border-border">
+              <th scope="row" className="py-1.5 pr-1 text-left align-middle font-normal">
+                <span className="block text-meta leading-tight text-ink">Bench</span>
+                <span className="text-micro text-faint">
+                  {grid.bench.players} {grid.bench.players === 1 ? "player" : "players"}, games per night
+                </span>
+              </th>
+              {grid.bench.cells.map((c, i) => (
+                <td key={c.date} className={cn("py-1.5 text-center align-middle", grid.nights[i]?.today && "bg-surface-2")}>
+                  <span className={cn("figure", c.count ? "font-semibold text-ink" : "text-faint")}>{c.count}</span>
+                </td>
+              ))}
+            </tr>
+          )}
         </tbody>
       </table>
       <p className="mt-1.5 flex flex-wrap gap-x-3 gap-y-1 text-micro text-muted">

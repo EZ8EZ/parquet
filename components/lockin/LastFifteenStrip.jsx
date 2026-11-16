@@ -48,7 +48,7 @@ export function LastFifteenStrip({ g, name }) {
           </span>
         ))}
         {g.labels.map((l) => (
-          <span key={l.key} className="figure pointer-events-none absolute -translate-y-1/2 whitespace-nowrap text-micro leading-none text-ink" style={{ top: pctY(l.y, g.H), left: pctX(g.plot.x1 + 5, g.W) }} aria-hidden="true">
+          <span key={l.key} className="figure pointer-events-none absolute -translate-y-1/2 whitespace-nowrap text-micro leading-none text-ink" style={{ top: pctY(l.y, g.H), left: pctX(g.plot.x1 + 10, g.W) }} aria-hidden="true">
             {l.text}
           </span>
         ))}

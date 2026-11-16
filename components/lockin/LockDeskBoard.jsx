@@ -1,8 +1,8 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { loadLockDesk, isFixtureDesk } from "@/lib/lockin/source";
-import { easternStamp, gapLines, groupCards, shortDate, weekGrid } from "@/lib/lockin/view";
-import { WeekStrip, PressureLine } from "./WeekStrip";
+import { compactLive, easternStamp, gapLines, groupCards, shortDate, weekGrid } from "@/lib/lockin/view";
+import { WeekStrip } from "./WeekStrip";
 import { SlotCells } from "./SlotCells";
 import { LiveRow } from "./LiveRow";
 import { HashOpener } from "./HashOpener";
@@ -84,6 +84,15 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
   const grid = weekGrid(desk, { compact });
   const summary = desk.slotPressure?.summary;
   const card = (c, Comp) => <Comp key={c.playerId} card={c} record={desk.leanRecord} today={desk.today} open={open === c.playerId} methodHref={methodHref} />;
+  const cl = compactLive(groups.live);
+  const rows = (list) =>
+    list.length ? (
+      <ul className="divide-y divide-border rounded-[var(--radius)] border border-border bg-surface">
+        {list.map((c) => (
+          <LiveRow key={c.playerId} card={c} href={`${fullHref}?open=${c.playerId}#lk-${c.playerId}`} />
+        ))}
+      </ul>
+    ) : null;
 
   return (
     <section aria-label="Lock-in" data-lockin-board={mode} data-status={desk.status}>
@@ -93,10 +102,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
       </div>
 
       {compact ? (
-        <>
-          <SlotCells slots={desk.slots} />
-          {summary && <PressureLine summary={summary} />}
-        </>
+        <SlotCells slots={desk.slots} />
       ) : (
         <>
           <H2 id="lk-slots">Your seven slots</H2>
@@ -110,14 +116,9 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
         <div className="space-y-3">
           {compact ? (
             <>
-              {card(groups.live[0], DecisionCard)}
-              {groups.live.length > 1 && (
-                <ul className="divide-y divide-border rounded-[var(--radius)] border border-border bg-surface">
-                  {groups.live.slice(1).map((c) => (
-                    <LiveRow key={c.playerId} card={c} href={`${fullHref}?open=${c.playerId}#lk-${c.playerId}`} />
-                  ))}
-                </ul>
-              )}
+              {rows(cl.before)}
+              {card(cl.featured, DecisionCard)}
+              {rows(cl.after)}
             </>
           ) : (
             groups.live.map((c) => card(c, DecisionCard))
