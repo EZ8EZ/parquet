@@ -1,33 +1,17 @@
 /**
- * THE RECEIPT - one trade, one URL.
+ * THE RECEIPT - one trade, one URL. The page answers "what did each side get, and what
+ * is it worth today?": the two-sided receipt first (each side's players-only total at
+ * today's prices over every asset it received), then each side's assets as rows that
+ * open the asset's provenance (a player: where he came from; a pick: what it became).
  *
- * This is the page `tradeWebHref` should always have been pointing at. The digest,
- * global search, Manager Compare, the dossiers and the commissioner's audit log have
- * all been linking a specific deal for rounds; every one of them landed the reader in
- * a fourteen-node ring with one strand lit and the deal itself somewhere in a list
- * underneath. `TradeRecord` was already the receipt - it just had nowhere to print.
- *
- * Two stacked side-blocks (N for a multi-team deal - `tradeParties` already computes
- * the party set, and this league's biggest deals are three-way), each asset a row
- * carrying what it is worth TODAY and, for a pick, what it actually became. Every
- * player row links to its own provenance rail: trade -> asset -> trade is the whole
- * loop this feature is built around.
- *
- * NO GRADE, NO WINNER (D6). The totals are labelled "what each side is worth today"
- * and nothing here computes a delta, a percentage or a verdict. Three separate
- * honesty caveats ride with the number rather than sitting on a methodology page:
- *   - D23: this is hindsight. It measures how the deal turned out, not how it was
- *     reasoned. We hold NO historical ranking snapshots, so a value-at-trade-time
- *     version is not available and the copy says "today" and only today.
- *   - D24: players only. Commissioner-executed trades arrive with `draft_picks: []`,
- *     so including the picks we happen to have would produce a total that looks
- *     complete and is not.
- *   - D19: a commissioner-executed deal says so at the top - not that its picks were
- *     inferred (they never are), but that its pick record is simply gone.
+ * NO GRADE, NO WINNER (D6). Nothing computes a delta or a verdict. The caveats ride
+ * with the number, one tap away: D23 hindsight (no historical price snapshots, so
+ * "today" and only today), D24 players only (commissioner deals arrive with no picks),
+ * D19 a commissioner-executed deal says its pick record is gone, never inferred.
  */
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { ChevronLeft, Hourglass } from "lucide-react";
+import { AlertTriangle, ChevronLeft, Hourglass } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getPrincipals } from "@/lib/principals";
 import { buildTradeLedger, tradeParties, pickKey } from "@/lib/tradegraph";
@@ -35,16 +19,14 @@ import { loadProvenanceSource } from "@/lib/provenance/source";
 import { lineageHref, playerLineageHref } from "@/lib/tradegraph/url";
 import { cachedValuePlayers } from "@/lib/valuation";
 import { leagueTiers, tierResolver } from "@/lib/rankings/tiers";
-import { leagueTimelines, playerDuration } from "@/lib/metrics/duration";
-import { leagueFragility } from "@/lib/metrics/fragility";
 import { ordinal } from "@/lib/derive/describe";
-import { Card, Disclosure, PageHeader, SectionHeader } from "@/components/ui";
+import { Card, Chip, Disclosure, List, ListRow, PageHeader, SectionHeader } from "@/components/ui";
 import { LocalDate } from "@/components/LocalDate";
-import { ManagerLink, PlayerNowRow } from "@/components/TradeParts";
 import { DealReceipt } from "@/components/DealReceipt";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { fmtValue } from "@/lib/ui";
 export const dynamic = "force-dynamic";
+
 export default async function DealPage({ params }) {
   const { transactionId } = await params;
   const id = decodeURIComponent(transactionId);
@@ -54,8 +36,6 @@ export default async function DealPage({ params }) {
   const record = ledger.trades.find((t) => t.id === id);
   const tx = h.transactions.find((t) => t.transactionId === id);
   if (!record || !tx) notFound();
-  // One assembly, shared by the pick resolution below and by nothing else on this
-  // page - the rails themselves live on /lineage, one tap away from every row.
   const { pickPlayers } = await loadProvenanceSource(h, { principals });
   const values = cachedValuePlayers(h);
   const valuesDesc = [...values.values()]
@@ -64,46 +44,19 @@ export default async function DealPage({ params }) {
     .sort((a, b) => b - a);
   const tierFor = tierResolver(leagueTiers(valuesDesc));
   const holdings = {};
-  for (const r of h.rosters)
-    for (const pid of r.players) holdings[pid] = r.rosterId;
+  for (const r of h.rosters) for (const pid of r.players) holdings[pid] = r.rosterId;
   const nowOf = (pid) => {
     const v = values.get(pid);
     if (!v || v.value <= 0) return undefined;
-    const p = h.players.get(pid);
     return {
-      team: p?.team ?? null,
+      team: h.players.get(pid)?.team ?? null,
       value: v.value,
       tier: tierFor(v.value)?.label ?? "Fringe",
-      duration: playerDuration(p?.age ?? null),
       heldBy: holdings[pid] ?? null,
     };
   };
-  const managerMetrics = {};
-  for (const t of leagueTimelines(h)) {
-    managerMetrics[t.rosterId] = {
-      tci: t.tci,
-      posture: t.posture,
-      rosterDuration: t.rosterDuration,
-      fragility: null,
-      fragilityBand: null,
-    };
-  }
-  for (const f of leagueFragility(h)) {
-    managerMetrics[f.rosterId] = {
-      ...(managerMetrics[f.rosterId] ?? {
-        tci: 0,
-        posture: "straddling",
-        rosterDuration: 0,
-      }),
-      fragility: f.fragility,
-      fragilityBand: f.band,
-    };
-  }
   const names = {};
   for (const m of ledger.managers) if (!m.isFormer) names[m.rosterId] = m.name;
-  // Read the parties from the transaction itself, not from the asset moves: a move
-  // needs a recorded `from` to exist at all, and a receipt that silently omitted an
-  // asset because its counterpart drop was missing would be the wrong kind of tidy.
   const parties = tradeParties(tx);
   const sides = parties.map((rosterId) => {
     const playersIn = Object.entries(tx.adds)
@@ -117,16 +70,10 @@ export default async function DealPage({ params }) {
     return { rosterId, playersIn, picksIn, total, side, manager };
   });
   const anyValued = sides.some((s) => s.total > 0);
-  /*
-   * The receipt proper (components/DealReceipt.jsx): each side as one column of
-   * ledger lines over a ruled total. It lists EVERYTHING a side received - a pick
-   * or an unpriceable player prints an em dash in the price column rather than
-   * disappearing - so the players-only total (D24) sits above a visible record of
-   * exactly what it did not count. The rich rows above keep the avatars and the
-   * lineage links; this document is the "what each side is worth today" summary
-   * itself, replacing the bar chart that used to draw only the two endpoint
-   * numbers.
-   */
+  const pickLabel = (dp) =>
+    `${dp.season} ${ordinal(dp.round)}${
+      dp.rosterId !== dp.previousOwnerId && names[dp.rosterId] ? ` (orig. ${names[dp.rosterId]})` : ""
+    }`;
   const receiptSides = sides.map((s) => ({
     key: s.rosterId,
     name: s.manager?.name ?? s.side?.name ?? `Roster ${s.rosterId}`,
@@ -146,225 +93,144 @@ export default async function DealPage({ params }) {
         const became = pickPlayers[key];
         return {
           key: `${key}|${dp.previousOwnerId}`,
-          label: `${dp.season} ${ordinal(dp.round)}${
-            dp.rosterId !== dp.previousOwnerId && names[dp.rosterId]
-              ? ` (orig. ${names[dp.rosterId]})`
-              : ""
-          }`,
+          label: pickLabel(dp),
           value: null,
           note: became ? `became ${became}` : null,
         };
       }),
     ],
   }));
+
   return (
     <div>
       <Link
         href="/deals"
-        className="-ml-2 mb-1 inline-flex min-h-11 items-center gap-1 px-2 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
+        className="-ml-2 inline-flex min-h-11 items-center gap-1 px-2 text-note font-semibold text-secondary transition-colors hover:text-accent-text"
       >
-        <ChevronLeft size={13} aria-hidden="true" />
+        <ChevronLeft size={16} aria-hidden="true" />
         All deals
       </Link>
 
       <PageHeader
         kicker={`${record.season} · week ${record.week}`}
         title={record.multiTeam ? `${parties.length}-team deal` : "The deal"}
-      >
-        <p className="mt-0.5 figure text-meta text-secondary">
-          <LocalDate ts={record.created} />
-        </p>
-        <p className="mt-1 text-note leading-snug text-muted">
-          {record.summary}
-        </p>
-      </PageHeader>
-
-      {record.commissionerExecuted && (
-        <Card className="mb-3 border-warn-edge bg-warn-wash">
-          <p className="text-note leading-snug text-muted">
-            <span className="font-semibold text-warn">
-              Pick record missing.
-            </span>{" "}
-            The commissioner executed this deal by hand, and Sleeper records no
-            picks against commissioner moves. If picks changed hands here, they
-            are not below - and the app will not guess which ones.
-          </p>
-        </Card>
-      )}
-
-      {sides.map((s) => (
-        <section
-          key={s.rosterId}
-          className="mb-2 rounded-[--radius] border border-border bg-surface p-3"
-        >
-          <div className="flex items-start justify-between gap-2">
-            {s.manager ? (
-              <ManagerLink
-                node={s.manager}
-                metric={
-                  s.manager.isFormer
-                    ? undefined
-                    : managerMetrics[s.manager.rosterId]
-                }
-                isMe={s.manager.isMe}
-              />
-            ) : (
-              <span className="text-body font-semibold text-ink">
-                {s.side?.name ?? `Roster ${s.rosterId}`}
-              </span>
-            )}
-            <span className="shrink-0 text-right">
-              <span className="block figure text-lede font-semibold leading-tight text-ink">
-                {fmtValue(s.total)}
-              </span>
-              <span className="block text-micro leading-normal text-faint">
-                today
-              </span>
-            </span>
-          </div>
-
-          <p className="mt-1 text-meta leading-snug text-muted">
-            received {s.playersIn.length + s.picksIn.length}{" "}
-            {s.playersIn.length + s.picksIn.length === 1 ? "asset" : "assets"}
-          </p>
-
-          <ul className="mt-1.5 space-y-1.5">
-            {s.playersIn.map((pid) => {
-              const p = h.players.get(pid);
-              const now = nowOf(pid);
-              return (
-                <li key={pid}>
-                  {now ? (
-                    <PlayerNowRow
-                      assetKey={`p:${pid}`}
-                      label={p?.fullName ?? `Player ${pid}`}
-                      now={now}
-                      names={names}
-                    />
-                  ) : (
-                    // A player the model cannot price - out of the league, or with no
-                    // NBA team to anchor a consensus rank against. Listed, never
-                    // scored zero, and excluded from the total above.
-                    <Link
-                      href={playerLineageHref(pid)}
-                      className="flex items-center gap-1.5 rounded-[--radius-sm] border border-border bg-surface px-2 py-1.5 transition-colors hover:bg-surface-2"
-                    >
-                      <PlayerAvatar
-                        name={p?.fullName ?? "?"}
-                        team={p?.team ?? null}
-                        playerId={pid}
-                        size="sm"
-                      />
-                      <span className="min-w-0 flex-1">
-                        <span className="block line-clamp-1 text-body font-semibold leading-snug text-ink">
-                          {p?.fullName ?? `Player ${pid}`}
-                        </span>
-                        <span className="block text-meta leading-snug text-secondary">
-                          no price today · where he came from
-                        </span>
-                      </span>
-                    </Link>
-                  )}
-                </li>
-              );
-            })}
-
-            {s.picksIn.map((dp) => {
-              const key = pickKey(dp.season, dp.round, dp.rosterId);
-              const became = pickPlayers[key];
-              return (
-                <li key={`${key}|${dp.previousOwnerId}`}>
-                  <Link
-                    href={lineageHref(key)}
-                    className="flex items-start gap-1.5 rounded-[--radius-sm] border border-border bg-surface px-2 py-1.5 transition-colors hover:bg-surface-2"
-                  >
-                    <span className="min-w-0 flex-1">
-                      <span className="block line-clamp-1 text-body font-semibold leading-snug text-ink">
-                        {dp.season} {ordinal(dp.round)}
-                        {dp.rosterId !== dp.previousOwnerId &&
-                        names[dp.rosterId]
-                          ? ` (orig. ${names[dp.rosterId]})`
-                          : ""}
-                      </span>
-                      {became ? (
-                        <span className="block line-clamp-1 text-meta leading-snug text-info">
-                          became {became}
-                        </span>
-                      ) : (
-                        <span className="flex items-center gap-1 text-meta leading-snug text-faint">
-                          <Hourglass
-                            size={11}
-                            aria-hidden="true"
-                            className="shrink-0"
-                          />
-                          not drafted yet
-                        </span>
-                      )}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-
-            {s.playersIn.length === 0 && s.picksIn.length === 0 && (
-              <li className="text-meta leading-snug text-secondary">
-                Nothing recorded incoming on this side.
-              </li>
-            )}
-          </ul>
-        </section>
-      ))}
+        subtitle={<LocalDate ts={record.created} />}
+        below={
+          record.commissionerExecuted ? (
+            <div className="mt-2">
+              <Chip tone="warn" icon={AlertTriangle}>
+                Pick record missing
+              </Chip>
+              <Disclosure summary="Why picks may be missing">
+                The commissioner executed this deal by hand, and Sleeper records no picks against commissioner
+                moves. If picks changed hands here, they are not below, and the app will not guess which ones.
+              </Disclosure>
+            </div>
+          ) : null
+        }
+      />
 
       {anyValued && (
-        <>
-          <SectionHeader title="What each side is worth today" />
-          <Card>
+        <section aria-labelledby="worth-today">
+          <h2 id="worth-today" className="mb-2 text-lede font-semibold text-ink">
+            What each side is worth today
+          </h2>
+          <Card pad="sm">
             <DealReceipt sides={receiptSides} />
-            <p className="mt-2 text-meta leading-snug text-muted">
-              Today&apos;s prices, on the players only. Not a grade and not a
-              winner.
-            </p>
-            <Disclosure
-              summary="What this number cannot tell you"
-              className="mt-1"
-            >
+            <Disclosure className="-mb-2 mt-1 px-1" summary="Players only, at today's prices: what that misses">
               <p>
-                This is hindsight. It prices what each side received at what
-                those players are worth NOW, which is the right way to read an
-                outcome and the wrong way to read a decision - nobody trading in{" "}
-                {record.season} knew any of it. The app holds no historical
-                ranking snapshots, so a value-at-the-time version is not
-                available and this one says today, and only today.
+                This is hindsight: it prices what each side received at what those players are worth now, the right
+                way to read an outcome and the wrong way to read a decision. Nobody trading in {record.season} knew
+                any of it, and the app holds no historical price snapshots. Not a grade and not a winner.
               </p>
-              <p className="mt-1.5">
-                Players only. Commissioner-executed trades reach us with no
-                picks attached at all, so counting the picks that happen to be
-                recorded would make a number that looks complete and is not. The
-                direction of the bias is worth knowing: a side that sent picks
-                and took back players looks better here than it was, and a side
-                that sold for picks looks worse. What the picks became is listed
-                above, unpriced.
+              <p className="mt-2">
+                Picks are left unpriced because commissioner-executed trades reach us with none attached. A side
+                that sent picks and took back players looks better here than it was; a side that sold for picks
+                looks worse.
               </p>
             </Disclosure>
           </Card>
-        </>
+        </section>
       )}
 
-      <SectionHeader title="In the record" />
-      <Card>
+      {sides.map((s) => {
+        const name = s.manager?.name ?? s.side?.name ?? `Roster ${s.rosterId}`;
+        const count = s.playersIn.length + s.picksIn.length;
+        return (
+          <section key={s.rosterId}>
+            <SectionHeader
+              title={`${name} got`}
+              href={s.manager && !s.manager.isFormer ? `/managers/${s.manager.rosterId}` : undefined}
+              cta={s.manager && !s.manager.isFormer ? "Dossier" : undefined}
+            />
+            {count === 0 ? (
+              <Card>
+                <p className="text-body text-muted">Nothing recorded incoming on this side.</p>
+              </Card>
+            ) : (
+              <List aria-label={`What ${name} received`}>
+                {s.playersIn.map((pid) => {
+                  const p = h.players.get(pid);
+                  const label = p?.fullName ?? `Player ${pid}`;
+                  const now = nowOf(pid);
+                  return (
+                    <li key={pid}>
+                      <ListRow
+                        href={playerLineageHref(pid)}
+                        aria-label={`${label}: ${now ? `worth ${fmtValue(now.value)} today` : "no price today"}. Open where he came from.`}
+                        avatar={<PlayerAvatar name={label} team={now?.team ?? p?.team ?? null} playerId={pid} size="sm" />}
+                        title={label}
+                        meta={
+                          now
+                            ? [now.tier, now.heldBy != null && names[now.heldBy] ? `now on ${names[now.heldBy]}` : null]
+                                .filter(Boolean)
+                                .join(" · ")
+                            : "no price today"
+                        }
+                        value={now ? fmtValue(now.value) : "unknown"}
+                        valueSub="today"
+                      />
+                    </li>
+                  );
+                })}
+                {s.picksIn.map((dp) => {
+                  const key = pickKey(dp.season, dp.round, dp.rosterId);
+                  const became = pickPlayers[key];
+                  return (
+                    <li key={`${key}|${dp.previousOwnerId}`}>
+                      <ListRow
+                        href={lineageHref(key)}
+                        title={pickLabel(dp)}
+                        meta={
+                          became ? (
+                            `became ${became}`
+                          ) : (
+                            <span className="inline-flex items-center gap-1">
+                              <Hourglass size={12} aria-hidden="true" />
+                              not drafted yet
+                            </span>
+                          )
+                        }
+                      />
+                    </li>
+                  );
+                })}
+              </List>
+            )}
+          </section>
+        );
+      })}
+
+      <Disclosure className="mt-3" summary="As recorded">
         <ul className="space-y-1.5">
           {record.sides.map((s) => (
-            <li key={s.rosterId} className="text-body leading-snug">
-              <span className="font-semibold text-ink">{s.name}</span>{" "}
-              <span className="text-muted">{s.text}</span>
+            <li key={s.rosterId}>
+              <span className="font-semibold text-ink">{s.name}</span> {s.text}
             </li>
           ))}
         </ul>
-        <p className="mt-2 text-meta leading-snug text-secondary">
-          Every player above opens where he came from. Every pick opens what it
-          became.
-        </p>
-      </Card>
+        {record.summary && <p className="mt-2">{record.summary}</p>}
+      </Disclosure>
     </div>
   );
 }
