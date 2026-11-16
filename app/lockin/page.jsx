@@ -38,7 +38,7 @@ export default async function LockInPage({ searchParams }) {
       <PageHeader
         kicker={hd.kicker}
         title="Lock or hold"
-        aside={<RefreshControl rosterId={rosterId} asOf={desk.generatedAt} live={hd.live} updating={hd.updating} disabled={!!replay || isFixtureDesk(desk)} />}
+        aside={<RefreshControl asOf={desk.generatedAt} live={hd.live} updating={hd.updating} disabled={!!replay || isFixtureDesk(desk)} />}
         below={isFixtureDesk(desk) ? <Chip className="mt-2">Sample week, invented players</Chip> : null}
       />
       <LockDeskBoard rosterId={rosterId} desk={desk} mode="full" open={one(sp.open)} fullHref={fullHref} methodOpen={one(sp.method) === "open"} />
