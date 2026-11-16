@@ -21,7 +21,7 @@
  * involving a former manager says so and shows only what is genuinely theirs.
  */
 import Link from "next/link";
-import { ArrowLeft, ChevronRight, Lock, Trophy } from "lucide-react";
+import { ArrowLeft, ChevronRight, Trophy } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { dossiersByOwner } from "@/lib/dossier";
 import { titleSummariesByOwner } from "@/lib/dossier/titles";
@@ -30,7 +30,7 @@ import { buildTradeLedger, pairEdgeKey } from "@/lib/tradegraph";
 import { pairDealsHref } from "@/lib/tradegraph/url";
 import { leagueTimelines } from "@/lib/metrics/duration";
 import { fragilityTone, leagueFragility } from "@/lib/metrics/fragility";
-import { Card, PageHeader, SectionHeader, Tag } from "@/components/ui";
+import { Card, Chip, Disclosure, List, ListRow, PageHeader, SectionHeader, StatTile, Tag } from "@/components/ui";
 import { PostureTag } from "@/components/PostureTag";
 import { MetricGloss } from "@/components/MetricGloss";
 import { TeamAvatar } from "@/components/TeamAvatar";
@@ -58,14 +58,15 @@ function Val({ cell, lead }) {
     <div className="min-w-0">
       <div
         className={cn(
-          "figure text-body leading-tight",
-          lead ? "font-semibold text-accent-text" : "text-ink",
+          "figure text-body font-semibold leading-tight",
+          lead ? "text-accent-text" : "text-ink",
         )}
       >
         {cell.main}
+        {lead && <span className="sr-only"> (more)</span>}
       </div>
       {cell.sub != null && (
-        <div className="mt-px text-micro leading-tight text-faint">
+        <div className="mt-0.5 text-meta leading-tight text-secondary">
           {cell.sub}
         </div>
       )}
@@ -90,7 +91,6 @@ function dossierHref(d) {
  */
 function Side({ d, principal, isMe, titles }) {
   const p = d.profile;
-  const shown = d.tags.slice(0, 3);
   return (
     <div className="min-w-0">
       <TeamAvatar
@@ -100,29 +100,27 @@ function Side({ d, principal, isMe, titles }) {
         size="sm"
         isMe={isMe}
       />
+      {/* Names wrap, never clip (D111). */}
       <Link
         href={dossierHref(d)}
-        className="mt-1 flex min-h-11 items-center line-clamp-1 text-body font-semibold leading-tight text-ink transition-colors hover:text-accent-text"
+        className="mt-1 flex min-h-11 items-center text-body font-semibold leading-tight text-ink transition-colors hover:text-accent-text"
       >
         {p.teamName ?? p.displayName}
       </Link>
-      <div className="line-clamp-1 text-meta leading-tight text-secondary">
-        {p.displayName}
+      <div className="text-meta leading-tight text-secondary">{p.displayName}</div>
+      <div className="mt-1 flex flex-wrap gap-1">
+        {isMe && (
+          <Chip size="sm" tone="accent">
+            You
+          </Chip>
+        )}
+        {d.identity.kind === "former" && <Chip size="sm">former {d.identity.tenureLabel}</Chip>}
+        {titles && (
+          <Chip size="sm" tone="accent" icon={Trophy}>
+            {titles.label}
+          </Chip>
+        )}
       </div>
-      {d.identity.kind === "former" && (
-        <Tag className="mt-1">former {d.identity.tenureLabel}</Tag>
-      )}
-      {titles && (
-        <div className="mt-1 flex items-center gap-1 text-meta font-semibold text-accent-text">
-          <Trophy size={11} aria-hidden="true" className="shrink-0" />
-          <span className="line-clamp-1">{titles.label}</span>
-        </div>
-      )}
-      {shown.length > 0 && (
-        <div className="mt-1 text-meta font-medium leading-snug text-accent-text">
-          {shown.join(" · ")}
-        </div>
-      )}
     </div>
   );
 }
@@ -133,22 +131,15 @@ function Side({ d, principal, isMe, titles }) {
  */
 function CompareSheet({ rows }) {
   return (
-    <div className="overflow-hidden rounded-[--radius] border border-border bg-surface">
-      <ul className="divide-y divide-border">
-        {rows.map((r) => (
-          <li
-            key={r.label}
-            className="grid grid-cols-[76px_1fr_1fr] items-start gap-2 px-2.5 py-1.5"
-          >
-            <div className="text-micro uppercase leading-tight tracking-wide text-faint">
-              {r.label}
-            </div>
-            <Val cell={r.a} lead={r.lead === "a"} />
-            <Val cell={r.b} lead={r.lead === "b"} />
-          </li>
-        ))}
-      </ul>
-    </div>
+    <List>
+      {rows.map((r) => (
+        <li key={r.label} className="grid min-h-14 grid-cols-[80px_1fr_1fr] items-start gap-2 px-4 py-2.5">
+          <div className="text-meta font-medium leading-tight text-secondary">{r.label}</div>
+          <Val cell={r.a} lead={r.lead === "a"} />
+          <Val cell={r.b} lead={r.lead === "b"} />
+        </li>
+      ))}
+    </List>
   );
 }
 export default async function CompareManagersPage({ searchParams }) {
@@ -180,25 +171,12 @@ export default async function CompareManagersPage({ searchParams }) {
     <>
       <Link
         href="/managers"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
+        className="-ml-1 -mt-2 inline-flex min-h-11 items-center gap-1.5 px-1 text-note font-semibold text-secondary transition-colors hover:text-ink"
       >
-        <ArrowLeft size={13} aria-hidden="true" />
-        All dossiers
+        <ArrowLeft size={14} aria-hidden="true" />
+        All managers
       </Link>
-      <PageHeader
-        kicker="Manager compare"
-        title="Side by side"
-        subtitle="The same numbers for two managers, from the same reads their own dossiers use."
-      >
-        <div className="mt-1 flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
-          <span>{options.length} managers</span>
-          <span aria-hidden="true">·</span>
-          <span className="inline-flex items-center gap-1 text-warn">
-            <Lock size={11} aria-hidden="true" />
-            private
-          </span>
-        </div>
-      </PageHeader>
+      <PageHeader kicker="Trade" title="Compare managers" subtitle={`Same numbers, two of ${options.length} managers`} />
       <ManagerComparePicker options={options} a={aId} b={bId} />
     </>
   );
@@ -234,26 +212,22 @@ export default async function CompareManagersPage({ searchParams }) {
     return (
       <div>
         {header}
-        <Card className="mt-3">
-          <p className="text-body leading-relaxed text-muted">
-            {aD || bD
-              ? "Pick a second manager to compare against."
-              : "Pick two managers. Former managers are in the list too - their behaviour is scoped to the seasons they actually ran the team."}
-          </p>
-          {suggestions.length > 0 && (
-            <div className="mt-2 flex flex-wrap gap-1.5">
-              {suggestions.map((s) => (
-                <Link
-                  key={s.href}
-                  href={s.href}
-                  className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-3 text-note font-semibold text-ink transition-colors hover:border-accent-edge hover:text-accent-text"
-                >
-                  {s.label}
-                </Link>
-              ))}
-            </div>
-          )}
-        </Card>
+        <p className="mt-3 text-body text-muted">
+          {aD || bD ? "Pick a second manager." : "Pick two managers, or start from one of these."}
+        </p>
+        {suggestions.length > 0 && (
+          <List className="mt-2" aria-label="Suggested pairs">
+            {suggestions.map((s) => (
+              <li key={s.href}>
+                <ListRow href={s.href} title={s.label} />
+              </li>
+            ))}
+          </List>
+        )}
+        <Disclosure className="mt-1" summary="Former managers">
+          Former managers are in the list too: their behaviour is scoped to the seasons
+          they actually ran the team.
+        </Disclosure>
         {/* The empty branch is a dead end too, and it is the one a reader most often
                 lands on: arriving with no pair chosen and no idea who to pick. */}
         <Onward from="/managers/compare" />
@@ -475,33 +449,29 @@ export default async function CompareManagersPage({ searchParams }) {
           )
         }
       />
-      <Card>
-        {edge ? (
-          <>
-            <p className="text-body leading-relaxed text-ink">
-              <span className="figure font-semibold text-accent-text">
-                {dealsListed} deal{dealsListed === 1 ? "" : "s"}
-              </span>{" "}
-              <span className="text-muted">
-                between them, in {edge.seasons.join(", ")}.
-              </span>
-            </p>
-            {dossierCount > dealsListed && (
-              <p className="mt-1 text-meta leading-relaxed text-secondary">
-                Their dossiers count {dossierCount}. A commissioner-executed
-                multi-team deal collapses several transactions into one record
-                here, so the listable number is the smaller one.
-              </p>
-            )}
-          </>
-        ) : (
-          <p className="text-body leading-relaxed text-muted">
+      {edge ? (
+        <>
+          <StatTile
+            label="Deals between them"
+            value={`${dealsListed}`}
+            sub={`in ${edge.seasons.join(", ")}`}
+          />
+          {dossierCount > dealsListed && (
+            <Disclosure className="mt-1" summary={`Why their dossiers count ${dossierCount}`}>
+              A commissioner-executed multi-team deal collapses several transactions into
+              one record here, so the listable number is the smaller one.
+            </Disclosure>
+          )}
+        </>
+      ) : (
+        <Card>
+          <p className="text-body text-muted">
             {overlap.length === 0
-              ? "They were never in the league at the same time, so no deal between them was ever possible."
-              : `No deals between them, across ${overlap.length} shared season${overlap.length === 1 ? "" : "s"}.`}
+              ? "Never in the league at the same time."
+              : `No deals across ${overlap.length} shared season${overlap.length === 1 ? "" : "s"}.`}
           </p>
-        )}
-      </Card>
+        </Card>
+      )}
 
       <SectionHeader title="How they trade" />
       <CompareSheet rows={behaviour} />
@@ -515,30 +485,25 @@ export default async function CompareManagersPage({ searchParams }) {
           <MetricGloss className="mt-1" />
         </>
       ) : (
-        <Card className="border-warn/30 bg-warn/[0.06]">
-          <p className="text-body leading-relaxed text-muted">
-            Only shown when both managers currently hold a roster. TCI, duration
-            and fragility describe a roster as it stands tonight, and a former
-            manager holds none - showing these would quietly be describing
-            whoever took their team over.
-          </p>
-        </Card>
+        <>
+          <p className="text-body text-muted">Only shown when both managers hold a roster.</p>
+          <Disclosure summary="Why">
+            TCI, duration and fragility describe a roster as it stands tonight, and a
+            former manager holds none: showing these would quietly be describing whoever
+            took their team over.
+          </Disclosure>
+        </>
       )}
 
       <SectionHeader title="The read" />
-      <div className="space-y-2">
-        {[aD, bD].map((d) => (
-          <div
-            key={d.profile.userId ?? d.profile.displayName}
-            className="rounded-[--radius] border border-border bg-surface p-2.5"
-          >
-            <div className="mb-0.5 text-meta font-semibold uppercase tracking-wide text-accent-text">
-              {d.profile.teamName ?? d.profile.displayName}
-            </div>
-            <p className="text-note leading-[1.42] text-ink">{d.read}</p>
-          </div>
-        ))}
-      </div>
+      {[aD, bD].map((d) => (
+        <Disclosure
+          key={d.profile.userId ?? d.profile.displayName}
+          summary={d.profile.teamName ?? d.profile.displayName}
+        >
+          {d.read}
+        </Disclosure>
+      ))}
 
       {/*
        * WHAT TO DO WITH THE COMPARISON. This was two dossier links, and the whole
@@ -550,7 +515,7 @@ export default async function CompareManagersPage({ searchParams }) {
       <div className="space-y-1.5">
         {[aD, bD].map((d) => (
           <div key={dossierHref(d)} className="min-w-0">
-            <p className="mb-0.5 line-clamp-1 text-meta font-semibold uppercase tracking-wide text-secondary">
+            <p className="mb-1 text-note font-semibold text-ink">
               {d.profile.teamName ?? d.profile.displayName}
             </p>
             <ManagerRail
@@ -565,15 +530,14 @@ export default async function CompareManagersPage({ searchParams }) {
         ))}
       </div>
 
-      <p className="mt-3 text-meta leading-relaxed text-secondary">
-        Gold marks a side only where more is plainly more: pick capital, and the
-        lower fragility index when both rosters are playing to win now. A low
-        fragility score on a team that has already sold means it has little left
-        to lose, so that comparison gets no winner. Every other row is a
-        difference, not a score. Behaviour is scoped to each manager&apos;s own
-        tenure, so a roster that changed hands reads as two people rather than
-        one blended average.
-      </p>
+      <Disclosure className="mt-3" summary="How to read the highlights">
+        Violet marks a side only where more is plainly more: pick capital, and the lower
+        fragility index when both rosters are playing to win now. A low fragility score
+        on a team that has already sold means it has little left to lose, so that
+        comparison gets no winner. Every other row is a difference, not a score.
+        Behaviour is scoped to each manager&apos;s own tenure, so a roster that changed
+        hands reads as two people rather than one blended average.
+      </Disclosure>
 
       <Onward from="/managers/compare" />
     </div>

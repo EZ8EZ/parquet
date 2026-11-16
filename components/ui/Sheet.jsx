@@ -9,8 +9,11 @@ import { cn } from "@/lib/ui";
  * behind is inert, focus stays inside, Escape closes, and focus returns to the
  * trigger. Backdrop tap and the close button also dismiss. Children mount on first
  * open, so a list of sheets costs no DOM until used. Motion: globals.css `.sheet`.
+ * `footer` (alias `actions`) pins a row of buttons under the scrolling body;
+ * `leading` puts an avatar beside the title.
  */
-export function Sheet({ trigger, triggerLabel, triggerClassName, title, subtitle, children, footer }) {
+export function Sheet({ trigger, triggerLabel, triggerClassName, title, subtitle, leading, children, footer, actions }) {
+  const foot = footer ?? actions;
   const ref = useRef(null);
   const [opened, setOpened] = useState(false);
   const titleId = useId();
@@ -42,6 +45,7 @@ export function Sheet({ trigger, triggerLabel, triggerClassName, title, subtitle
       >
         <span aria-hidden="true" className="mx-auto mt-2 block h-1 w-10 shrink-0 rounded-full bg-border-strong" />
         <div className="flex items-start gap-3 px-4 pb-2 pt-2">
+          {leading && <div className="shrink-0 pt-2">{leading}</div>}
           <div className="min-w-0 flex-1 pt-2.5">
             <h2 id={titleId} className="text-lede font-semibold text-ink">
               {title}
@@ -60,7 +64,11 @@ export function Sheet({ trigger, triggerLabel, triggerClassName, title, subtitle
         <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
           {opened && children}
         </div>
-        {footer && opened && <div className="border-t border-border px-4 py-3">{footer}</div>}
+        {foot && opened && (
+          <div className="flex flex-wrap gap-2 border-t border-border px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+            {foot}
+          </div>
+        )}
       </dialog>
     </>
   );

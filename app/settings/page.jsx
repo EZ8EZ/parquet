@@ -1,41 +1,26 @@
 /**
- * SETTINGS - the app's first real preference gets the app's first settings page.
+ * SETTINGS AND SEARCH - the Menu's utility page.
  *
- * This page exists now rather than earlier on a decision the team already recorded: a
- * settings page is not a feature on its own. The theme toggle that justified it was
- * retired with the light theme (one dark theme now); search and the menu index remain.
+ * The theme toggle that first justified a settings page was retired with the light
+ * theme, so what is left is the thing people come here for: search across every
+ * player, manager, trade and pick, then the rest of the Menu as rows. The page
+ * answers "where is X?" with the search field first, at the top of the screen.
  */
 import { Suspense } from "react";
-import Link from "next/link";
-import { ArrowLeft } from "lucide-react";
-import { PageHeader, SectionHeader } from "@/components/ui";
-import { Onward } from "@/components/Onward";
+import { PageHeader } from "@/components/ui";
 import { SearchPanel } from "@/components/SearchPanel";
 import { TabIndex } from "@/components/TabIndex";
 export const metadata = {
-  title: "Settings and search - Parquet",
+  title: "Search - Parquet",
 };
 export default function SettingsPage() {
   return (
     <div>
-      <Link
-        href="/"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
-      >
-        <ArrowLeft size={13} aria-hidden="true" />
-        This Week
-      </Link>
-
-      <PageHeader kicker="Menu" title="Settings and search" />
-
-      <SectionHeader title="Search" />
-      <Suspense fallback={null}>
+      <PageHeader kicker="Menu" title="Search" />
+      <Suspense fallback={<div className="skeleton h-12 rounded-full" aria-hidden="true" />}>
         <SearchPanel basePath="/settings" />
       </Suspense>
-
-      <TabIndex tab="utility" title="Also in the menu" exclude={["/settings"]} />
-
-      <Onward from="/settings" />
+      <TabIndex tab="utility" title="Also in the menu" className="mt-6" exclude={["/settings"]} />
     </div>
   );
 }

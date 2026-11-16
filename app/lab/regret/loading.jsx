@@ -4,5 +4,5 @@
  */
 import { LoadingPage } from "@/components/PageSkeleton";
 export default function Loading() {
-  return <LoadingPage cards={3} kicker="w-20" title="w-1/2" />;
+  return <LoadingPage layout="cards" cards={3} kicker="w-20" title="w-1/2" />;
 }

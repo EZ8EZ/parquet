@@ -1,10 +1,12 @@
 import Link from "next/link";
+import { ChevronDown } from "lucide-react";
 import { BrandMark } from "@/components/Brand";
 import { TeamAvatar } from "@/components/TeamAvatar";
 
 /**
- * The app header: brand home link left, the team you are viewing as right (opens the
- * team switcher). Sticky, solid, clears the notch via safe-area-inset-top.
+ * The app header: brand home link left, the team you are viewing as right: avatar,
+ * team name and a chevron, so "whose team is this" is answered on every page (opens
+ * the team switcher). Sticky, solid, clears the notch via safe-area-inset-top.
  */
 export function AppHeader({ seat }) {
   return (
@@ -22,15 +24,21 @@ export function AppHeader({ seat }) {
           <Link
             href="/teams"
             aria-label={`Viewing as ${seat.label}. Switch team`}
-            className="-mr-1.5 flex min-h-11 min-w-11 items-center justify-center rounded-full px-1.5"
+            className="-mr-1.5 flex min-h-11 max-w-[60%] items-center gap-2 rounded-full bg-surface py-1 pl-1 pr-2.5 transition-colors hover:bg-surface-2"
           >
             <TeamAvatar
               name={seat.label}
               avatarId={seat.avatarId}
               teamLogoUrl={seat.teamLogoUrl}
-              size="xs"
-              className="rounded-full"
+              size="sm"
+              className="shrink-0 rounded-full"
             />
+            {/* The name wraps to a second line rather than truncating (D111); the
+                header row is tall enough for two lines at this size. */}
+            <span className="min-w-0 text-meta font-semibold leading-[14px] text-ink">
+              {seat.label}
+            </span>
+            <ChevronDown size={16} aria-hidden="true" className="shrink-0 text-secondary" />
           </Link>
         ) : (
           <Link

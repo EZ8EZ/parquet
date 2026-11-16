@@ -12,7 +12,7 @@ import { Tag } from "@/components/ui";
  */
 export function ExperimentBadge() {
   return (
-    <Tag tone="warn" className="uppercase tracking-[0.14em]">
+    <Tag tone="warn">
       <FlaskConical size={11} aria-hidden="true" />
       Experiment
     </Tag>

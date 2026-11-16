@@ -7,9 +7,16 @@ import { cn } from "@/lib/ui";
  * on the server and passed in. Inactive panels are `hidden`, so they cost no reading
  * and no layout. Arrow keys, Home and End move between tabs (WAI-ARIA tabs pattern).
  * `variant="segmented"` draws the pill control; the default is an underline bar.
+ * `onChange(id)` reports a switch (for a URL or a parent); `value` makes it
+ * controlled. A tab's `count` is printed in a small pill beside its label.
  */
-export function Tabs({ items, label, defaultId, variant = "underline", className, panelClassName }) {
-  const [active, setActive] = useState(defaultId ?? items[0]?.id);
+export function Tabs({ items, label, defaultId, value, onChange, variant = "underline", className, panelClassName }) {
+  const [inner, setInner] = useState(defaultId ?? items[0]?.id);
+  const active = value ?? inner;
+  const setActive = (id) => {
+    setInner(id);
+    onChange?.(id);
+  };
   const base = useId();
   const tabRefs = useRef([]);
 
