@@ -11,7 +11,7 @@ import {
 } from "@/lib/lineage";
 import { describeTransaction, ordinal } from "@/lib/derive/describe";
 import { fold } from "@/lib/ui";
-import { boardHref } from "@/app/drafts/parts";
+import { boardHref } from "@/app/(app)/drafts/parts";
 export const dynamic = "force-dynamic";
 // One surface, four entity types, capped so the overlay never turns into a second
 // scrollable page - the point is a fast answer, not an exhaustive one.
