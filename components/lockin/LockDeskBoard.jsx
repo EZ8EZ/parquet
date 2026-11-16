@@ -4,6 +4,8 @@ import { Disclosure, EmptyState, List, ListRow, SectionHeader, StatTile, Tabs } 
 import { loadLockDesk } from "@/lib/lockin/source";
 import { compactLive, firstUp, gapLines, groupCards, playerSubtitle, resultLine, shortDate, stateBody, weekGrid } from "@/lib/lockin/view";
 import { DeckTrigger, PlayerDeck } from "./PlayerDeck";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { Opp } from "./Opp";
 import { PlayerPanel } from "./PlayerDetail";
 import { SlotCells } from "./SlotCells";
 import { DecisionHero } from "./DecisionHero";
@@ -40,7 +42,7 @@ function FirstUp({ fu, title, tappable = false, className, moreHref = null }) {
       <SectionHeader className={className} title={title ?? (fu.tonight ? "First up tonight" : `First up ${fu.day} ${shortDate(fu.date)}`)} />
       <List>
         {shown.map((p) => {
-          const row = <ListRow as={tappable ? "span" : undefined} chevron={tappable} leading={p.slotLabel ?? "BN"} title={p.name} meta={`${p.away ? "at" : "vs"} ${p.opponent ?? "unknown"}`} />;
+          const row = <ListRow as={tappable ? "span" : undefined} chevron={tappable} leading={p.slotLabel ?? "BN"} avatar={<PlayerAvatar name={p.name} team={p.team} playerId={p.playerId} size="sm" decorative />} title={p.name} meta={<Opp team={p.opponent} away={p.away} />} />;
           return tappable ? (
             <li key={p.playerId}>
               <DeckTrigger playerId={p.playerId} label={`${p.name}. Show details`}>
@@ -81,6 +83,7 @@ function panelsFor(desk, methodHref) {
     .map((c) => ({
       id: c.playerId,
       title: c.name,
+      leading: <PlayerAvatar name={c.name} team={c.team} playerId={c.playerId} size="md" decorative />,
       subtitle: playerSubtitle(c),
       content: <PlayerPanel card={c} today={desk.today} record={desk.leanRecord} methodHref={methodHref} calibration={desk.model?.calibration?.pLaterBeatsIfPlays} />,
     }));

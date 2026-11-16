@@ -1,6 +1,7 @@
 import { AlertTriangle, Hourglass, Lock } from "lucide-react";
 import { Chip } from "@/components/ui";
-import { SLOT_STATES, decisionNumbers, fmt, gamesLeftText, leanView, pct, slotStateKey } from "@/lib/lockin/view";
+import { SLOT_STATES, decisionNumbers, fmt, gamesLeftText, leanView, pct, remainingGames, slotStateKey } from "@/lib/lockin/view";
+import { Opp } from "./Opp";
 import { StateIcon } from "./StateIcon";
 
 export function slotKeyOf(card) {
@@ -69,7 +70,7 @@ export function DecisionFigures({ card }) {
     return (
       <div className="grid grid-cols-2 gap-2">
         <Tile label={card.role === "bench" ? "Bench" : "In his slot"} value={card.banked == null ? "-" : fmt(card.banked)} sub={state} />
-        <Tile label="Games left" value={card.gamesLeft} sub={card.nextGame ? `next ${card.nextGame.day} ${card.nextGame.away ? "at" : "vs"} ${card.nextGame.opponent}` : "none this week"} />
+        <Tile label="Games left" value={card.gamesLeft} sub={card.nextGame ? <>next {card.nextGame.day} <Opp team={card.nextGame.opponent} away={card.nextGame.away} /></> : "none this week"} />
       </div>
     );
   }
@@ -89,9 +90,22 @@ export function DecisionFigures({ card }) {
 
 /** "1 game left: Sun vs SAC · decide before his next game tonight." */
 export function WhenLine({ card }) {
+  const left = remainingGames(card);
   return (
     <p className="text-note text-muted">
-      {gamesLeftText(card)}
+      {left.length ? (
+        <>
+          {left.length} {left.length === 1 ? "game" : "games"} left:{" "}
+          {left.map((g, i) => (
+            <span key={g.date}>
+              {i > 0 ? ", " : ""}
+              {g.day} <Opp team={g.opponent} away={g.away} />
+            </span>
+          ))}
+        </>
+      ) : (
+        gamesLeftText(card)
+      )}
       {card.decision.kind === "lock_or_hold" && card.decision.deadlineText ? `. Decide ${card.decision.deadlineText}.` : "."}
     </p>
   );
