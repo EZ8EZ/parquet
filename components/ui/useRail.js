@@ -29,31 +29,43 @@ export function useRail(activeKey) {
     setEdges((e) => (e.start === start && e.end === end ? e : { start, end }));
   }, []);
 
-  useEffect(() => {
-    const el = ref.current;
-    if (!el) return;
-    measure();
-    el.addEventListener("scroll", measure, { passive: true });
-    const ro = typeof ResizeObserver !== "undefined" ? new ResizeObserver(measure) : null;
-    ro?.observe(el);
-    return () => {
-      el.removeEventListener("scroll", measure);
-      ro?.disconnect();
-    };
-  }, [measure]);
-
-  // Keep the active option in view. Only the rail scrolls, never the page.
-  useEffect(() => {
+  // Scroll only the rail (never the page) so the active option is in view.
+  const reveal = useCallback((smooth) => {
     const el = ref.current;
     const item = el?.querySelector('[data-active="true"]');
-    if (!el || !item) return;
+    if (!el || !item || el.clientWidth === 0) return;
     const left = item.offsetLeft - FADE;
     const right = item.offsetLeft + item.offsetWidth + FADE - el.clientWidth;
     const target = el.scrollLeft > left ? left : el.scrollLeft < right ? right : null;
     if (target == null) return;
     const reduce = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
-    el.scrollTo({ left: Math.max(0, target), behavior: reduce ? "auto" : "smooth" });
-  }, [activeKey]);
+    el.scrollTo({ left: Math.max(0, target), behavior: smooth && !reduce ? "smooth" : "auto" });
+  }, []);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    measure();
+    el.addEventListener("scroll", measure, { passive: true });
+    // A rail that mounts hidden (inside an inactive tab panel) has no size until it is
+    // shown, so the resize that reveals it is also when the active option is placed.
+    const ro =
+      typeof ResizeObserver !== "undefined"
+        ? new ResizeObserver(() => {
+            reveal(false);
+            measure();
+          })
+        : null;
+    ro?.observe(el);
+    return () => {
+      el.removeEventListener("scroll", measure);
+      ro?.disconnect();
+    };
+  }, [measure, reveal]);
+
+  useEffect(() => {
+    reveal(true);
+  }, [activeKey, reveal]);
 
   const a = edges.start ? "transparent" : "black";
   const b = edges.end ? "transparent" : "black";
