@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
-import { Card, Tag } from "@/components/ui";
+import { Card, List, ListRow, SectionHeader, Tag } from "@/components/ui";
 /**
  * THE ACTION QUEUE: at most three decision cards, numbered because the order IS the
  * priority (crunch → taxi → plan → waivers, lib/actions). Each card prints a count or
@@ -56,32 +56,14 @@ export function ActionQueue({ items, className, compact = false }) {
 function CompactQueue({ items, className }) {
   return (
     <section id="action-queue" aria-labelledby="action-queue-title" className={className}>
-      <h2
-        id="action-queue-title"
-        className="mb-2 text-lede font-semibold text-ink"
-      >
-        To do
-      </h2>
-      <ol className="divide-y divide-border overflow-hidden rounded-card bg-surface">
+      <SectionHeader id="action-queue-title" title="To do" className="mt-0" />
+      <List as="ol">
         {items.map((item) => (
           <li key={item.id} data-action={item.id}>
-            <Link
-              href={item.href}
-              className="flex min-h-14 items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-2"
-            >
-              <span className="min-w-0 flex-1">
-                <span className="block text-meta font-semibold text-accent-text">
-                  {item.kicker}
-                </span>
-                <span className="block text-body font-semibold leading-snug text-ink">
-                  {item.title}
-                </span>
-              </span>
-              <ChevronRight size={18} aria-hidden="true" className="-mr-1 shrink-0 text-faint" />
-            </Link>
+            <ListRow href={item.href} title={item.title} badge={<Tag tone="accent" size="sm">{item.kicker}</Tag>} />
           </li>
         ))}
-      </ol>
+      </List>
     </section>
   );
 }

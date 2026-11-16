@@ -77,7 +77,7 @@ export function DraftRecap({ recap, meRosterId }) {
                   />
                 }
               >
-                <ul className="divide-y divide-border rounded-control bg-surface-2 px-3" tabIndex={0} aria-label={`${t.name}'s picks`}>
+                <ul className="divide-y divide-border rounded-control bg-surface-2 px-3">
                   {t.picks.map((p) => (
                     <li key={p.pickNo} className="flex items-baseline justify-between gap-3 py-2.5 text-note">
                       <span className="min-w-0 text-ink">
