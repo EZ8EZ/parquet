@@ -8,8 +8,9 @@ import { Card, Tag } from "@/components/ui";
  * nothing when there is nothing to decide. No `truncate`: a decision you cannot read
  * in full is not one you can make.
  */
-export function ActionQueue({ items, className }) {
+export function ActionQueue({ items, className, compact = false }) {
   if (!items?.length) return null;
+  if (compact) return <CompactQueue items={items} className={className} />;
   return (
     <section id="action-queue" aria-label="Decisions in front of you" className={className}>
       <ol className="space-y-1.5">
@@ -44,6 +45,39 @@ export function ActionQueue({ items, className }) {
                   </span>
                 </span>
               </Card>
+            </Link>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+function CompactQueue({ items, className }) {
+  return (
+    <section id="action-queue" aria-labelledby="action-queue-title" className={className}>
+      <h2
+        id="action-queue-title"
+        className="mb-1.5 text-note font-semibold uppercase tracking-[0.16em] text-muted"
+      >
+        To do
+      </h2>
+      <ol className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
+        {items.map((item) => (
+          <li key={item.id} data-action={item.id}>
+            <Link
+              href={item.href}
+              className="flex min-h-11 items-center gap-2.5 px-3 py-2 transition-colors hover:bg-surface-2"
+            >
+              <span className="min-w-0 flex-1">
+                <span className="block text-micro font-semibold uppercase tracking-[0.14em] text-accent-text">
+                  {item.kicker}
+                </span>
+                <span className="block text-body font-semibold leading-snug text-ink">
+                  {item.title}
+                </span>
+              </span>
+              <ChevronRight size={15} aria-hidden="true" className="shrink-0 text-faint" />
             </Link>
           </li>
         ))}

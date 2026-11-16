@@ -9,6 +9,8 @@ import { PostureTag } from "@/components/PostureTag";
 import { TeamAvatar } from "@/components/TeamAvatar";
 import { Onward } from "@/components/Onward";
 import { TradeBuilder } from "@/components/TradeBuilder";
+import { TabIndex } from "@/components/TabIndex";
+import { PartnersRow, TradeJobs } from "@/components/trade/TradeHub";
 export const dynamic = "force-dynamic";
 export default async function TradePage() {
   const h = await getLeagueHistory();
@@ -58,6 +60,18 @@ export default async function TradePage() {
       ),
     )
     .sort((a, b) => b.value - a.value);
+  const partners = ranking
+    .filter((r) => r.rosterId !== rosterId)
+    .map((r) => {
+      const ownerId = h.rostersById.get(r.rosterId)?.ownerId;
+      const user = ownerId ? h.usersById.get(ownerId) : undefined;
+      return {
+        rosterId: r.rosterId,
+        name: r.teamName ?? r.ownerName,
+        avatarId: user?.avatar ?? null,
+        teamLogoUrl: user?.teamLogoUrl ?? null,
+      };
+    });
   // The most motivated partners on the board: lowest timeline coherence. A
   // straddling roster has to pick a direction eventually, and either direction
   // means a trade.
@@ -67,31 +81,12 @@ export default async function TradePage() {
     .reverse();
   return (
     <div>
-      <PageHeader
-        kicker="Trade evaluator"
-        title="Should you make this move?"
-        subtitle="We value both sides - but the answer isn't a grade. It's what each side is betting on, the assumption that must hold, and what your own history says. Picks are priced by who owes them."
-      />
-      {/* The builder prices a trade you already have in mind. The finder runs the other
-            direction: it proposes the trade, using the same evaluator underneath. */}
-      <nav aria-label="Trade tools" className="mb-2 flex gap-1.5">
-        <Link
-          href="/trade/finder"
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
-        >
-          Find a trade for me
-          <ChevronRight size={13} aria-hidden="true" />
-        </Link>
-      </nav>
-      {/*
-          Suspense because TradeBuilder reads the query string through useSearchParams -
-          the give/get package is addressable now (lib/trade/url.ts), so checking a
-          value or a dossier mid-build and coming back does not lose the package, and
-          a pasted link reproduces it on another phone. This page is force-dynamic, so
-          the boundary never actually suspends in practice; it is here so that
-          dependency can never turn into a render-mode surprise later (same reasoning
-          as /deals - see lib/tradegraph/url.ts).
-        */}
+      <PageHeader kicker="Trade" title="What's the job?" />
+      <TradeJobs />
+      <PartnersRow partners={partners} />
+
+      <SectionHeader title="Check a deal" />
+      <div id="check" className="scroll-mt-4" />
       <Suspense fallback={null}>
         <TradeBuilder
           myPlayers={myPlayers}
@@ -168,6 +163,7 @@ export default async function TradePage() {
         </>
       )}
 
+      <TabIndex tab="trade" title="More in Trade" exclude={["/trade/finder", "/values", "/managers"]} />
       <Onward from="/trade" />
     </div>
   );

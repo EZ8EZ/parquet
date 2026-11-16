@@ -24,6 +24,9 @@ import { ordinal } from "@/lib/derive/describe";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperLeagueUrl } from "@/lib/sleeperLinks";
 import { Onward } from "@/components/Onward";
+import { Standings } from "@/components/league/Standings";
+import { TabIndex } from "@/components/TabIndex";
+import { standingsRows } from "@/lib/league/standings";
 export const dynamic = "force-dynamic";
 /**
  * THE LEAGUE - one question, three facets, in that order.
@@ -101,6 +104,13 @@ export default async function LeaguePage() {
   const fragility = leagueFragility(h);
   const form = await currentFormByRoster(h);
   const meId = h.me.rosterId;
+  const standings = standingsRows({
+    forms: form,
+    ranked,
+    users: h.usersById,
+    rostersById: h.rostersById,
+    meId,
+  });
   // Most of a dynasty league's calendar has the live season sitting at 0-0 in
   // pre-draft, so the whole-league form is worth a callout when nobody has played yet.
   const seasonLive = [...form.values()].some((f) => f.isLive);
@@ -387,6 +397,20 @@ export default async function LeaguePage() {
         }
       />
 
+      <SectionHeader
+        title={
+          standings.hasRecords
+            ? `Standings · ${standings.season}${standings.isLive ? "" : " final"}`
+            : "Standings · no games yet, by value"
+        }
+      />
+      <Standings standings={standings} />
+      <TabIndex tab="league" section="Record" title="Record" className="mt-4" />
+      <TabIndex tab="league" section="History" title="History" className="mt-4" />
+
+      <h2 className="mb-1 mt-6 border-t border-border pt-4 font-display text-lede font-semibold text-ink">
+        Where everyone&apos;s value sits
+      </h2>
       {/* Suspense because the selection provider and the board read the query string
           through `useSearchParams`, the same contract /values' list is mounted under.
           This page is force-dynamic, so the boundary never actually suspends. One

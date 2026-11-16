@@ -14,6 +14,7 @@ import {
   Tag,
 } from "@/components/ui";
 import { ExperimentBadge } from "@/components/ExperimentBadge";
+import { Onward } from "@/components/Onward";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { photosEnabled } from "@/lib/photos";
 import { fmtValue } from "@/lib/ui";
@@ -209,7 +210,7 @@ export default async function CounterfactualPage() {
   if (rosterId == null) {
     return (
       <div>
-        <PageHeader kicker="The Lab" title="The roster you never kept" />
+        <PageHeader kicker="Team · experiment" title="The roster you never kept" />
         <Card>
           <p className="text-body text-muted">
             No roster to read. Pick a team first.
@@ -225,7 +226,7 @@ export default async function CounterfactualPage() {
   return (
     <div>
       <PageHeader
-        kicker="The Lab"
+        kicker="Team · experiment"
         title="The roster you never kept"
         subtitle={`${c.teamName ?? c.ownerName}, if no trade had ever happened.`}
         action={<ExperimentBadge />}
@@ -336,6 +337,7 @@ export default async function CounterfactualPage() {
         . There is no verdict here on purpose: trading value for pick capital is
         a strategy, and the two columns are the argument, not the answer.
       </p>
+      <Onward from="/lab/counterfactual" />
     </div>
   );
 }

@@ -94,7 +94,9 @@ export default async function ManagerDetailPage({ params }) {
   const departed = [...pickDepartures(h).values()].filter(
     (original) => original === rosterId,
   ).length;
-  const extras = [];
+  const extras = [
+    `${p.totalTransactions} moves: ${p.waivers} waiver, ${p.freeAgents} free agent`,
+  ];
   if (p.avgHoldingDays != null) extras.push(`avg hold ${p.avgHoldingDays}d`);
   if (p.deadline.buys || p.deadline.sells)
     extras.push(

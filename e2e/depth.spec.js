@@ -84,7 +84,7 @@ test("a roster row leads to the player's real NBA depth chart, and back out agai
     page.getByRole("heading", { level: 1 }),
   ).toBeVisible();
   await expect(page.getByText("players placed")).toBeVisible();
-  await expect(page.locator("[aria-current='true']")).toHaveCount(1);
+  await expect(page.locator("main [aria-current='true']")).toHaveCount(1);
   // Two ways out, rendered - not merely returned by `depthOnwardSteps`.
   const onward = page.getByRole("navigation", { name: "Where to next" });
   await expect(onward).toBeVisible();
