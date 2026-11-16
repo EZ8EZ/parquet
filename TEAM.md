@@ -7,8 +7,10 @@ session.
 
 House rules every agent carries: no grades or verdicts (D6), never fabricate (D19),
 measurements ship with n and caveats, plain JS, derivations are offline scripts whose
-outputs are committed constants, decisions logged in `DECISIONS.md` as Dxxx, and use the
-system git.
+outputs are committed constants, decisions logged in `DECISIONS.md` as Dxxx. Git: on the owner's Mac use
+`/Library/Developer/CommandLineTools/usr/bin/git` (plain `/usr/bin/git` hits an Xcode
+license wall there); where that path does not exist, such as cloud sessions, use plain
+`git`.
 
 ## Roster
 

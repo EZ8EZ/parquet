@@ -144,8 +144,7 @@ optional), Vitest 4, Playwright.
 [DECISIONS.md](DECISIONS.md) (choices and what was rejected; index at the top),
 [API_NOTES.md](API_NOTES.md) (Sleeper as observed), [SHELVED.md](SHELVED.md) (what was
 removed and what would bring it back), [QUESTIONS.md](QUESTIONS.md) (owner decisions),
-[DESIGN.md](DESIGN.md), [TEAM.md](TEAM.md). VISION.md, BRAINSTORM.md, RESEARCH.md,
-PROGRESS.md and REVIEW.md are historical.
+[DESIGN.md](DESIGN.md), [TEAM.md](TEAM.md).
 
 ## License
 
