@@ -25,12 +25,16 @@ export const metadata = {
     title: "Parquet",
   },
   icons: {
-    icon: [{ url: "/icon.svg", type: "image/svg+xml" }],
+    icon: [
+      { url: "/icon.svg", type: "image/svg+xml" },
+      { url: "/favicon.png", type: "image/png", sizes: "32x32" },
+    ],
     apple: [{ url: "/icon-apple.png" }],
   },
 };
 
 export const viewport = {
+  // color-bg (app/globals.css); metadata needs a literal, not a custom property.
   themeColor: "#0b0d10",
   width: "device-width",
   initialScale: 1,
