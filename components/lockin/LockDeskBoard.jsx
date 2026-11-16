@@ -150,6 +150,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
 
   const decide = (
     <div className="space-y-3 pt-3">
+      <h2 className="sr-only">Decide now</h2>
       {hazardOnly.length > 0 && <List>{hazardOnly.map((c) => <PlayerRow key={c.playerId} card={c} />)}</List>}
       {heroes.map((c) => (
         <DecisionHero key={c.playerId} card={c} />
@@ -159,12 +160,14 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
   );
   const nights = (
     <div className="pt-3">
+      <h2 className="sr-only">Nights</h2>
       {summary && <p className="mb-2 text-note text-muted">{summary.text}.</p>}
       <WeekGrid grid={weekGrid(desk)} caption="Every player's games this week" triggers />
     </div>
   );
   const everyone = (
     <div className="pt-3">
+      <h2 className="sr-only">Players</h2>
       <List>{[...groups.live, ...groups.lineup, ...groups.quiet].map((c) => <PlayerRow key={c.playerId} card={c} />)}</List>
       {desk.excluded.length > 0 && <p className="mt-2 text-meta text-secondary">Not counted: {desk.excluded.map((e) => `${e.name} (${e.reason === "taxi" ? "taxi" : "IR"})`).join(", ")}.</p>}
     </div>
