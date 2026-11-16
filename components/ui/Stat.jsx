@@ -82,9 +82,17 @@ export function StatTile({
   );
 }
 
-/** The old name and props (label, value, sub, tone). */
-export function Stat({ label, value, sub, tone }) {
-  return <StatTile label={label} value={value} sub={sub} tone={tone} />;
+/** The old name and props (label, value, sub, tone); label, value, sub stay sibling divs. */
+export function Stat({ label, value, sub, tone = "neutral" }) {
+  return (
+    <div className="min-w-0 rounded-card bg-surface p-3">
+      <div className="text-meta font-medium text-secondary">{label}</div>
+      <div className={cn("mt-1 figure text-display font-bold tracking-tight", VALUE_TONES[tone] ?? VALUE_TONES.neutral)}>
+        {value}
+      </div>
+      {sub && <div className="mt-0.5 text-meta text-muted">{sub}</div>}
+    </div>
+  );
 }
 
 /** Old signed figure: kept for existing call sites. Prefer `Delta`. */

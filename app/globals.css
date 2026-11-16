@@ -173,6 +173,14 @@ body {
   border-radius: 6px;
 }
 
+/* A link inside running text is underlined: the violet alone sits too close to the
+ * grey ink around it to be told apart without colour (WCAG 1.4.1). */
+p a:not([class*="min-h"]) {
+  text-decoration-line: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 3px;
+}
+
 button,
 a[role="button"],
 [data-tap] {

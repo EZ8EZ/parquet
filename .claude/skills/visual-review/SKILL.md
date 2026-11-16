@@ -1,12 +1,11 @@
 ---
 name: visual-review
-description: Screenshot Parquet's pages at its 390px design viewport across both themes (dark/paper), and run automated axe-core accessibility scans against a running dev server. Use before and after any UI or visual-design change, and whenever asked to review, audit, or verify how a page actually looks/renders.
+description: Screenshot Parquet's pages at its 390px design viewport (one dark theme), and run automated axe-core accessibility scans against a running dev server. Use before and after any UI or visual-design change, and whenever asked to review, audit, or verify how a page actually looks/renders.
 ---
 
 # Visual review
 
-Parquet is mobile-first, dark-editorial, and has two themes (`dark`/`light`,
-see DESIGN.md and `lib/theme.js`) and a team-scoped cookie
+Parquet is mobile-first, has one dark theme (see DESIGN.md), and a team-scoped cookie
 (`parquet_roster`) that gates almost every page behind a first-run team picker.
 A naive `page.goto` + `page.screenshot` loop shows the team picker on every
 route instead of the actual page - this skill exists so that mistake isn't
@@ -23,16 +22,16 @@ devDependency here).
 #    deterministic - if nothing is already listening there).
 BASE=$(node .claude/skills/visual-review/scripts/ensure-server.mjs 3200 --fixture)
 
-# 2. Screenshot routes at the design viewport, one theme at a time.
-node .claude/skills/visual-review/scripts/shoot.mjs --base "$BASE" --theme dark \
+# 2. Screenshot routes at the design viewport.
+node .claude/skills/visual-review/scripts/shoot.mjs --base "$BASE" \
   --out /tmp/shots / /roster /values
 
 # 3. Read the PNGs back with the Read tool - screenshots are only useful once
 #    you actually look at them.
 
-# 4. Accessibility scan the same routes (also per-theme: color-contrast is the
-#    one rule category that genuinely varies by theme).
-node .claude/skills/visual-review/scripts/axe-scan.mjs --base "$BASE" --theme dark \
+# 4. Accessibility scan the same routes. Also scan interactive states (open tabs,
+#    bottom sheets, the Menu) by hand: the default view hides them.
+node .claude/skills/visual-review/scripts/axe-scan.mjs --base "$BASE" \
   / /roster /values
 
 # 5. Optional: a Lighthouse pass for the categories axe doesn't cover -
@@ -40,9 +39,8 @@ node .claude/skills/visual-review/scripts/axe-scan.mjs --base "$BASE" --theme da
 node .claude/skills/visual-review/scripts/lighthouse.mjs --base "$BASE" / /roster
 ```
 
-Repeat step 2/4 with `--theme light` - most visual bugs this skill has caught
-so far were theme-specific (a token that reads fine in dark and fails once
-the same element sits on `light`'s ground).
+`--theme` is still accepted for old command lines and ignored: the light theme
+was retired, so there is nothing to switch.
 
 Already have `pnpm dev` running on your own port for manual testing? Point
 `--base` at that instead of starting a second server - reuse, don't relaunch
@@ -62,8 +60,7 @@ anything that's about layout/visual design rather than real data.
 ## The committed a11y CI gate
 
 `e2e/a11y.spec.js` runs the same axe-core check as `axe-scan.mjs`, but as a
-proper Playwright test: full ruleset once per route (dark) plus a
-`color-contrast`-only pass per route in `light`, driven off the
+proper Playwright test: full ruleset once per route, driven off the
 same `ALL_SURFACES` registry `e2e/smoke.spec.js` uses (`lib/nav.js`). Run it
 with `pnpm e2e e2e/a11y.spec.js`. This is the thing to keep green, not a
 replacement for eyeballing the screenshots - axe catches contrast/ARIA/label

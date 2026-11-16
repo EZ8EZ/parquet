@@ -800,11 +800,9 @@ export function ValuesList({ rows }) {
               )}
             >
               {f}
-              {/* Only dimmed against the plain default ground: on the active pill's
-                accent-wash fill, opacity-60 pushes text-accent-text's already-tighter
-                contrast margin below WCAG AA (caught by axe-core, see e2e/a11y.spec.ts). */}
+              {/* Quieter ink, never opacity: opacity makes the contrast unmeasurable. */}
               <span
-                className={cn("figure text-meta", pos !== f && "opacity-60")}
+                className={cn("figure text-meta", pos !== f && "text-secondary")}
               >
                 {counts[f] ?? 0}
               </span>
