@@ -126,10 +126,8 @@ function WeekBar({ banked, best, max }) {
 }
 
 function WeekDetail({ w }) {
-  // Focusable so the sheet's scrolling body is reachable by keyboard (axe
-  // scrollable-region-focusable): the detail has no links or buttons of its own.
   return (
-    <div tabIndex={0} aria-label={`Week ${w.week} detail`} className="rounded-control outline-offset-2">
+    <div>
       <div className="grid grid-cols-3 gap-2">
         <StatTile className="bg-surface-2" size="sm" label="Banked" value={fmt(w.banked)} />
         <StatTile className="bg-surface-2" size="sm" label="Available" value={fmt(w.best)} />

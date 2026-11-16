@@ -15,7 +15,9 @@ import { cn } from "@/lib/ui";
  * Open state: uncontrolled by default (the trigger opens it). `defaultOpen` opens it
  * on mount, e.g. for a deep link such as /values?focus=<id>. `open` + `onOpenChange`
  * make it controlled; every dismissal path (Escape, backdrop, close button) reports
- * `onOpenChange(false)` and the trigger reports `onOpenChange(true)`.
+ * `onOpenChange(false)` and the trigger reports `onOpenChange(true)`. Without a
+ * `trigger` the sheet is opened only through `open` (several triggers elsewhere, e.g.
+ * components/lockin/PlayerDeck).
  */
 export function Sheet({
   trigger,
@@ -60,15 +62,17 @@ export function Sheet({
 
   return (
     <>
-      <button
-        type="button"
-        aria-haspopup="dialog"
-        aria-label={triggerLabel}
-        onClick={show}
-        className={cn("block w-full text-left", triggerClassName)}
-      >
-        {trigger}
-      </button>
+      {trigger != null && (
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          aria-label={triggerLabel}
+          onClick={show}
+          className={cn("block w-full text-left", triggerClassName)}
+        >
+          {trigger}
+        </button>
+      )}
       <dialog
         ref={ref}
         aria-labelledby={titleId}
@@ -98,7 +102,14 @@ export function Sheet({
             <X size={18} aria-hidden="true" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+        {/* A focusable, labelled scroll region: keyboard users can scroll it even when the
+            content has nothing focusable (axe scrollable-region-focusable). */}
+        <div
+          role="region"
+          aria-labelledby={titleId}
+          tabIndex={0}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+        >
           {opened && children}
         </div>
         {foot && opened && (
