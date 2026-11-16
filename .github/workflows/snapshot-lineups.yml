@@ -1,0 +1,75 @@
+name: Snapshot lineups
+
+# Hourly copy of this week's lock-in lineups (scripts/snapshot-lineups.js), because
+# Sleeper keeps neither lock state nor mid-week lineup changes. Files are committed to
+# a dedicated orphan `data` branch, never to main:
+#  - ci.yml and codeql.yml run on pull_request and on pushes to main only, so pushes
+#    to `data` trigger neither;
+#  - commits carry [skip ci] as a second guard;
+#  - the `data` branch carries a vercel.json with git.deploymentEnabled=false, which
+#    Vercel reads from the pushed commit, so it never builds a preview for it.
+# Scheduled workflows run from the default branch: this starts once it is on main.
+on:
+  schedule:
+    - cron: "17 * * * *" # hourly, off the top of the hour (GitHub delays :00 runs)
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+# Never two snapshot runs pushing to `data` at once.
+concurrency:
+  group: snapshot-lineups
+  cancel-in-progress: false
+
+jobs:
+  snapshot:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out the script (default branch)
+        uses: actions/checkout@v7
+        with:
+          path: app
+          fetch-depth: 1
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Check out the data branch (create it as an orphan on first run)
+        working-directory: app
+        run: |
+          set -euo pipefail
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          if git ls-remote --exit-code --heads origin data >/dev/null; then
+            git fetch --depth 1 origin data:refs/remotes/origin/data
+            git worktree add -B data ../data origin/data
+          else
+            git worktree add --orphan -b data ../data
+            cd ../data
+            printf '%s\n' '{ "git": { "deploymentEnabled": false } }' > vercel.json
+            git add vercel.json
+            git commit -m "Start the data branch [skip ci]"
+          fi
+
+      - name: Take a snapshot
+        working-directory: app
+        env:
+          SNAPSHOT_DIR: ${{ github.workspace }}/data/snapshots/lineups
+        run: node scripts/snapshot-lineups.js
+
+      - name: Commit and push if a file was added
+        working-directory: data
+        run: |
+          set -euo pipefail
+          git add -A snapshots
+          if git diff --cached --quiet; then
+            echo "No new snapshot."
+            # A freshly created branch still has its first commit to publish.
+            if git ls-remote --exit-code --heads origin data >/dev/null; then exit 0; fi
+          else
+            git commit -m "Lineup snapshot $(date -u +%Y-%m-%dT%H:%MZ) [skip ci]"
+          fi
+          git push origin data
