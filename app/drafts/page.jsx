@@ -53,6 +53,7 @@ export default async function DraftsPage() {
             <StatTile size="sm" label="In flight" value={String(mineOpen.length)} sub="not drafted yet" />
           </div>
 
+          <h2 className="sr-only">Your traded picks</h2>
           <Tabs
             className="mt-4"
             label="Your traded picks"
