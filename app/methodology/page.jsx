@@ -48,6 +48,7 @@ import { RefusalMark } from "@/components/RefusalMark";
 import { ProductionEvidence } from "@/components/ProductionEvidence";
 import { ProductionMovers } from "@/components/ProductionMovers";
 import { MethodologyWalkthrough } from "@/components/MethodologyWalkthrough";
+import { LEAN_RECORD, MODEL_INFO } from "@/lib/lockin";
 export const dynamic = "force-dynamic";
 /**
  * TEN SECTIONS, EACH A DOOR. This page used to print every subsection's charts,
@@ -73,6 +74,7 @@ const SECTION_LINKS = [
   { id: "picks", label: "6 · Picks" },
   { id: "timelines", label: "7 · Timelines" },
   { id: "fragility", label: "8 · Fragility" },
+  { id: "lockin", label: "9 · Lock-in" },
 ];
 function Subsection({ id, title, defaultOpen, children }) {
   return (
@@ -107,6 +109,8 @@ export default async function MethodologyPage() {
   const orderFidelity = await loadDraftOrderFidelity(h);
   const scoring = h.currentLeague.scoringSettings;
   const cfg = VALUATION_CONFIG;
+  // D121: the production term is switched off through config, not deleted.
+  const productionOff = !(cfg.productionWeight > 0);
   const posMults = positionMultipliers(scoring);
   const baseExamples = [1, 10, 25, 50, 100, 150, 220].map((rank) => ({
     label: `#${rank}`,
@@ -337,12 +341,24 @@ export default async function MethodologyPage() {
     {
       id: "production",
       kicker: "1a · In-league production",
-      title: "The rank is a blend, and the blend can move it",
+      title: productionOff
+        ? "Production is switched off for now"
+        : "The rank is a blend, and the blend can move it",
       body: (
         <p className="text-body leading-relaxed text-muted">
-          {Math.round(cfg.productionWeight * 100)}% of the rank comes from what he has
-          actually banked in this league, not just consensus opinion.{" "}
-          {walkthroughExample.rank !== walkthroughExample.searchRank ? (
+          {productionOff ? (
+            <>
+              This term is off pending re-measurement (section 1a), so{" "}
+              {walkthroughExample.name}&apos;s working rank is the market rank,{" "}
+              <span className="figure text-ink">#{walkthroughExample.rank}</span>.
+            </>
+          ) : (
+            <>
+              {Math.round(cfg.productionWeight * 100)}% of the rank comes from what he
+              has actually banked in this league, not just consensus opinion.{" "}
+            </>
+          )}
+          {productionOff ? null : walkthroughExample.rank !== walkthroughExample.searchRank ? (
             <>
               For {walkthroughExample.name} that moves the working rank to{" "}
               <span className="figure text-ink">#{walkthroughExample.rank}</span> -
@@ -449,7 +465,7 @@ export default async function MethodologyPage() {
       <PageHeader
         kicker="Methodology"
         title="How the values work"
-        subtitle="No black box, no scraped market. Every number below is a tunable constant in one config file. Transparency is the point."
+        subtitle="No black box, no scraped market. Every number below is a constant you can read in the code, with where it came from."
         action={
           <Link
             href="/about"
@@ -472,15 +488,15 @@ export default async function MethodologyPage() {
         <Card className="mb-4">
           <p className="text-body leading-relaxed text-ink">
             A player&apos;s dynasty value is a base value from a rank, bent by
-            four multipliers. The rank is part consensus opinion and part what he
-            has actually produced in this league:
+            four multipliers:
           </p>
           <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-body text-accent-text">
             value = base(rank) × age × injury × role × position
           </p>
           <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-body text-accent-text">
-            rank = {Math.round((1 - cfg.productionWeight) * 100)}% consensus rank
-            + {Math.round(cfg.productionWeight * 100)}% in-league production
+            {productionOff
+              ? "rank = market rank (production term off, section 1a)"
+              : `rank = ${Math.round((1 - cfg.productionWeight) * 100)}% consensus rank + ${Math.round(cfg.productionWeight * 100)}% in-league production`}
           </p>
         </Card>
       )}
@@ -516,6 +532,25 @@ export default async function MethodologyPage() {
       </Subsection>
 
       <Subsection id="production" title="1a · In-league production" defaultOpen>
+      {productionOff ? (
+        <Card className="mb-2">
+          <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
+            Off, pending re-measurement
+          </h3>
+          <p className="mt-2 text-body leading-relaxed text-muted">
+            Production does not move any price today: its weight is set to 0 in the
+            config. It was switched off on 2026-11-16 for two reasons. Its weight
+            (0.233) was measured against Sleeper&apos;s redraft ranking, before the
+            price moved onto the dynasty market, so it was never tested against the
+            rank it now sits on. And it counts a season lost to injury as zeros, which
+            pushed injured players far below where the dynasty market has them.
+          </p>
+          <p className="mt-3 text-body leading-relaxed text-muted">
+            The code and the old measurement are kept, and are described below, so the
+            term can be re-measured against the current rank and switched back on.
+          </p>
+        </Card>
+      ) : null}
       <Card>
         <p className="text-body leading-relaxed text-muted">
           The rank above used to be Sleeper&apos;s <span className="text-ink">search_rank</span>{" "}
@@ -526,8 +561,8 @@ export default async function MethodologyPage() {
           production.
         </p>
         <p className="mt-3 text-body leading-relaxed text-muted">
-          It now blends in what a player has actually banked{" "}
-          <span className="text-ink">here</span>. This league runs Sleeper&apos;s lock-in
+          The production term {productionOff ? "can blend" : "now blends"} in what a
+          player has actually banked <span className="text-ink">here</span>. This league runs Sleeper&apos;s lock-in
           format, so a week&apos;s score is one game, and the index is the mean points a
           player banked per rostered week - zeros included, because a week on a roster
           that scored nothing is a real zero - normalised so{" "}
@@ -543,8 +578,9 @@ export default async function MethodologyPage() {
 
       <Card className="mt-2">
         <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
-          The weight is {Math.round(cfg.productionWeight * 100)}%, and the first
-          measurement said zero
+          {productionOff
+            ? "How the 0.233 weight was measured (not applied now)"
+            : `The weight is ${Math.round(cfg.productionWeight * 100)}%, and the first measurement said zero`}
         </h3>
         <p className="mt-2 text-body leading-relaxed text-muted">
           Asked the obvious question first: does past production here predict{" "}
@@ -567,8 +603,10 @@ export default async function MethodologyPage() {
         </div>
         <p className="mt-3 text-body leading-relaxed text-muted">
           The standardised weight that falls out of the second run is{" "}
-          <span className="font-mono text-ink">0.233</span>, and that is the weight used,
-          unrounded. R² goes from{" "}
+          <span className="font-mono text-ink">0.233</span>
+          {productionOff
+            ? ", the weight used until it was switched off. R² went from "
+            : ", and that is the weight used, unrounded. R² goes from "}
           <span className="font-mono text-ink">
             {PRODUCTION_R2.ordinal.toFixed(3)}
           </span>{" "}
@@ -616,6 +654,10 @@ export default async function MethodologyPage() {
         </p>
       </Card>
 
+      {/* With the term off nothing moves, and coverage of a term that prices nothing
+          is beside the point; both cards return when the weight does. */}
+      {productionOff ? null : (
+      <>
       <Card className="mt-2">
         <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
           What it moved
@@ -728,6 +770,8 @@ export default async function MethodologyPage() {
           play real minutes, so absence is a fact about fourteen managers, not about him.
         </p>
       </Card>
+      </>
+      )}
 
       <Card className="mt-2">
         <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
@@ -754,8 +798,10 @@ export default async function MethodologyPage() {
           <li className="text-body leading-relaxed text-muted">
             <span className="text-ink">Injury, and this one overlaps the injury term.</span>{" "}
             A player hurt for eleven weeks banked eleven zeros, so production charges him
-            for an absence the injury multiplier is also looking at. The counts are above,
-            with the moves they qualify, rather than filed down here away from them.
+            for an absence the injury multiplier is also looking at.{" "}
+            {productionOff
+              ? "This is one of the two reasons the term is off."
+              : "The counts are above, with the moves they qualify, rather than filed down here away from them."}{" "}
             The two terms are not measuring the same thing - the injury multiplier prices
             the forward risk in a current flag and sits near 1.0 for most of them, while
             production records output that did not happen - but on an injured player they
@@ -1557,12 +1603,86 @@ export default async function MethodologyPage() {
       </Card>
       </Subsection>
 
+      <Subsection id="lockin" title="9 · This week's lock-in numbers">
+      <Card>
+        <p className="text-body leading-relaxed text-muted">
+          Each starting slot banks one game a week. You can lock a starter&apos;s score
+          after a game and before his next tip. If you never lock him, the slot takes
+          his last game of the week, and a game he does not play counts 0. For each
+          starter still open, three numbers help with bank-or-hold:
+        </p>
+        <ul className="mt-3 space-y-2">
+          <li className="text-body leading-relaxed text-muted">
+            <span className="font-semibold text-ink">Expected if held.</span> What
+            holding is worth on average, given the games he has left. It comes from a
+            forecast of his next game: recent form weighted toward the newest games, and
+            the spread of his last {MODEL_INFO.params.shapeGames} played games. Set it
+            beside the score he has now.
+          </li>
+          <li className="text-body leading-relaxed text-muted">
+            <span className="font-semibold text-ink">
+              Chance a later game beats it.
+            </span>{" "}
+            The probability that he plays a later game this week and scores more than
+            he has now. It runs high at the top: checked on 4,109 player-games this season,
+            it overstated by 13 points in the 60-80% band (n=731) and by 10 points
+            above 80% (n=101), and was within 3 points below 60%.
+          </li>
+          <li className="text-body leading-relaxed text-muted">
+            <span className="font-semibold text-ink">The model&apos;s lean.</span>{" "}
+            Lock, hold or none. It weighs your whole lineup (open slots, who is
+            holding, who still plays tonight and later), not one player alone. It is the
+            model&apos;s lean, not a verdict. In a backtest against what managers
+            actually banked it gained{" "}
+            <span className="figure text-ink">
+              +{LEAN_RECORD.gainPerTeamWeek.toFixed(1)}
+            </span>{" "}
+            points per team-week (95% interval {LEAN_RECORD.interval95[0].toFixed(1)} to{" "}
+            {LEAN_RECORD.interval95[1].toFixed(1)}, n={LEAN_RECORD.n} active team-weeks,{" "}
+            {LEAN_RECORD.sample}). {LEAN_RECORD.availabilityCaveat}{" "}
+            {LEAN_RECORD.rotationCaveat}
+          </li>
+        </ul>
+        <p className="mt-3 text-body leading-relaxed text-muted">
+          <span className="font-semibold text-ink">Lock state.</span>{" "}
+          {MODEL_INFO.lockStateNote}
+        </p>
+      </Card>
+      <Card className="mt-2">
+        <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
+          Left out on purpose
+        </h3>
+        <ul className="mt-2 space-y-2">
+          <li className="text-body leading-relaxed text-muted">
+            <span className="text-ink">His record against tonight&apos;s opponent.</span>{" "}
+            Once current form is allowed for, it predicts almost nothing (partial rho
+            0.026, n=18,812 games). It can be shown as history, never as a forecast.
+          </li>
+          <li className="text-body leading-relaxed text-muted">
+            <span className="text-ink">A teammate being out, per player.</span> On
+            average a player scores about 1.7 points more when a usual top-three-minutes
+            teammate sits (n=6,432 games). Per player the effect does not repeat
+            (split-half r 0.15), so no player gets his own adjustment, and the average
+            is not in the forecast yet.
+          </li>
+        </ul>
+        <p className="mt-3 text-meta leading-relaxed text-secondary">
+          Forecast fit: {MODEL_INFO.fit.method}, R² {MODEL_INFO.fit.r2}, n=
+          {MODEL_INFO.fit.n.toLocaleString()} games. Constants in{" "}
+          <span className="font-mono">lib/lockin/model.js</span> and{" "}
+          <span className="font-mono">lib/lockin/index.js</span>, from the lock-in study
+          of 2026-11-16.
+        </p>
+      </Card>
+      </Subsection>
+
       <p className="mt-6 text-center text-meta leading-relaxed text-secondary">
         Player and pick constants live in{" "}
         <span className="font-mono">lib/valuation/config.js</span>; the timeline
         math in <span className="font-mono">lib/metrics/duration.js</span> and{" "}
         <span className="font-mono">lib/metrics/window.js</span>; fragility in{" "}
-        <span className="font-mono">lib/metrics/fragility.js</span>. Ranking
+        <span className="font-mono">lib/metrics/fragility.js</span>; lock-in numbers
+        in <span className="font-mono">lib/lockin/</span>. Ranking
         tiers are not part of the model - they break where the value
         distribution actually cliffs, instead of at fixed thresholds. A
         crowdsourced vote-driven market is intentionally deferred until
