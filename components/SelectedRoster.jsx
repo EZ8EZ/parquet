@@ -87,7 +87,7 @@ export function SelectedRoster({ rosters, myOwnerId }) {
       {/* THE LEAD READING: their window against yours, or the stated reason there is
           no such reading. One or the other always renders, never neither. */}
       {r.thesis ? (
-        <p className="mt-1.5 text-note leading-snug text-ink/85">{r.thesis}</p>
+        <p className="mt-1.5 text-note leading-snug text-muted">{r.thesis}</p>
       ) : (
         <RefusalMark className="mt-1.5">{r.thesisRefusal}</RefusalMark>
       )}

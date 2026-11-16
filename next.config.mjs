@@ -1,4 +1,4 @@
-import { REDIRECTS } from "./lib/nav.js";
+import { REDIRECTS } from "./lib/redirects.mjs";
 const nextConfig = {
   /**
    * /web is gone and its readers are not. The trade web shipped with a URL that four
