@@ -1,13 +1,13 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, ChevronRight, Hourglass } from "lucide-react";
+import { ChevronLeft, Hourglass } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildDraftIndex, getDraftBoard, getDraftSeasons } from "@/lib/lineage";
 import { getPrincipals } from "@/lib/principals";
-import { EmptyState, PageHeader } from "@/components/ui";
-import { cn } from "@/lib/ui";
+import { EmptyState, List, PageHeader, StatTile, Tabs } from "@/components/ui";
+import { SeasonLinks } from "@/components/league/SeasonLinks";
 import { BoardPickRow } from "../parts";
-import { DraftRecap } from "./recap";
+import { computeRecap, DraftRecap } from "./recap";
 export const dynamic = "force-dynamic";
 export default async function DraftBoardPage({ params, searchParams }) {
   const { season } = await params;
@@ -49,156 +49,105 @@ export default async function DraftBoardPage({ params, searchParams }) {
     board.picks.length > 0 &&
     seasons.length > 1 &&
     season !== oldestSeason;
+  const recap = showRecap ? computeRecap(h, board) : null;
+  const boardPanel = (
+    <>
+      {[...rounds.entries()].map(([round, picks]) => {
+        const yours = picks.filter((p) => p.isMine).length;
+        return (
+          <section key={round} aria-labelledby={`round-${round}`}>
+            <div className="mb-2 mt-4 flex items-baseline justify-between gap-3 first:mt-1">
+              <h2 id={`round-${round}`} className="text-lede font-semibold text-ink">
+                Round {round}
+              </h2>
+              <span className="figure text-meta text-secondary">
+                {picks.length} picks{yours > 0 ? ` · ${yours} yours` : ""}
+              </span>
+            </div>
+            <List aria-label={`Round ${round} picks`}>
+              {picks.map((p) => (
+                <BoardPickRow key={p.pickNo} p={p} highlighted={p.pickNo === highlight} />
+              ))}
+            </List>
+          </section>
+        );
+      })}
+      <p className="mt-3 text-meta text-secondary">Rows open the dossier of the manager who made the pick.</p>
+    </>
+  );
   return (
     <div>
-      {/* Negative margin keeps the 44px tap target from adding visual space. */}
       <Link
         href="/drafts"
-        className="-ml-1 -mt-3 mb-0.5 inline-flex min-h-11 items-center gap-1.5 px-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
+        className="-ml-2 inline-flex min-h-11 items-center gap-1 px-2 text-note font-semibold text-secondary transition-colors hover:text-accent-text"
       >
-        <ArrowLeft size={13} aria-hidden="true" />
-        Pick lineage
+        <ChevronLeft size={16} aria-hidden="true" />
+        Drafts
       </Link>
-
       <PageHeader
-        kicker="Draft board"
-        kickerAction={
-          <Link
-            href="/values"
-            className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
-          >
-            pick values
-            <ChevronRight size={12} aria-hidden="true" />
-          </Link>
-        }
         title={`${season} draft`}
-      >
-        <div className="mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5 figure text-meta text-secondary">
-          {board.draftId ? (
-            <>
-              <span className="uppercase tracking-wide">{board.type}</span>
-              <span aria-hidden="true">·</span>
-              <span>{board.rounds} rounds</span>
-              <span aria-hidden="true">·</span>
-              <span>{board.teams} teams</span>
-              <span aria-hidden="true">·</span>
-              <span>{board.picks.length} picks</span>
-              {mine.length > 0 && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span className="text-accent-text">{mine.length} yours</span>
-                </>
-              )}
-              {traded.length > 0 && (
-                <>
-                  <span aria-hidden="true">·</span>
-                  <span className="text-info">{traded.length} traded in</span>
-                </>
-              )}
-            </>
-          ) : (
-            <span>No draft on record for this season.</span>
-          )}
-        </div>
-      </PageHeader>
-
-      {/* Season switcher - 44px tap targets, horizontal only for these pills. */}
+        subtitle={
+          board.draftId
+            ? `${board.type ? `${board.type[0].toUpperCase()}${board.type.slice(1)} · ` : ""}${board.rounds} rounds · ${board.teams} teams`
+            : "No draft on record for this season"
+        }
+      />
       {seasons.length > 1 && (
-        <nav aria-label="Draft season" className="scroll-x -mx-4 mb-2 px-4">
-          <ul className="flex gap-1.5">
-            {seasons.map((s) => {
-              const active = s.season === season;
-              return (
-                <li key={s.draftId}>
-                  <Link
-                    href={`/drafts/${s.season}`}
-                    aria-current={active ? "page" : undefined}
-                    className={cn(
-                      "inline-flex min-h-11 items-center gap-1.5 rounded-full border px-3 figure text-body font-semibold transition-colors",
-                      active
-                        ? "border-accent bg-accent-wash text-accent-text"
-                        : "border-border text-muted hover:bg-surface-2",
-                    )}
-                  >
-                    {s.season}
-                    <span
-                      className={cn(
-                        "text-meta font-normal",
-                        active ? "text-accent-text" : "text-secondary",
-                      )}
-                    >
-                      {s.pickCount === 0 ? "soon" : s.pickCount}
-                    </span>
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </nav>
-      )}
-
-      {highlighted && (
-        <p className="mb-2 rounded-[--radius-sm] border border-accent-edge bg-accent-wash px-2.5 py-1.5 text-meta leading-snug text-muted">
-          <span className="font-semibold text-ink">
-            Pick #{highlighted.pickNo}
-          </span>{" "}
-          highlighted below: {highlighted.playerName ?? "no player"}
-          {highlighted.usedByName ? `, taken by ${highlighted.usedByName}` : ""}
-          .
-        </p>
+        <SeasonLinks
+          className="mb-3"
+          label="Draft season"
+          seasons={seasons.map((s) => s.season)}
+          active={season}
+          hrefFor={(s) => `/drafts/${s}`}
+        />
       )}
 
       {board.picks.length === 0 ? (
         <EmptyState
           icon={<Hourglass size={28} />}
-          title={
-            board.reason === "not-yet-drafted"
-              ? "Draft hasn't happened yet"
-              : "No draft data"
-          }
-          cta={{ href: "/drafts", label: "Back to pick lineage" }}
+          title={board.reason === "not-yet-drafted" ? "Draft hasn't happened yet" : "No draft data"}
+          cta={{ href: "/drafts", label: "Back to drafts" }}
         >
-          {/* `reasonText` is phrased for a single pick; a whole board needs its own
-                copy. */}
           {board.reason === "not-yet-drafted"
-            ? `No picks have been made in the ${season} draft yet. Picks traded for this season are still in flight.`
+            ? `No picks made in ${season} yet; picks traded for it are still in flight.`
             : board.reasonText}
           {board.status ? ` Status: ${board.status}.` : ""}
         </EmptyState>
       ) : (
         <>
-          {showRecap && <DraftRecap h={h} board={board} />}
-          {[...rounds.entries()].map(([round, picks]) => {
-            const yours = picks.filter((p) => p.isMine).length;
-            return (
-              <section key={round}>
-                <div className="mb-1 mt-2.5 flex items-baseline justify-between gap-3">
-                  <h2 className="text-meta font-semibold uppercase tracking-[0.16em] text-muted">
-                    Round {round}
-                  </h2>
-                  <span className="figure text-meta text-secondary">
-                    {picks.length} picks
-                    {yours > 0 && (
-                      <span className="text-accent-text"> · {yours} yours</span>
-                    )}
-                  </span>
-                </div>
-                <ul className="space-y-1">
-                  {picks.map((p) => (
-                    <BoardPickRow
-                      key={p.pickNo}
-                      p={p}
-                      highlighted={p.pickNo === highlight}
-                    />
-                  ))}
-                </ul>
-              </section>
-            );
-          })}
-          <p className="mt-3 text-meta leading-relaxed text-secondary">
-            Rows link to the dossier of the manager who made the pick.
-            &ldquo;via&rdquo; names the roster the slot originally belonged to.
-          </p>
+          <div className="mb-3 grid grid-cols-3 gap-2">
+            <StatTile size="sm" label="Picks" value={String(board.picks.length)} />
+            <StatTile size="sm" label="Yours" value={String(mine.length)} tone={mine.length ? "accent" : "neutral"} />
+            <StatTile size="sm" label="Traded slots" value={String(traded.length)} />
+          </div>
+          {highlighted && (
+            <p className="mb-2 text-note text-muted">
+              <a href={`#pick-${highlighted.pickNo}`} className="font-semibold text-accent-text underline underline-offset-2">
+                Pick #{highlighted.pickNo}
+              </a>{" "}
+              {highlighted.playerName ?? "no player"}
+              {highlighted.usedByName ? `, taken by ${highlighted.usedByName}` : ""}
+            </p>
+          )}
+          {recap && !highlighted ? (
+            <Tabs
+              label="Draft views"
+              items={[
+                { id: "class", label: "The class, today", content: <DraftRecap recap={recap} meRosterId={h.me.rosterId} /> },
+                { id: "board", label: "Board", count: board.picks.length, content: boardPanel },
+              ]}
+            />
+          ) : recap ? (
+            <Tabs
+              label="Draft views"
+              items={[
+                { id: "board", label: "Board", count: board.picks.length, content: boardPanel },
+                { id: "class", label: "The class, today", content: <DraftRecap recap={recap} meRosterId={h.me.rosterId} /> },
+              ]}
+            />
+          ) : (
+            boardPanel
+          )}
         </>
       )}
     </div>

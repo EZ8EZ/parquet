@@ -45,93 +45,45 @@ import { cn, fmtValue } from "@/lib/ui";
 export function DealReceipt({ sides, dense = false, className }) {
   if (!sides || sides.length === 0) return null;
   return (
-    <div
-      className={cn(
-        "grid grid-cols-2 overflow-hidden rounded-[--radius-sm] border border-border bg-surface",
-        className,
-      )}
-    >
+    <div className={cn("grid grid-cols-2 gap-2", className)}>
       {sides.map((s, i) => (
         <div
           key={s.key}
           className={cn(
-            "flex flex-col",
-            dense ? "p-2" : "p-2.5",
-            // Printed-matter rules between columns and rows, drawn on the cells
-            // so a third party in a multi-team deal wraps into its own full-width
-            // row of the same document rather than into a squeezed third column.
-            i % 2 === 1 && "border-l border-border",
-            i >= 2 && "border-t border-border",
-            i === sides.length - 1 && sides.length % 2 === 1 && i >= 2
-              ? "col-span-2"
-              : undefined,
+            "flex min-w-0 flex-col rounded-control bg-surface-2",
+            dense ? "p-2.5" : "p-3",
+            // A third party in a multi-team deal takes its own full-width row
+            // rather than a squeezed third column.
+            i === sides.length - 1 && sides.length % 2 === 1 && i >= 2 ? "col-span-2" : undefined,
           )}
         >
-          <p
-            className={cn(
-              "font-display text-body font-semibold leading-snug line-clamp-2",
-              s.isMe ? "text-accent-text" : "text-ink",
-            )}
-          >
-            {s.name}
+          <p className={cn("text-note font-semibold", s.isMe ? "text-accent-text" : "text-ink")}>{s.name}</p>
+          <p className="mt-0.5 flex items-baseline gap-1.5">
+            <span className={cn("figure font-bold text-ink", dense ? "text-body" : "text-lede")}>
+              {fmtValue(Math.round(s.total))}
+            </span>
+            <span className="text-meta text-secondary">today</span>
           </p>
-          {/* Plain divs, not a <ul>: a receipt's lines are rows of a document,
-              and the deal index counts one <li> per DEAL (its e2e contract) with
-              this whole component nested inside one of them. */}
-          <div className={cn("mt-1.5 flex-1", dense ? "space-y-0.5" : "space-y-1")}>
+          {/* Plain divs, not a <ul>: the deal index counts one <li> per DEAL (its e2e
+              contract) and this component can nest inside one of them. */}
+          <div className={cn("mt-2 flex-1", dense ? "space-y-1" : "space-y-1.5")}>
             {s.lines.map((l) => (
               <div key={l.key}>
-                <span className="flex items-baseline gap-1">
-                  {/* line-clamp, never mid-word truncate, on a name (the standing
-                      truncation rule - VISION kill-list #8). */}
-                  <span className="min-w-0 text-meta leading-snug text-ink line-clamp-1">
-                    {l.label}
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className="mb-[3px] min-w-3 flex-1 self-end border-b border-dotted border-border"
-                  />
+                <span className="flex items-baseline justify-between gap-2">
+                  <span className="min-w-0 text-note text-ink">{l.label}</span>
                   {l.value != null ? (
-                    <span className="figure shrink-0 text-meta leading-snug text-ink">
-                      {fmtValue(l.value)}
-                    </span>
+                    <span className="figure shrink-0 text-meta text-secondary">{fmtValue(l.value)}</span>
                   ) : (
-                    <span className="shrink-0 text-meta leading-snug text-faint">
+                    <span className="shrink-0 text-meta text-secondary">
                       <span aria-hidden="true">&mdash;</span>
                       <span className="sr-only">unpriced</span>
                     </span>
                   )}
                 </span>
-                {l.note && (
-                  <span className="block text-meta leading-snug text-secondary line-clamp-1">
-                    {l.note}
-                  </span>
-                )}
+                {l.note && <span className="block text-meta text-secondary">{l.note}</span>}
               </div>
             ))}
-            {s.lines.length === 0 && (
-              <div className="text-meta leading-snug text-secondary">
-                nothing recorded incoming
-              </div>
-            )}
-          </div>
-          <div
-            className={cn(
-              "mt-1.5 flex items-baseline justify-between gap-1 border-t border-border-strong",
-              dense ? "pt-1" : "pt-1.5",
-            )}
-          >
-            <span className="text-micro uppercase tracking-wide text-secondary">
-              today
-            </span>
-            <span
-              className={cn(
-                "figure font-semibold leading-tight text-ink",
-                dense ? "text-body" : "text-lede",
-              )}
-            >
-              {fmtValue(Math.round(s.total))}
-            </span>
+            {s.lines.length === 0 && <div className="text-meta text-secondary">nothing recorded incoming</div>}
           </div>
         </div>
       ))}

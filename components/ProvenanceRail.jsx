@@ -430,8 +430,8 @@ export function ProvenanceRail({
   return (
     <div className={className}>
       {showTitle && (
-        <p className="mb-1 text-meta font-semibold uppercase tracking-[0.16em] text-accent-text">
-          {chain.kind === "pick" ? "Pick provenance" : "Provenance"}
+        <p className="mb-1 text-note font-semibold text-ink">
+          {chain.kind === "pick" ? "How this pick got here" : "How he got here"}
         </p>
       )}
       {/*
@@ -514,7 +514,7 @@ export function ProvenanceRail({
         })}
       </div>
       {legend.length > 0 && (
-        <p className="mt-1.5 text-micro leading-snug text-faint">
+        <p className="mt-1.5 text-meta text-secondary">
           On the rail: {legend.join("; ")}.
         </p>
       )}
@@ -642,7 +642,7 @@ function GapRow({
         className="min-w-0"
       >
         {dated && to > from && (
-          <p className="figure text-micro leading-normal text-faint">
+          <p className="figure text-meta text-secondary">
             {formatGap(to - from)} later
           </p>
         )}
@@ -874,7 +874,7 @@ function OwnershipStrip({ nodes, names }) {
           />
         ))}
       </div>
-      <p className="mt-1 text-micro leading-snug text-faint">
+      <p className="mt-1 text-meta text-secondary">
         Proportional time, unlike the rail below. Longest hold:{" "}
         <span className="text-muted">{longest.name}</span>,{" "}
         {formatGap(longest.ms)} of {formatGap(total)}
@@ -1002,7 +1002,7 @@ function OriginBody({ o }) {
   return (
     <div>
       <p className="text-body font-semibold leading-snug text-ink">{o.text}</p>
-      <p className="figure text-micro leading-normal text-faint">
+      <p className="figure text-meta text-secondary">
         {o.dated ? <LocalDate ts={o.at} /> : "on or before the record opens"}
       </p>
     </div>
@@ -1020,10 +1020,10 @@ function HopBody({ h, repeat }) {
           .join(" ")} Open the deal.`}
       >
         <span className="min-w-0">
-          <span className="block line-clamp-1 text-body font-semibold leading-snug text-ink group-hover:text-accent-text">
+          <span className="block text-body font-semibold leading-snug text-ink group-hover:text-accent-text">
             Traded to {h.toName}
           </span>
-          <span className="block line-clamp-1 text-meta leading-snug text-muted">
+          <span className="block text-meta leading-snug text-muted">
             by {h.fromName} · as {h.assetLabel}
           </span>
         </span>
@@ -1041,7 +1041,7 @@ function HopBody({ h, repeat }) {
           {n.text}
         </p>
       ))}
-      <p className="figure text-micro leading-normal text-faint">
+      <p className="figure text-meta text-secondary">
         <LocalDate ts={h.at} /> · {h.season} wk {h.week}
       </p>
     </div>
@@ -1070,10 +1070,10 @@ function ResolutionBody({ r }) {
           className="mt-0.5"
         />
         <span className="min-w-0">
-          <span className="block line-clamp-1 text-body font-semibold leading-snug text-info group-hover:underline">
+          <span className="block text-body font-semibold leading-snug text-info group-hover:underline">
             The pick became {r.playerName}
           </span>
-          <span className="block line-clamp-1 text-meta leading-snug text-muted">
+          <span className="block text-meta leading-snug text-muted">
             {r.season} {ordinal(r.round)}
             {r.pickNo ? ` · pick #${r.pickNo}` : ""}
             {r.usedByName ? ` · used by ${r.usedByName}` : ""}
@@ -1085,7 +1085,7 @@ function ResolutionBody({ r }) {
           className="mt-0.5 shrink-0 text-faint group-hover:text-info"
         />
       </Link>
-      <p className="figure text-micro leading-normal text-faint">
+      <p className="figure text-meta text-secondary">
         {r.dated ? <LocalDate ts={r.at} /> : `${r.season} draft`}
       </p>
     </div>

@@ -71,6 +71,8 @@ test("ledger annotate affordance, then the audit-log deep link into the deal rec
   // would be data loss wearing a layout change's clothes.
   const seeded = page.getByText(/Full rebuild\./);
   await expect(seeded).toBeAttached();
+  // Captured entries sit in their own tab now (app/ledger/page.jsx); open it first.
+  await page.getByRole("tab", { name: /Captured/ }).click();
   const capturedRow = page.locator("details", { has: seeded });
   await expect(capturedRow).not.toHaveAttribute("open", /.*/);
   await capturedRow.locator("summary").first().click();

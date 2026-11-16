@@ -13,17 +13,17 @@ export function ActionQueue({ items, className, compact = false }) {
   if (compact) return <CompactQueue items={items} className={className} />;
   return (
     <section id="action-queue" aria-label="Decisions in front of you" className={className}>
-      <ol className="space-y-1.5">
+      <ol className="space-y-2">
         {items.map((item, i) => (
           <li key={item.id} data-action={item.id}>
             <Link href={item.href} className="group block">
               <Card
                 as="div"
-                className="card-lit flex items-start gap-2.5 p-3 transition-colors group-hover:border-border-strong group-hover:bg-surface-2"
+                className="flex items-start gap-3 transition-colors group-hover:bg-surface-2"
               >
                 <span
                   aria-hidden="true"
-                  className="figure mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full border border-accent-edge bg-accent-wash text-meta font-semibold text-accent-text"
+                  className="figure mt-0.5 flex size-6 shrink-0 items-center justify-center rounded-full bg-accent-wash text-meta font-semibold text-accent-text"
                 >
                   {i + 1}
                 </span>
@@ -35,7 +35,7 @@ export function ActionQueue({ items, className, compact = false }) {
                     {item.title}
                   </span>
                   {item.detail && (
-                    <span className="mt-0.5 block text-meta leading-snug text-muted">
+                    <span className="mt-0.5 block text-note text-muted">
                       {item.detail}
                     </span>
                   )}
@@ -58,26 +58,26 @@ function CompactQueue({ items, className }) {
     <section id="action-queue" aria-labelledby="action-queue-title" className={className}>
       <h2
         id="action-queue-title"
-        className="mb-1.5 text-note font-semibold uppercase tracking-[0.16em] text-muted"
+        className="mb-2 text-lede font-semibold text-ink"
       >
         To do
       </h2>
-      <ol className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
+      <ol className="divide-y divide-border overflow-hidden rounded-card bg-surface">
         {items.map((item) => (
           <li key={item.id} data-action={item.id}>
             <Link
               href={item.href}
-              className="flex min-h-11 items-center gap-2.5 px-3 py-2 transition-colors hover:bg-surface-2"
+              className="flex min-h-14 items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-2"
             >
               <span className="min-w-0 flex-1">
-                <span className="block text-micro font-semibold uppercase tracking-[0.14em] text-accent-text">
+                <span className="block text-meta font-semibold text-accent-text">
                   {item.kicker}
                 </span>
                 <span className="block text-body font-semibold leading-snug text-ink">
                   {item.title}
                 </span>
               </span>
-              <ChevronRight size={15} aria-hidden="true" className="shrink-0 text-faint" />
+              <ChevronRight size={18} aria-hidden="true" className="-mr-1 shrink-0 text-faint" />
             </Link>
           </li>
         ))}

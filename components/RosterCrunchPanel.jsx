@@ -2,7 +2,8 @@ import { cachedValuePlayers } from "@/lib/valuation";
 import { leagueCrunch } from "@/lib/crunch";
 import { seasonPhase } from "@/lib/actions";
 import { fmtValue } from "@/lib/ui";
-import { Card, SectionHeader, Stat, Tag } from "@/components/ui";
+import { AlertTriangle } from "lucide-react";
+import { Card, Disclosure, StatTile, Tag } from "@/components/ui";
 /**
  * BEFORE TIP-OFF: THE ROSTER CRUNCH, AS COUNTS.
  *
@@ -67,21 +68,26 @@ function teamLabel(h, ownerId, rosterId) {
 
 function NameRow({ name, value, children }) {
   return (
-    <li className="flex items-start justify-between gap-3 py-1.5">
+    <li className="flex min-h-11 items-center justify-between gap-3 py-2">
       <span className="min-w-0 flex-1">
-        <span className="text-body font-semibold leading-snug text-ink">
-          {name}
-        </span>
-        {children && (
-          <span className="mt-0.5 flex flex-wrap items-center gap-1.5">
-            {children}
-          </span>
-        )}
+        <span className="text-body font-semibold text-ink">{name}</span>
+        {children && <span className="mt-0.5 flex flex-wrap items-center gap-1.5">{children}</span>}
       </span>
-      <span className="figure shrink-0 text-body font-semibold text-ink">
-        {fmtValue(Math.round(value))}
-      </span>
+      <span className="figure shrink-0 text-body font-semibold text-ink">{fmtValue(Math.round(value))}</span>
     </li>
+  );
+}
+
+/** A sub-list's heading inside the panel: sentence case, one size up from a label. */
+function ListTitle({ children }) {
+  return <h3 className="mt-4 text-note font-semibold text-ink">{children}</h3>;
+}
+
+function Injured({ children = "injured" }) {
+  return (
+    <Tag size="sm" tone="warn" icon={AlertTriangle}>
+      {children}
+    </Tag>
   );
 }
 
@@ -133,36 +139,38 @@ export function RosterCrunchPanel({ h, rosterId, onlyWhenRelevant = false, class
 
   return (
     <Card className={className}>
-      <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
+      <h2 className="text-lede font-semibold text-ink">
         {seasonPhase(h).phase === "preseason" ? "Before tip-off" : "Roster limits"}
-      </p>
-      <p className="mt-1 text-body leading-snug text-ink">{standfirst}</p>
+      </h2>
+      <p className="mt-0.5 text-note text-muted">{standfirst}</p>
 
       <div className="mt-3 grid grid-cols-2 gap-2">
-        <Stat
+        <StatTile
+          className="bg-surface-2"
+          size="sm"
           label="Active roster"
           value={countValue}
           sub={countSub}
           tone={c.overBy > 0 ? "negative" : "neutral"}
         />
-        <Stat
+        <StatTile
+          className="bg-surface-2"
+          size="sm"
           label="Taxi"
           value={`${c.counts.taxi} of ${c.limits.taxi}`}
           sub={`${c.taxiOpen} open`}
         />
       </div>
-      {deadlineNote && (
-        <p className="mt-1.5 text-meta leading-snug text-faint">{deadlineNote}</p>
-      )}
+      {deadlineNote && <p className="mt-1.5 text-meta text-secondary">{deadlineNote}</p>}
 
       {stash.length > 0 && (
         <>
-          <SectionHeader title="Taxi-eligible, outside your top starters" />
+          <ListTitle>Taxi-eligible, outside your top starters</ListTitle>
           <ul className="divide-y divide-border">
             {stash.map((p) => (
               <NameRow key={p.playerId} name={p.name} value={p.value}>
-                {p.reasonFlags.includes("rookie") && <Tag>just drafted</Tag>}
-                {p.reasonFlags.includes("injured") && <Tag tone="warn">injured</Tag>}
+                {p.reasonFlags.includes("rookie") && <Tag size="sm">just drafted</Tag>}
+                {p.reasonFlags.includes("injured") && <Injured />}
               </NameRow>
             ))}
           </ul>
@@ -171,11 +179,11 @@ export function RosterCrunchPanel({ h, rosterId, onlyWhenRelevant = false, class
 
       {irList.length > 0 && (
         <>
-          <SectionHeader title="IR-eligible, with an open IR slot" />
+          <ListTitle>IR-eligible, with an open IR slot</ListTitle>
           <ul className="divide-y divide-border">
             {irList.map((p) => (
               <NameRow key={p.playerId} name={p.name} value={p.value}>
-                <Tag tone="warn">{h.players?.get?.(p.playerId)?.injuryStatus ?? "injured"}</Tag>
+                <Injured>{h.players?.get?.(p.playerId)?.injuryStatus ?? "injured"}</Injured>
               </NameRow>
             ))}
           </ul>
@@ -184,17 +192,19 @@ export function RosterCrunchPanel({ h, rosterId, onlyWhenRelevant = false, class
 
       {c.overBy > 0 && (
         <>
-          <SectionHeader title="Lowest value on this roster" />
+          <ListTitle>Lowest value on this roster</ListTitle>
           <ul className="divide-y divide-border">
             {cuts.map((p) => (
               <NameRow key={p.playerId} name={p.name} value={p.value}>
-                {p.reasonFlags.includes("injured") && <Tag tone="warn">injured</Tag>}
-                {p.reasonFlags.includes("noTeam") && <Tag>no NBA team</Tag>}
+                {p.reasonFlags.includes("injured") && <Injured />}
+                {p.reasonFlags.includes("noTeam") && <Tag size="sm">no NBA team</Tag>}
               </NameRow>
             ))}
             {rookies.map((p) => (
               <NameRow key={p.playerId} name={p.name} value={p.value}>
-                <Tag tone="accent">just drafted</Tag>
+                <Tag size="sm" tone="accent">
+                  just drafted
+                </Tag>
               </NameRow>
             ))}
           </ul>
@@ -202,29 +212,30 @@ export function RosterCrunchPanel({ h, rosterId, onlyWhenRelevant = false, class
       )}
 
       {(c.overBy > 0 || pickups.length > 0) && (
-        <>
-          <SectionHeader title="Likely to hit waivers" />
+        <Disclosure
+          className="-mb-2 mt-2"
+          summary={
+            pickups.length > 0
+              ? `Likely to hit waivers (${pickups.length})`
+              : "Likely to hit waivers: none counted"
+          }
+        >
           {pickups.length > 0 ? (
             <ul className="divide-y divide-border">
               {pickups.map((p) => (
                 <NameRow key={`${p.rosterId}:${p.playerId}`} name={p.name} value={p.value}>
-                  <span className="text-meta text-secondary">
-                    {teamLabel(h, p.ownerId, p.rosterId)}
-                  </span>
+                  <span className="text-meta text-secondary">{teamLabel(h, p.ownerId, p.rosterId)}</span>
                 </NameRow>
               ))}
             </ul>
           ) : (
-            <p className="text-note leading-snug text-muted">
-              No other roster is over the limit, so no releases are counted league-wide.
-            </p>
+            <p>No other roster is over the limit, so no releases are counted league-wide.</p>
           )}
-          <p className="mt-1.5 text-meta leading-snug text-faint">
-            Each over-limit roster&apos;s lowest-value players after taxi and IR, by count -
-            not a report of what any owner will do. Just-drafted rookies are never
-            counted.
+          <p className="mt-2">
+            Each over-limit roster&apos;s lowest-value players after taxi and IR, by count - not a report
+            of what any owner will do. Just-drafted rookies are never counted.
           </p>
-        </>
+        </Disclosure>
       )}
     </Card>
   );

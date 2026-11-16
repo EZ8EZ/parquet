@@ -13,8 +13,6 @@
  * find something.
  */
 import { notFound } from "next/navigation";
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildProvenance, parsePickKey } from "@/lib/provenance";
 import {
@@ -25,7 +23,7 @@ import {
 } from "@/lib/provenance/source";
 import { ProvenanceRail, chainSummary } from "@/components/ProvenanceRail";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { Card, Disclosure, PageHeader, SectionHeader } from "@/components/ui";
+import { Card, Disclosure, List, ListRow, PageHeader } from "@/components/ui";
 import { cachedValuePlayers } from "@/lib/valuation";
 import { leagueTiers, tierResolver } from "@/lib/rankings/tiers";
 import { assetPlayerId } from "@/lib/tradegraph";
@@ -97,7 +95,7 @@ export default async function LineagePage({ params }) {
         }
         title={player?.fullName ?? chain.label}
         below={
-          <p className="mt-1 text-note leading-snug text-muted">
+          <p className="mt-1 text-note text-muted">
             {chainSummary(chain)}
             {value != null && (
               <>
@@ -130,69 +128,34 @@ export default async function LineagePage({ params }) {
         />
       </Card>
 
-      <SectionHeader title="What this is and is not" />
-      <Card>
-        <p className="text-body leading-relaxed text-muted">
-          Read top to bottom and this answers one question only: how the thing
-          you hold today got to you. It is not a claim that the trade was good,
-          and there is no grade anywhere on it.
+      <Disclosure className="mt-2" summary="What this is, and where it can be wrong">
+        <p>
+          How the thing you hold today got to you, read top to bottom. Not a claim that any trade was good; no grade
+          anywhere on it.
         </p>
-        <Disclosure summary="Where this chain can be wrong" className="mt-1">
-          <p>
-            A pick is not the player. Where a chain crosses a draft it credits
-            whoever was actually taken at that slot, which is a fact - but a
-            manager who acquired the pick and then took someone else would leave
-            the same trace, and a draft board nobody used leaves no record at
-            all.
-          </p>
-          <p className="mt-1.5">
-            Commissioner-executed trades reach us with no picks attached, so a
-            hop that moved a pick by hand can be missing from the chain
-            entirely. Nothing here is reconstructed to fill that in - where a
-            hop we DO have came from a commissioner move, it says so and names
-            what is missing; where the hop itself was never recorded, the chain
-            is simply shorter than the truth and cannot know it.
-          </p>
-          <p className="mt-1.5">
-            The record starts when this league&apos;s history does. Anything
-            that was already true then reads &quot;on this roster before the
-            record begins&quot;, which is honest rather than complete.
-          </p>
-        </Disclosure>
-      </Card>
+        <p className="mt-2">
+          A pick is not the player: where a chain crosses a draft it credits whoever was actually taken at that slot.
+          Commissioner-executed trades reach us with no picks attached, so a hand-moved pick can be missing; where a
+          hop we have came from a commissioner move, it says so. The record starts when this league&apos;s history
+          does.
+        </p>
+      </Disclosure>
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {/* WHERE HE SITS TONIGHT. This page answers "how did I get him"; the
-            question a reader holds immediately after that is "and what is his
-            actual role now", which is the one thing on the same subject that this
-            app can answer from a fact rather than a model. Rendered only when
-            Sleeper has him on an NBA team - a free agent has no chart to open. */}
+      <List className="mt-3" aria-label="Related">
         {depthHref && player?.team && (
-          <Link
-            href={depthHref}
-            className="inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-surface px-3 text-note font-semibold leading-snug text-muted transition-colors hover:border-accent hover:text-accent-text"
-          >
-            Where he sits on {player.team}
-            <ChevronRight size={13} aria-hidden="true" />
-          </Link>
+          <li>
+            <ListRow href={depthHref} title={`Where he sits on ${player.team}`} meta="Sleeper's depth chart" />
+          </li>
         )}
         {pid && (
-          <Link
-            href={valuesFocusHref(pid)}
-            className="inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-surface px-3 text-note font-semibold leading-snug text-muted transition-colors hover:border-accent hover:text-accent-text"
-          >
-            How he is valued
-            <ChevronRight size={13} aria-hidden="true" />
-          </Link>
+          <li>
+            <ListRow href={valuesFocusHref(pid)} title="How he is valued" meta="Asset values" />
+          </li>
         )}
-        <Link
-          href="/deals"
-          className="inline-flex min-h-11 items-center gap-1 rounded-full border border-border bg-surface px-3 text-note font-semibold leading-snug text-muted transition-colors hover:border-accent hover:text-accent-text"
-        >
-          Every deal
-          <ChevronRight size={13} aria-hidden="true" />
-        </Link>
-      </div>
+        <li>
+          <ListRow href="/deals" title="Every deal" meta="The deal index" />
+        </li>
+      </List>
     </div>
   );
 }

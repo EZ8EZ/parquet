@@ -17,8 +17,7 @@
  * `<details>`, no client JavaScript to open a row, find-in-page still reaches the text
  * inside a shut one, and the only motion is the shared `.disclosure-*` reveal.
  */
-import Link from "next/link";
-import { CheckCircle2, ChevronRight, Eye, KeyRound } from "lucide-react";
+import { Check, CheckCircle2, ChevronRight, Eye, KeyRound } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import {
   getLedgerEntries,
@@ -29,15 +28,11 @@ import {
 import { getPrincipals } from "@/lib/principals";
 import { captureBlock, readSeat } from "@/lib/auth/server";
 import { LedgerItem } from "@/components/LedgerItem";
-import {
-  PageHeader,
-  SectionHeader,
-  Stat,
-  EmptyState,
-  Tag,
-} from "@/components/ui";
+import { Chip, Disclosure, PageHeader, SectionHeader, Stat, EmptyState, Tabs } from "@/components/ui";
 import { Onward } from "@/components/Onward";
 export const dynamic = "force-dynamic";
+/** Newest uncaptured rows shown before the "older" fold. */
+const FIRST = 6;
 export default async function LedgerPage() {
   const h = await getLeagueHistory();
   const seat = await readSeat();
@@ -66,42 +61,26 @@ export default async function LedgerPage() {
         title={blocked ? "The record" : "Capture the why"}
         subtitle={
           blocked
-            ? "Every notable move this team has made. The reasoning behind them is private to the manager who wrote it, so none of it is shown here."
-            : "Record your reasoning at the moment of conviction - not later, when memory has already rewritten it."
+            ? "Every notable move; the reasoning stays private"
+            : "Write down why, while you still remember"
         }
       />
 
       {blocked === "other-lens" && (
-        <div className="mb-3 flex items-start gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2">
-          <Eye
-            size={15}
-            aria-hidden="true"
-            className="mt-0.5 shrink-0 text-faint"
-          />
-          <p className="min-w-0 text-meta leading-relaxed text-muted">
-            You are viewing {h.me.teamName ?? h.me.displayName}. Captured
-            reasoning belongs to whoever wrote it, so yours is hidden here too -
-            switch back to your own team to see and edit it.
-          </p>
-        </div>
+        <p className="mb-3 flex items-center gap-2 text-note text-muted">
+          <Eye size={16} aria-hidden="true" className="shrink-0 text-secondary" />
+          Viewing {h.me.teamName ?? h.me.displayName}: reasoning is hidden. Switch to your own team to edit yours.
+        </p>
       )}
 
       {blocked === "unclaimed" && (
-        <div className="mb-3 flex items-start gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2">
-          <KeyRound
-            size={15}
-            aria-hidden="true"
-            className="mt-0.5 shrink-0 text-faint"
-          />
-          <p className="min-w-0 text-meta leading-relaxed text-muted">
-            This browser has not claimed a seat, so it cannot write as anyone.
-            Ask the commissioner for your claim link - it takes one tap and no
-            password.
-          </p>
-        </div>
+        <p className="mb-3 flex items-center gap-2 text-note text-muted">
+          <KeyRound size={16} aria-hidden="true" className="shrink-0 text-secondary" />
+          This browser has no seat. Ask the commissioner for your claim link.
+        </p>
       )}
 
-      <div className="grid grid-cols-3 gap-2.5">
+      <div className="grid grid-cols-3 gap-2">
         <Stat
           label={blocked ? "Uncaptured" : "To capture"}
           value={summary.unannotatedNotable}
@@ -110,10 +89,9 @@ export default async function LedgerPage() {
         <Stat label="Captured" value={summary.annotated} tone="positive" />
         <Stat label="Notable" value={summary.notable} />
       </div>
-      <p className="-mt-1 mb-2 text-meta leading-snug text-muted">
-        Notable means every trade, plus {waiverLabel} - the same bar the
-        commissioner audit log and season recap use.
-      </p>
+      <Disclosure className="mt-1" summary="What counts as notable">
+        Every trade, plus {waiverLabel}: the same bar the commissioner audit log and season recap use.
+      </Disclosure>
 
       {/* THE PINNED ONE. It is the only editor open on arrival, it is the freshest
             decision with no why on it, and it is above everything else on the page
@@ -136,71 +114,62 @@ export default async function LedgerPage() {
         </>
       )}
 
-      <SectionHeader
-        title={
-          blocked
-            ? "Uncaptured - newest first"
-            : newest
-              ? "The rest, newest first"
-              : "To capture - newest first"
-        }
+      <SectionHeader title={newest ? "The rest" : "Every notable move"} />
+      <Tabs
+        label="Decisions"
+        items={[
+          {
+            id: "open",
+            label: blocked ? "Uncaptured" : "To capture",
+            count: rest.length,
+            content:
+              toCapture.length === 0 ? (
+                <EmptyState icon={<CheckCircle2 size={28} />} title={blocked ? "Nothing notable yet" : "All caught up"}>
+                  {blocked
+                    ? "This team has made no trades or notable waiver claims."
+                    : "Every notable decision has your reasoning attached."}
+                </EmptyState>
+              ) : rest.length === 0 ? (
+                <p className="text-note text-muted">That was the last one without a why on it.</p>
+              ) : (
+                <>
+                  <RowList>
+                    {rest.slice(0, FIRST).map((e) => (
+                      <LedgerRow key={e.transactionId} entry={e} readOnly={blocked != null} />
+                    ))}
+                  </RowList>
+                  {rest.length > FIRST && (
+                    <Disclosure summary={`${rest.length - FIRST} older`} bodyClassName="bg-transparent p-0">
+                      <RowList>
+                        {rest.slice(FIRST).map((e) => (
+                          <LedgerRow key={e.transactionId} entry={e} readOnly={blocked != null} />
+                        ))}
+                      </RowList>
+                    </Disclosure>
+                  )}
+                </>
+              ),
+          },
+          {
+            id: "captured",
+            label: "Captured",
+            count: captured.length,
+            content:
+              captured.length === 0 ? (
+                <p className="text-note text-muted">
+                  {blocked ? "Nothing of yours is readable from here." : "Nothing captured yet."}
+                </p>
+              ) : (
+                <RowList>
+                  {captured.map((e) => (
+                    <LedgerRow key={e.transactionId} entry={e} readOnly={blocked != null} />
+                  ))}
+                </RowList>
+              ),
+          },
+        ]}
       />
-      {toCapture.length === 0 ? (
-        <EmptyState
-          icon={<CheckCircle2 size={28} />}
-          title={blocked ? "Nothing notable yet" : "All caught up"}
-        >
-          {blocked
-            ? "This team has made no trades or notable waiver claims."
-            : "Every notable decision has your reasoning attached. Come back after your next trade."}
-        </EmptyState>
-      ) : rest.length === 0 ? (
-        <p className="text-body leading-relaxed text-muted">
-          That was the last one without a why on it.
-        </p>
-      ) : (
-        <RowList>
-          {rest.map((e) => (
-            <LedgerRow
-              key={e.transactionId}
-              entry={e}
-              readOnly={blocked != null}
-            />
-          ))}
-        </RowList>
-      )}
 
-      <SectionHeader title="Captured" />
-      {captured.length === 0 ? (
-        <p className="text-body leading-relaxed text-muted">
-          {blocked
-            ? "Nothing of yours is readable from here."
-            : "Nothing captured yet. Start above."}
-        </p>
-      ) : (
-        <RowList>
-          {captured.map((e) => (
-            <LedgerRow
-              key={e.transactionId}
-              entry={e}
-              readOnly={blocked != null}
-            />
-          ))}
-        </RowList>
-      )}
-
-      {blocked === "unclaimed" && (
-        <p className="mt-4 text-center text-meta leading-relaxed text-secondary">
-          Everything else in Parquet is public league data.{" "}
-          <Link
-            href="/about"
-            className="inline-flex min-h-11 items-center gap-0.5 font-semibold text-muted underline-offset-2 hover:text-accent-text hover:underline"
-          >
-            What this is
-            <ChevronRight size={12} aria-hidden="true" />
-          </Link>
-        </p>
-      )}
       <Onward from="/ledger" />
     </div>
   );
@@ -209,7 +178,7 @@ function RowList({ children }) {
   return (
     <ul
       data-testid="ledger-rows"
-      className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface"
+      className="divide-y divide-border overflow-hidden rounded-card bg-surface"
     >
       {children}
     </ul>
@@ -229,23 +198,27 @@ function LedgerRow({ entry, readOnly }) {
   return (
     <li>
       <details className="group">
-        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-2.5 py-1.5">
-          <ChevronRight
-            size={13}
-            aria-hidden="true"
-            className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
-          />
+        <summary className="flex min-h-14 cursor-pointer list-none items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-2 [&::-webkit-details-marker]:hidden">
           <span className="min-w-0 flex-1">
-            <span className="block line-clamp-1 text-body leading-tight text-ink">
-              {entry.description}
-            </span>
-            <span className="block figure text-meta leading-tight text-secondary">
+            <span className="block text-body font-semibold text-ink">{entry.description}</span>
+            <span className="mt-0.5 block figure text-meta text-secondary">
               {entry.season} · wk {entry.week} · {entry.type.replace("_", " ")}
             </span>
           </span>
-          <Tag tone={annotated ? "positive" : "accent"}>
-            {annotated ? "captured" : readOnly ? "no why" : "add why"}
-          </Tag>
+          {annotated ? (
+            <Chip size="sm" tone="positive" icon={Check}>
+              captured
+            </Chip>
+          ) : (
+            <Chip size="sm" tone={readOnly ? "neutral" : "accent"}>
+              {readOnly ? "no why" : "add why"}
+            </Chip>
+          )}
+          <ChevronRight
+            size={18}
+            aria-hidden="true"
+            className="disclosure-chevron -mr-1 shrink-0 text-faint group-open:rotate-90"
+          />
         </summary>
         <div className="disclosure-body">
           <LedgerItem
