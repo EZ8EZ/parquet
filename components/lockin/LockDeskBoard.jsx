@@ -82,7 +82,7 @@ function panelsFor(desk, methodHref) {
       id: c.playerId,
       title: c.name,
       subtitle: playerSubtitle(c),
-      content: <PlayerPanel card={c} today={desk.today} record={desk.leanRecord} methodHref={methodHref} />,
+      content: <PlayerPanel card={c} today={desk.today} record={desk.leanRecord} methodHref={methodHref} calibration={desk.model?.calibration?.pLaterBeatsIfPlays} />,
     }));
 }
 

@@ -24,21 +24,33 @@ const Missing = ({ text }) => <p className="text-note text-muted">{text}</p>;
 
 function Record({ record, methodHref }) {
   const pessimistic = record.rotationCaveat?.match(/falls to (\+[\d.]+)/)?.[1];
+  const blind = record.availabilityCaveat?.match(/gain was (\+[\d.]+)/)?.[1];
   return (
     <Disclosure summary="The lean's record">
-      <p>
-        Backtest, {record.n} active team-weeks ({record.sample}): <span className="figure font-semibold text-ink">+{record.gainPerTeamWeek}</span> points per team-week over what managers banked (95% interval +{record.interval95[0]} to +{record.interval95[1]}).
-        {pessimistic ? ` With the most pessimistic assumption about mid-week swaps, the per-player rule gains only ${pessimistic}.` : ""}{" "}
-        <Link href={methodHref} className="font-semibold text-accent-text underline underline-offset-2">
-          How these numbers are made
-        </Link>
-      </p>
+      <ul className="space-y-1.5">
+        <li>
+          <span className="figure font-semibold text-ink">+{record.gainPerTeamWeek}</span> points per team-week over what managers banked (95% interval +{record.interval95[0]} to +{record.interval95[1]}, n={record.n} team-weeks), in a backtest that knew who would play his next game.
+        </li>
+        {blind && (
+          <li>
+            Without knowing who would play: <span className="figure font-semibold text-ink">{blind}</span> for the simpler per-player rule.
+          </li>
+        )}
+        {pessimistic && (
+          <li>
+            If managers could not have swapped starters mid-week: only <span className="figure font-semibold text-ink">{pessimistic}</span>.
+          </li>
+        )}
+      </ul>
+      <Link href={methodHref} className="mt-2 inline-block font-semibold text-accent-text underline underline-offset-2">
+        How these numbers are made
+      </Link>
     </Disclosure>
   );
 }
 
 /** Everything about one player, for the sheet: the decision, then the five charts. */
-export function PlayerPanel({ card, today, record, methodHref }) {
+export function PlayerPanel({ card, today, record, methodHref, calibration = null }) {
   const strip = stripChart(card);
   const dist = distChart(card);
   const mins = minutesChart(card);
@@ -59,6 +71,7 @@ export function PlayerPanel({ card, today, record, methodHref }) {
           <p className="text-note text-muted">{card.decision.kind === "lineup" ? card.decision.text : card.lean.reason}</p>
         )}
         {fc && <p className="text-meta text-secondary">Forecast {basisText(fc)}.</p>}
+        {card.stopping && calibration && <p className="text-meta text-secondary">&ldquo;Later game beats it&rdquo; tends to run high: in 2026 games it {calibration}.</p>}
         {card.lean.value !== "none" && <Record record={record} methodHref={methodHref} />}
       </div>
       <Block title="Last 15 games" sub={strip.ok ? "tap a game" : null}>
