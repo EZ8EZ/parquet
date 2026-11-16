@@ -12,12 +12,12 @@
  * test). No magnitude anywhere on this chart; see the derivation's own docstring for
  * why deal count is deliberately not drawn.
  */
-import { CHART_ACCENT, CHART_FAINT, CHART_GRID } from "@/lib/chart-colors";
+import { CHART_ACCENT, CHART_GRID } from "@/lib/chart-colors";
 const W = 320;
-const PAD_L = 15;
+const PAD_L = 20;
 const PAD_R = 3;
 const PAD_T = 3;
-const PAD_B = 15;
+const PAD_B = 18;
 const r = Math.round;
 /** One full sentence describing the shape, since a grid of squares says nothing to a screen reader on its own. */
 function matrixLabel(matrix) {
@@ -36,14 +36,10 @@ export function TradeMatrix({ matrix }) {
   const sq = Math.max(2, cell - 1.5);
   return (
     <div>
-      <svg
-        viewBox={`0 0 ${W} ${H}`}
-        width="100%"
-        height={H}
-        role="img"
-        aria-label={matrixLabel(matrix)}
-        className="select-none"
-      >
+      {/* Drawn at scale 1 (W x H real pixels) so the HTML tick numbers below line up with
+          the cells; no <text> inside a viewBox (DESIGN.md charts). */}
+      <div className="relative mx-auto" style={{ width: W, height: H }} role="img" aria-label={matrixLabel(matrix)}>
+      <svg viewBox={`0 0 ${W} ${H}`} width={W} height={H} aria-hidden="true" className="select-none">
         {matrix.cells.map((c) => {
           const x = r(PAD_L + c.col * cell + (cell - sq) / 2);
           const y = r(PAD_T + c.row * cell + (cell - sq) / 2);
@@ -65,36 +61,29 @@ export function TradeMatrix({ matrix }) {
           );
         })}
         {/* Row and column tick numbers - a position in the ordered list below, never a
-            name (there is no room to set fifteen team names legibly in an SVG cell). */}
-        {matrix.order.map((m, i) => (
-          <text
-            key={`row${i}`}
-            x={r(PAD_L - 3)}
-            y={r(PAD_T + i * cell + cell / 2 + 2.5)}
-            textAnchor="end"
-            fontSize="6.5"
-            fill={m.isMe ? CHART_ACCENT : CHART_FAINT}
-            fontWeight={m.isMe ? 700 : 400}
-            className="figure"
-          >
-            {i + 1}
-          </text>
-        ))}
-        {matrix.order.map((m, i) => (
-          <text
-            key={`col${i}`}
-            x={r(PAD_L + i * cell + cell / 2)}
-            y={r(PAD_T + n * cell + 11)}
-            textAnchor="middle"
-            fontSize="6.5"
-            fill={m.isMe ? CHART_ACCENT : CHART_FAINT}
-            fontWeight={m.isMe ? 700 : 400}
-            className="figure"
-          >
-            {i + 1}
-          </text>
-        ))}
+            name (there is no room to set fifteen team names legibly in a cell). */}
       </svg>
+      {matrix.order.map((m, i) => (
+        <span
+          key={`row${i}`}
+          aria-hidden="true"
+          className={`figure absolute -translate-y-1/2 text-right text-micro leading-none ${m.isMe ? "font-bold text-accent-text" : "text-secondary"}`}
+          style={{ left: 0, width: PAD_L - 3, top: r(PAD_T + i * cell + cell / 2) }}
+        >
+          {i + 1}
+        </span>
+      ))}
+      {matrix.order.map((m, i) => (
+        <span
+          key={`col${i}`}
+          aria-hidden="true"
+          className={`figure absolute -translate-x-1/2 text-micro leading-none ${m.isMe ? "font-bold text-accent-text" : "text-secondary"}`}
+          style={{ left: r(PAD_L + i * cell + cell / 2), top: r(PAD_T + n * cell + 4) }}
+        >
+          {i + 1}
+        </span>
+      ))}
+      </div>
       {/* The ordered legend - the SAME numbering the axes use, so a reader can look up
           any row or column. Real HTML, not SVG text, so it wraps and stays legible at
           any width (the same reasoning WindowMap's own docstring gives for range
