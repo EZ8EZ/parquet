@@ -137,6 +137,10 @@ export default async function PlanPage() {
         <h2 className="font-display text-lede font-semibold leading-tight text-ink">
           {dx.headline}
         </h2>
+        {/* What decided the direction, always stated (lib/metrics/axes.js stanceOf). */}
+        <p className="mt-1 text-note leading-snug text-secondary">
+          {dx.directionNote}
+        </p>
         <ul className="mt-1.5 space-y-1">
           {dx.because.map((b, i) => (
             <li key={i} className="flex gap-1.5 text-note leading-snug">
@@ -153,7 +157,12 @@ export default async function PlanPage() {
       {/* Diagnosis figures as one strip, with the position reads folded in. */}
       <div className="mt-1.5 flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface">
         {[
-          { v: dx.starCount, l: "stars", s: "cornerstone+", tone: "text-ink" },
+          {
+            v: dx.starCount,
+            l: `valued ${fmtValue(dx.starLine.value)}+`,
+            s: `line in ${dx.starLine.tier} tier`,
+            tone: "text-ink",
+          },
           {
             v: fmtValue(dx.pickTotal),
             l: "pick value",
@@ -166,7 +175,7 @@ export default async function PlanPage() {
           {
             v: dx.deadWeight,
             l: "dead weight",
-            s: "roster clogs",
+            s: `under ${fmtValue(dx.deadLine.value)}`,
             tone: "text-ink",
           },
         ].map((s) => (
@@ -215,7 +224,7 @@ export default async function PlanPage() {
               ? `Your assets do not agree about when you win: ${Math.round(tl.nowShare * 100)}% of your value pays off inside two seasons while ${Math.round(tl.laterShare * 100)}% arrives four or more out. Every move below should pull the roster onto ONE timeline - a move that adds value but widens the spread makes this worse.`
               : timelineAgrees
                 ? `The ${dir.label.toLowerCase()} call is read off this timeline - value concentrated around ${tl.rosterDuration.toFixed(1)} seasons out, assets agreed about it (that is what "${tl.posture}" means). Protect that alignment: do not add pieces dated far from it.`
-                : `${dx.directionNote} The two answer different questions - when your value arrives, and what your standing argues for - so this is a choice in front of you rather than a contradiction. Each move below is chosen for the ${dir.label.toLowerCase()} call.`}
+                : `The ${dir.label.toLowerCase()} call above was decided by standing, not by this timeline (value ~${tl.rosterDuration.toFixed(1)} seasons out, ${tl.posture}). The two answer different questions - when your value arrives, and what your standing argues for - so this is a choice in front of you rather than a contradiction. Each move below is chosen for the ${dir.label.toLowerCase()} call.`}
           </p>
           {myWindow && (
             <p className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
@@ -347,70 +356,92 @@ export default async function PlanPage() {
                 {m.detail}
               </p>
 
-              {/* Send / target side by side even at 390px: the comparison is the point. */}
-              <div className="mt-1.5 grid grid-cols-2 gap-1.5">
-                <div className="rounded-[--radius-sm] border border-border bg-bg/40 px-2 py-1.5">
-                  <div className="text-meta uppercase tracking-wide text-negative">
-                    You send
+              {/*
+               * A TRADE MOVE IS A NAMED PACKAGE (lib/gameplan/packages.js): the trade
+               * finder's best deal under this move's constraints, with both sides and
+               * their values on the app's own scale. Non-trade moves (cuts, holding
+               * picks) keep their plain send/get lines. Send and get sit side by side
+               * even at 390px: the comparison is the point. Names wrap, never truncate.
+               */}
+              {m.package && (
+                <p className="mt-1.5 text-meta uppercase tracking-wide text-secondary">
+                  With{" "}
+                  <span className="normal-case text-ink">
+                    {m.package.counterparty.name}
+                  </span>
+                </p>
+              )}
+              <div className="mt-1 grid grid-cols-2 gap-1.5">
+                {[
+                  {
+                    label: "You send",
+                    tone: "text-negative",
+                    assets: m.package?.give,
+                    total: m.package?.giveValue,
+                    plain: m.give,
+                  },
+                  {
+                    label: m.package ? "You get" : "You target",
+                    tone: "text-positive",
+                    assets: m.package?.get,
+                    total: m.package?.getValue,
+                    plain: m.get,
+                  },
+                ].map((side) => (
+                  <div
+                    key={side.label}
+                    className="rounded-[--radius-sm] border border-border bg-bg/40 px-2 py-1.5"
+                  >
+                    <div className="flex items-baseline justify-between gap-1 text-meta uppercase tracking-wide">
+                      <span className={side.tone}>{side.label}</span>
+                      {side.total != null && (
+                        <span className="figure text-secondary">
+                          {fmtValue(side.total)}
+                        </span>
+                      )}
+                    </div>
+                    {side.assets ? (
+                      <ul className="mt-0.5 space-y-0.5">
+                        {side.assets.map((x) => (
+                          <li key={x.id} className="text-note leading-snug text-ink">
+                            {x.name}
+                            <span className="figure text-meta text-muted">
+                              {" "}
+                              · {fmtValue(x.value)}
+                              {x.tier ? ` · ${x.tier}` : ""}
+                            </span>
+                          </li>
+                        ))}
+                      </ul>
+                    ) : (
+                      <div className="text-note leading-snug text-ink">
+                        {side.plain.join(", ") || "-"}
+                      </div>
+                    )}
                   </div>
-                  <div className="text-note leading-snug text-ink">
-                    {m.give.join(", ") || "-"}
-                  </div>
-                </div>
-                <div className="rounded-[--radius-sm] border border-border bg-bg/40 px-2 py-1.5">
-                  <div className="text-meta uppercase tracking-wide text-positive">
-                    You target
-                  </div>
-                  <div className="text-note leading-snug text-ink">
-                    {m.get.join(", ") || "-"}
-                  </div>
-                </div>
+                ))}
               </div>
 
-              {/*
-               * THE PARTNER SUGGESTION IS NOW A SEARCH, NOT A SECOND OPINION.
-               *
-               * This row used to name one leaguemate picked by `choosePartner` -
-               * shelved, SHELVED.md S11 - which scored dossier tags without ever
-               * checking whether either roster held an asset the other one wanted. It
-               * could therefore send a reader to a manager the trade finder finds
-               * nothing with, from a card on the same page. The finder answers the same
-               * question by searching real assets, and `move=` hands it the one asset
-               * this move actually names so it does not have to guess what you meant.
-               */}
-              <Link
-                href={
-                  m.moveAssetId
-                    ? `/trade/finder?${new URLSearchParams({ move: String(m.moveAssetId) }).toString()}`
-                    : "/trade/finder"
-                }
-                className="mt-1.5 flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-info/25 bg-info/[0.06] px-2 py-1.5 transition-colors hover:border-info/50 hover:bg-info/[0.1]"
-              >
-                <Target
-                  size={13}
-                  aria-hidden="true"
-                  className="shrink-0 text-info"
-                />
-                <span className="min-w-0 flex-1">
-                  <span className="block line-clamp-1 text-note font-semibold text-ink">
-                    {m.moveAssetId
-                      ? `Who would take ${m.give[0]}?`
-                      : "Who has room for this?"}
+              {m.package && (
+                <Link
+                  href={m.package.builderHref}
+                  className="mt-1.5 flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-info/25 bg-info/[0.06] px-2 py-1.5 transition-colors hover:border-info/50 hover:bg-info/[0.1]"
+                >
+                  <Target
+                    size={13}
+                    aria-hidden="true"
+                    className="shrink-0 text-info"
+                  />
+                  <span className="min-w-0 flex-1 text-note font-semibold text-ink">
+                    Open this package in the trade builder
                   </span>
-                  {/* `line-clamp-2`, not `truncate`: this is a sentence, and a
-                        sentence cut mid-word is the bug D72 spent a whole round on. */}
-                  <span className="block text-meta leading-tight text-muted line-clamp-2">
-                    {m.moveAssetId
-                      ? "Searched for packages that include him"
-                      : "Grouped by whose window is opposite yours"}
-                  </span>
-                </span>
-                <ArrowRight
-                  size={13}
-                  aria-hidden="true"
-                  className="shrink-0 text-info"
-                />
-              </Link>
+                  <ArrowRight
+                    size={13}
+                    aria-hidden="true"
+                    className="shrink-0 text-info"
+                  />
+                </Link>
+              )}
 
               <p className="mt-1.5 flex items-start gap-1.5 text-meta leading-snug text-warn">
                 <AlertTriangle
