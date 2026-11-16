@@ -92,7 +92,7 @@ export function WhenLine({ card }) {
   return (
     <p className="text-note text-muted">
       {gamesLeftText(card)}
-      {card.decision.deadlineText ? `. Decide ${card.decision.deadlineText}.` : ""}
+      {card.decision.kind === "lock_or_hold" && card.decision.deadlineText ? `. Decide ${card.decision.deadlineText}.` : "."}
     </p>
   );
 }
