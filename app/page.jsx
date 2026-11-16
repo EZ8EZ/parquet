@@ -7,31 +7,32 @@ import { currentFormByRoster } from "@/lib/roster";
 import { ordinal } from "@/lib/derive/describe";
 import { actionQueue } from "@/lib/actions";
 import { loadWeek } from "@/lib/week/load";
-import { formatRange } from "@/lib/week";
+import { easternStamp } from "@/lib/lockin/view";
+import { replayAllowed } from "@/lib/lockin/source";
 import { DigestBeacon } from "@/components/DigestBeacon";
 import { ActionQueue } from "@/components/ActionQueue";
 import { RosterCrunchPanel } from "@/components/RosterCrunchPanel";
-import { WeekStrip } from "@/components/week/WeekStrip";
-import { LockDesk } from "@/components/week/LockDesk";
+import { LockDeskBoard } from "@/components/lockin/LockDeskBoard";
 import { DeadlineStrip } from "@/components/week/DeadlineStrip";
 import { InjuredStarters } from "@/components/week/InjuredStarters";
 
 export const dynamic = "force-dynamic";
 
-export default async function ThisWeekPage() {
+export default async function ThisWeekPage({ searchParams }) {
+  const at = (await searchParams)?.at;
+  const replay = replayAllowed() && typeof at === "string" ? at : null;
   const h = await getLeagueHistory();
   const principals = await getPrincipals(h);
   const rosterId = h.me.rosterId;
   const [week, forms, digest] = await Promise.all([
-    loadWeek(h, rosterId),
+    loadWeek(h, rosterId, { replay }),
     currentFormByRoster(h),
     loadDigest(h),
   ]);
   const form = forms.get(rosterId);
   const actions = actionQueue(h, rosterId, principals);
   const teamName = h.me.teamName ?? h.me.displayName;
-  const range = week.window ? formatRange(week.window.start, week.window.end) : null;
-  const ended = week.window?.state === "ended";
+  const hd = week.header;
   const season = h.currentLeague.season;
 
   return (
@@ -82,12 +83,10 @@ export default async function ThisWeekPage() {
         </div>
         {!week.offseason && (
           <p className="mt-2 figure text-meta text-secondary">
-            {[
-              range,
-              week.status,
-              week.available ? `${week.banked} of ${week.slots.length} banked` : null,
-              week.available ? `${week.points} pts` : null,
-            ]
+            {(hd
+              ? [hd.range, `${hd.locked} locked`, `${hd.open} open`, `${hd.points} pts`, week.desk?.generatedAt ? `as of ${easternStamp(week.desk.generatedAt)}` : null]
+              : [week.desk?.message]
+            )
               .filter(Boolean)
               .join(" · ") || "Dates unknown"}
           </p>
@@ -116,18 +115,12 @@ export default async function ThisWeekPage() {
         </>
       ) : (
         <>
-          <WeekStrip slots={week.slots} available={week.available} ended={ended} />
-          <LockDesk
-            slots={week.slots}
-            available={week.available}
-            reason={week.reason}
-            ended={ended}
-          />
+          {week.desk && <LockDeskBoard rosterId={rosterId} desk={week.desk} mode="compact" showHeader={week.desk.status !== "in_season"} />}
         </>
       )}
 
       <DeadlineStrip deadlines={week.deadlines} week={week.week} window={week.window} />
-      <InjuredStarters injured={week.injured} available={week.available} />
+      {week.desk?.status === "in_season" && <InjuredStarters injured={week.injured} />}
       <ActionQueue items={actions} compact className="mt-4" />
 
       <DigestBeacon metrics={digest.nextMetrics} />

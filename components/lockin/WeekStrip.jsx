@@ -12,7 +12,13 @@ export function WeekStrip({ slots, summary }) {
             <li key={s.index} className="grid grid-cols-[2.75rem_minmax(0,1fr)_auto] items-center gap-2 px-3 py-2">
               <span className="font-mono text-micro font-semibold text-faint">{s.label}</span>
               <span className="min-w-0">
-                <span className="block text-body font-medium leading-snug text-ink">{s.name ?? "Empty slot"}</span>
+                {s.playerId ? (
+                  <a href={`#lk-${s.playerId}`} className="block text-body font-medium leading-snug text-ink underline decoration-border-strong underline-offset-2 hover:text-accent-text">
+                    {s.name}
+                  </a>
+                ) : (
+                  <span className="block text-body font-medium leading-snug text-ink">Empty slot</span>
+                )}
                 <span className="mt-0.5 flex items-center gap-1 text-micro text-muted">
                   <StateIcon state={key} className={key === "locked" ? "text-ink" : ""} />
                   {SLOT_STATES[key].label}

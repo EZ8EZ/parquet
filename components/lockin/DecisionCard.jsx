@@ -41,7 +41,7 @@ function Num({ label, value, sub }) {
 
 function Detail({ card, today, open }) {
   return (
-    <details className="group mt-2 border-t border-border" open={open}>
+    <details data-player-detail className="group mt-2 border-t border-border" open={open}>
       <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-meta font-semibold text-muted hover:text-accent-text">
         Charts and history
         <ChevronRight size={12} aria-hidden="true" className="disclosure-chevron shrink-0 group-open:rotate-90" />
@@ -97,31 +97,43 @@ export function DecisionCard({ card, record, today, open = false, methodHref }) 
   );
 }
 
-/** A lineup call or a player with nothing to decide: one compact row, charts on demand. */
+/** A lineup call or a player with nothing to decide: one row; tap it for the numbers and charts. */
 export function QuietCard({ card, today, open = false }) {
   const key = slotKeyOf(card);
   const fc = card.forecast;
+  const line = card.decision.kind === "none" ? card.decision.text : gamesLeftText(card);
   return (
-    <article id={`lk-${card.playerId}`} className="scroll-mt-4 rounded-[var(--radius)] border border-border bg-surface px-3 pt-2.5">
-      <div className="flex items-start justify-between gap-3">
-        <Who card={card} />
-        {card.banked != null && <span className="figure shrink-0 text-lede font-semibold text-ink">{fmt(card.banked)}</span>}
-      </div>
-      {key && (
-        <p className="mt-1 flex items-center gap-1 text-micro text-muted">
-          <StateIcon state={key} /> {SLOT_STATES[key].label}
-        </p>
-      )}
-      <p className="mt-1 text-meta leading-snug text-ink">
-        {card.decision.kind === "none" ? card.decision.text : gamesLeftText(card)}
-        {card.decision.kind === "lineup" && <span className="text-muted">. {card.decision.text}.</span>}
-      </p>
-      {card.decision.kind === "lineup" && fc && fc.basis !== "league-prior" && (
-        <p className="mt-0.5 text-micro text-muted">
-          Next game, 8 in 10: <span className="figure text-ink">{fmt(fc.range.p10)}-{fmt(fc.range.p90)}</span> ({basisText(fc)})
-        </p>
-      )}
-      <Detail card={card} today={today} open={open} />
+    <article id={`lk-${card.playerId}`} className="scroll-mt-4">
+      <details data-player-detail className="group" open={open}>
+        <summary className="flex min-h-11 cursor-pointer list-none items-center gap-2 px-3 py-2 hover:bg-surface-2">
+          <span className="w-9 shrink-0 font-mono text-micro font-semibold text-faint">{card.slotLabel ?? "BN"}</span>
+          <span className="min-w-0 flex-1">
+            <span className="flex flex-wrap items-baseline gap-x-1.5">
+              <span className="text-body font-semibold leading-snug text-ink">{card.name}</span>
+              {card.injury?.status && <span className="text-micro font-medium text-negative">{card.injury.status}</span>}
+            </span>
+            <span className="flex items-center gap-1 text-micro leading-snug text-muted">
+              {key && <StateIcon state={key} />}
+              {key ? `${SLOT_STATES[key].label} · ` : ""}
+              {line}
+            </span>
+          </span>
+          {card.banked != null && <span className="figure shrink-0 text-lede font-semibold text-ink">{fmt(card.banked)}</span>}
+          <ChevronRight size={14} aria-hidden="true" className="disclosure-chevron shrink-0 text-faint group-open:rotate-90" />
+        </summary>
+        <div className="border-t border-border px-3 pb-3">
+          <p className="mt-2 text-micro text-muted">
+            {[card.team, card.positions.join("/")].filter(Boolean).join(" · ") || "team unknown"}
+            {card.decision.kind === "lineup" ? ` · ${card.decision.text}` : ""}
+          </p>
+          {card.decision.kind === "lineup" && fc && fc.basis !== "league-prior" && (
+            <p className="mt-0.5 text-micro text-muted">
+              Next game, 8 in 10: <span className="figure text-ink">{fmt(fc.range.p10)}-{fmt(fc.range.p90)}</span> ({basisText(fc)})
+            </p>
+          )}
+          <PlayerDetail card={card} today={today} />
+        </div>
+      </details>
     </article>
   );
 }

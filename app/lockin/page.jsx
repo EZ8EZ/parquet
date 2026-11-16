@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { PageHeader } from "@/components/ui";
+import { Onward } from "@/components/Onward";
 import { LockDeskBoard } from "@/components/lockin/LockDeskBoard";
 import { readLensRosterId } from "@/lib/auth/server";
 import { replayAllowed } from "@/lib/lockin/source";
@@ -27,6 +28,7 @@ export default async function LockInPage({ searchParams }) {
       ) : (
         <LockDeskBoard rosterId={rosterId} mode={mode} open={one(sp.open)} replay={replay} />
       )}
+      <Onward from="/lockin" />
     </>
   );
 }
