@@ -1,163 +1,50 @@
 "use client";
 /**
- * THE DESK - the app's bottom chrome.
+ * THE DESK - the app's bottom chrome, bottom-up:
  *
- * Four things stacked at the bottom of every page, bottom-up:
+ *   tab row      53pt  This Week, Team, Trade, League, and the Menu button
+ *   context row  44pt  your team and this week's scorebug
+ *   handle       24pt  the grip that opens the menu above it
  *
- *   tab row      53pt  five always-visible destinations: the four primaries plus More
- *   context row  44pt  what you are looking at, and what is outstanding
- *   handle       24pt  the grip that opens the drawer above all of it
+ * The menu is small on purpose: search, then the utility pages (lib/nav.js
+ * `utilitySurfaces`). Everything else lives under a tab, so the tab that owns the
+ * current page stays lit (`tabOf`).
  *
- * 121pt plus `env(safe-area-inset-bottom)`, so ~155pt at rest on a device with a home
- * indicator - was 116pt/19pt for the handle until a `target-size` audit measured that
- * button's own box against WCAG 2.5.8 and it failed outright; grown to the 24pt floor,
- * upward only (see the handle's own comment below and app/globals.css), which is the
- * one direction that doesn't touch the arithmetic the root layout's bottom padding is
- * sized to and belongs to another owner this round - that padding still clears the
- * new total with room to spare, just less of it (see app/layout.tsx's comment).
- *
- * D53 SHIPPED THE SINGLE FULL-BLEED "MENU" BUTTON WITH AN OPEN QUESTION ATTACHED: can
- * a reader find the four primaries, or are they visible without an action - and which
- * of those the owner meant was never settled. This is the owner's answer: visible
- * without an action, on every route, the way Sleeper's own bottom bar never asks a
- * returning user to open anything to reach League or Team. See DECISIONS.md D65.
- *
- * THE FIVE TABS ARE `primarySurfaces()` PLUS ONE. Four plain links, rendered from the
- * same registry flag every other pinned-destination view in this app has read (Home's
- * former shortcut row, the drawer's former pinned block - both gone now, since a
- * destination printed as a persistent tab does not also need printing beside it). The
- * fifth is More: the same control that used to be the whole row, now one fifth of it,
- * still opening the identical drawer below with the identical focus-trap/inert
- * contract - nothing about the SHEET changed, only what sits above it at rest.
- *
- * WHAT MOVES WHEN IT OPENS: nothing you can reach. The drawer is the FIRST child of
- * the sheet, above the handle, so it grows upward into the page and the three rows
- * below stay bolted to the bottom of the screen. The mockup this was built from had
- * it the other way round - drawer last, so opening pushed the tab row up the screen
- * and out from under your thumb, which is the one thing a fixed bar is uniquely good
- * at not doing. Muscle memory is the entire budget of a bottom bar, and an element
- * that moves 500pt when you touch a grip next to it has spent it.
- *
- * TWO ACCESSIBILITY STATES, NOT THREE:
- *
- *   collapsed  non-modal. `<nav aria-label="Primary">` wraps the whole resting sheet -
- *              the seat chip, the status line and the tab row are ALL navigation, and
- *              that landmark is the assertion every route in e2e/ makes (see
- *              e2e/helpers.ts), unchanged by what row happens to sit inside it. The
- *              drawer inside it is `hidden` + `inert` when closed, so it is not in the
- *              tab order, not in the accessibility tree, and not findable by
- *              browser find-in-page.
- *   expanded   `role="dialog" aria-modal="true"`, focus trapped inside the sheet,
- *              Escape closes, and the page behind is `inert`.
- *
- * Drag is an ACCELERATOR, never the contract. The handle is a real `<button>` with
- * `aria-expanded`/`aria-controls`, the More tab below it is the same action in words,
- * and every destination in the drawer is also on /more - which stays a real page for
- * exactly that reason (no-JS, crawlers, and "see everything"). The former
- * chevron-only toggle in the context row is gone: with a control that says "More" in
- * the row below, a bare glyph was a third way to do one thing. Nothing in this
- * component is reachable by drag alone. Intermediate detents are deliberately
- * NOT implemented: a third position would be a state with no name to announce and no
- * keyboard equivalent, so it would be a pointer-only nicety pretending to be part of
- * the interface.
- *
- * NEVER AUTO-HIDES ON SCROLL. Chrome that disappears when you move is chrome you
- * cannot aim at, and hiding on scroll is how every inventive navigation eventually
- * dies. It is always exactly where it was.
+ * Collapsed, `<nav aria-label="Primary">` wraps the sheet (the landmark every e2e
+ * route asserts) and the drawer is `hidden` + `inert`. Expanded, the sheet is a modal
+ * dialog: focus is trapped, Escape closes, and the page behind is `inert`. Drag is an
+ * accelerator only; the handle and the Menu tab are real buttons.
  */
-import {
-  Fragment,
-  Suspense,
-  useCallback,
-  useEffect,
-  useId,
-  useRef,
-  useState,
-} from "react";
+import { Fragment, Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  ChevronDown,
-  ChevronRight,
-  ChevronUp,
-  ExternalLink,
-  Repeat,
-  ScrollText as LedgerIcon,
-  Settings,
-} from "lucide-react";
-import { BrandMark } from "./Brand";
-import { groupedSurfaces, primarySurfaces } from "@/lib/nav";
+import { ChevronDown, ChevronRight, ExternalLink, Menu } from "lucide-react";
+import { primarySurfaces, tabOf, utilitySurfaces } from "@/lib/nav";
 import { cn } from "@/lib/ui";
 import { iconForSurface } from "./nav-icons";
 import { TeamAvatar } from "./TeamAvatar";
 import { SearchPanel } from "./SearchPanel";
-/** The id of the page content the expanded drawer makes `inert`. */
+
 export const APP_CONTENT_ID = "app-content";
-/**
- * The Desk's own search box takes its own query-string key rather than `q`.
- *
- * `/values` already uses `q` for its name filter (lib/values/url.ts). A box that
- * lives on every page has to assume the page underneath it already owns the obvious
- * names, so it takes one nothing else uses; `/more`'s own box keeps `q`, because
- * there the box IS the page.
- */
 const DESK_SEARCH_PARAM = "find";
-function isActive(pathname, href) {
-  if (href === "/") return pathname === "/";
-  return pathname === href || pathname.startsWith(href + "/");
-}
+
 export function Desk({ data }) {
   const pathname = usePathname() ?? "/";
-  /*
-   * Both open states are stored as THE PATH THEY WERE OPENED ON rather than as a
-   * boolean, which is what makes "navigating from inside the drawer closes it" a
-   * derivation instead of an effect. A boolean would need a `useEffect` on `pathname`
-   * whose whole body was `setExpanded(false)` - the cascading-render anti-pattern this
-   * repo's lint rule rejects, and rightly: the drawer is not open independently of a
-   * page, it is open ON one. Leaving it open over the page it just navigated to would
-   * also mean the sheet is still modal and still covering the answer.
-   */
+  // Keyed to the pathname so a navigation from inside the menu closes it.
   const [openOn, setOpenOn] = useState(null);
-  const [seatMenuOn, setSeatMenuOn] = useState(null);
-  /*
-   * THE EXIT, which the drawer did not have. `.desk-drawer:not([hidden])` animated the
-   * sheet in over 180ms and then `hidden` + `inert` removed it in a single frame, so
-   * opening was a considered gesture and closing was a snap - the asymmetry the
-   * interaction review named as the biggest source of jank in the app.
-   *
-   * A closing drawer is a THIRD state, not the absence of the open one, so it gets its
-   * own field rather than being derived from a transition between renders (which is
-   * the `useEffect`-that-only-calls-setState pattern the comment above and this repo's
-   * lint rule both reject). It stores a path for exactly the reason `openOn` does.
-   *
-   * It is set only by `setExpanded`, so it covers every deliberate dismissal - the
-   * close button, Escape, the scrim, the handle tap and the flick down - and NOT the
-   * navigation case, which is correct: navigating away is the page changing underneath
-   * the sheet, and animating a drawer out over a page that is already gone would be
-   * motion describing something that did not happen.
-   */
   const [closingOn, setClosingOn] = useState(null);
   const closeTimer = useRef(null);
   const expanded = openOn === pathname;
   const closing = !expanded && closingOn === pathname;
-  const seatMenu = seatMenuOn === pathname;
+
   const setExpanded = useCallback(
     (next) => {
       if (closeTimer.current) clearTimeout(closeTimer.current);
       closeTimer.current = null;
       if (next) {
-        // Reopening mid-exit has to cancel the exit outright, or the pending timer
-        // fires into the newly open drawer and hides it.
         setClosingOn(null);
       } else {
         setClosingOn(pathname);
-        /*
-         * Matches `--motion-base`. Deliberately a plain number rather than a read of
-         * the custom property: this only decides when an already-invisible, already
-         * `inert` node leaves the tree, so being 60ms generous under reduced motion
-         * (where the CSS runs the exit at `--motion-fast`) costs nothing and is
-         * cheaper than a `getComputedStyle` on every dismissal.
-         */
         closeTimer.current = setTimeout(() => setClosingOn(null), 180);
       }
       setOpenOn(next ? pathname : null);
@@ -170,22 +57,17 @@ export function Desk({ data }) {
     },
     [],
   );
+
   const sheetRef = useRef(null);
   const drawerRef = useRef(null);
   const handleRef = useRef(null);
   const drawerId = useId();
-  const seatMenuId = useId();
+
   const close = useCallback(() => {
     setExpanded(false);
-    // Focus returns to the control that opened the drawer, not to the top of the
-    // document - the standard dialog contract, and the reason the handle is the one
-    // element that stays put in both states. It happens at the START of the exit, not
-    // at the end of it: the drawer is `inert` from this frame on, so there is nothing
-    // inside it left to hold focus and nothing to wait for.
     handleRef.current?.focus();
   }, [setExpanded]);
-  // The background half of the modal contract. Set imperatively because the element
-  // it applies to is rendered by the server layout, which cannot hold this state.
+
   useEffect(() => {
     const content = document.getElementById(APP_CONTENT_ID);
     if (!content) return;
@@ -194,8 +76,7 @@ export function Desk({ data }) {
       content.inert = false;
     };
   }, [expanded]);
-  // Escape, and the focus trap. Both are scoped to the expanded state: collapsed, the
-  // Desk is ordinary page chrome and must not intercept a single key.
+
   useEffect(() => {
     if (!expanded) return;
     const onKeyDown = (e) => {
@@ -207,12 +88,11 @@ export function Desk({ data }) {
       if (e.key !== "Tab") return;
       const sheet = sheetRef.current;
       if (!sheet) return;
-      const focusable = sheet.querySelectorAll(
-        'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
-      );
-      const items = Array.from(focusable).filter(
-        (el) => el.offsetParent !== null,
-      );
+      const items = Array.from(
+        sheet.querySelectorAll(
+          'a[href], button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])',
+        ),
+      ).filter((el) => el.offsetParent !== null);
       if (items.length === 0) return;
       const first = items[0];
       const last = items[items.length - 1];
@@ -228,121 +108,43 @@ export function Desk({ data }) {
     document.addEventListener("keydown", onKeyDown);
     return () => document.removeEventListener("keydown", onKeyDown);
   }, [expanded, close]);
-  // Opening moves focus into the drawer rather than into the search field: an
-  // autofocused input raises the software keyboard, which would cover most of the
-  // sheet the reader just asked to see. One Tab away, by choice rather than by force.
+
   useEffect(() => {
     if (expanded) drawerRef.current?.focus();
   }, [expanded]);
-  // The seat popover is not modal - it is three links off a chip - so it gets the
-  // light version of the same contract: Escape, and a click anywhere else.
-  useEffect(() => {
-    if (!seatMenu) return;
-    const onKeyDown = (e) => {
-      if (e.key === "Escape") setSeatMenuOn(null);
-    };
-    const onPointerDown = (e) => {
-      const el = e.target;
-      if (!sheetRef.current?.contains(el)) setSeatMenuOn(null);
-    };
-    document.addEventListener("keydown", onKeyDown);
-    document.addEventListener("pointerdown", onPointerDown);
-    return () => {
-      document.removeEventListener("keydown", onKeyDown);
-      document.removeEventListener("pointerdown", onPointerDown);
-    };
-  }, [seatMenu]);
-  // ---------------------------------------------------------------- drag
-  // A flick up opens, a flick down closes, and a tap does whatever a tap does. The
-  // pointer never gets to do anything the button cannot, so this is pure speed.
+
   const dragRef = useRef(null);
-  /*
-   * A pointer gesture that ends on this button still fires a `click` afterwards, and
-   * that click would toggle the state the drag just set - so a flick up opened the
-   * drawer and the trailing click closed it again, which looked exactly like the drag
-   * not being wired up at all. The suppression flag has to be SEPARATE from `dragRef`,
-   * because `dragRef` is cleared on pointerup and is therefore already null by the
-   * time the click arrives to be checked against it. Found by driving the real
-   * gesture rather than by reading the handler; a synthesized click never reproduces
-   * it.
-   */
   const suppressClickRef = useRef(false);
   const onPointerDown = (e) => {
-    // Capture, or the gesture dies the instant the pointer leaves a 19pt-tall button -
-    // which is immediately, since the whole point of the gesture is to move away from
-    // it. Without this the move and up events land on whatever is under the cursor and
-    // the drag silently does nothing.
     e.currentTarget.setPointerCapture(e.pointerId);
     dragRef.current = { y: e.clientY, moved: false };
   };
   const onPointerMove = (e) => {
     const d = dragRef.current;
-    if (!d) return;
-    if (Math.abs(e.clientY - d.y) > 24) d.moved = true;
+    if (d && Math.abs(e.clientY - d.y) > 24) d.moved = true;
   };
   const onPointerUp = (e) => {
     const d = dragRef.current;
     dragRef.current = null;
-    if (!d?.moved) return; // a tap - let the click handler own it
+    if (!d?.moved) return;
     suppressClickRef.current = true;
     const up = e.clientY < d.y;
     setExpanded(up);
     if (!up) handleRef.current?.focus();
   };
   const onHandleClick = () => {
-    // The drag already decided; consume its trailing click and leave the state alone.
     if (suppressClickRef.current) {
       suppressClickRef.current = false;
       return;
     }
     setExpanded(!expanded);
   };
-  // ------------------------------------------------- the "more below" cue
-  /*
-   * The registry list is taller than any phone, and a scroll region with no edge is
-   * a scroll region nobody knows is there: the review that produced this measured
-   * 846pt of list in a 416pt window, with The Lab, Methodology, Settings and Switch
-   * team all under the fold and nothing on screen saying so. Half the fix is the
-   * window itself (see the `max-h` below, now the whole viewport minus the resting
-   * sheet rather than a flat 26rem cap). The other half is this: the drawer says
-   * out loud when there is more, and stops saying it the moment there is not.
-   *
-   * Derived from the element rather than from the item count - the list is
-   * registry-driven and its height depends on the viewport, the theme's type size
-   * and whether the search panel has results, none of which this component can
-   * predict.
-   *
-   * Driven by EVENTS, never by an effect keyed on `expanded`: a `useEffect` whose
-   * body is `setMoreBelow(...)` is the cascading-render pattern this repo's lint
-   * rule rejects, and the same one the open-state comment above explains away for
-   * the drawer itself. The two events that can change the answer are the only two
-   * hooks it needs - a scroll, and the drawer's own open animation finishing, at
-   * which point the element has a real height for the first time (it is `hidden`
-   * until then, so every measurement before it is zero). `.desk-drawer:not([hidden])`
-   * in globals.css always sets an animation, including the reduced-motion branch,
-   * so this fires in both.
-   */
-  const scrollerRef = useRef(null);
-  const [moreBelow, setMoreBelow] = useState(false);
-  const syncMoreBelow = useCallback(() => {
-    const el = scrollerRef.current;
-    if (!el) return;
-    // A whole line of slack, so a sub-pixel rounding remainder at the true bottom
-    // does not leave the cue permanently lit on a list you have fully read.
-    setMoreBelow(el.scrollHeight - el.scrollTop - el.clientHeight > 12);
-  }, []);
-  const destinations = primarySurfaces();
-  // The More tab reads as "you are somewhere in here" whenever the current route is
-  // not one of the four always-visible primaries, matching the native-app convention
-  // that exactly one tab is lit at any given time - not only while the drawer itself
-  // is open.
-  const onPrimary = destinations.some((s) => isActive(pathname, s.href));
-  const moreActive = expanded || !onPrimary;
+
+  const activeTab = tabOf(pathname);
+  const menuActive = expanded || activeTab === "utility";
+
   return (
     <>
-      {/* Visible, but not reachable: the page stays legible behind an open drawer
-            (that is most of the point of a sheet over a full-screen menu) while this
-            absorbs the tap that dismisses it. */}
       {(expanded || closing) && (
         <div
           aria-hidden="true"
@@ -350,9 +152,6 @@ export function Desk({ data }) {
           data-closing={closing ? "" : undefined}
           className={cn(
             "desk-scrim fixed inset-0 z-40 bg-bg/60",
-            // On the way out it is a picture of a drawer receding, not a control:
-            // a tap during the exit must reach the page, which is what the reader is
-            // aiming at by then.
             closing && "pointer-events-none",
           )}
         />
@@ -363,189 +162,82 @@ export function Desk({ data }) {
           ref={sheetRef}
           role={expanded ? "dialog" : undefined}
           aria-modal={expanded ? true : undefined}
-          aria-label={expanded ? "Everything in Parquet" : undefined}
-          // `desk-sheet` (globals.css) is the app's one true glass: fill + pane
-          // light + blur-and-saturate + upward shadow + the gold catchlight laid
-          // along this top edge. The plain border-t stays underneath it so the
-          // edge is still a defined line where the catchlight has faded out.
+          aria-label={expanded ? "Menu" : undefined}
           className="desk-sheet mx-auto w-full max-w-2xl rounded-t-[--radius-lg] border-t border-border"
           style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
         >
-          {/* `aria-label="Primary"` is load-bearing well beyond this file: every
-            registry-driven smoke test asserts it (e2e/helpers.ts) as the one piece of
-            chrome that proves a route rendered at all. It wraps the whole sheet now
-            rather than a row of tabs, because the whole sheet is the navigation. */}
           <nav aria-label="Primary">
-            {/* ------------------------------------------------------- the drawer
-            Everything that is NOT one of the five tabs below: the search box, then
-            every registry group except Primary, since the primaries are always on
-            screen already and printing them again here would be the same
-            destination advertised twice in one view. */}
             <div
               id={drawerId}
               ref={drawerRef}
               tabIndex={-1}
-              // `hidden` waits for the exit animation; `inert` does not. The drawer stops
-              // being reachable the instant it is dismissed and only then plays itself
-              // out, so nothing focusable and nothing tappable survives the gesture.
               hidden={!expanded && !closing}
               inert={!expanded}
               data-closing={closing ? "" : undefined}
-              onAnimationEnd={expanded ? syncMoreBelow : undefined}
-              // The display utility is applied ONLY when open. Tailwind's preflight
-              // hides `[hidden]` with a plain `display: none` rule, and a `flex`
-              // utility in the same class list wins on order - so a permanent `flex`
-              // here would render the whole drawer on every page, closed or not.
               className={cn(
                 "desk-drawer outline-none",
                 (expanded || closing) && "flex flex-col",
               )}
             >
-              <div className="relative">
-                {/*
-          The window used to be `min(26rem, 100dvh-16rem)`, and on every phone in
-          the design range the flat 26rem arm won - so the drawer showed 416pt of
-          an 846pt list on a screen with 588pt to spare. The cap bought nothing
-          the viewport arm was not already buying, and cost the bottom half of the
-          registry. What is left is the honest arithmetic: the whole screen, minus
-          the 116pt resting sheet, minus the home indicator, minus a gap wide enough
-          that the page behind is still visibly a page. On a tall screen the whole
-          registry now fits with no scroll at all; on a phone it is most of it with
-          the cue below saying so.
-        */}
-                <div
-                  ref={scrollerRef}
-                  onScroll={syncMoreBelow}
-                  className="max-h-[calc(100dvh-10.5rem-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain px-3.5 pt-3"
-                >
-                  <Suspense fallback={null}>
-                    <SearchPanel
-                      basePath={pathname}
-                      param={DESK_SEARCH_PARAM}
-                    />
-                  </Suspense>
-
-                  {/*
-          Every group EXCEPT Primary. Those four are already on screen as the tab
-          row below, at rest, on every route - printing them again here would be
-          the same destination advertised twice in one view. /more remains the
-          index that lists literally everything, and it is the last link here.
-        */}
-                  {groupedSurfaces()
-                    .filter((g) => g.group !== "Primary")
-                    .map(({ group, items }) => (
-                      <div key={group} className="mt-3 first:mt-2">
-                        <h2 className="mb-1.5 px-0.5 text-micro font-semibold uppercase tracking-[0.16em] text-faint">
-                          {group}
-                        </h2>
-                        <div className="grid grid-cols-2 gap-1.5">
-                          {items
-                            // The "see everything" link at the bottom of the drawer is this
-                            // same page; two of it in one panel is one too many.
-                            .filter((s) => s.href !== "/more")
-                            .map((s) => {
-                              const Icon = iconForSurface(s.href);
-                              const active = isActive(pathname, s.href);
-                              return (
-                                <Link
-                                  key={s.href}
-                                  href={s.href}
-                                  aria-current={active ? "page" : undefined}
-                                  className={cn(
-                                    "flex min-h-11 items-start gap-2 rounded-[--radius-sm] border bg-surface px-2 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2",
-                                    active
-                                      ? "border-accent-edge"
-                                      : "border-border",
-                                  )}
-                                >
-                                  <Icon
-                                    size={15}
-                                    aria-hidden="true"
-                                    className={cn(
-                                      "mt-[3px] shrink-0",
-                                      active
-                                        ? "text-accent-text"
-                                        : "text-faint",
-                                    )}
-                                  />
-                                  <span className="min-w-0 flex-1">
-                                    <span className="block line-clamp-1 text-note font-semibold leading-tight text-ink">
-                                      {s.label}
-                                    </span>
-                                    <span className="mt-px block line-clamp-1 text-micro leading-snug text-faint">
-                                      {s.sub}
-                                    </span>
-                                  </span>
-                                </Link>
-                              );
-                            })}
-                        </div>
-                      </div>
-                    ))}
-
-                  <Link
-                    href="/more"
-                    className="mb-2 mt-3 flex min-h-11 items-center justify-center gap-1 rounded-[--radius-sm] border border-dashed border-border text-note font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
-                  >
-                    See everything on one page
-                    <ChevronRight size={13} aria-hidden="true" />
-                  </Link>
-                </div>
-
-                {/* `aria-hidden` and `pointer-events-none`: a screen reader already knows
-            the list continues, and a keyboard user already reaches the rest by
-            tabbing, which scrolls it into view. This is for the one reader those
-            two affordances do not serve - the one looking at a phone. */}
-                <div
-                  aria-hidden="true"
-                  // The cue fades rather than unmounting, so "is it showing" is opacity,
-                  // which no browser automation can read as visibility. Stated as data so
-                  // e2e/nav.spec.ts can assert the honest half of this - that it goes away
-                  // at the bottom - instead of only that it appears.
-                  data-more-below={moreBelow ? "true" : "false"}
-                  className={cn(
-                    "pointer-events-none absolute inset-x-0 bottom-0 flex justify-center bg-gradient-to-t from-bg via-bg/80 to-transparent pb-1 pt-6 transition-opacity",
-                    moreBelow ? "opacity-100" : "opacity-0",
+              <div className="max-h-[calc(100dvh-10.5rem-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain px-3.5 pb-2 pt-3">
+                <Suspense fallback={null}>
+                  <SearchPanel basePath={pathname} param={DESK_SEARCH_PARAM} />
+                </Suspense>
+                <ul className="mt-2 space-y-1">
+                  {utilitySurfaces().map((s) => {
+                    const Icon = iconForSurface(s.href);
+                    const active = pathname === s.href;
+                    return (
+                      <li key={s.href}>
+                        <Link
+                          href={s.href}
+                          aria-current={active ? "page" : undefined}
+                          className={cn(
+                            "flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border bg-surface px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2",
+                            active ? "border-accent-edge" : "border-border",
+                          )}
+                        >
+                          <Icon
+                            size={15}
+                            aria-hidden="true"
+                            className={cn("shrink-0", active ? "text-accent-text" : "text-faint")}
+                          />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-note font-semibold leading-tight text-ink">
+                              {s.label}
+                            </span>
+                            <span className="block text-micro leading-snug text-secondary">
+                              {s.sub}
+                            </span>
+                          </span>
+                          <ChevronRight size={13} aria-hidden="true" className="shrink-0 text-faint" />
+                        </Link>
+                      </li>
+                    );
+                  })}
+                  {data?.seat?.sleeperHref && (
+                    <li>
+                      <a
+                        href={data.seat.sleeperHref}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+                      >
+                        <ExternalLink size={15} aria-hidden="true" className="shrink-0 text-faint" />
+                        Open my team in Sleeper
+                      </a>
+                    </li>
                   )}
-                  style={{
-                    transitionDuration: "var(--motion-fast)",
-                    transitionTimingFunction: "var(--ease-out)",
-                  }}
-                >
-                  <span className="inline-flex items-center gap-1 rounded-full border border-border bg-elevated px-2 py-0.5 text-micro font-semibold uppercase tracking-[0.14em] text-muted">
-                    More below
-                    <ChevronDown size={11} />
-                  </span>
-                </div>
+                </ul>
               </div>
             </div>
 
-            {/* ------------------------------------------------------- the handle
-            24pt (was 19pt - see app/globals.css's `.desk-handle` comment for the
-            `target-size` finding that grew it), and still the one control in here
-            that is under the 44pt DEFAULT minimum - which is why `min-h-0` has to
-            override the global rule in globals.css rather than the rule being wrong.
-            It is full-bleed wide, its BOTTOM edge sits ~97pt above
-            `env(safe-area-inset-bottom)` so it never competes with the iOS home
-            indicator's swipe - unchanged by the height increase, which only grew the
-            box upward, away from that edge - and the More tab two rows below is the
-            same action at a fully compliant size for anyone who wants it (also the
-            reason 24pt was the right floor to stop at rather than Material's 48pt:
-            this is the accelerator, not the only way in, and doubling the Desk's
-            resting height would cost more thumb-reach real estate than a control with
-            a full-size alternative two rows away is worth). Its name says "drag
-            handle" so that it and the More tab are never two identically-named
-            controls in one list to a screen reader. */}
             <button
               ref={handleRef}
               type="button"
               aria-expanded={expanded}
               aria-controls={drawerId}
-              aria-label={
-                expanded
-                  ? "Drag handle: close the menu"
-                  : "Drag handle: open the menu"
-              }
+              aria-label={expanded ? "Drag handle: close the menu" : "Drag handle: open the menu"}
               onClick={onHandleClick}
               onPointerDown={onPointerDown}
               onPointerMove={onPointerMove}
@@ -562,218 +254,72 @@ export function Desk({ data }) {
               />
             </button>
 
-            {/* --------------------------------------------------- the scorebug row
-            VISION.md M3: the context row is the app's scorebug - a persistent
-            one-line strip of the lens team's standing facts (code, record,
-            standing, TCI, window), the same on every route, tappable through to
-            /league's seat card. The seat chip shrinks to its avatar (the strip's
-            leading team code carries the identity in words now - printing the full
-            name AND the code an inch apart would be the restatement D61 warns
-            about) and keeps the menu. The capture count rides beside the strip as
-            its own compact link - see lib/desk.js rule 1b for why it neither owns
-            the row anymore nor disappears (D40: the count is real information).
-
-            THE STRIP NEVER TRUNCATES, BY ARITHMETIC RATHER THAN BY CSS: its widest
-            honest content (2-char code, "40-12", "#14/14", "TCI 100", "2029-31",
-            four separators) plus the chip and the capture link fits 390px with
-            room to spare, and lib/desk.js omits segments it cannot print whole. A
-            scorebug that ellipsizes is a scorebug that lies, so there is no
-            `truncate` here on purpose.
-
-            MONO, DELIBERATELY, against globals.css's ".figure on quantities, mono
-            on identifiers only" rule: VISION.md's M3 (owner-approved) assigns this
-            one element the broadcast voice outright ("a persistent one-line mono
-            strip... the brand's tightest typography"), and the strip reads as one
-            composite identifier of your seat - a ticker line - not as figures in
-            prose. The exception is this row only. */}
-            <div className="relative flex h-[44px] items-center gap-2 px-3.5">
+            {/* The scorebug never truncates: lib/desk.js keeps it short enough to fit. */}
+            <div className="flex h-[44px] items-center gap-2 px-3.5">
               {data?.seat ? (
-                <>
-                  <button
-                    type="button"
-                    aria-expanded={seatMenu}
-                    aria-controls={seatMenuId}
-                    aria-label={`${data.seat.label} - team menu`}
-                    onClick={() => setSeatMenuOn(seatMenu ? null : pathname)}
-                    className={cn(
-                      "flex min-h-0 shrink-0 items-center gap-1 rounded-full border bg-surface py-1 pl-1 pr-1.5 transition-colors",
-                      seatMenu
-                        ? "border-accent"
-                        : "border-border hover:border-border-strong",
-                    )}
-                  >
-                    <TeamAvatar
-                      name={data.seat.label}
-                      avatarId={data.seat.avatarId}
-                      teamLogoUrl={data.seat.teamLogoUrl}
-                      size="xs"
-                      className="rounded-full"
-                    />
-                    <ChevronUp
-                      size={12}
-                      aria-hidden="true"
-                      className={cn(
-                        "disclosure-chevron shrink-0 text-faint",
-                        seatMenu && "rotate-180",
-                      )}
-                    />
-                  </button>
-
-                  {data.capture && (
-                    <Link
-                      href={data.capture.href}
-                      aria-label={data.capture.label}
-                      // `self-stretch`: the row is 44pt and so is the target. The
-                      // accent is this row's established to-do tone; the ledger's
-                      // own registry mark says WHERE in one glyph so the count can
-                      // stay a bare figure.
-                      className="flex shrink-0 items-center gap-1 self-stretch px-0.5 figure text-meta font-semibold text-accent-text transition-colors hover:text-ink"
-                    >
-                      <LedgerIcon
-                        size={12}
-                        aria-hidden="true"
-                        className="shrink-0"
-                      />
-                      {data.capture.count}
-                    </Link>
-                  )}
-
-                  <Link
-                    href={data.bug.href}
-                    aria-label={data.bug.label}
-                    // `self-stretch` rather than a bare inline link: the row is 44pt and
-                    // so is the target, instead of a 17pt strip of text floating in the
-                    // middle of it.
-                    className="flex min-w-0 flex-1 items-center justify-end gap-1 self-stretch whitespace-nowrap font-mono figure text-meta font-medium text-ink transition-colors hover:text-accent-text"
-                  >
-                    <span>
-                      {data.bug.parts.map((part, i) => (
-                        <Fragment key={i}>
-                          {i > 0 && (
-                            <span aria-hidden="true" className="mx-0.5 text-faint">
-                              ·
-                            </span>
-                          )}
-                          {part}
-                        </Fragment>
-                      ))}
-                    </span>
-                    <ChevronRight
-                      size={13}
-                      aria-hidden="true"
-                      className="shrink-0 text-faint"
-                    />
-                  </Link>
-                </>
-              ) : data ? (
-                // NO LENS YET (lib/desk.ts: `{ seat: null, status: null }`) - a stranger
-                // on one of the handful of pages that must work before a choice exists
-                // (/teams, /about, /claim/invalid). `h.me` would happily hand back the
-                // deploy owner's own identity here, which is the exact leak D35's
-                // middleware exists to prevent one layer up, in page content - so this
-                // row asks for a choice instead of presenting one nobody made. No seat
-                // chip (there is no team to put in it), and the one link this row can
-                // honestly offer.
-                <>
-                  <span className="flex shrink-0 items-center rounded-full border border-border bg-surface px-3 py-1.5 text-note font-medium text-faint">
-                    No team picked yet
-                  </span>
-                  <Link
-                    href="/teams"
-                    className="flex min-w-0 flex-1 items-center justify-end gap-1 self-stretch line-clamp-1 text-meta font-semibold text-accent-text transition-colors hover:text-ink"
-                  >
-                    <span className="line-clamp-1">Pick your team</span>
-                    <ChevronRight
-                      size={13}
-                      aria-hidden="true"
-                      className="shrink-0"
-                    />
-                  </Link>
-                </>
-              ) : (
-                // The corpus could not be read (lib/desk.ts returns null and says so in
-                // the server log). Navigation is registry-driven and does not depend on
-                // it, so the Desk keeps working with this row simply quiet.
-                <span className="flex-1 line-clamp-1 text-meta text-faint">
-                  Parquet
-                </span>
-              )}
-
-              {seatMenu && data?.seat && (
-                <div
-                  id={seatMenuId}
-                  // The app's own raised stack + catchlight, not Tailwind's stock
-                  // `shadow-lg`: this popover genuinely floats, so it uses the
-                  // same tokens the drawer does and re-themes with them.
-                  className="absolute bottom-[calc(100%+6px)] left-3 z-10 w-56 overflow-hidden rounded-[--radius-sm] border border-border-strong bg-elevated shadow-[var(--shadow-raised),var(--edge-hilite)]"
+                <Link
+                  href={data.bug.href}
+                  aria-label={data.bug.label}
+                  className="flex min-w-0 flex-1 items-center gap-2 self-stretch whitespace-nowrap font-mono figure text-meta font-medium text-ink transition-colors hover:text-accent-text"
                 >
-                  <SeatAction
-                    href="/teams"
-                    icon={<Repeat size={14} aria-hidden="true" />}
-                  >
-                    Switch team
-                  </SeatAction>
-                  {/* The outbound handoff. Parquet advises and cannot act, so every
-                screen that says something about your team should be one tap from
-                the app that can do something about it. Null against the fixture
-                provider, whose league ids are not Sleeper ids - see
-                lib/sleeperLinks.ts, where that is made structurally impossible to
-                get wrong rather than guarded per call site. */}
-                  {data.seat.sleeperHref && (
-                    <SeatAction
-                      href={data.seat.sleeperHref}
-                      external
-                      icon={<ExternalLink size={14} aria-hidden="true" />}
-                    >
-                      Open my team in Sleeper
-                    </SeatAction>
-                  )}
-                  <SeatAction
-                    href="/settings"
-                    icon={<Settings size={14} aria-hidden="true" />}
-                  >
-                    Settings
-                  </SeatAction>
-                </div>
+                  <TeamAvatar
+                    name={data.seat.label}
+                    avatarId={data.seat.avatarId}
+                    teamLogoUrl={data.seat.teamLogoUrl}
+                    size="xs"
+                    className="shrink-0 rounded-full"
+                  />
+                  <span className="min-w-0 flex-1">
+                    {data.bug.parts.map((part, i) => (
+                      <Fragment key={i}>
+                        {i > 0 && (
+                          <span aria-hidden="true" className="mx-1 text-faint">
+                            ·
+                          </span>
+                        )}
+                        {part}
+                      </Fragment>
+                    ))}
+                  </span>
+                  <ChevronRight size={13} aria-hidden="true" className="shrink-0 text-faint" />
+                </Link>
+              ) : data ? (
+                <Link
+                  href="/teams"
+                  className="flex min-w-0 flex-1 items-center justify-between gap-1 self-stretch text-meta font-semibold text-accent-text transition-colors hover:text-ink"
+                >
+                  <span className="text-faint">No team picked yet</span>
+                  <span className="inline-flex items-center gap-1">
+                    Pick your team
+                    <ChevronRight size={13} aria-hidden="true" className="shrink-0" />
+                  </span>
+                </Link>
+              ) : (
+                <span className="flex-1 text-meta text-faint">Parquet</span>
               )}
             </div>
 
-            {/* ------------------------------------------------------- the tab row
-            The five always-visible destinations, replacing the single "Menu" button
-            (D65). Same 53pt the button used to fill alone - a five-column grid
-            divides the width instead of widening the control - so the root layout's
-            bottom-padding arithmetic (app/layout.tsx) is untouched. Icon-over-label
-            in both cases, matching the shape of a native tab bar rather than the
-            worded full-bleed button it replaced: five short labels read faster at a
-            glance than one long one, which was the whole point of a persistent row. */}
             <div className="grid h-[53px] grid-cols-5 border-t border-border">
-              {destinations.map((s) => {
+              {primarySurfaces().map((s) => {
                 const Icon = iconForSurface(s.href);
-                const active = isActive(pathname, s.href);
+                const active = activeTab === s.tab;
                 return (
                   <Link
                     key={s.href}
                     href={s.href}
-                    aria-current={active ? "page" : undefined}
+                    aria-current={pathname === s.href ? "page" : active ? "true" : undefined}
                     className={cn(
                       "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 transition-colors",
-                      active
-                        ? "tab-glow text-accent-text"
-                        : "text-muted hover:text-ink",
+                      active ? "tab-glow text-accent-text" : "text-muted hover:text-ink",
                     )}
                   >
                     <Icon size={18} aria-hidden="true" className="shrink-0" />
-                    <span className="max-w-full line-clamp-1 text-micro font-semibold leading-none">
-                      {s.short ?? s.label}
+                    <span className="max-w-full whitespace-nowrap text-micro font-semibold leading-none">
+                      {s.short}
                     </span>
                   </Link>
                 );
               })}
-              {/* More: the fifth tab, and the only one that is a button rather than a
-              link - it opens the drawer in place instead of navigating. No
-              aria-label: the visible text below already says "More" (or "Close"
-              while open), and a hand-written label could only ever paraphrase that,
-              never match it exactly. */}
               <button
                 type="button"
                 aria-expanded={expanded}
@@ -781,24 +327,16 @@ export function Desk({ data }) {
                 onClick={() => setExpanded(!expanded)}
                 className={cn(
                   "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 transition-colors",
-                  moreActive
-                    ? "tab-glow text-accent-text"
-                    : "text-muted hover:text-ink",
+                  menuActive ? "tab-glow text-accent-text" : "text-muted hover:text-ink",
                 )}
               >
                 {expanded ? (
-                  <ChevronDown
-                    size={18}
-                    aria-hidden="true"
-                    className="shrink-0"
-                  />
+                  <ChevronDown size={18} aria-hidden="true" className="shrink-0" />
                 ) : (
-                  <span className="shrink-0 leading-none">
-                    <BrandMark size={18} gradientId="desk-mark" />
-                  </span>
+                  <Menu size={18} aria-hidden="true" className="shrink-0" />
                 )}
-                <span className="max-w-full line-clamp-1 text-micro font-semibold leading-none">
-                  {expanded ? "Close" : "More"}
+                <span className="max-w-full text-micro font-semibold leading-none">
+                  {expanded ? "Close" : "Menu"}
                 </span>
               </button>
             </div>
@@ -806,28 +344,5 @@ export function Desk({ data }) {
         </div>
       </div>
     </>
-  );
-}
-function SeatAction({ href, external, icon, children }) {
-  const className =
-    "flex min-h-11 items-center gap-2.5 border-b border-border px-3 text-note font-medium text-ink transition-colors last:border-b-0 hover:bg-surface-2";
-  if (external) {
-    return (
-      <a
-        href={href}
-        target="_blank"
-        rel="noopener noreferrer"
-        className={className}
-      >
-        <span className="shrink-0 text-faint">{icon}</span>
-        {children}
-      </a>
-    );
-  }
-  return (
-    <Link href={href} className={className}>
-      <span className="shrink-0 text-faint">{icon}</span>
-      {children}
-    </Link>
   );
 }

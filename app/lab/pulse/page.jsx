@@ -35,6 +35,7 @@ import { loadDigest } from "@/lib/digest";
 import { dealHref } from "@/lib/tradegraph/url";
 import { Card, Disclosure, EmptyState, PageHeader, SectionHeader } from "@/components/ui";
 import { ExperimentBadge } from "@/components/ExperimentBadge";
+import { Onward } from "@/components/Onward";
 export const dynamic = "force-dynamic";
 export const metadata = {
   title: "The pulse - Parquet Lab",
@@ -276,6 +277,7 @@ export default async function PulsePage() {
         signal - it may not earn a permanent page, and unlike TCI and RFI themselves it
         has not been lived with across a season yet.
       </p>
+      <Onward from="/lab/pulse" />
     </div>
   );
 }
@@ -292,7 +294,7 @@ function PageHeaderLocal({ digest }) {
         : `Since ${digest.sinceLabel}.`;
   return (
     <PageHeader
-      kicker="The Lab"
+      kicker="This Week · experiment"
       title="The pulse"
       subtitle={subtitle}
       action={<ExperimentBadge />}

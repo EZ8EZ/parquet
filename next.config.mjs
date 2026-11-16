@@ -1,3 +1,4 @@
+import { REDIRECTS } from "./lib/nav.js";
 const nextConfig = {
   /**
    * /web is gone and its readers are not. The trade web shipped with a URL that four
@@ -13,7 +14,10 @@ const nextConfig = {
    * bookmark case, which wants the index anyway.
    */
   async redirects() {
-    return [{ source: "/web", destination: "/deals", permanent: true }];
+    return [
+      { source: "/web", destination: "/deals", permanent: true },
+      ...REDIRECTS.map((r) => ({ ...r, permanent: false })),
+    ];
   },
   /**
    * Baseline response security headers - none of this app's own attack surface

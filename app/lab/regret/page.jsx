@@ -12,6 +12,7 @@ import {
   Stat,
 } from "@/components/ui";
 import { ExperimentBadge } from "@/components/ExperimentBadge";
+import { Onward } from "@/components/Onward";
 export const dynamic = "force-dynamic";
 export const metadata = {
   title: "The regret ledger - Parquet Lab",
@@ -377,7 +378,7 @@ export default async function RegretPage({ searchParams }) {
   const rosterId = h.me.rosterId ?? h.rosters[0]?.rosterId;
   const header = (
     <PageHeader
-      kicker="The Lab"
+      kicker="Team · experiment"
       title="The regret ledger"
       subtitle={
         chosen
@@ -598,6 +599,7 @@ export default async function RegretPage({ searchParams }) {
           </ul>
         </Disclosure>
       </div>
+      <Onward from="/lab/regret" />
     </div>
   );
 }

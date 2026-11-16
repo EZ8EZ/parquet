@@ -31,35 +31,12 @@ import {
 import { loadDraftOrderFidelity, loadPickSlots } from "@/lib/agency/source";
 import { PickAgencyPanel } from "@/components/PickAgencyPanel";
 import { RosterCrunchPanel } from "@/components/RosterCrunchPanel";
+import { DirectionCard } from "@/components/team/DirectionCard";
+import { TabIndex } from "@/components/TabIndex";
+import { getPrincipals } from "@/lib/principals";
+import { diagnose } from "@/lib/gameplan";
+import { directionSummary } from "@/lib/team";
 export const dynamic = "force-dynamic";
-/*
- * CORE AGE, SAYING ONLY WHAT IT MEASURES.
- *
- * These three used to be labelled "Rebuilding / ascending", "Win-now window" and
- * "Balanced" - three strategy words for a figure that is the value-weighted age of the
- * top 8 players and nothing else. Posture, a different classifier on a different input,
- * used two of the same words for a different question, and /league printed both on one
- * row. The notes below were always honest about this being an age; only the labels were
- * not. See lib/metrics/axes.js.
- *
- * Neutral tone for all three, for the reason components/PostureTag gives: an age is not
- * a grade, and a semantic colour hands the reader a verdict the sentence underneath
- * refuses to give (D6).
- */
-const CORE_AGE_COPY = {
-  "young core": {
-    label: "Young core",
-    note: "Your core skews young - time is on your side.",
-  },
-  "veteran core": {
-    label: "Veteran core",
-    note: "Your core is the oldest quarter of the league - production now, less of it later.",
-  },
-  "mixed-age core": {
-    label: "Mixed-age core",
-    note: "A mixed-age core - you can pivot either direction.",
-  },
-};
 /** How many seasons of trajectory the sparkline shows, current season included. */
 const TRAJECTORY_SEASONS = 4;
 /**
@@ -110,7 +87,6 @@ export default async function RosterPage() {
   // on another.
   const ranked = leagueValueRanking(h);
   const a = ranked.find((r) => r.rosterId === rosterId);
-  const win = CORE_AGE_COPY[a.coreAgeBand];
   // One chain per rostered player, built from one assembly. `loadProvenanceSource`
   // costs `getPrincipals` and `buildDraftIndex`, both already loaded on demand and
   // memoized for five minutes by their own modules - it is the bill /drafts has always
@@ -185,6 +161,14 @@ export default async function RosterPage() {
   const shortest = tl ? [...tl.assets].slice(-3).reverse() : [];
   const forms = await currentFormByRoster(h);
   const form = forms.get(rosterId);
+  const principals = await getPrincipals(h);
+  let dx = null;
+  try {
+    dx = diagnose(h, rosterId, principals);
+  } catch (err) {
+    console.error(`[roster] direction unavailable: ${err instanceof Error ? err.message : String(err)}`);
+  }
+  const direction = directionSummary({ dx, analysis: a, form });
   /*
    * PICK AGENCY. The join nobody had made: a pick's outcome is decided by whoever's
    * season orders the draft it sits in, which the corpus has always known as the
@@ -240,7 +224,6 @@ export default async function RosterPage() {
           <span className="block line-clamp-1">{a.teamName ?? "Your team"}</span>
         }
         title={a.ownerName}
-        truncateTitle
         aside={
           <OpenInSleeper
             href={sleeperTeamUrl(h.currentLeague.leagueId, rosterId)}
@@ -279,17 +262,193 @@ export default async function RosterPage() {
                   </>
                 )}
               </span>
-              <Tag tone="neutral">{win.label}</Tag>
             </div>
-            <p className="mt-1 text-note leading-snug text-muted">{win.note}</p>
           </>
         }
       />
 
-      {/* Before tip-off: active count vs limit, taxi room, lowest-value players and
-            league-wide likely releases - counts from lib/crunch, not advice. */}
-      <RosterCrunchPanel h={h} rosterId={rosterId} className="mb-3" />
+      <DirectionCard summary={direction} />
 
+      <RosterCrunchPanel
+        h={h}
+        rosterId={rosterId}
+        onlyWhenRelevant
+        className="mt-3"
+      />
+
+      <SectionHeader
+        title="Roster - by value"
+        href="/values"
+        cta="all values"
+      />
+      <p className="-mt-1 mb-1.5 figure text-meta text-secondary">
+        {a.valued.length} players · bar = share of {fmtValue(a.playerValue)}{" "}
+        player value · line = {TRAJECTORY_SEASONS}-season age-curve trajectory
+      </p>
+      <ul className="space-y-1">
+        {a.valued.map((v, i) => (
+          <Fragment key={v.playerId}>
+            {/* TIER SEAMS, same device as /values (round 10): a labelled beat where
+                the tier changes, so seventeen rows read as the tiers they already
+                belong to instead of one unbroken column. The list is value-sorted
+                by construction (analyzeRoster), so tiers are contiguous. */}
+            {i > 0 && a.valued[i - 1].tier !== v.tier && (
+              <li
+                aria-hidden="true"
+                className="flex items-center gap-2 px-1 pb-0.5 pt-2"
+              >
+                <span className="text-meta font-semibold uppercase tracking-[0.16em] text-accent-text">
+                  {v.tier}
+                </span>
+                <span className="rule min-w-0 flex-1" />
+              </li>
+            )}
+            <ValueAssetRow
+            // WHY HE IS HERE, in place. This is the page that asks the question, so
+            // this is the page that answers it without a navigation: expanding a row
+            // shows the whole chain back to whichever of the five origins it ends on.
+            // Seventeen rails is seventeen array walks over data already in hand -
+            // the only real cost is `loadProvenanceSource` above, which is two
+            // memoized on-demand loaders and not a corpus change (D25).
+            provenance={
+              provenance[v.playerId] && (
+                // `names` only, and that is the whole prop list on purpose. The
+                // per-gap scenes, the draft hairlines and the hold population are
+                // deliberately NOT computed here: this page draws one rail per
+                // rostered player, and /lineage is where a single asset earns the
+                // full treatment. The rail degrades to ordering plus proportion,
+                // which is what an inline expansion wants anyway.
+                <ProvenanceRail
+                  chain={provenance[v.playerId]}
+                  names={ctx.names}
+                  showTitle
+                />
+              )
+            }
+            name={v.name}
+            team={v.team}
+            position={v.position}
+            age={v.age}
+            value={v.value}
+            tier={v.tier}
+            playerId={v.playerId}
+            injury={v.injury}
+            injuryDetail={v.injuryDetail}
+            share={a.playerValue ? v.value / a.playerValue : 0}
+            consensusRank={v.consensusRank}
+            pricedRank={v.pricedRank}
+            productionBacked={v.productionBacked}
+            productionRefusal={v.productionRefusal}
+            // The rank scale is shared across this roster's own rows. /values computes
+            // the same thing over its 260, so the two pages scale to their own lists -
+            // which is correct: a dumbbell is only ever compared with the rows beside it.
+            rankAxisMax={rosterRankAxisMax}
+            depth={depthRowFor(charts, h.players.get(v.playerId))}
+            trajectory={valueTrajectory(v)}
+            // ONE HUE, EVERY ROW (round 10). This used to leave the Sparkline's
+            // default valence pair in play: a declining line drew itself red, which
+            // painted most of an aging roster as a wall of warnings - colour
+            // restating slope as judgment, exactly what D6 forbids and what the
+            // line's own geometry already carries. Age-curve trajectories are the
+            // model unwinding a premium, not a verdict, so every row draws in the
+            // same dimmed accent and the slope alone does the talking.
+            trajectoryColor="var(--color-accent-dim)"
+            // The roster's own best asset gets the podium frame - same `hero`
+            // vocabulary as the /values board (see ValueAssetRow).
+            hero={i === 0 ? "lead" : undefined}
+            enterIndex={i}
+          />
+          </Fragment>
+        ))}
+      </ul>
+
+      {/* Pick capital - in dynasty, picks are assets, so they get real estate.
+            One row per season instead of one card per season. */}
+      <SectionHeader
+        title={`Draft capital - ${a.picks.picks.length} picks`}
+        href="/drafts"
+        cta="lineage"
+      />
+      {a.picks.picks.length === 0 ? (
+        <Card className="p-3">
+          <p className="text-body leading-relaxed text-muted">
+            No draft picks owned. Every future pick has been traded away - that
+            caps how much this roster can change.
+          </p>
+        </Card>
+      ) : (
+        <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
+          {a.picks.seasons.map((season) => {
+            const forSeason = a.picks.picks.filter((p) => p.season === season);
+            if (!forSeason.length) return null;
+            return (
+              <li key={season}>
+                {/* Season label and total on one line, chips using the FULL width
+                        below it - attribution ("via X") is long, and giving the chips
+                        the whole row costs fewer lines than an inline column. */}
+                <Link
+                  href="/drafts"
+                  className="block min-h-11 px-2.5 py-2 transition-colors hover:bg-surface-2"
+                >
+                  <span className="flex items-baseline justify-between gap-2">
+                    <span className="figure text-body font-semibold text-ink">
+                      {season}
+                    </span>
+                    <span className="flex items-center gap-1 figure text-meta text-muted">
+                      {forSeason.length} picks ·{" "}
+                      {fmtValue(forSeason.reduce((s, p) => s + p.value, 0))}
+                      <ChevronRight
+                        size={13}
+                        aria-hidden="true"
+                        className="text-faint"
+                      />
+                    </span>
+                  </span>
+                  <span className="mt-1 flex flex-wrap gap-1">
+                    {forSeason.map((p) => (
+                      <Tag
+                        key={`${p.season}-${p.round}-${p.originalRoster}`}
+                        tone={p.round === 1 ? "accent" : "neutral"}
+                      >
+                        {p.round === 1
+                          ? "1st"
+                          : p.round === 2
+                            ? "2nd"
+                            : `${p.round}rd`}
+                        {p.acquired && p.fromName ? ` via ${p.fromName}` : ""}
+                      </Tag>
+                    ))}
+                  </span>
+                </Link>
+              </li>
+            );
+          })}
+        </ul>
+      )}
+
+      {/* WHOSE SEASON DECIDES THEM. The list above says what you hold; this says
+            whether the outcome is yours. A pick set by your own season is an
+            instrument you act on, and a pick set by somebody else's is a claim on
+            their intentions - the same asset on the balance sheet, two different
+            things to own. */}
+      {agencyReads.length > 0 && (
+        <>
+          <SectionHeader
+            title="Whose season decides them"
+            href="/league"
+            cta="every posture"
+          />
+          <PickAgencyPanel
+            reads={agencyReads}
+            summary={agency}
+            orderLine={orderFidelity.panelLine}
+          />
+        </>
+      )}
+
+      <TabIndex tab="team" title="More on your team" />
+
+      <SectionHeader title="Against the league" />
       {/*
        * THE HEADLINE NUMBERS, WITH THE ONLY THING THAT MAKES THEM MEAN ANYTHING.
        *
@@ -505,90 +664,6 @@ export default async function RosterPage() {
         </>
       )}
 
-      {/* Pick capital - in dynasty, picks are assets, so they get real estate.
-            One row per season instead of one card per season. */}
-      <SectionHeader
-        title={`Draft capital - ${a.picks.picks.length} picks`}
-        href="/drafts"
-        cta="lineage"
-      />
-      {a.picks.picks.length === 0 ? (
-        <Card className="p-3">
-          <p className="text-body leading-relaxed text-muted">
-            No draft picks owned. Every future pick has been traded away - that
-            caps how much this roster can change.
-          </p>
-        </Card>
-      ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
-          {a.picks.seasons.map((season) => {
-            const forSeason = a.picks.picks.filter((p) => p.season === season);
-            if (!forSeason.length) return null;
-            return (
-              <li key={season}>
-                {/* Season label and total on one line, chips using the FULL width
-                        below it - attribution ("via X") is long, and giving the chips
-                        the whole row costs fewer lines than an inline column. */}
-                <Link
-                  href="/drafts"
-                  className="block min-h-11 px-2.5 py-2 transition-colors hover:bg-surface-2"
-                >
-                  <span className="flex items-baseline justify-between gap-2">
-                    <span className="figure text-body font-semibold text-ink">
-                      {season}
-                    </span>
-                    <span className="flex items-center gap-1 figure text-meta text-muted">
-                      {forSeason.length} picks ·{" "}
-                      {fmtValue(forSeason.reduce((s, p) => s + p.value, 0))}
-                      <ChevronRight
-                        size={13}
-                        aria-hidden="true"
-                        className="text-faint"
-                      />
-                    </span>
-                  </span>
-                  <span className="mt-1 flex flex-wrap gap-1">
-                    {forSeason.map((p) => (
-                      <Tag
-                        key={`${p.season}-${p.round}-${p.originalRoster}`}
-                        tone={p.round === 1 ? "accent" : "neutral"}
-                      >
-                        {p.round === 1
-                          ? "1st"
-                          : p.round === 2
-                            ? "2nd"
-                            : `${p.round}rd`}
-                        {p.acquired && p.fromName ? ` via ${p.fromName}` : ""}
-                      </Tag>
-                    ))}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {/* WHOSE SEASON DECIDES THEM. The list above says what you hold; this says
-            whether the outcome is yours. A pick set by your own season is an
-            instrument you act on, and a pick set by somebody else's is a claim on
-            their intentions - the same asset on the balance sheet, two different
-            things to own. */}
-      {agencyReads.length > 0 && (
-        <>
-          <SectionHeader
-            title="Whose season decides them"
-            href="/league"
-            cta="every posture"
-          />
-          <PickAgencyPanel
-            reads={agencyReads}
-            summary={agency}
-            orderLine={orderFidelity.panelLine}
-          />
-        </>
-      )}
-
       {/* Both shape charts in one card - two section headers and two card
             paddings for the same information was pure vertical cost. */}
       <SectionHeader title="Roster shape" />
@@ -623,92 +698,6 @@ export default async function RosterPage() {
           <BarChart data={posData} height={112} format={(n) => fmtValue(n)} />
         )}
       </Card>
-
-      <SectionHeader
-        title="Roster - by value"
-        href="/values"
-        cta="all values"
-      />
-      <p className="-mt-1 mb-1.5 figure text-meta text-secondary">
-        {a.valued.length} players · bar = share of {fmtValue(a.playerValue)}{" "}
-        player value · line = {TRAJECTORY_SEASONS}-season age-curve trajectory
-      </p>
-      <ul className="space-y-1">
-        {a.valued.map((v, i) => (
-          <Fragment key={v.playerId}>
-            {/* TIER SEAMS, same device as /values (round 10): a labelled beat where
-                the tier changes, so seventeen rows read as the tiers they already
-                belong to instead of one unbroken column. The list is value-sorted
-                by construction (analyzeRoster), so tiers are contiguous. */}
-            {i > 0 && a.valued[i - 1].tier !== v.tier && (
-              <li
-                aria-hidden="true"
-                className="flex items-center gap-2 px-1 pb-0.5 pt-2"
-              >
-                <span className="text-meta font-semibold uppercase tracking-[0.16em] text-accent-text">
-                  {v.tier}
-                </span>
-                <span className="rule min-w-0 flex-1" />
-              </li>
-            )}
-            <ValueAssetRow
-            // WHY HE IS HERE, in place. This is the page that asks the question, so
-            // this is the page that answers it without a navigation: expanding a row
-            // shows the whole chain back to whichever of the five origins it ends on.
-            // Seventeen rails is seventeen array walks over data already in hand -
-            // the only real cost is `loadProvenanceSource` above, which is two
-            // memoized on-demand loaders and not a corpus change (D25).
-            provenance={
-              provenance[v.playerId] && (
-                // `names` only, and that is the whole prop list on purpose. The
-                // per-gap scenes, the draft hairlines and the hold population are
-                // deliberately NOT computed here: this page draws one rail per
-                // rostered player, and /lineage is where a single asset earns the
-                // full treatment. The rail degrades to ordering plus proportion,
-                // which is what an inline expansion wants anyway.
-                <ProvenanceRail
-                  chain={provenance[v.playerId]}
-                  names={ctx.names}
-                  showTitle
-                />
-              )
-            }
-            name={v.name}
-            team={v.team}
-            position={v.position}
-            age={v.age}
-            value={v.value}
-            tier={v.tier}
-            playerId={v.playerId}
-            injury={v.injury}
-            injuryDetail={v.injuryDetail}
-            share={a.playerValue ? v.value / a.playerValue : 0}
-            consensusRank={v.consensusRank}
-            pricedRank={v.pricedRank}
-            productionBacked={v.productionBacked}
-            productionRefusal={v.productionRefusal}
-            // The rank scale is shared across this roster's own rows. /values computes
-            // the same thing over its 260, so the two pages scale to their own lists -
-            // which is correct: a dumbbell is only ever compared with the rows beside it.
-            rankAxisMax={rosterRankAxisMax}
-            depth={depthRowFor(charts, h.players.get(v.playerId))}
-            trajectory={valueTrajectory(v)}
-            // ONE HUE, EVERY ROW (round 10). This used to leave the Sparkline's
-            // default valence pair in play: a declining line drew itself red, which
-            // painted most of an aging roster as a wall of warnings - colour
-            // restating slope as judgment, exactly what D6 forbids and what the
-            // line's own geometry already carries. Age-curve trajectories are the
-            // model unwinding a premium, not a verdict, so every row draws in the
-            // same dimmed accent and the slope alone does the talking.
-            trajectoryColor="var(--color-accent-dim)"
-            // The roster's own best asset gets the podium frame - same `hero`
-            // vocabulary as the /values board (see ValueAssetRow).
-            hero={i === 0 ? "lead" : undefined}
-            enterIndex={i}
-          />
-          </Fragment>
-        ))}
-      </ul>
 
       <Onward from="/roster" />
     </div>

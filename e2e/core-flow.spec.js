@@ -13,7 +13,7 @@ import {
  * (lib/history.ts's `FIXTURE_SEED_ANNOTATIONS`, authored by "u1" - EZ8's own
  * seat, which is also the default "viewing as" identity with no cookie set).
  *
- *   1. Home -> Decision ledger -> open the annotate affordance on that trade and
+ *   1. This Week -> League -> Decision ledger -> open the annotate affordance on that trade and
  *      see the fixture's seeded reasoning ("Full rebuild...") already captured.
  *   2. Commissioner tools' transaction audit log links that SAME trade into the
  *      deal receipt (`dealHref`, lib/tradegraph/url.ts) instead of re-showing
@@ -44,16 +44,18 @@ test("ledger annotate affordance, then the audit-log deep link into the deal rec
 }) => {
   const guard = watchConsole(page);
   await primeLens(page);
-  // ---- Half one: Home -> Decision ledger -> the annotate affordance ----
+  // ---- Half one: This Week -> League -> Record -> Decision ledger ----
   await page.goto("/");
   await expectStableChrome(page);
-  // Through the Desk's persistent tab row (D65) - one of the four always-visible
-  // primaries, no drawer to open first. Scoped to the Primary navigation on purpose:
-  // "Record" is also the label of Home's record figure, which links to /league, and
-  // this test means the destination.
+  // The ledger left the tab bar; it lives in League's Record group.
   await page
     .getByRole("navigation", { name: "Primary" })
-    .getByRole("link", { name: "Record", exact: true })
+    .getByRole("link", { name: "League", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/league$/);
+  await page
+    .getByRole("region", { name: "Record" })
+    .getByRole("link", { name: /Decision ledger/ })
     .click();
   await expect(page).toHaveURL(/\/ledger$/);
   await expectStableChrome(page);
