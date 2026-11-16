@@ -41,7 +41,7 @@ import Link from "next/link";
 import { ChevronRight, GitCompare } from "lucide-react";
 import { PostureGlyph } from "@/components/PostureTag";
 import { RefusalMark } from "@/components/RefusalMark";
-import { Tag } from "@/components/ui";
+import { Disclosure, Tag } from "@/components/ui";
 import { useLeagueSelection } from "@/components/LeagueSelection";
 export function SelectedRoster({ rosters, myOwnerId }) {
   const { selected } = useLeagueSelection();
@@ -52,15 +52,15 @@ export function SelectedRoster({ rosters, myOwnerId }) {
   return (
     <div
       className={
-        `mt-1.5 rounded-[--radius] border p-2.5 ` +
-        (r.isMe ? "border-accent-edge bg-accent-wash" : "border-border bg-surface")
+        `mt-3 rounded-card p-4 ` +
+        (r.isMe ? "bg-accent-wash" : "bg-surface")
       }
     >
-      <p className="line-clamp-1 text-body font-semibold leading-tight text-ink">
+      <p className="text-body font-semibold text-ink">
         <span className="mr-1.5 figure text-meta text-secondary">{r.n}</span>
         {r.name}
         {r.isMe && (
-          <span className="ml-1.5 text-meta text-accent-text">you</span>
+          <Tag tone="accent" size="sm" className="ml-1.5">You</Tag>
         )}
       </p>
 
@@ -87,7 +87,7 @@ export function SelectedRoster({ rosters, myOwnerId }) {
       {/* THE LEAD READING: their window against yours, or the stated reason there is
           no such reading. One or the other always renders, never neither. */}
       {r.thesis ? (
-        <p className="mt-1.5 text-note leading-snug text-ink/85">{r.thesis}</p>
+        <p className="mt-1.5 text-note leading-snug text-muted">{r.thesis}</p>
       ) : (
         <RefusalMark className="mt-1.5">{r.thesisRefusal}</RefusalMark>
       )}
@@ -115,7 +115,9 @@ export function SelectedRoster({ rosters, myOwnerId }) {
         </p>
       )}
 
-      <p className="mt-1.5 text-note leading-snug text-muted">{r.thesisQuad}</p>
+      <Disclosure className="mt-1" summary={`About "${r.quadrantLabel}"`}>
+        {r.thesisQuad}
+      </Disclosure>
 
       <div className="mt-1 flex flex-wrap items-center gap-x-3">
         <Link

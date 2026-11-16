@@ -1,13 +1,14 @@
 # API_NOTES.md - Observed behavior of external APIs
 
-All shapes below are **empirically observed**, not assumed. Probed 2026-07-28.
+All shapes below are **empirically observed**, not assumed. Probed 2026-07-28; the lock-in
+endpoints (matchups, game log, schedule, state) were verified 2026-11-16.
 
 ## Sleeper API - `https://api.sleeper.app/v1`
 
 Read-only, no auth, no key. Rate limit ~1000 req/min. **No write access exists** -
 this app can advise but never execute a transaction. Every recommendation therefore
 ends in a one-tap deep link into the league's own Sleeper screen (see
-`lib/sleeperLinks.ts`), and the user carries the thesis over themselves from there.
+`lib/sleeperLinks.js`), and the user carries the thesis over themselves from there.
 
 ### Resolve user - `/user/EZ8`
 ```json
@@ -86,7 +87,7 @@ league has **15 principals over 14 rosters, one of them former**.
 manager's name survives.** The 2024 users payload contains `NSLKB`; the 2025 and 2026
 payloads do not. Both list exactly 14 users. Any display-name lookup for a historical
 fact therefore has to fall back through the chain, most recent season first, or a
-departed manager renders as a raw user id. `lib/principals.ts` does this in `userOf()`.
+departed manager renders as a raw user id. `lib/principals.js` does this in `userOf()`.
 
 **Roster ids are stable across this league's `previous_league_id` chain**, verified: the
 same 14 ids appear in every season, and the one ownership change kept `roster_id: 11`.
@@ -101,7 +102,7 @@ roster 11 would be credited to the manager who arrived in 2025.
 `complete` seasons and is absent or zero in the `pre_draft` 2026 season, alongside
 `fpts`. So any rate built on it must skip a season where either side is missing rather
 than divide by zero: live start rates (`fpts / ppts`) span **83.2% to 94.8%** across
-managers on the four completed seasons. See `lib/metrics/skill.ts`.
+managers on the four completed seasons. See `lib/metrics/skill.js`.
 
 ### Transactions - `/league/{league_id}/transactions/{week}`
 **Full parity with NFL confirmed.** Keys: `type` ("trade" | "waiver" |
@@ -139,7 +140,7 @@ Observed volume 2025: wk1=84, wk2=31, wk5=17, wk10=2, wk15=21.
    | 981396413038772224 | Klay Thompson | NSLKB → aidsnuge |
    | 981392784131178496 | Deandre Ayton | aidsnuge → NSLKB |
    All four share `creator: 882656931146457088` (the commissioner) and week/`leg` 1.
-   → Handled by `lib/derive/coalesce.ts` (time-window + roster union-find → one trade).
+   → Handled by `lib/derive/coalesce.js` (time-window + roster union-find → one trade).
 
 2. **`draft_picks` is ALWAYS EMPTY on commissioner rows.** Confirmed: every
    commissioner transaction in 2023 has `draft_picks: []` and `waiver_budget: []`.
@@ -254,8 +255,51 @@ about the player's news moves, so it supports "this record was touched then" and
 nothing stronger. It is still the only freshness signal the payload carries.
 
 ### Matchups - `/league/{league_id}/matchups/{week}`
-Not yet deep-probed; used for after-win/after-loss behavioral signals. Standard
-shape `{ roster_id, matchup_id, points, players, starters, players_points }`.
+Shape `{ roster_id, matchup_id, points, players, starters, starters_points,
+players_points }`, ~8 KB for all 14 rosters, CDN cache 60 s. Semantics in lock-in mode
+(`game_mode: 1`), verified 2026-11-16 by the lock-in study against 364 matchups / 2,538
+filled slots (2025 weeks 1-23, 2026 weeks 1-3) and one live week-4 snapshot:
+
+- `points` = sum of `starters_points` (364 of 364). Each slot banks one game; no player
+  fills two slots (0 duplicates in 2,538).
+- `starters_points` is live: it tracks the in-game score. An unlocked starter's score
+  **resets at his next tip** and is 0 if he does not play that game (10 cases in the live
+  snapshot). A starter never locked banks his last team game of the week (120 slots
+  banked exactly 0 after the player had played earlier that week; each had a DNP last game).
+- `players_points` for a starter equals `starters_points` (2,538 of 2,538). For a bench
+  player it is usually his latest game (77%), but 267 of 3,082 (8.7%) equal an earlier game
+  for no known reason. Treat bench `players_points` as unreliable.
+- `starters` is only the final lineup. Mid-week lineup moves leave no trace, which is why
+  `scripts/snapshot-lineups.js` copies this endpoint hourly to the `data` branch (D129).
+- **Lock state is not exposed** anywhere. It can be inferred with certainty only when
+  `starters_points` differs from the latest completed game and matches an earlier one
+  (`lib/lockin/lockState.js`). In the week-4 snapshot: 34 certainly locked, 50 ambiguous
+  until the next tip, 10 reset, 4 mid-game (n=98 starters).
+- Weeks run Monday to Sunday by the schedule's `week` (0 of 2,298 banked games outside
+  their week). League playoffs are weeks 21-23.
+
+Read by `lib/lockin/load.js` and the regret ledger (`lib/lab/regret/source.js`).
+
+### Per-player game log - `https://api.sleeper.app/stats/nba/player/{id}?season_type=regular&season={s}&grouping=week`
+No `/v1`. Undocumented. One row per **team game**, including rows for games the player
+did not play (`sp` = 0, empty stats) and rows for **games not yet played** (created ahead,
+with `updated_at` at the scheduled tip). "Played" means `sp` > 0 on a game the schedule
+marks `complete` (`lib/lockin/normalize.js`). Rows update live during a game; the last
+update lands a median 3.4 h after tip, but p90 is 31.5 h and the max 158 h (n=192
+completed 2026 games), so stat corrections can move a banked score a day later. About
+77 KB for a full season, 13.5 KB for 2026 to date. Populated from 2015 on (2012 was
+empty for the two veterans probed). CDN `s-maxage=60`.
+
+### Schedule - `https://api.sleeper.app/schedule/nba/regular/{season}`
+No `/v1`. Undocumented. The whole season: `game_id`, `week`, `date`, `status`
+(`pre_game`, `in_game`, `complete`, `postponed`, `canceled`), per-side `team`, `points`,
+quarter and overtime `scoring`, starting fives (`starters`). **No tip times**: a tip can be
+recovered only afterwards, from a game-log row's `updated_at`. About 1.05 MB for a full
+season. CDN `s-maxage=600`. Read by `lib/lockin/load.js`.
+
+### State - `/state/nba`
+Gives the current `season` and `week`; `lib/lockin` and `scripts/snapshot-lineups.js`
+read the week from it. When it flips on Monday was not measured.
 
 ### Drafts
 
@@ -414,8 +458,9 @@ calibration studies (`scripts/calibration/`); nothing in the request path reads 
 - **`bonus_pt_40p` / `bonus_pt_50p` are not counts of 40/50-point games** - they appear
   as a ~0/1 flag on hundreds of rows per season, including low-scoring ones. Exclude them
   from any fantasy-point computation built off this blob.
-- **The season in progress is empty**: `stats2026` (preseason, 2026-10-01) is ~1,800 keys
-  mapping to `{}`. Sleeper season `Y` = NBA season `Y-(Y+1)`, so `stats2025` is 2025-26.
+- **The season in progress is empty before it starts**: `stats2026` (preseason,
+  2026-10-01) was ~1,800 keys mapping to `{}`. It fills with season-to-date totals once
+  games are played (read in the 2026-11-16 red-team audit). Sleeper season `Y` = NBA season `Y-(Y+1)`, so `stats2025` is 2025-26.
 - `/stats/nba/regular/{season}/{week}` is a TRAP - it returns only the last game of the
   week for ~557 players (see `lib/lab/regret/source.js`). Per-game box scores live at
   `https://api.sleeper.app/stats/nba/player/{id}?season_type=regular&season={s}&grouping=week`

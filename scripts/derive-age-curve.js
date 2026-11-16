@@ -2,10 +2,10 @@
  * OFFLINE CALIBRATION - derives the dynasty age curve from real NBA box scores,
  * scored under THIS league's own scoring settings.
  *
- *   pnpm tsx scripts/derive-age-curve.ts
+ *   pnpm tsx scripts/derive-age-curve.js
  *
  * Run by hand, never from a render path. Its output is pasted into
- * `lib/valuation/ageCurve.ts` as a committed constant, with the sample size and the
+ * `lib/valuation/ageCurve.js` as a committed constant, with the sample size and the
  * run date recorded there. A calibration constant does not need recomputing on every
  * request, and D25's cold-start budget forbids it: this makes 14 network requests and
  * reads 2.5MB, which is an order of magnitude more than the whole corpus costs.
@@ -14,7 +14,7 @@
  * WHY THIS EXISTS
  * ---------------------------------------------------------------------------------
  * The league is five seasons old. Its own trade record is far too thin to calibrate an
- * age curve against (see `lib/valuation/exitWindow.ts`, which measures exactly that and
+ * age curve against (see `lib/valuation/exitWindow.js`, which measures exactly that and
  * refuses). But the age curve is not really a question about this league's trades. It
  * is a question about when NBA production declines, and those games were all played -
  * this league simply did not exist to watch them. The scoring settings are known, the
@@ -30,7 +30,7 @@
  * the window starts.
  *
  * NOT to be confused with `GET /v1/stats/nba/regular/{season}/{week}`, which looks like
- * the weekly sibling and is the trap documented in lib/lab/regret/source.ts: it returns
+ * the weekly sibling and is the trap documented in lib/lab/regret/source.js: it returns
  * only the last game of the week and covers ~557 players. The season aggregate has no
  * such problem - it carries `gp`, `sp` (seconds played) and every counting stat this
  * league scores, including `dd`, `td`, `tf`, `ff` and both point bonuses. Checked: not
@@ -261,7 +261,7 @@ async function main() {
         `${s.toFixed(3)}     ${(s / reference).toFixed(3)}    ${((s / peak) * PEAK).toFixed(3)}`,
     );
   }
-  console.log(`\n// paste into lib/valuation/ageCurve.ts`);
+  console.log(`\n// paste into lib/valuation/ageCurve.js`);
   console.log(`export const DERIVED_AGE_CURVE: DerivedAgeRow[] = [`);
   for (const r of raw) {
     const s = smoothed.get(r.age);

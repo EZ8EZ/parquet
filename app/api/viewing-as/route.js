@@ -6,7 +6,7 @@ const Body = z.object({ rosterId: z.number().int().min(1).max(64) });
  * Set which team the app is "viewing as". Persisted in a cookie so every server
  * component picks it up. The heavy league corpus is cached independently of this,
  * so switching teams is cheap — no `invalidateHistory()` here on purpose. `Corpus`
- * (lib/history.ts) is declared `Omit<LeagueHistory, "me">`, i.e. identity-independent
+ * (lib/history.js) is declared `Omit<LeagueHistory, "me">`, i.e. identity-independent
  * by construction, and `getLeagueHistory` re-derives `me` from the lens cookie on
  * every call, so switching the lens can never stale the corpus. Invalidating it here
  * used to force every other reader on this instance into a ~146-request corpus

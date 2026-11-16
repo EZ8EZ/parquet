@@ -39,7 +39,7 @@
  * The refusal LABEL in the figure slot is deliberate and is D95's rule, not a shortcut.
  * A refusal that renders as a dash reads as a missing number, which is a claim the
  * derivation just declined to make; `windowShort` returns the register's human label
- * for the same reason (it returned the raw code until VISION.md's kill-list flagged
+ * for the same reason (it returned the raw code until a design review flagged
  * internal constants in reader-facing prose - the code still lives on the refusal
  * object for tests, grep, and serialization).
  *
@@ -67,11 +67,11 @@ export function SeatCard({ seat }) {
   const { rank, teams, state, code, span, peak, synthesis, buckets } = seat;
   const readable = state === "window";
   return (
-    <section className="rounded-[--radius] border border-accent-edge bg-accent-wash p-3">
+    <section className="rounded-card bg-surface p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <h2 className="text-meta font-semibold uppercase tracking-[0.14em] text-accent-text">
-            Your seat
+          <h2 className="text-meta font-medium text-secondary">
+            Your value window
           </h2>
           {/*
               THE LARGEST FIGURE ON THE PAGE, and what it is depends on whether there is
@@ -81,7 +81,7 @@ export function SeatCard({ seat }) {
             */}
           <p
             className={
-              `mt-0.5 font-display font-semibold leading-none text-ink ` +
+              `mt-1 font-bold tracking-tight text-ink ` +
               (readable ? "figure text-display" : "text-lede")
             }
           >
@@ -95,13 +95,13 @@ export function SeatCard({ seat }) {
         </div>
         {rank > 0 && (
           <div className="shrink-0 text-right">
-            <p className="figure text-lede font-semibold leading-none text-ink">
+            <p className="figure text-display font-bold text-ink">
               {rank}
               <span className="text-note font-normal text-secondary">
                 /{teams}
               </span>
             </p>
-            <p className="mt-0.5 text-micro uppercase tracking-wide text-secondary">
+            <p className="text-meta text-secondary">
               by asset value
             </p>
           </div>
@@ -132,7 +132,7 @@ export function SeatCard({ seat }) {
           draws it, where it belongs, in components/LeagueBoard.jsx.
         */}
       {synthesis && !readable && (
-        <RefusalMark className="mt-2 border-t border-accent-edge/60 pt-2">
+        <RefusalMark className="mt-2 border-t border-border pt-3">
           {synthesis}
         </RefusalMark>
       )}
@@ -147,13 +147,13 @@ export function SeatCard({ seat }) {
         <div
           role="group"
           aria-label="Rosters compared with your window"
-          className="mt-2 space-y-1.5 border-t border-accent-edge/60 pt-2"
+          className="mt-2 space-y-1.5 border-t border-border pt-3"
         >
           {buckets.map((b) => (
             <div key={b.key}>
-              <p className="text-micro uppercase tracking-wide text-secondary">
+              <p className="text-meta text-secondary">
                 {b.label}
-                <span className="ml-1 figure normal-case tracking-normal text-ink">
+                <span className="ml-1 figure font-semibold text-ink">
                   {b.rosters.length}
                 </span>
               </p>
@@ -172,7 +172,7 @@ export function SeatCard({ seat }) {
           this link is the return leg. */}
       <Link
         href="/plan"
-        className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-meta font-semibold text-accent-text"
+        className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text"
       >
         What to do about it
         <ChevronRight size={13} aria-hidden="true" />

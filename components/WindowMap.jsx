@@ -169,7 +169,7 @@ import {
   CHART_GRID,
   CHART_NEUTRAL,
 } from "@/lib/chart-colors";
-import { windowRefusalCode } from "@/lib/metrics/window";
+import { windowRefusalCode } from "@/lib/metrics/windowRefusal";
 import { refusalSentence } from "@/lib/refusal";
 const W = 320;
 /**
@@ -539,9 +539,7 @@ export function WindowMap({ rows, first, last, currentSeason, selectedId }) {
               </span>
             )}
             {s === currentSeason && (
-              <span className="block text-micro font-semibold uppercase tracking-[0.12em] text-faint">
-                now
-              </span>
+              <span className="block text-micro font-semibold text-secondary">now</span>
             )}
           </span>
         ))}

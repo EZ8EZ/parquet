@@ -105,7 +105,7 @@ export function DistributionStrip({
   const body = (
     <>
       <div className="flex items-baseline justify-between gap-2">
-        <span className="flex min-w-0 items-center gap-0.5 line-clamp-1 text-meta uppercase tracking-wide text-secondary">
+        <span className="flex min-w-0 items-center gap-0.5 text-note font-medium text-secondary">
           {label}
           {href && (
             <ChevronRight size={11} aria-hidden="true" className="shrink-0" />
@@ -123,7 +123,7 @@ export function DistributionStrip({
         </span>
       </div>
       {hero && mine != null && (
-        <div className="mb-0.5 mt-1 figure text-hero font-semibold leading-none text-ink">
+        <div className="mb-0.5 mt-1 figure text-hero font-bold leading-none tracking-tight text-ink">
           {format(mine)}
         </div>
       )}
@@ -236,7 +236,7 @@ export function DistributionStrip({
       <Link
         href={href}
         className={cn(
-          "block min-w-0 rounded-[--radius-sm] px-1.5 py-1 transition-colors hover:bg-surface-2",
+          "block min-w-0 rounded-control px-1.5 py-1 transition-colors hover:bg-surface-2",
           className,
         )}
       >

@@ -236,7 +236,7 @@ export function CoherenceFragilityQuadrant({ view, selectedId, onSelect }) {
   const selIndex = points.findIndex((p) => p.rosterId === selected.rosterId);
   const selAt = selIndex >= 0 ? geom.placed[selIndex] : null;
   return (
-    <div className="rounded-[--radius] border border-border bg-surface p-2.5">
+    <div className="rounded-card bg-surface p-3">
       {/*
           THE PLOT AND ITS LABEL LAYER, in one aspect-locked box.
 
@@ -585,9 +585,7 @@ export function CoherenceFragilityQuadrant({ view, selectedId, onSelect }) {
 
       {/* Scale legend. A multi-hue ramp always ships one. */}
       <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-        <span className="text-micro uppercase tracking-wide text-faint">
-          TCI
-        </span>
+        <span className="text-micro font-semibold text-secondary">TCI</span>
         {TCI_BANDS.map((b) => (
           <span key={b.step} className="inline-flex items-center gap-1">
             <span

@@ -2,6 +2,31 @@
 
 Format: **Decision** - rationale, and rejected alternatives.
 
+## Index (D91 and D115 onward; append-only log below)
+
+| D | Title |
+|---|---|
+| D91 | The AI/subjective component is shelved (owner, 2026-08-19) |
+| D115 | A spent pick is not capital |
+| D116 | The price anchor moves to Sleeper's dynasty market |
+| D117 | The base curve becomes the measured hybrid |
+| D118 | Rookies priced on the market plus NBA draft capital |
+| D119 | The spine moves to this week's lock-in decisions (owner, 2026-11-16) |
+| D120 | A forward-looking lean is allowed, labelled as the model's |
+| D121 | The production term is off pending re-measurement |
+| D122 | Future picks slotted by this season once it has games |
+| D123 | Contend needs top-half standing by value |
+| D124 | Plan trade moves are named packages from the trade finder |
+| D125 | Cut list on the league replacement line; one tier ladder |
+| D126 | Two copy fixes: taxi deadline week, phantom draft capital |
+| D127 | One Sleeper client, one cache-lifetime table, visible gaps |
+| D128 | Data-layer housekeeping: Prisma, proxy, /league bundle, dead code |
+| D129 | Hourly lineup snapshots to an orphan `data` branch |
+| D130 | The lock-in model and its stopping numbers |
+| D131 | The lean is lineup-aware |
+| D132 | Lock state is inferred, never assumed |
+| D133 | Game context as facts only |
+
 ## D1. Repo name
 Attempting `parquet` (Celtics floor + columnar-data nod) per brief. Fallbacks in
 order: `hardwood-ledger`, `glasshouse-hoops`. Final name recorded in README.md.
@@ -7992,3 +8017,164 @@ Lint clean; 1,456 tests green (74 files) on the hybrid curve. The two consolidat
 ### Gate
 
 Lint clean; 1,460 tests green.
+
+## D119. THE SPINE MOVES TO THIS WEEK'S LOCK-IN DECISIONS - memory surfaces stay, but they are no longer the centre
+**Decision (owner, 2026-11-16).** The app's centre is the weekly lock-in decision: bank a starter's score now
+or hold the slot for a later game. The decision ledger, revealed-vs-stated strategy, the plan and the
+trade/valuation tools are kept and deprioritised. D91 stands: no AI or subjective component; statistical calls
+from the league's own data plus the context to judge them.
+**Evidence.** Product audit (2026-11-16, 5 rosters walked live): no live surface answered the lock decision;
+memory stories refresh about 20 times a year league-wide (98 trades in 5 seasons). Lock-in study: managers
+banked an earlier game rather than the last in 935 of 2,398 matched slots (39%), so the decision is made
+weekly by most of the league.
+**Rejected.** Keeping memory as the spine (too infrequent to bring anyone back weekly). Rebuilding what
+Sleeper already does (matchup, lineup screen, news).
+**Status.** The engine is merged (D130-D133). The four-tab navigation and the lock-or-hold cards are on other
+branches and not recorded here as shipped.
+
+## D120. A FORWARD-LOOKING LEAN IS ALLOWED, LABELLED AS THE MODEL'S - D6 still forbids grades and verdicts on past choices
+**Decision (as directed, 2026-11-16).** A lock/hold lean about a decision still open may be shown, always
+labelled as the model's and shipped with its record and caveats. Grades or verdicts on a manager's past
+choices remain out (D6).
+**Evidence.** The lineup-aware policy beat what managers banked by +9.4 points per team-week (95% CI +5.5 to
++14.7, cluster bootstrap by team-season, n=240 active team-weeks). Under the pessimistic rotation bound the
+per-player rule's gain is +0.8 (+0.3 to +1.5), so the record must travel with that caveat (`LEAN_RECORD`,
+lib/lockin/index.js).
+**Rejected.** The study's own recommendation of numbers with no lean at all; an unlabelled "Lock" instruction.
+**Known tension.** `/drafts/grades` and some awards still score past choices; not resolved here.
+
+## D121. THE PRODUCTION TERM IS OFF PENDING RE-MEASUREMENT - weight 0 through config, the code and the 0.233 fit stay
+**Decision.** `productionWeight: 0` in lib/valuation/config.js. `PRODUCTION_WEIGHT` (0.23) and the blend code
+stay in lib/valuation/production.js. lib/marketgap no longer cites production as a reason while the weight is
+0.
+**Evidence.** The weight was fitted against Sleeper's redraft ordinal, before the anchor moved to the
+dynasty/redraft blend (D116/D117), and it books a season lost to injury as zeros. Red-team audit: production
+caused 12 of the 15 least defensible prices (Haliburton #48 at 915 against dynasty ADP #12; 2,243 without
+production); players 30 and older gained 3.9 ranks on average (n=22), 23 and younger lost 5.1 (n=20). With it
+off, the top 60's mean absolute rank gap to dynasty ADP fell from 13.0 to 8.3 (n=60); of 64 players in either
+top 60, 44 moved closer and 11 further.
+**Rejected.** Refitting it today (needs an offline study against the blended anchor); deleting the code.
+
+## D122. FUTURE PICKS ARE SLOTTED BY THIS SEASON ONCE IT HAS GAMES - last season's bracket only before the first scored game
+**Decision.** `strengthRanks` (lib/picks.js) uses last season's playoff bracket only while the current season
+has no scored games. In season it blends record rank and roster-value rank, weighting record by the share of
+the regular season played (gp / (playoff_week_start - 1)).
+**Evidence.** Audit, all 14 rosters at 3 games each: EZ8's 2027 1st (3-0, #1 by value) was priced as a lottery
+pick (608) and is now slot 14 (164); mjrooney20's (1-2, #9) was priced as the champion's pick (164) and is now
+lottery (608).
+**Rejected.** Last season's bracket all season (the bug). Record alone; the weighting lets record count for
+more as games are played.
+
+## D123. CONTEND NEEDS TOP-HALF STANDING BY VALUE - a contending posture alone gives retool when the roster ranks in the bottom half
+**Decision.** `stanceOf` (lib/metrics/axes.js) returns contend only for a top-half rank by total asset value
+(1..ceil(teams/2)); otherwise a contending posture gives retool, basis "standing". Every direction note states
+the inputs that decided it.
+**Evidence.** Posture is a timing read (the oldest quartile) with no standing check; value ranks 7, 8 and 9
+sat within 373 points (3.3%) and got contend, rebuild, contend. After the fix one of 14 rosters changed
+direction: mjrooney20 (rank 9 of 14) from contend to retool.
+**Rejected.** The product audit also asked for the W-L record; it is not used, and why was not recorded.
+
+## D124. PLAN TRADE MOVES ARE NAMED PACKAGES FROM THE TRADE FINDER - a move with no viable package is dropped and says so; no asset is spent twice
+**Decision.** Each /plan trade move carries the finder's best package under the move's constraints
+(counterparty, assets out and in, both values), built in lib/gameplan/packages.js from `searchPackages`. Cut
+candidates are never trade filler.
+**Evidence (all 14 rosters, before / after).** Moves 46 / 37; trade moves naming a package 0 of 34 / 32 of 32;
+rosters spending one asset in two moves 4 / 0. Cost: `buildGamePlan` median 8.1 ms / 39.0 ms per roster, max
+61.8 ms (plain node, warm module).
+**Rejected.** Template moves ("one Cornerstone-or-better player") with a link to the finder.
+
+## D125. THE CUT LIST USES THE LEAGUE'S REPLACEMENT LINE, AND TIER WORDS COME FROM ONE LADDER
+**Decision.** Dead weight is the value of the (teams x active spots)th-best priced player (`replacementLevel`,
+lib/metrics/fragility.js). Every tier word on /plan comes from `leagueTierLabel`
+(lib/rankings/leagueTiers.js), the ladder /values and /roster print; the 1,569 star line is named by number.
+**Evidence.** The old line sat near value rank 157 in a league with 224 active spots and told owners to cut
+Kuminga (30.6 mpg, 18.0 fp/g), Jrue Holiday, Aaron Gordon and VanVleet. "Cornerstone-or-better" on /plan meant
+value >= 1,569, which /values labels "Depth".
+**Rejected.** A hand-set dead-weight rank; plan-specific tier names.
+
+## D126. TWO COPY FIXES - the taxi card's deadline week, and "the draft capital" in deals with no picks
+**Decision.** The taxi card says "this week (taxi moves close after week 4)" in the deadline week, "by the end
+of week N" before it, nothing after (lib/actions/index.js). The trade thesis no longer mentions draft capital
+when no picks move (lib/trade/index.js).
+**Evidence.** Home said "Stash ... before week 4" during week 4, beside "Taxi moves close after week 4"
+(audit, 2026-11-16). Tests pin both cases.
+
+## D127. ONE SLEEPER CLIENT WITH TIMEOUTS AND ONE CACHE-LIFETIME TABLE - and data gaps are shown, never swallowed
+**Decision.** Every Sleeper read goes through lib/providers/sleeper/client.js: 5 s per-attempt timeout, the
+old 429/5xx retries, Zod at the edge, Next's fetch data cache with one lifetime table (completed seasons
+forever; current data 5 min to 1 day). The corpus carries `gaps`; the root layout shows one sentence
+(components/DataGapBanner.jsx).
+**Evidence (one local run each, before / after).** Restart with cache kept: 1.09 s and 1 Sleeper request /
+0.48 s and 0. Cold instance with cache kept, five pages: 24 requests / 0. Cold with an empty cache: 3.06 s /
+2.95 s, 155 requests both.
+**Rejected.** Module-memory memos (empty on every cold serverless instance); retrying timeouts (doubles the
+wait); bare `catch {}` that reads a failed request as a quiet week.
+
+## D128. DATA-LAYER HOUSEKEEPING - Prisma off the read path without a database, middleware renamed proxy, /league bundle cut, dead code out
+**Decision.** Prisma is not imported on the read path when `DATABASE_URL` is unset (lib/history.js).
+`middleware.js` is `proxy.js` per the Next 16 docs. `windowRefusalCode` moved to lib/metrics/windowRefusal.js
+so /league ships no provider or Zod code. PlayerRow.jsx, StreakPanel.jsx, unused exports and the failing
+`typecheck` script (no TypeScript since D63) were removed.
+**Evidence.** /league first-load JS 877,897 to 568,378 bytes (reported in the hardening commit; the 877,897
+baseline is in the agent's bundle log). Without a database the read path had tried and failed a Prisma query
+on every corpus assembly (product-audit server log).
+**Rejected.** Keeping the typecheck script as a no-op.
+
+## D129. HOURLY LINEUP SNAPSHOTS TO AN ORPHAN `data` BRANCH - because Sleeper keeps neither lock state nor mid-week lineup moves
+**Decision.** scripts/snapshot-lineups.js copies `GET /v1/league/{id}/matchups/{week}` into
+snapshots/lineups/{season}/week-{NN}/{timestamp}.json, skipping a payload identical to that week's last.
+.github/workflows/snapshot-lineups.yml runs it hourly (minute 17) and commits with `[skip ci]` to `data`,
+whose vercel.json disables deployments. Nothing in the app reads the files yet.
+**Evidence.** Mid-week rotation is the largest unknown in the backtest: the per-player rule's gain is +10.0 if
+starters sat all week and +0.8 under the pessimistic bound (n=240). Lock state was certain for 34 of 98
+starters in one mid-week snapshot. A simulated run of the workflow (4 runs) wrote 2 files and skipped 2
+identical payloads.
+**Rejected.** Committing snapshots to `main` (would trigger CI and Vercel builds).
+**Operator.** Scheduled workflows run from the default branch, so this starts once merged to `main`.
+
+## D130. THE LOCK-IN MODEL AND ITS STOPPING NUMBERS - expected-if-held and the chance a later game beats the score, from the study's offline fit
+**Decision.** lib/lockin/model.js: next-game mean is an EWMA (half-life 5 games); shape is the last 30 played
+games' deviations widened x1.12; play probability is the share of the last 40 team-game rows played, shrunk
+toward 0.8. A reservation-value recursion gives expected-if-held and P(a later game is played and beats x).
+Constants are committed from the 2026-11-16 study; nothing is fitted at request time.
+**Evidence.** Fit n=21,757 games, 353 players: R² 0.42, residual SD 7.0. 2026 calibration n=3,039: quantiles
+within about 4 points of nominal; P(beats) if he plays overstates by 2.0 to 6.7 points; with play probability
+it overstates by up to 13.3 points in the 0.6-0.8 bin (n=731 of 4,109). Replay through lib/lockin reproduced
+the study: per-player rule +9.97 (identical in 236 of 240 team-weeks), lineup-aware +9.57 (229 of 240). Live:
+38 requests and 0.56 to 0.76 s per roster, cold.
+**Rejected.** Home/away (+0.19, null); back-to-back (+0.55, small and against folk wisdom); hot hand (residual
+autocorrelation 0.024); long-run means (RMSE 7.31 over the last 82 against 6.96).
+
+## D131. THE LEAN IS LINEUP-AWARE - one nightly assignment across open slots, not each player's rule alone
+**Decision.** lib/lockin/policy.js solves a position-constrained assignment of open slots each night (holders
+at hold value, tonight's players at entry value, later players discounted by play probability) and picks the
+subset to lock. Confidence is marginal, moderate or clear by the margin in forecast SDs (< 0.25, < 0.75,
+else). The lean is "none" when locked, unresolved, scoreless or with no games left.
+**Evidence (active team-weeks, n=240, against actual).** Lineup-aware +9.4 (+5.5 to +14.7). Per-player rule on
+the manager's own 7: +10.0 (+8.1 to +12.5). Per-player rule on a greedy model 7: +2.8 (-1.3 to +8.3). Never
+lock: -29.4. Lock the first game: -21.2. The backtest knew who would play his next game; without that the
+per-player rule gained +6.5.
+**Rejected.** A per-player-only lean (ignores slot pressure); a full Monte Carlo over the week (not built; the
+policy is a one-step approximation).
+
+## D132. LOCK STATE IS INFERRED, NEVER ASSUMED - "locked" only when certain, otherwise "unknown until his next tip"
+**Decision.** lib/lockin/lockState.js marks a starter locked only when his banked score differs from his
+latest completed game and matches an earlier one; equal to the latest means unknown until his next tip (or
+simply his score, when no game is left); a DNP in the latest game after an earlier played one reads as reset.
+Anything else is left without a state, with the reason. A lean on a score that may already be locked is marked
+conditional.
+**Evidence.** Sleeper exposes no lock state. In the week-4 snapshot (n=98 starters): 34 certainly locked, 50
+ambiguous, 10 reset to 0, 4 mid-game.
+**Rejected.** Treating an equal score as unlocked; computing slots left from inference without saying so.
+
+## D133. GAME CONTEXT AS FACTS ONLY - opponent history and per-player teammate effects stay out of the forecast
+**Decision.** lib/lockin/context.js annotates past games with facts: overtime, a minutes jump of 5 or more
+over the last-10 average, and "did not start" for a usual starter (started 8 of the last 10) missing from the
+starting five. Opponent meetings are shown as history only.
+**Evidence.** Opponent history: partial rho 0.026 (n=18,812 games); a +10 history moves the forecast 0.5
+points. Teammate out: +1.7 points on average (n=6,432 games) but split-half r 0.15 per player, so not
+estimable per player. A minutes jump accompanies 61% of positive outliers against 17% of ordinary games. A
+usual starter missing from the five was a DNP in 78.5% of 1,171 cases, so the copy says "did not start", not
+"did not play".
+**Rejected.** Any opponent term in the model; per-player teammate lifts. The average teammate lift is a
+candidate to re-test in the backtest before it ships.

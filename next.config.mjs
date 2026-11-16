@@ -1,3 +1,4 @@
+import { REDIRECTS } from "./lib/redirects.mjs";
 const nextConfig = {
   /**
    * /web is gone and its readers are not. The trade web shipped with a URL that four
@@ -9,11 +10,14 @@ const nextConfig = {
    * take as an instruction to update the link. It lands on the deal INDEX rather than
    * trying to reconstruct `?trade=` into `/deals/<id>` - a redirect that reads query
    * strings is a route in disguise, and every in-app caller was updated at the source
-   * (lib/tradegraph/url.ts) in the same change, so the only traffic left here is the
+   * (lib/tradegraph/url.js) in the same change, so the only traffic left here is the
    * bookmark case, which wants the index anyway.
    */
   async redirects() {
-    return [{ source: "/web", destination: "/deals", permanent: true }];
+    return [
+      { source: "/web", destination: "/deals", permanent: true },
+      ...REDIRECTS.map((r) => ({ ...r, permanent: false })),
+    ];
   },
   /**
    * Baseline response security headers - none of this app's own attack surface

@@ -51,23 +51,20 @@ If the lottery is weighted toward the worst record, set `lotteryWeighting` above
 the worst team's first becomes the most valuable pick in the league. This is a real
 fork in how rebuilding is valued, so it is worth answering.
 
-## 10. Lock-in scoring is not yet reflected in the valuation model
-Eric confirmed this is a LOCK-IN league, not a traditional weekly-total league
-(`game_mode: 1` in the league settings, which the app can detect).
+## 10. Lock-in is handled for the weekly decision; the valuation model still ignores it
+Eric confirmed this is a LOCK-IN league (`game_mode: 1`). Updated 2026-11-16.
 
-That should change valuation, and currently does not:
-- Lock-in rewards GAMES PLAYED volume and availability, so durability and schedule
-  matter more than in a weekly-total format.
-- Roster DEPTH is worth more, because you need bodies playing on any given night. The
-  current rank decay (`rankDecay: 0.021`) is arguably too steep in the tail for a
-  lock-in league: it prices the ~200th-ranked player at roughly 120 against a top asset of 9,009 and a
-  configured ceiling of 10,000. (Was "roughly 150 against 10,000" before the age-curve
-  recalibration; the tail decay itself is unchanged, the population around it moved.)
+**Done:** the weekly bank-or-hold decision now has its own engine, `lib/lockin/`
+(D130-D133), built on per-player game logs (one row per team game, DNPs included). The
+data gap this item named (per-player games and minutes) is closed for that purpose.
 
-This is deliberately NOT tuned by guesswork. Doing it properly needs per-player
-games-played and minutes data, which is exactly the gap the `StatsProvider` interface
-exists to fill (see #4). Tuning `rankDecay` by feel would be a fake fix that made the
-numbers look considered while resting on nothing.
+**Still open, for the owner:** should dynasty VALUES reflect lock-in? They do not. The
+base curve is now the measured hybrid (D117, `rankDecay: 0.015`, `rankPower: 0.35`);
+nothing in it prices games played, availability or depth. Outside evidence says the format
+pays for volume: picking the best game from 2, 3 or 4 banks about +14%, +22% and +28%
+over a player's average, and 2-game against 4-game weeks differ by about 12% (research
+note, 2026-11-16, n=56 game logs). Changing values on that basis needs its own offline
+study against this league's banked scores, not a hand-tuned curve.
 
 ## 11. Ranking sources and custom rankings (Eric's idea, worth building)
 Eric proposed ingesting ranking sources plus letting the user build their OWN ranking,

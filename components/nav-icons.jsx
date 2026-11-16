@@ -5,20 +5,23 @@
  */
 import {
   Award,
-  Beaker,
+  Activity,
   BookText,
   CalendarCheck,
-  Compass,
+  CalendarDays,
+  CalendarRange,
+  Repeat,
+  Scale,
   FlaskConical,
   GitBranch,
   GitCompare,
   GraduationCap,
   Handshake,
-  Home,
   Info,
   ListOrdered,
+  Palette,
   ScrollText,
-  Settings,
+  Search,
   Share2,
   ShieldCheck,
   Target,
@@ -27,7 +30,7 @@ import {
   ArrowLeftRight,
 } from "lucide-react";
 export const NAV_ICONS = {
-  "/": Home,
+  "/": CalendarDays,
   "/roster": Users,
   "/plan": Target,
   "/trade": ArrowLeftRight,
@@ -49,11 +52,15 @@ export const NAV_ICONS = {
   // never have been noticed by anything - which is exactly why it goes now.
   "/about": Info,
   "/methodology": FlaskConical,
-  "/settings": Settings,
-  "/more": Compass,
+  "/settings": Search,
+  "/design": Palette,
+  "/teams": Repeat,
+  "/lab/pulse": Activity,
+  "/lab/regret": CalendarRange,
+  "/lab/counterfactual": GitBranch,
+  "/lab/leverage": Scale,
   // Not FlaskConical: /methodology already wears that, and two surfaces sharing a
   // mark in the same list is how a reader learns to stop trusting the marks.
-  "/lab": Beaker,
 };
 /** Falls back to a generic mark rather than throwing - a registry entry added
  *  without a matching icon should still render, just plainly. */

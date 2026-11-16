@@ -8,16 +8,16 @@ import {
 /**
  * CORE FLOW - the app's defining loop, both halves anchored on the same seeded
  * transaction: `fx-2022-rebuildA`, EZ8's 2022 sell of Damian Lillard to roster 8
- * for Scottie Barnes + a future first (lib/providers/fixture/generate.ts). The
+ * for Scottie Barnes + a future first (lib/providers/fixture/generate.js). The
  * fixture seeds exactly one Decision Ledger annotation, and it is on this trade
- * (lib/history.ts's `FIXTURE_SEED_ANNOTATIONS`, authored by "u1" - EZ8's own
+ * (lib/history.js's `FIXTURE_SEED_ANNOTATIONS`, authored by "u1" - EZ8's own
  * seat, which is also the default "viewing as" identity with no cookie set).
  *
- *   1. Home -> Decision ledger -> open the annotate affordance on that trade and
+ *   1. This Week -> League -> Decision ledger -> open the annotate affordance on that trade and
  *      see the fixture's seeded reasoning ("Full rebuild...") already captured.
  *   2. Commissioner tools' transaction audit log links that SAME trade into the
- *      deal receipt (`dealHref`, lib/tradegraph/url.ts) instead of re-showing
- *      it inline (lib/commissioner.ts's header explains why: the audit log is
+ *      deal receipt (`dealHref`, lib/tradegraph/url.js) instead of re-showing
+ *      it inline (lib/commissioner.js's header explains why: the audit log is
  *      deliberately not a second ledger). BRAINSTORM.md's round-3 integration
  *      review calls exactly this - an audit-log link resolving a bare
  *      transaction id to the right deal on a totally different page, through a
@@ -28,7 +28,7 @@ import {
  *
  * FIDELITY NOTE: round 3's manual verification used a real, commissioner-executed
  * three-team deal that Sleeper had recorded as several separate `commissioner`
- * transactions and `coalesceCommissionerTrades` (lib/derive/coalesce.ts) had to
+ * transactions and `coalesceCommissionerTrades` (lib/derive/coalesce.js) had to
  * stitch back into one synthetic trade, against live league data. The fixture
  * provider's `recordTrade` only ever builds ordinary two-team trades - there is no
  * multi-transaction, commissioner-executed deal in fixture data for the coalescer
@@ -37,30 +37,32 @@ import {
  * It is not a substitute for re-checking the coalesced, multi-team case by hand
  * against real data - and note that a coalesced id now rides in a PATH segment
  * rather than a query string, so `dealHref`'s encoding of `+` is the part to
- * re-check (`lib/tradegraph/url.test.ts` pins it, live data confirms it).
+ * re-check (`lib/tradegraph/url.test.js` pins it, live data confirms it).
  */
 test("ledger annotate affordance, then the audit-log deep link into the deal receipt", async ({
   page,
 }) => {
   const guard = watchConsole(page);
   await primeLens(page);
-  // ---- Half one: Home -> Decision ledger -> the annotate affordance ----
+  // ---- Half one: This Week -> League -> Record -> Decision ledger ----
   await page.goto("/");
   await expectStableChrome(page);
-  // Through the Desk's persistent tab row (D65) - one of the four always-visible
-  // primaries, no drawer to open first. Scoped to the Primary navigation on purpose:
-  // "Record" is also the label of Home's record figure, which links to /league, and
-  // this test means the destination.
+  // The ledger left the tab bar; it lives in League's Record group.
   await page
     .getByRole("navigation", { name: "Primary" })
-    .getByRole("link", { name: "Record", exact: true })
+    .getByRole("link", { name: "League", exact: true })
+    .click();
+  await expect(page).toHaveURL(/\/league$/);
+  await page
+    .getByRole("region", { name: "Record" })
+    .getByRole("link", { name: /Decision ledger/ })
     .click();
   await expect(page).toHaveURL(/\/ledger$/);
   await expectStableChrome(page);
   // THE LEDGER IS ROW-FOLDED NOW, and as with the audit log below, the path grew one
   // step rather than losing one. Every entry but the pinned newest one lives inside a
   // shut `<details>`, which is most of why this page dropped from 10,047px to ~2,270px
-  // at 390px. The seeded reasoning is fixture DATA (lib/history.ts), not UI copy that
+  // at 390px. The seeded reasoning is fixture DATA (lib/history.js), not UI copy that
   // shifts under a copy pass - safe to assert on directly, in both states.
   //
   // Both halves asserted deliberately, for exactly the reason the audit-log half does
@@ -69,18 +71,20 @@ test("ledger annotate affordance, then the audit-log deep link into the deal rec
   // would be data loss wearing a layout change's clothes.
   const seeded = page.getByText(/Full rebuild\./);
   await expect(seeded).toBeAttached();
+  // Captured entries sit in their own tab now (app/ledger/page.jsx); open it first.
+  await page.getByRole("tab", { name: /Captured/ }).click();
   const capturedRow = page.locator("details", { has: seeded });
   await expect(capturedRow).not.toHaveAttribute("open", /.*/);
   await capturedRow.locator("summary").first().click();
   await expect(seeded).toBeVisible();
   // Exactly one annotation exists in fresh fixture state, so exactly one "edit"
-  // affordance exists (components/LedgerItem.tsx). Every OTHER (unannotated) entry on
+  // affordance exists (components/LedgerItem.jsx). Every OTHER (unannotated) entry on
   // this page still renders its textarea in edit mode inside its own row (LedgerItem
   // defaults `editing` to true when there is no existing annotation), so there are
   // many textareas in the DOM before this click - `.last()` below is what picks out
   // the one this click just opened, not a generic "the only textbox" assumption.
   await page.getByRole("button", { name: "edit" }).click();
-  // `.last()`, not "the only one": app/ledger/page.tsx renders the pinned newest card,
+  // `.last()`, not "the only one": app/ledger/page.jsx renders the pinned newest card,
   // then "The rest", then "Captured", and the fixture seeds exactly one captured
   // entry, so once this entry is in edit mode its textarea is the last one in DOM
   // order.
@@ -88,7 +92,7 @@ test("ledger annotate affordance, then the audit-log deep link into the deal rec
   await expect(reasoningBox).toBeVisible();
   await expect(reasoningBox).toHaveValue(/Full rebuild\./);
   // Every OTHER (unannotated) entry on the page also renders a full posture-pill
-  // row with its own "rebuild" button (components/LedgerItem.tsx's POSTURES list
+  // row with its own "rebuild" button (components/LedgerItem.jsx's POSTURES list
   // is the same five options everywhere), so this scopes to the specific panel
   // that just opened - the textarea's own parent, which also holds its posture
   // row - rather than asserting on "the" rebuild button page-wide.
@@ -99,7 +103,7 @@ test("ledger annotate affordance, then the audit-log deep link into the deal rec
   // ---- Half two: Commissioner audit log -> the SAME deal's own receipt ----
   await page.goto("/commissioner");
   await expectStableChrome(page);
-  // dealHref("fx-2022-rebuildA") (lib/tradegraph/url.ts) - the audit row's own
+  // dealHref("fx-2022-rebuildA") (lib/tradegraph/url.js) - the audit row's own
   // href, not a hand-built URL, so this fails if the row ever stops linking
   // through that function.
   const auditLink = page.locator('a[href="/deals/fx-2022-rebuildA"]');
@@ -149,17 +153,17 @@ test("ledger annotate affordance, then the audit-log deep link into the deal rec
 });
 /**
  * ROSTER 9's SUCCESSION, end to end. Roster 9 is the fixture's one seat that has
- * changed hands (lib/providers/fixture/generate.ts's `SUCCESSION`): "BigTrades" (u9)
+ * changed hands (lib/providers/fixture/generate.js's `SUCCESSION`): "BigTrades" (u9)
  * ran it 2022-2024, "kdewitt4" (u15) has run it since 2025 - the same shape as the
- * real league's roster 11 (NSLKB -> kdewitt4, lib/principals.ts). Setting the lens to
+ * real league's roster 11 (NSLKB -> kdewitt4, lib/principals.js). Setting the lens to
  * roster 9 resolves to the CURRENT occupant, kdewitt4, exactly the way
- * `lib/history.ts`'s `getLeagueHistory` reads `r.ownerId` off today's roster snapshot.
+ * `lib/history.js`'s `getLeagueHistory` reads `r.ownerId` off today's roster snapshot.
  *
  * This is the one cheap, page-level check that a seat-keyed regression in the
  * Decision Ledger would actually surface to a real user, not just to a unit test:
  * kdewitt4's ledger must show only their own 2025-2026 decisions, never a season from
  * BigTrades' 2022-2024 tenure on the same seat. Deliberately narrow - the unit
- * suites in lib/ledger.test.ts, lib/strategy/strategy.test.ts, lib/dossier/ and
+ * suites in lib/ledger.test.js, lib/strategy/strategy.test.js, lib/dossier/ and
  * lib/superlatives/ already pin the underlying mechanism in detail; this only checks
  * that it actually reaches the page.
  */
@@ -171,7 +175,7 @@ test("viewing as the successor on a succeeded seat shows only their own tenure",
   await page.goto("/ledger");
   await expectStableChrome(page);
   // Every ledger entry prints its own season as a standalone four-digit label
-  // (components/LedgerItem.tsx). None of kdewitt4's should read as a season from
+  // (components/LedgerItem.jsx). None of kdewitt4's should read as a season from
   // before the 2025 handover - if one does, the predecessor's history has leaked
   // onto the successor's page.
   for (const season of ["2022", "2023", "2024"]) {

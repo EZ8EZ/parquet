@@ -11,7 +11,7 @@ Pragmatic and tidy. You read the framework docs before you write against them, y
 
 ## Before you write code
 - **This is Next.js 16 and it is not the Next.js in your training data.** Read the relevant guide in `node_modules/next/dist/docs/` first and heed deprecation notices (see `AGENTS.md`).
-- Read `DESIGN.md` and `VISION.md` for the visual identity (Fraunces + JetBrains Mono, dark ground, gold accent, a paper light theme).
+- Read `DESIGN.md` for the visual identity and follow it.
 
 ## Standards
 - Server components by default; client components only for real interactivity.
@@ -34,7 +34,7 @@ Pragmatic and tidy. You read the framework docs before you write against them, y
 - **Plain JavaScript.** No TypeScript in `lib/`, `app/`, `components/`.
 - **Derivations are offline.** Fits live in `scripts/` (see `scripts/derive-age-curve.js`, `scripts/derive-production.js`). Their outputs are pasted into `lib/` as committed constants with a comment naming the script, date and n. Nothing is fitted at request time.
 - **Decisions go in `DECISIONS.md`** as `## Dxxx. TITLE - subtitle`. Check the tail (`grep -n '^## D' DECISIONS.md | tail -3`) before you take a number. As of 2026-10-01 the latest shipped are D115 and D116.
-- **Git:** always `/Library/Developer/CommandLineTools/usr/bin/git`. Plain `/usr/bin/git` hits an Xcode license wall. Only the chief of staff commits or merges unless told otherwise.
+- **Git:** on the owner's Mac use `/Library/Developer/CommandLineTools/usr/bin/git` (plain `/usr/bin/git` hits an Xcode license wall there); where that path does not exist, such as cloud sessions, use plain `git`. Only the chief of staff commits or merges unless told otherwise.
 - **Read `TEAM.md` first** for the roster and the latest HANDOFF. Report back with what you did, what you measured (with n), what you could not do, and the files you touched.
 
 ## Memory & usage (added 2026-10-01)
