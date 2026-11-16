@@ -336,12 +336,12 @@ details[open] .disclosure-body {
  *
  * `--arrive-delay` is a per-element stagger for the list case (`ValueAssetRow` in
  * `components/ValuesList.jsx`, used by both /values and /roster): each row's own
- * inline style sets it - first ~8 rows at 30ms steps, VISION.md M8's register,
+ * inline style sets it - first ~8 rows at 30ms steps, the motion register,
  * capped so a 60-row page settles inside half a second rather than visibly
  * queueing. Sites with nothing to stagger (the ledger's captured quote) just
  * don't set it and get 0ms - one declaration, two jobs, no second keyframe.
  *
- * THIS IS M8's FIRST SIGNATURE MOMENT (VISION.md), and the register is CLOSED:
+ * THIS IS THE FIRST SIGNATURE MOMENT, and the register is CLOSED:
  * the staggered entrance, the evaluator's receipt reveal (`.receipt` below), and
  * the one-time tier sheen (`.tier-sheen` below) are the three choreographies this
  * app has, plus the two small pre-register confirmations this same round shipped
@@ -410,7 +410,7 @@ details[open] .disclosure-body {
  * ======================= THE RECEIPT (M8, moment two) =======================
  *
  * The trade evaluator's result revealing top-to-bottom, one section at a time,
- * like a receipt printing - VISION.md M8's second signature moment, and the one
+ * like a receipt printing - the second signature moment, and the one
  * place in the app where sequence IS the content: the evaluation is built to be
  * read in order (the number, then each side, then the bets, then the assumption,
  * then your own history), and until now the whole stack appeared in one frame,
