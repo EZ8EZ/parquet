@@ -2,7 +2,7 @@ import Link from "next/link";
 import { AlertTriangle, CalendarDays, ChevronRight } from "lucide-react";
 import { Disclosure, EmptyState, List, ListRow, SectionHeader, StatTile, Tabs } from "@/components/ui";
 import { loadLockDesk } from "@/lib/lockin/source";
-import { compactLive, firstUp, gapLines, groupCards, playerSubtitle, resultLine, shortDate, weekGrid } from "@/lib/lockin/view";
+import { compactLive, firstUp, gapLines, groupCards, playerSubtitle, resultLine, shortDate, stateBody, weekGrid } from "@/lib/lockin/view";
 import { DeckTrigger, PlayerDeck } from "./PlayerDeck";
 import { PlayerPanel } from "./PlayerDetail";
 import { SlotCells } from "./SlotCells";
@@ -106,7 +106,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
           <BetweenWeeks desk={desk} />
         ) : (
           <EmptyState icon={<CalendarDays size={28} aria-hidden="true" />} title={{ offseason: "No lock-in week", no_matchup: "No matchup this week", unavailable: "Lock-in data unavailable" }[desk.status] ?? "Nothing to show"}>
-            {desk.message}
+            {stateBody(desk)}
           </EmptyState>
         )}
       </section>
