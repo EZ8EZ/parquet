@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Chip, PageHeader } from "@/components/ui";
 import { LockDeskBoard } from "@/components/lockin/LockDeskBoard";
 import { RefreshControl } from "@/components/lockin/RefreshControl";
-import { readLensRosterId } from "@/lib/auth/server";
+import { getLeagueHistory } from "@/lib/history";
 import { isFixtureDesk, loadLockDesk, replayAllowed } from "@/lib/lockin/source";
 import { boardHeader } from "@/lib/lockin/view";
 
@@ -13,7 +13,9 @@ const one = (v) => (Array.isArray(v) ? v[0] : v) ?? null;
 
 export default async function LockInPage({ searchParams }) {
   const sp = await searchParams;
-  const rosterId = await readLensRosterId();
+  // Through the corpus so an unknown team cookie bounces to the picker (lib/history.js).
+  const h = await getLeagueHistory();
+  const rosterId = h.me.rosterId;
   if (rosterId == null) {
     return (
       <>
@@ -28,7 +30,7 @@ export default async function LockInPage({ searchParams }) {
     );
   }
   const replay = replayAllowed() ? one(sp.at) : null;
-  const desk = await loadLockDesk({ rosterId, replay });
+  const desk = await loadLockDesk({ rosterId, replay, players: h.players });
   const hd = boardHeader(desk);
   const fullHref = replay ? `/lockin?at=${encodeURIComponent(replay)}` : "/lockin";
   return (
