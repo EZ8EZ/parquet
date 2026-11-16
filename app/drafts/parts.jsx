@@ -36,12 +36,10 @@ export function LineageCard({ l, perspective = null, inList = false, showBadge =
   return (
     <Wrap className={inList ? undefined : "overflow-hidden rounded-card bg-surface"}>
       <ListRow
-        href={boardHref(l.season, l.pickNo)}
-        aria-label={
-          l.resolved
-            ? `${label}: ${l.playerName}, pick ${l.pickNo}. Open the ${l.season} board.`
-            : `${label}: still in flight. Open the ${l.season} board.`
-        }
+        // A pick not yet made has no draft board to open (the season's draft has not
+        // run), so its row does not navigate.
+        href={l.resolved ? boardHref(l.season, l.pickNo) : undefined}
+        aria-label={l.resolved ? `${label}: ${l.playerName}, pick ${l.pickNo}. Open the ${l.season} board.` : undefined}
         avatar={
           l.resolved ? (
             <PlayerAvatar name={l.playerName ?? "?"} team={l.team} playerId={l.playerId} size="sm" />
