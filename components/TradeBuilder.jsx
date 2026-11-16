@@ -23,11 +23,12 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { ArrowLeftRight, Loader2, Plus, X } from "lucide-react";
 import { parseTradeParams, tradeQueryString } from "@/lib/trade/url";
-import { cn, fmtValue, fold } from "@/lib/ui";
+import { fmtValue, fold } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTradeUrl } from "@/lib/sleeperLinks";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { ManagerRail } from "@/components/ManagerRail";
+import { Button, Disclosure } from "@/components/ui";
 function PickerModal({
   title,
   items,
@@ -61,57 +62,53 @@ function PickerModal({
       role="dialog"
       aria-modal="true"
       aria-label={title}
-      className="fixed inset-0 z-[60] flex flex-col bg-bg/95 backdrop-blur"
+      className="fixed inset-0 z-[60] flex flex-col bg-bg"
     >
       <div className="mx-auto flex h-full w-full max-w-2xl flex-col px-4 pb-4 pt-3">
         <div className="mb-2 flex items-center justify-between gap-2">
-          <h3 className="min-w-0 line-clamp-1 font-display text-lede leading-tight font-semibold text-ink">
-            {title}
-          </h3>
+          <h3 className="min-w-0 text-lede font-semibold text-ink">{title}</h3>
           <button
             onClick={onClose}
             aria-label="Close"
-            className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-border text-muted transition-colors hover:border-border-strong hover:text-ink"
+            className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted transition-colors hover:text-ink"
           >
             <X size={18} aria-hidden="true" />
           </button>
         </div>
         <input
           autoFocus
+          type="search"
           value={q}
           onChange={(e) => setQ(e.target.value)}
           placeholder={searchLabel}
           aria-label={searchLabel}
-          className="mb-2 h-11 w-full rounded-full border border-border bg-surface px-4 text-body leading-relaxed text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
+          className="mb-2 h-11 w-full rounded-full border border-border-strong bg-surface px-4 text-body text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
         />
-        <p className="mb-1 figure text-meta text-secondary">
-          {filtered.length} shown · esc to close
-        </p>
-        <div className="flex-1 space-y-1 overflow-y-auto pb-4">
-          {filtered.length === 0 && (
-            <p className="py-6 text-center text-body leading-relaxed text-muted">
-              {emptyText}
-            </p>
+        <p className="mb-1 px-1 figure text-meta text-secondary">{filtered.length} shown</p>
+        <div className="flex-1 overflow-y-auto pb-4">
+          {filtered.length === 0 ? (
+            <p className="py-6 text-center text-body text-muted">{emptyText}</p>
+          ) : (
+            <ul className="divide-y divide-border overflow-hidden rounded-card bg-surface">
+              {filtered.map((o) => (
+                <li key={o.id}>
+                  <button
+                    type="button"
+                    onClick={() => onPick(o.id)}
+                    className="flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left transition-colors hover:bg-surface-2"
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block text-body font-semibold text-ink">{o.name}</span>
+                      <span className="block text-meta text-secondary">{o.meta}</span>
+                    </span>
+                    <span className="shrink-0 figure text-body font-bold text-ink">
+                      {fmtValue(o.value)}
+                    </span>
+                  </button>
+                </li>
+              ))}
+            </ul>
           )}
-          {filtered.map((o) => (
-            <button
-              key={o.id}
-              onClick={() => onPick(o.id)}
-              className="flex min-h-11 w-full items-center justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 text-left transition-colors hover:border-border-strong hover:bg-surface-2"
-            >
-              <span className="min-w-0">
-                <span className="block line-clamp-1 text-body font-semibold leading-tight text-ink">
-                  {o.name}
-                </span>
-                <span className="block line-clamp-1 figure text-meta leading-tight text-secondary">
-                  {o.meta}
-                </span>
-              </span>
-              <span className="shrink-0 figure text-body font-semibold text-muted">
-                {fmtValue(o.value)}
-              </span>
-            </button>
-          ))}
         </div>
       </div>
     </div>
@@ -119,7 +116,7 @@ function PickerModal({
 }
 function AssetRow({ label, meta, value, onRemove, player }) {
   return (
-    <div className="flex min-h-11 items-center justify-between gap-1.5 rounded-[--radius-sm] bg-elevated px-2 py-1">
+    <div className="flex min-h-11 items-center justify-between gap-1.5 rounded-control bg-surface-2 py-1 pl-2">
       <span className="flex min-w-0 items-center gap-1.5">
         {player && (
           <PlayerAvatar
@@ -134,10 +131,8 @@ function AssetRow({ label, meta, value, onRemove, player }) {
           />
         )}
         <span className="min-w-0">
-          <span className="block line-clamp-1 text-body leading-tight text-ink">
-            {label}
-          </span>
-          <span className="block line-clamp-1 figure text-meta leading-tight text-secondary">
+          <span className="block text-body font-semibold leading-tight text-ink">{label}</span>
+          <span className="block figure text-meta leading-tight text-secondary">
             {meta ? `${meta} · ` : ""}
             {fmtValue(value)}
           </span>
@@ -164,17 +159,11 @@ function SideColumn({
   total,
 }) {
   return (
-    // edge-hilite (round 10): the one-pixel top catchlight the depth system
-    // already owns, so the two ledger columns read as raised plates rather than
-    // outlined rectangles. Surface separation rules unchanged - no shadow.
-    <div className="edge-hilite rounded-[--radius] border border-border bg-surface p-2">
-      <div className="mb-1.5 flex items-baseline justify-between px-0.5">
-        <span className="text-meta font-semibold uppercase tracking-wide text-muted">
-          {label}
-        </span>
-        {/* The column's running total at heading weight - it is the number the
-            whole column exists to accumulate (round 10). */}
-        <span className="figure text-lede font-semibold leading-none text-ink">
+    <div className="rounded-card bg-surface p-2">
+      <div className="mb-1.5 px-1 pt-0.5">
+        <span className="block text-meta font-medium text-secondary">{label}</span>
+        {/* The column's running total: the number the column exists to accumulate. */}
+        <span className="block figure text-display font-bold tracking-tight text-ink">
           {fmtValue(total)}
         </span>
       </div>
@@ -200,24 +189,16 @@ function SideColumn({
           />
         ))}
         {players.length + picks.length === 0 && (
-          <p className="px-0.5 py-2 text-meta leading-snug text-secondary">
-            Nothing yet - add a player or a pick.
-          </p>
+          <p className="px-1 py-1 text-note text-secondary">Nothing yet</p>
         )}
       </div>
       <div className="mt-1.5 flex gap-1.5">
-        <button
-          onClick={onAddPlayer}
-          className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-full border border-border text-note leading-snug font-medium text-muted transition-colors hover:border-accent hover:text-accent-text"
-        >
-          <Plus size={14} aria-hidden="true" /> player
-        </button>
-        <button
-          onClick={onAddPick}
-          className="flex min-h-11 flex-1 items-center justify-center gap-1 rounded-full border border-border text-note leading-snug font-medium text-muted transition-colors hover:border-accent hover:text-accent-text"
-        >
-          <Plus size={14} aria-hidden="true" /> pick
-        </button>
+        <Button variant="secondary" size="sm" className="flex-1 px-2" onClick={onAddPlayer}>
+          <Plus size={14} aria-hidden="true" /> Player
+        </Button>
+        <Button variant="secondary" size="sm" className="flex-1 px-2" onClick={onAddPick}>
+          <Plus size={14} aria-hidden="true" /> Pick
+        </Button>
       </div>
     </div>
   );
@@ -439,18 +420,22 @@ export function TradeBuilder({
         <BalanceBeam give={giveTotal} get={getTotal} className="mt-2" />
       )}
 
-      <button
+      {/* Disabled reads as a plain secondary control with its reason as the label,
+          not a washed-out primary. */}
+      <Button
+        block
+        variant={hasSomething ? "primary" : "secondary"}
         onClick={evaluate}
         disabled={!hasSomething || loading}
-        className="mt-3 flex min-h-11 w-full items-center justify-center gap-2 rounded-full bg-accent py-3 text-body leading-relaxed font-semibold text-accent-ink transition-opacity disabled:opacity-40"
+        className="mt-3 disabled:cursor-not-allowed disabled:opacity-100 disabled:text-secondary"
       >
         {loading ? (
           <Loader2 size={16} aria-hidden="true" className="animate-spin" />
         ) : (
           <ArrowLeftRight size={16} aria-hidden="true" />
         )}
-        Evaluate trade
-      </button>
+        {hasSomething ? "Evaluate trade" : "Add assets to evaluate"}
+      </Button>
 
       {error && (
         <p role="alert" className="mt-2 text-center text-note text-negative">
@@ -559,174 +544,89 @@ function BalanceBeam({ give, get, className }) {
   );
 }
 function TradeResult({ r, leagueId, counterparty }) {
-  const dirTone =
-    r.direction === "buying"
-      ? "text-accent-text"
-      : r.direction === "selling"
-        ? "text-info"
-        : "text-muted";
+  // The evaluation leads with figures: what each side totals and the difference.
+  // The difference is ink, never green/red: value gained is not the verdict (D6).
+  // The theses and history checks sit behind one Disclosure.
+  const diff = `${r.delta >= 0 ? "+" : ""}${fmtValue(r.delta)}`;
   return (
-    // `.receipt` (interaction.css): the whole evaluation prints top-to-bottom,
-    // one section per beat, in the order it is meant to be read. The parent
-    // keys this component per evaluation so the print replays only for a
-    // genuinely new answer.
     <div className="receipt mt-4 space-y-2">
-      {/* Round 10: the headline delta was green-when-positive, red-when-negative -
-          value gained painted as "good" on the one card the app's own copy says is
-          NOT the verdict. That was colour-as-judgment (D6). Now the number is ink
-          at hero weight, and the lean is drawn as geometry by the beam below it. */}
-      <div className="hero-card rounded-[--radius] border border-accent-edge p-3 text-center">
-        <div className="text-meta uppercase tracking-wide text-secondary">
-          Value to you
-        </div>
-        <div className="figure text-hero leading-none font-semibold text-ink">
-          {r.delta >= 0 ? "+" : ""}
-          {fmtValue(r.delta)}
-        </div>
-        <BalanceBeam
-          give={r.give.total}
-          get={r.get.total}
-          className="mx-auto mt-2 max-w-64"
-        />
-        <div className="mt-1.5 text-note leading-snug text-muted">
-          You&apos;re{" "}
-          <span className={cn("font-semibold", dirTone)}>{r.direction}</span>.
-          Value is a guide, not the verdict - read below.
-        </div>
-        {/* Both sides as the evaluator priced them - picks labelled by who owes them. */}
-        <div className="mt-2 grid grid-cols-2 gap-1.5 text-left">
+      <section aria-label="Evaluation" className="rounded-card bg-surface p-3">
+        <p className="text-meta font-medium text-secondary">Value to you</p>
+        <p className="figure text-hero font-bold tracking-tight text-ink">{diff}</p>
+        <p className="text-note text-muted">
+          You&apos;re <span className="font-semibold text-ink">{r.direction}</span>
+        </p>
+        <div className="mt-3 grid grid-cols-2 gap-2">
           {[
-            ["send", r.give],
-            ["get", r.get],
-          ].map(([k, side]) => (
-            <div
-              key={k}
-              className="rounded-[--radius-sm] border border-border bg-bg/40 px-2 py-1.5"
-            >
-              <div className="flex items-baseline justify-between gap-1">
-                {/* Was red-for-send / green-for-get: valence on the two halves of
-                    every trade, the same D6 problem as the old delta colour. Now
-                    the two OWNED hues (VISION M4): gold is your side of the
-                    ledger, court blue is theirs - identity, not judgment. */}
-                <span
-                  className={cn(
-                    "text-meta uppercase tracking-wide",
-                    k === "send" ? "text-accent-text" : "text-info",
-                  )}
-                >
-                  you {k}
-                </span>
-                <span className="figure text-meta font-semibold text-ink">
-                  {fmtValue(side.total)}
-                </span>
-              </div>
-              <ul className="mt-0.5 space-y-0.5">
+            ["You give", r.give],
+            ["You get", r.get],
+          ].map(([label, side]) => (
+            <div key={label} className="min-w-0 rounded-control bg-surface-2 p-3">
+              <p className="text-meta font-medium text-secondary">{label}</p>
+              <p className="figure text-display font-bold tracking-tight text-ink">
+                {fmtValue(side.total)}
+              </p>
+              <ul className="mt-1 space-y-1">
                 {side.assets.map((a) => (
-                  <li
-                    key={a.id}
-                    className="flex items-baseline justify-between gap-1 text-meta leading-snug"
-                  >
-                    <span className="min-w-0 line-clamp-1 text-ink/85">
-                      {a.label}
-                    </span>
-                    <span className="shrink-0 figure text-meta text-secondary">
-                      {fmtValue(a.value)}
-                    </span>
+                  <li key={a.id} className="flex items-baseline justify-between gap-2 text-note">
+                    <span className="min-w-0 text-ink">{a.label}</span>
+                    <span className="shrink-0 figure text-secondary">{fmtValue(a.value)}</span>
                   </li>
                 ))}
               </ul>
             </div>
           ))}
         </div>
-      </div>
+      </section>
 
-      <Block title="What you're betting on">{r.yourBet}</Block>
-      <Block title="What they're betting on">{r.theirBet}</Block>
-      <Block title="The assumption that has to be true" tone="accent">
-        {r.keyAssumption}
-      </Block>
-      <Block title="What your history says" tone="warn">
-        {r.historyCheck}
-      </Block>
-      {r.consolidationNote && (
-        <Block title="Consolidation">{r.consolidationNote}</Block>
-      )}
-      {/*
-       * THE SAME TWO SHAPE-OF-THE-DEAL READS THE TRADE FINDER ALREADY PRINTS ON EVERY
-       * SUGGESTED PACKAGE (D75, D77) - reused here rather than re-derived (see the
-       * note on `evaluateTrade` in lib/trade/index.js). A deal typed in here is at
-       * least as often someone ELSE'S proposal as it is this app's own idea, and
-       * until now it was the one place in Parquet that priced a trade without saying
-       * whether it leaves the roster leaning on fewer names or more, or moves where
-       * the viewer's own positional depth sits. Never a verdict (D6, D19): a number
-       * and what moved, nothing about whether that movement is good - the identical
-       * discipline the finder's own lines keep. `null` on both fields when the shift
-       * is too small to clear either metric's own noise floor, or the trade touches
-       * no player/position at all - an omitted block is honest; a "no change" block
-       * on every trade would be exactly the clutter this app keeps refusing to ship. */}
-      {r.fragility && (
-        <Block
-          title={
-            r.fragility.direction === "relieves"
-              ? "What it takes off one man"
-              : "What it puts on one man"
-          }
-        >
-          {r.fragility.text}
-        </Block>
-      )}
-      {r.leverageShift && (
-        <Block title="Positional leverage">
-          <LeverageShiftText shift={r.leverageShift} />
-        </Block>
-      )}
-      {/* One line per pick in the deal. A list rather than a paragraph because each
-            note is about a DIFFERENT pick, and running them together would read as one
-            claim about the trade rather than several about its parts. */}
-      {r.agencyNotes.length > 0 && (
-        <Block title="Whose season decides the picks" block>
-          <ul className="space-y-1.5">
-            {r.agencyNotes.map((n, i) => (
-              <li key={i}>{n}</li>
-            ))}
-          </ul>
-        </Block>
-      )}
+      <Disclosure summary="What each side is betting on" bodyClassName="space-y-3 text-body">
+        <Block title="What you're betting on">{r.yourBet}</Block>
+        <Block title="What they're betting on">{r.theirBet}</Block>
+        <Block title="The assumption that has to be true">{r.keyAssumption}</Block>
+        <Block title="What your history says">{r.historyCheck}</Block>
+        {r.consolidationNote && <Block title="Consolidation">{r.consolidationNote}</Block>}
+        {/* The finder's two shape-of-the-deal reads (D75, D77), reused rather than
+            re-derived; null when the shift is under either metric's noise floor. */}
+        {r.fragility && (
+          <Block
+            title={
+              r.fragility.direction === "relieves"
+                ? "What it takes off one man"
+                : "What it puts on one man"
+            }
+          >
+            {r.fragility.text}
+          </Block>
+        )}
+        {r.leverageShift && (
+          <Block title="Positional leverage">
+            <LeverageShiftText shift={r.leverageShift} />
+          </Block>
+        )}
+        {r.agencyNotes.length > 0 && (
+          <Block title="Whose season decides the picks" block>
+            <ul className="space-y-1.5">
+              {r.agencyNotes.map((n, i) => (
+                <li key={i}>{n}</li>
+              ))}
+            </ul>
+          </Block>
+        )}
+      </Disclosure>
 
       {counterparty && (
-        <div className="rounded-[--radius] border border-border bg-surface p-3">
-          <div className="mb-1 text-meta font-semibold uppercase tracking-wide text-muted">
-            Before you send it
-          </div>
-          <p className="text-body leading-relaxed text-ink/90">
-            You are asking{" "}
-            <span className="font-semibold text-ink">{counterparty.name}</span>{" "}
-            to say yes. Read what they have actually paid for in five seasons,
-            and what the app would have proposed to them on its own.
+        <section aria-label="Before you send it" className="rounded-card bg-surface p-3">
+          <p className="text-note text-muted">
+            You are asking <span className="font-semibold text-ink">{counterparty.name}</span> to say yes.
           </p>
-          <ManagerRail
-            rosterId={counterparty.rosterId}
-            ownerId={null}
-            className="mt-1.5"
-          />
-        </div>
+          <ManagerRail rosterId={counterparty.rosterId} ownerId={null} className="mt-1.5" />
+        </section>
       )}
 
-      {/* Sleeper has no write API, so we can't send the proposal - the trade
-          centre is one tap away instead. The wrapper is conditional on the URL
-          resolving because OpenInSleeper renders NOTHING for ids that cannot be
-          real Sleeper ids (the fixture provider's), which left this box printing
-          as an empty bordered line - invisible enough before, but the receipt
-          reveal animates each child in, and an empty box arriving on its own
-          beat is a blank line the printer paused on. */}
+      {/* Sleeper has no write API, so the trade centre is one tap away instead.
+          Conditional because OpenInSleeper renders nothing for fixture ids. */}
       {sleeperTradeUrl(leagueId) && (
-        <div className="rounded-[--radius] border border-border bg-bg/70 p-3">
-          <OpenInSleeper
-            href={sleeperTradeUrl(leagueId)}
-            label="Open Sleeper to send"
-            className="w-full"
-          />
-        </div>
+        <OpenInSleeper href={sleeperTradeUrl(leagueId)} label="Open Sleeper to send" className="w-full" />
       )}
     </div>
   );
@@ -755,44 +655,18 @@ function LeverageShiftText({ shift }) {
     </>
   );
 }
-function Block({
-  title,
-  children,
-  tone = "neutral",
-  /**
-   * Skip the wrapping `<p>`. Every other block here is one paragraph, but the pick
-   * agency block is a LIST (one note per pick), and a `<ul>` inside a `<p>` is
-   * invalid HTML that React fixes up at hydration time and not before - which this
-   * codebase has already paid for once (D30's nested-anchor bug).
-   */
-  block = false,
-}) {
-  const border =
-    tone === "accent"
-      ? "border-accent-edge"
-      : tone === "warn"
-        ? "border-warn/30"
-        : "border-border";
-  const head =
-    tone === "accent"
-      ? "text-accent-text"
-      : tone === "warn"
-        ? "text-warn"
-        : "text-muted";
+/**
+ * One thesis inside the evaluation's Disclosure. `block` skips the wrapping <p> for
+ * the pick-agency list (a <ul> inside a <p> is invalid HTML, D30).
+ */
+function Block({ title, children, block = false }) {
   return (
-    <div className={cn("rounded-[--radius] border bg-surface p-3", border)}>
-      <div
-        className={cn(
-          "mb-1 text-meta font-semibold uppercase tracking-wide",
-          head,
-        )}
-      >
-        {title}
-      </div>
+    <div>
+      <h3 className="text-note font-semibold text-ink">{title}</h3>
       {block ? (
-        <div className="text-body leading-relaxed text-ink/90">{children}</div>
+        <div className="mt-0.5 text-body text-muted">{children}</div>
       ) : (
-        <p className="text-body leading-relaxed text-ink/90">{children}</p>
+        <p className="mt-0.5 text-body text-muted">{children}</p>
       )}
     </div>
   );
