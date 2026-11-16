@@ -9,7 +9,9 @@ import { fmt } from "@/lib/lockin/view";
  */
 export function SlotPreview({ preview }) {
   return (
-    <div aria-busy="true">
+    // Holds about the height of a typical board (slots plus one decision card) so the
+    // content below moves less when the board streams in.
+    <div aria-busy="true" className="min-h-[36rem]">
       {preview ? (
         <>
           <p className="mb-3 pt-1 figure text-note text-secondary">Week {preview.week} · lock states loading</p>
