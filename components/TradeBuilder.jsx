@@ -28,6 +28,7 @@ import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTradeUrl } from "@/lib/sleeperLinks";
 import { ManagerRail } from "@/components/ManagerRail";
 import { Button, Disclosure } from "@/components/ui";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 function PickerModal({
   title,
   items,
@@ -153,6 +154,14 @@ function SideColumn({
         <span className="block figure text-display font-bold tracking-tight text-ink">
           {fmtValue(total)}
         </span>
+        {players.length > 0 && (
+          // Faces in a row of their own, so they never squeeze the wrapping names below.
+          <span aria-hidden="true" className="mt-1 flex -space-x-2">
+            {players.map((p) => (
+              <PlayerAvatar key={p.id} name={p.name} team={p.team} playerId={p.id} size="sm" decorative />
+            ))}
+          </span>
+        )}
       </div>
       <div className="space-y-1">
         {players.map((p) => (

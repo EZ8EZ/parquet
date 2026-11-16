@@ -19,6 +19,7 @@ import {
 } from "@/components/ui";
 import { DirectionCard } from "@/components/team/DirectionCard";
 import { TeamAvatar } from "@/components/TeamAvatar";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { fmtValue } from "@/lib/ui";
 export const dynamic = "force-dynamic";
 /*
@@ -60,6 +61,10 @@ export default async function PlanPage() {
     ? { readable: windows.me.state === "window", short: windowShort(windows.me), peak: windows.me.peak }
     : null;
   const brk = tl && breakAssetNames(tl.timelineBreak) ? tl.timelineBreak : null;
+  const ownerOf = (rid) => {
+    const o = h.rostersById.get(rid)?.ownerId;
+    return o ? h.usersById.get(o) : null;
+  };
 
   return (
     <div>
@@ -125,8 +130,15 @@ export default async function PlanPage() {
                 </h3>
               </div>
               {m.package && (
-                <p className="mt-0.5 pl-5 text-note text-secondary">
-                  With <span className="font-semibold text-ink">{m.package.counterparty.name}</span>
+                <p className="mt-1 flex items-center gap-1.5 pl-5 text-note text-secondary">
+                  With
+                  <TeamAvatar
+                    name={m.package.counterparty.name}
+                    avatarId={ownerOf(m.package.counterparty.rosterId)?.avatar}
+                    teamLogoUrl={ownerOf(m.package.counterparty.rosterId)?.teamLogoUrl}
+                    size="xs"
+                  />
+                  <span className="font-semibold text-ink">{m.package.counterparty.name}</span>
                 </p>
               )}
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -150,6 +162,16 @@ export default async function PlanPage() {
                       <p data-total className="figure text-lede font-bold text-ink">
                         {fmtValue(side.total)}
                       </p>
+                    )}
+                    {side.assets?.some((x) => x.kind === "player") && (
+                      // Faces in a row of their own, so they never squeeze the names below.
+                      <div aria-hidden="true" className="mt-1.5 flex -space-x-2">
+                        {side.assets
+                          .filter((x) => x.kind === "player")
+                          .map((x) => (
+                            <PlayerAvatar key={x.id} name={x.name} team={h.players.get(String(x.id))?.team} playerId={String(x.id)} size="sm" decorative />
+                          ))}
+                      </div>
                     )}
                     {side.assets ? (
                       <ul className="mt-1.5 space-y-1">
