@@ -1,248 +1,141 @@
 /**
- * THE FRONT DOOR - what a first-time reader needs before any other page makes sense.
+ * THE FRONT DOOR - what a first-time reader needs before any other page makes sense,
+ * on one screen.
  *
- * This app was built by one manager for his own league, and its strongest surfaces
- * assume the reader already knows what a "revealed strategy" is and what a TCI of 62
- * means. This page is where that assumption gets paid off for everyone else: what the
- * app is FOR, who "you" refers to, what the two proprietary indexes measure and
- * refuse to measure, and why nothing here carries a grade.
- *
- * Deliberately static: it makes no claims that need live data, so it should load
- * instantly and identically for a visitor whose league hasn't even been fetched yet.
- * The honesty caveats are the pitch, not the fine print - "a torn-down roster scores
- * low because there is nothing left to fail, and the most torn-down rosters do not
- * score at all" earns more trust than any confident number would (see DECISIONS
- * D19/D23/D24/D113 for the record behind each one).
+ * Kept as its own page rather than merged into /methodology, on purpose: this page
+ * is static and makes no claim that needs live data, so it loads instantly for a
+ * visitor arriving from the team picker whose league has not been fetched yet, while
+ * /methodology assembles the whole corpus to print its live counts. Merging would
+ * make the front door wait on the heaviest page in the app. So /about says what the
+ * app is in one line, links each idea into its section of /methodology, and keeps
+ * the product-level explanations (who "you" is, streaks vs superlatives, why no
+ * grades, what the numbers refuse to know) behind Disclosures. Their substance is
+ * unchanged; the record behind each is in DECISIONS D19/D23/D24/D113.
  */
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-import { PageHeader, Card, SectionHeader } from "@/components/ui";
+import { BarChart3, Clock, Gauge, ShieldAlert, Timer, Trophy } from "lucide-react";
+import { ButtonLink, Disclosure, List, ListRow, PageHeader, SectionHeader } from "@/components/ui";
 import { Onward } from "@/components/Onward";
+
+const IDEAS = [
+  { href: "/methodology#formula", icon: BarChart3, title: "How a value is priced", meta: "Market rank, bent by age, injury, role, position" },
+  { href: "/methodology#timelines", icon: Clock, title: "TCI, timeline coherence", meta: "Do a roster's assets agree about when? 0-100" },
+  { href: "/methodology#fragility", icon: Gauge, title: "RFI, roster fragility", meta: "What breaks if one player goes down. 0-100" },
+  { href: "/methodology#picks", icon: Trophy, title: "Pick prices", meta: "By overall slot, spread over the lottery" },
+  { href: "/methodology#lockin", icon: Timer, title: "Lock-in numbers", meta: "Expected if held, chance a later game beats it" },
+];
+
 export default function AboutPage() {
   return (
     <div>
       <PageHeader
         kicker="Parquet"
         title="A memory, not a stat site"
-        subtitle="What this app is for, what its two indexes measure, what they refuse to measure, and why nothing here gets a grade."
+        subtitle="Your league's record and your reasoning, side by side."
       />
+      <ButtonLink href="/teams" block>
+        Pick your team
+      </ButtonLink>
 
-      <Card>
-        <p className="text-body leading-relaxed text-ink">
-          Dynasty leagues run for years, and the platform remembers everything
-          except the part that matters:{" "}
-          <span className="font-semibold">why</span>. Every trade survives
-          forever in the transaction log. The reasoning that felt so obvious at
-          the time survives about a month.
-        </p>
-        <p className="mt-2 text-body leading-relaxed text-muted">
-          Parquet keeps both. The record comes from the league itself. The
-          reasoning is written down in the decision ledger at the moment of
-          conviction, before memory rewrites it. The app&apos;s one real trick
-          is holding the two next to each other and telling you when they
-          disagree. It is built for self-knowledge, not for advice: most tools
-          tell you what to do next, this one shows you what you actually do. Who
-          you overpay. How long you really hold players. Whether your trades
-          match your stated plan. What you change is up to you.
-        </p>
-      </Card>
+      <SectionHeader title="The numbers" href="/methodology" cta="Methodology" />
+      <List>
+        {IDEAS.map(({ href, icon: Icon, title, meta }) => (
+          <li key={href}>
+            <ListRow
+              href={href}
+              avatar={<Icon size={20} aria-hidden="true" className="text-accent-text" />}
+              title={title}
+              meta={meta}
+            />
+          </li>
+        ))}
+      </List>
 
-      <SectionHeader title={'Who "you" is'} />
-      <Card>
-        <p className="text-body leading-relaxed text-muted">
-          Every page speaks to one manager at a time, and{" "}
-          <span className="font-semibold text-ink">
-            &quot;you&quot; means whoever is in the chair
-          </span>
-          . Pick a team on the Teams page and the whole app re-reads itself
-          around that manager: their roster, their revealed strategy, their read
-          on everyone else. Look through your own team and Parquet is a mirror.
-          Look through a rival&apos;s and it is a scouting report. A headline
-          like &quot;You said win-now. You sold.&quot; is aimed at the chair,
-          not at whoever happens to be holding the phone.
-        </p>
-        <p className="mt-2 text-body leading-relaxed text-muted">
-          Switching chairs is public and free, because every number it moves is
-          league data anyone can already read. Writing is the one thing it does
-          not hand you: if your commissioner has turned on{" "}
-          <span className="font-semibold text-ink">seats</span>, capturing
-          reasoning in the decision ledger needs a seat of your own, claimed
-          once from a private link, so a note is always signed by whoever
-          actually wrote it.
-        </p>
-        <Link
-          href="/teams"
-          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note leading-snug font-semibold text-accent-text"
+      <SectionHeader title="The ground rules" />
+      <div className="rounded-card bg-surface px-4">
+        <Disclosure summary="What Parquet is for" bodyClassName="space-y-2 bg-transparent px-0 pt-0 text-body">
+          <p>
+            Dynasty leagues run for years, and the platform remembers everything except
+            the part that matters: <span className="font-semibold text-ink">why</span>.
+            Every trade survives forever in the transaction log. The reasoning that felt
+            so obvious at the time survives about a month.
+          </p>
+          <p>
+            Parquet keeps both. The record comes from the league itself. The reasoning is
+            written down in the decision ledger at the moment of conviction, before memory
+            rewrites it, and the app holds the two next to each other and tells you when
+            they disagree. It is built for self-knowledge, not for advice: it shows you
+            what you actually do. What you change is up to you.
+          </p>
+        </Disclosure>
+        <Disclosure summary={'Who "you" is'} bodyClassName="space-y-2 bg-transparent px-0 pt-0 text-body" className="border-t border-border">
+          <p>
+            Every page speaks to one manager at a time, and{" "}
+            <span className="font-semibold text-ink">&quot;you&quot; means whoever is in the chair</span>.
+            Pick a team and the whole app re-reads itself around that manager: their
+            roster, their revealed strategy, their read on everyone else. Look through
+            your own team and Parquet is a mirror; look through a rival&apos;s and it is a
+            scouting report.
+          </p>
+          <p>
+            Switching chairs is public and free, because every number it moves is league
+            data anyone can already read. Writing is the one thing it does not hand you:
+            if your commissioner has turned on <span className="font-semibold text-ink">seats</span>,
+            capturing reasoning in the ledger needs a seat of your own, claimed once from
+            a private link, so a note is always signed by whoever wrote it.
+          </p>
+        </Disclosure>
+        <Disclosure summary="Still running vs. settled" bodyClassName="bg-transparent px-0 pt-0 text-body" className="border-t border-border">
+          <span className="font-semibold text-ink">Streaks</span> are yours and still
+          moving: most get longer with nothing but the passing of a day, and they can be
+          alive, at risk, or broken. <span className="font-semibold text-ink">Superlatives</span>{" "}
+          are the opposite: one winner each, ranked against the whole league, settled
+          until more history happens. That is why a streak prints the moment it was
+          counted to and an award does not.
+        </Disclosure>
+        <Disclosure summary="Why nothing gets a grade" bodyClassName="bg-transparent px-0 pt-0 text-body" className="border-t border-border">
+          A grade is a verdict from a model that cannot see your timeline, your
+          league&apos;s scoring, or the chair you are sitting in, and it ends the
+          conversation where it should start. What you get instead is{" "}
+          <span className="font-semibold text-ink">a thesis</span>: what each side is
+          betting on, the single assumption that has to hold for your side to be right,
+          and what your own history says about this kind of bet.
+        </Disclosure>
+        <Disclosure
+          summary="What the numbers refuse to know"
+          icon={<ShieldAlert size={16} className="text-secondary" />}
+          bodyClassName="bg-transparent px-0 pt-0 text-body"
+          className="border-t border-border"
         >
-          Pick your team
-          <ChevronRight size={13} aria-hidden="true" />
-        </Link>
-      </Card>
-
-      {/* Moved here out of the streak panel on Home, where it rendered on every visit
-            to explain a distinction that is new exactly once. This page is where the
-            app's vocabulary is defined; Home is where it gets used. */}
-      <SectionHeader title="Still running vs. settled" />
-      <Card>
-        <p className="text-body leading-relaxed text-muted">
-          Two things on this app look like the same thing and are not.{" "}
-          <span className="font-semibold text-ink">Streaks</span> are yours and
-          still moving: most of them get longer with nothing but the passing of
-          a day, they carry what happens next, and they can be alive, at risk,
-          or broken.{" "}
-          <span className="font-semibold text-ink">Superlatives</span> are the
-          opposite - one winner each, ranked against the whole league, settled
-          until more history happens. That is why a streak prints the moment it
-          was counted to and an award does not: only one of them will be a
-          different number tomorrow.
-        </p>
-        <Link
-          href="/awards"
-          className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text"
-        >
-          The Superlatives
-          <ChevronRight size={13} aria-hidden="true" />
-        </Link>
-      </Card>
-
-      <SectionHeader title="The two numbers you haven't seen before" />
-      <Card>
-        <p className="text-meta font-semibold uppercase tracking-wide text-accent-text">
-          TCI · Timeline Coherence Index{" "}
-          <span className="figure normal-case tracking-normal text-secondary">
-            (0-100)
-          </span>
-        </p>
-        <p className="mt-1.5 text-body leading-relaxed text-muted">
-          Every asset on a dynasty roster is a claim on production at some point
-          in time: a 21-year-old pays off later, a 33-year-old pays off now, a
-          far-out first pays off after that. TCI measures whether a
-          roster&apos;s assets{" "}
-          <span className="font-semibold text-ink">agree about when</span>. High
-          means the roster is one plan. Low means it is two teams sharing a
-          logo.
-        </p>
-        <p className="mt-2 text-body leading-relaxed text-muted">
-          <span className="font-semibold text-ink">
-            What it deliberately does not measure:
-          </span>{" "}
-          whether the plan is any good. TCI is direction-free. A committed
-          rebuild and a committed title push both score high, because the index
-          measures whether you have a plan, not whether we approve of it. The
-          only reading it calls bad is straddling: a win-now star next to a
-          stack of far-out firsts, where neither timeline is being served.
-        </p>
-      </Card>
-
-      <Card className="mt-2">
-        <p className="text-meta font-semibold uppercase tracking-wide text-accent-text">
-          RFI · Roster Fragility Index{" "}
-          <span className="figure normal-case tracking-normal text-secondary">
-            (0-100, higher is more fragile)
-          </span>
-        </p>
-        <p className="mt-1.5 text-body leading-relaxed text-muted">
-          If your most load-bearing player&apos;s knee went on a Tuesday night,
-          how much of your season goes with it? RFI deletes each player,
-          re-solves the best legal lineup out of who is left, and measures what
-          broke. Add how concentrated the roster&apos;s value is and how much of
-          it sits in bodies that miss games, and you have the index.
-        </p>
-        <p className="mt-2 text-body leading-relaxed text-muted">
-          <span className="font-semibold text-ink">
-            What it deliberately does not measure:
-          </span>{" "}
-          quality. Low fragility is not the same as good. A torn-down roster
-          can score low for the same reason a healthy one does: nothing left
-          on it is load-bearing enough to fail. The most torn-down rosters do
-          not score at all - too little left on them to read anything from,
-          so the index declines the figure rather than publish one. Picks are
-          excluded too: a future first cannot fill a lineup slot tonight, so
-          it cannot make this season less fragile.
-        </p>
-      </Card>
-
-      <p className="mt-2 text-meta leading-relaxed text-secondary">
-        Both numbers are built from one roster&apos;s own assets, so neither
-        moves when somebody else trades, and both read the roster as it stands
-        tonight. The words beside them are the league-relative part:
-        &quot;brittle&quot; and &quot;contending&quot; come from where a roster
-        sits against the other thirteen on your schedule.
-      </p>
-
-      <SectionHeader title="Why nothing gets a grade" />
-      <Card>
-        <p className="text-body leading-relaxed text-muted">
-          Every trade tool on the market will stamp your deal with a letter.
-          Parquet refuses, on purpose. A grade is a verdict handed down by a
-          model that cannot see your timeline, your league&apos;s scoring, or
-          the chair you are sitting in, and it ends the conversation exactly
-          where it should start. What you get instead is{" "}
-          <span className="font-semibold text-ink">a thesis</span>: what each
-          side is betting on, the single assumption that has to hold for your
-          side to be right, and what your own history says about this kind of
-          bet. If the assumption reads wrong to you, the trade is wrong for you,
-          whatever any letter would have said.
-        </p>
-      </Card>
-
-      <SectionHeader title="What the numbers refuse to know" />
-      <Card>
-        <p className="text-body leading-relaxed text-muted">
-          The fastest way to lose your trust would be one invented number, so
-          the gaps are named instead of filled:
-        </p>
-        <ul className="mt-2 space-y-2 text-body leading-relaxed text-muted">
-          <Refusal>
-            Commissioner-executed trades arrive from the platform with no pick
-            record. A version of this app inferred those picks; tested against a
-            real league, it attributed six unrelated pick moves to one deal, so
-            it was deleted. Nothing here is inferred - those deals are marked
-            &quot;no pick record&quot; instead, and the unattributed pick moves
-            are listed on their own.
-          </Refusal>
-          <Refusal>
-            Trade value added counts players only, because picks are missing
-            from exactly those trades. The bias is stated where the number
-            appears: a manager who sold picks looks worse than they were, a
-            buyer better.
-          </Refusal>
-          <Refusal>
-            The performance awards are scored with hindsight, at today&apos;s
-            values rather than what was knowable at the time, and each one says
-            so in its own subtitle.
-          </Refusal>
-          <Refusal>
-            No value history is stored, so nothing here charts a trend it would
-            have to invent. The one trajectory line in the app is the published
-            age curve projected forward, labeled as exactly that.
-          </Refusal>
-        </ul>
-      </Card>
-
-      <p className="mt-5 text-center text-meta leading-relaxed text-secondary">
-        The math behind every value, every curve, every constant is public on
-        the{" "}
-        <Link
-          href="/methodology"
-          className="font-semibold text-muted underline-offset-2 hover:text-accent-text hover:underline"
-        >
-          methodology page
-        </Link>
-        . If a number in this app cannot explain itself, that is a bug.
-      </p>
+          <ul className="list-disc space-y-2 pl-5 marker:text-accent-text">
+            <li>
+              Commissioner-executed trades arrive with no pick record. A version of this
+              app inferred those picks; tested against a real league, it attributed six
+              unrelated pick moves to one deal, so it was deleted. Those deals are marked
+              &quot;no pick record&quot; instead.
+            </li>
+            <li>
+              Trade value added counts players only, because picks are missing from
+              exactly those trades. The bias is stated where the number appears: a manager
+              who sold picks looks worse than they were, a buyer better.
+            </li>
+            <li>
+              The performance awards are scored with hindsight, at today&apos;s values, and
+              each one says so in its own subtitle.
+            </li>
+            <li>
+              No value history is stored, so nothing here charts a trend it would have to
+              invent. The one trajectory line is the published age curve projected
+              forward, labeled as exactly that.
+            </li>
+            <li>
+              TCI is direction-free and does not judge whether the plan is any good; RFI
+              is not a quality score, and the most torn-down rosters get no RFI at all
+              rather than a figure read from too little.
+            </li>
+          </ul>
+        </Disclosure>
+      </div>
       <Onward from="/about" />
     </div>
-  );
-}
-function Refusal({ children }) {
-  return (
-    <li className="flex gap-2">
-      <span
-        aria-hidden="true"
-        className="mt-[7px] h-1.5 w-1.5 shrink-0 rounded-full bg-accent"
-      />
-      <span>{children}</span>
-    </li>
   );
 }

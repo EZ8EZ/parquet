@@ -39,7 +39,8 @@ import {
   LOO_TOP_K,
 } from "@/lib/metrics/fragility";
 import { baseCurveSamples, pickWalkthroughExample } from "@/lib/methodology";
-import { PageHeader, Card } from "@/components/ui";
+import { PageHeader, Card, Disclosure } from "@/components/ui";
+import { SectionIndex } from "@/components/methodology/SectionIndex";
 import { LineChart } from "@/components/charts";
 import Link from "next/link";
 import { ChevronRight } from "lucide-react";
@@ -51,46 +52,64 @@ import { MethodologyWalkthrough } from "@/components/MethodologyWalkthrough";
 import { LEAN_RECORD, MODEL_INFO } from "@/lib/lockin";
 export const dynamic = "force-dynamic";
 /**
- * TEN SECTIONS, EACH A DOOR. This page used to print every subsection's charts,
- * tables and prose fully open, one after another - a first-time reader's page and
- * a "wait, how is injury priced again" reference page were forced to be the same
- * length. They are not: the formula card above stays open always (it is the one
- * sentence every reader needs), the first two subsections (base value, the
- * measured age curve) arrive open because they are what most readers came for,
- * and the rest - the market half, position, injury, role, picks, timelines,
- * fragility - are one tap away rather than a scroll away. Nothing here is
- * shortened or removed; `SECTION_LINKS` below is only a map of what is already
- * on the page.
+ * NAVIGABLE, NOT SHORT. This is the one legitimately long-form page, so it is built to
+ * be jumped around rather than scrolled: an index at the top puts every section one
+ * tap away (components/methodology/SectionIndex.jsx, which also pins a topic bar once
+ * the index scrolls off), and every section leads with its formula or its figure in a
+ * card. Explanation, measurement history and caveats sit behind Disclosures under it.
+ * Nothing was removed in the conversion and no number or formula changed: every
+ * paragraph, table and n that was on the page is still here, one tap deeper. Anchor
+ * ids are unchanged, so /methodology#picks and friends still land.
  */
-const SECTION_LINKS = [
-  { id: "base", label: "1 · Base value" },
-  { id: "production", label: "1a · Production" },
-  { id: "age", label: "2 · Age curve" },
-  { id: "star", label: "2a · Star tier" },
-  { id: "market", label: "2b · Market" },
-  { id: "position", label: "3 · Position" },
-  { id: "injury", label: "4 · Injury" },
-  { id: "role", label: "5 · Role" },
-  { id: "picks", label: "6 · Picks" },
-  { id: "timelines", label: "7 · Timelines" },
-  { id: "fragility", label: "8 · Fragility" },
-  { id: "lockin", label: "9 · Lock-in" },
+const SECTION_GROUPS = [
+  {
+    label: "Values",
+    items: [
+      { id: "formula", label: "Formula" },
+      { id: "base", label: "Base" },
+      { id: "production", label: "Production" },
+      { id: "age", label: "Age" },
+      { id: "star", label: "Star tier" },
+      { id: "market", label: "Market" },
+      { id: "position", label: "Position" },
+      { id: "injury", label: "Injury" },
+      { id: "role", label: "Role" },
+    ],
+  },
+  { label: "Picks", items: [{ id: "picks", label: "Draft picks" }] },
+  {
+    label: "Direction",
+    items: [
+      { id: "timelines", label: "TCI" },
+      { id: "fragility", label: "RFI" },
+    ],
+  },
+  { label: "Lock-in", items: [{ id: "lockin", label: "This week" }] },
 ];
-function Subsection({ id, title, defaultOpen, children }) {
+/**
+ * One topic: its title, then the lead card (the formula or the figure the section
+ * exists to state), then the explanation and history behind Disclosures.
+ * scroll-mt clears the sticky app header and the topic bar.
+ */
+function Section({ id, title, lead, children }) {
   return (
-    <details id={id} className="group mt-4 scroll-mt-3" open={defaultOpen || undefined}>
-      <summary className="mb-1.5 flex min-h-11 cursor-pointer list-none items-center gap-1.5">
-        <ChevronRight
-          size={13}
-          aria-hidden="true"
-          className="disclosure-chevron shrink-0 text-faint group-open:rotate-90"
-        />
-        <h2 className="min-w-0 text-note font-semibold uppercase tracking-[0.16em] text-muted">
-          {title}
-        </h2>
-      </summary>
-      <div className="disclosure-body space-y-2">{children}</div>
-    </details>
+    <section id={id} aria-labelledby={`${id}-h`} className="scroll-mt-[calc(var(--header-h)+env(safe-area-inset-top)+64px)] pt-6">
+      <h2 id={`${id}-h`} className="mb-2 text-lede font-semibold tracking-tight text-ink">
+        {title}
+      </h2>
+      <Card>{lead}</Card>
+      {children}
+    </section>
+  );
+}
+/** A figure inside a lead card: one tonal step up, never a bordered box. */
+function Tile({ label, value, sub }) {
+  return (
+    <div className="min-w-0 rounded-control bg-surface-2 p-3">
+      <div className="text-meta font-medium text-secondary">{label}</div>
+      <div className="mt-0.5 figure text-lede font-bold text-ink">{value}</div>
+      {sub && <div className="mt-0.5 text-meta text-secondary">{sub}</div>}
+    </div>
   );
 }
 export default async function MethodologyPage() {
@@ -464,59 +483,49 @@ export default async function MethodologyPage() {
     <div>
       <PageHeader
         kicker="Methodology"
-        title="How the values work"
-        subtitle="No black box, no scraped market. Every number below is a constant you can read in the code, with where it came from."
-        action={
+        title="How the numbers work"
+        subtitle="Every constant is in the code, with where it came from."
+        kickerAction={
           <Link
             href="/about"
-            className="inline-flex min-h-11 items-center gap-0.5 rounded-full border border-border px-3 text-meta font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
+            className="-mr-2 -my-3 inline-flex min-h-11 items-center gap-0.5 rounded-full px-2 text-note font-semibold text-accent-text"
           >
             What this is
-            <ChevronRight size={12} aria-hidden="true" />
+            <ChevronRight size={16} aria-hidden="true" />
           </Link>
         }
       />
 
-      {walkthroughModel ? (
-        <div className="mb-4">
-          <MethodologyWalkthrough model={walkthroughModel} steps={walkthroughSteps} />
-        </div>
-      ) : (
-        // The theoretical no-example case (see the comment above walkthroughModel):
-        // the formula still needs to be SAID somewhere, so it falls back to the
-        // sentence-plus-equation form the walkthrough replaced.
-        <Card className="mb-4">
-          <p className="text-body leading-relaxed text-ink">
-            A player&apos;s dynasty value is a base value from a rank, bent by
-            four multipliers:
-          </p>
-          <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-body text-accent-text">
+      <SectionIndex groups={SECTION_GROUPS} />
+
+      <Section id="formula" title="The formula" lead={
+        <>
+          <p className="font-mono text-body text-accent-text">
             value = base(rank) × age × injury × role × position
           </p>
-          <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-body text-accent-text">
+          <p className="mt-2 font-mono text-note text-muted">
             {productionOff
-              ? "rank = market rank (production term off, section 1a)"
+              ? "rank = market rank (production term off, see Production)"
               : `rank = ${Math.round((1 - cfg.productionWeight) * 100)}% consensus rank + ${Math.round(cfg.productionWeight * 100)}% in-league production`}
           </p>
-        </Card>
-      )}
+          {walkthroughExample ? (
+            <p className="mt-3 text-note text-secondary">
+              Today: {walkthroughExample.name} prices at{" "}
+              <span className="figure font-semibold text-ink">{walkthroughExample.value.toLocaleString()}</span>, top of the board{" "}
+              <span className="figure font-semibold text-ink">{valueCeiling.toLocaleString()}</span>.
+            </p>
+          ) : null}
+        </>
+      }>
+        {walkthroughModel ? (
+          <Disclosure summary="Walk one real player through it" className="mt-1" bodyClassName="bg-transparent px-0 pt-1">
+            <MethodologyWalkthrough model={walkthroughModel} steps={walkthroughSteps} />
+          </Disclosure>
+        ) : null}
+      </Section>
 
-      {/* Jump rail: nine subsections is a long page - let people land on one
-            rather than scroll every closed header on the way past. */}
-      <nav aria-label="Sections" className="mt-2 flex flex-wrap gap-1.5">
-        {SECTION_LINKS.map((s) => (
-          <a
-            key={s.id}
-            href={`#${s.id}`}
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-2.5 text-note font-medium text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
-          >
-            {s.label}
-          </a>
-        ))}
-      </nav>
-
-      <Subsection id="base" title="1 · Base value from the dynasty market rank" defaultOpen>
-      <Card>
+      <Section id="base" title="Base value from the dynasty market rank" lead={
+        <>
         <p className="mb-3 text-body leading-relaxed text-muted">
           Value falls steeply off the top of the dynasty market and then decays
           exponentially through the middle (studs are scarcer than a pure exponential
@@ -528,15 +537,17 @@ export default async function MethodologyPage() {
           </span>
         </p>
         <LineChart data={baseExamples} format={(n) => n.toLocaleString()} />
-      </Card>
-      </Subsection>
+        </>
+      } />
 
-      <Subsection id="production" title="1a · In-league production" defaultOpen>
-      {productionOff ? (
-        <Card className="mb-2">
-          <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
-            Off, pending re-measurement
-          </h3>
+      <Section id="production" title="In-league production" lead={
+        <div className="grid grid-cols-2 gap-2">
+          <Tile label="Weight in the rank" value={productionOff ? "0" : `${Math.round(cfg.productionWeight * 100)}%`} sub={productionOff ? "off, pending re-measurement" : "of the rank prior"} />
+          <Tile label="Measured on" value={PRODUCTION_PROVENANCE.playerWeeks.toLocaleString()} sub={`player-weeks, ${PRODUCTION_PROVENANCE.playerSeasons} player-seasons`} />
+        </div>
+      }>
+        {productionOff ? (
+        <Disclosure summary="Off, pending re-measurement" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
           <p className="mt-2 text-body leading-relaxed text-muted">
             Production does not move any price today: its weight is set to 0 in the
             config. It was switched off on 2026-11-16 for two reasons. Its weight
@@ -549,9 +560,9 @@ export default async function MethodologyPage() {
             The code and the old measurement are kept, and are described below, so the
             term can be re-measured against the current rank and switched back on.
           </p>
-        </Card>
-      ) : null}
-      <Card>
+        </Disclosure>
+        ) : null}
+        <Disclosure summary="What it measures" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <p className="text-body leading-relaxed text-muted">
           The rank above used to be Sleeper&apos;s <span className="text-ink">search_rank</span>{" "}
           and nothing else. That is a <span className="text-ink">redraft popularity
@@ -574,14 +585,10 @@ export default async function MethodologyPage() {
           {PRODUCTION_PROVENANCE.playerSeasons} player-seasons, read once offline and
           committed as a table of {DERIVED_PRODUCTION.length} players.
         </p>
-      </Card>
-
-      <Card className="mt-2">
-        <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
-          {productionOff
+        </Disclosure>
+        <Disclosure summary={productionOff
             ? "How the 0.233 weight was measured (not applied now)"
-            : `The weight is ${Math.round(cfg.productionWeight * 100)}%, and the first measurement said zero`}
-        </h3>
+            : `The weight is ${Math.round(cfg.productionWeight * 100)}%, and the first measurement said zero`} className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <p className="mt-2 text-body leading-relaxed text-muted">
           Asked the obvious question first: does past production here predict{" "}
           <span className="text-ink">next season&apos;s</span>{" "}
@@ -636,12 +643,8 @@ export default async function MethodologyPage() {
           much on either count is unknown. There is no correction applied here and no
           range drawn for one, because a bound nobody measured is not a bound.
         </p>
-      </Card>
-
-      <Card className="mt-2">
-        <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
-          It changes who sits where, never the scale
-        </h3>
+        </Disclosure>
+        <Disclosure summary="It changes who sits where, never the scale" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <p className="mt-2 text-body leading-relaxed text-muted">
           Production is not a fifth multiplier. The two ranks are blended as percentiles,
           the blendable players are re-ordered, and each is then handed the rank belonging
@@ -652,14 +655,13 @@ export default async function MethodologyPage() {
           should be ahead of whom, and no claim at all about what a dynasty asset is worth
           in points.
         </p>
-      </Card>
-
+        </Disclosure>
       {/* With the term off nothing moves, and coverage of a term that prices nothing
           is beside the point; both cards return when the weight does. */}
       {productionOff ? null : (
       <>
-      <Card className="mt-2">
-        <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
+      <div>
+        <h3 className="text-body font-semibold text-ink">
           What it moved
         </h3>
         <div className="mt-2">
@@ -671,10 +673,10 @@ export default async function MethodologyPage() {
             pricedTotal={priced.length}
           />
         </div>
-      </Card>
+      </div>
 
-      <Card className="mt-2">
-        <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
+      <div>
+        <h3 className="text-body font-semibold text-ink">
           Which prices rest on production, and which do not
         </h3>
         <p className="mt-2 text-body leading-relaxed text-muted">
@@ -769,14 +771,10 @@ export default async function MethodologyPage() {
           around {h.rosters.length * 19} roster spots against roughly 500 NBA players who
           play real minutes, so absence is a fact about fourteen managers, not about him.
         </p>
-      </Card>
+      </div>
       </>
       )}
-
-      <Card className="mt-2">
-        <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
-          What it is confounded by
-        </h3>
+        <Disclosure summary="What it is confounded by" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <ul className="mt-2 space-y-2">
           <li className="text-body leading-relaxed text-muted">
             <span className="text-ink">Opportunity.</span> Minutes are in here. A player
@@ -810,11 +808,11 @@ export default async function MethodologyPage() {
             re-measure.
           </li>
         </ul>
-      </Card>
-      </Subsection>
+        </Disclosure>
+      </Section>
 
-      <Subsection id="age" title="2 · Age curve, measured" defaultOpen>
-      <Card>
+      <Section id="age" title="Age curve, measured" lead={
+        <>
         <LineChart
           data={ageExamples.map((a) => ({
             label: `${a}`,
@@ -823,6 +821,14 @@ export default async function MethodologyPage() {
           yLabel="age multiplier (%)"
           format={(n) => `${n}%`}
         />
+          <p className="mt-2 text-note text-secondary">
+            From{" "}
+            <span className="figure font-semibold text-ink">{AGE_CURVE_PROVENANCE.playerSeasons.toLocaleString()}</span>{" "}
+            NBA player-seasons, {AGE_CURVE_PROVENANCE.firstSeason} to {AGE_CURVE_PROVENANCE.lastSeason}.
+          </p>
+        </>
+      }>
+        <Disclosure summary="How the curve was measured" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <p className="mt-3 text-body leading-relaxed text-muted">
           These multipliers used to be hand-set. They are now measured from{" "}
           <span className="figure text-ink">
@@ -843,9 +849,10 @@ export default async function MethodologyPage() {
           curves that conclude 36-year-olds hold up fine: the 36-year-olds still
           playing do hold up fine, and half of them are not still playing.
         </p>
-
+        </Disclosure>
+        <Disclosure summary="The full table, with n at each age" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-meta">
+          <table className="w-full text-note">
             <caption className="sr-only">
               Measured age curve: multiplier, sample size and one-season
               survival at each age
@@ -893,7 +900,7 @@ export default async function MethodologyPage() {
           </table>
         </div>
 
-        <p className="mt-2 text-meta leading-snug text-secondary">
+        <p className="mt-2 text-note text-secondary">
           ▾ marks {cliff}, the steepest single year anywhere before 34, and the
           age the quiet marker on /values and /roster points at. Below{" "}
           {CURVE_SUPPORTED_MIN} and above {CURVE_SUPPORTED_MAX} the curve holds
@@ -904,11 +911,16 @@ export default async function MethodologyPage() {
           is divided by, so moving it would rescale every price here for no
           reason at all.
         </p>
-      </Card>
-      </Subsection>
+        </Disclosure>
+      </Section>
 
-      <Subsection id="star" title="2a · Star-tier adjustment (D74)">
-      <Card>
+      <Section id="star" title="Star-tier adjustment (D74)" lead={
+        <div className="grid grid-cols-2 gap-2">
+          <Tile label="Applies from age" value={STAR_AGE_ADJUSTMENT_PROVENANCE.appliedFromAge} sub="cleanly measured span" />
+          <Tile label="Consensus rank" value={`${STAR_SEARCH_RANK_CUTOFF} or better`} sub="who qualifies" />
+        </div>
+      }>
+        <Disclosure summary="Why stars age differently" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <p className="text-body leading-relaxed text-muted">
           The curve above is a POPULATION average - it does not condition on talent
           tier at all. Re-running the same derivation split into a top-decile
@@ -933,8 +945,10 @@ export default async function MethodologyPage() {
           looks right now.&quot; It multiplies onto the ordinary age multiplier
           above; it changes nothing for anyone else.
         </p>
+        </Disclosure>
+        <Disclosure summary="The table, with n at each age" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-meta">
+          <table className="w-full text-note">
             <caption className="sr-only">
               Star-tier age adjustment: ratio, sample size and thinnest supporting
               horizon cell at each age
@@ -978,7 +992,7 @@ export default async function MethodologyPage() {
             </tbody>
           </table>
         </div>
-        <p className="mt-2 text-meta leading-snug text-secondary">
+        <p className="mt-2 text-note text-secondary">
           Below {STAR_AGE_ADJUSTMENT_PROVENANCE.appliedFromAge} the adjustment is
           exactly 1.0 - no correction, not because none exists but because the raw
           data there does not clear its own noise. Beyond{" "}
@@ -986,11 +1000,36 @@ export default async function MethodologyPage() {
           at the last measured ratio, the same convention the curve above uses past
           its own supported range.
         </p>
-      </Card>
-      </Subsection>
+        </Disclosure>
+      </Section>
 
-      <Subsection id="market" title="2b · What this league actually paid">
-      <Card>
+      <Section id="market" title="What this league actually paid" lead={
+        <>
+          <div className="grid grid-cols-3 gap-2">
+            <Tile label="Trades read" value={market.tradesRead} />
+            <Tile label="Usable buys" value={market.acquisitions} />
+            <Tile label="Age vs outcome ρ" value={market.rho != null ? market.rho.toFixed(2) : "-"} />
+          </div>
+        {/* THE REFUSAL WAS ALREADY IN THE DATA AND NOTHING RENDERED IT.
+            `deriveExitWindow` has returned a `refusal` since it was written, and this
+            page hand-wrote an equivalent paragraph beside it - so the sentence a reader
+            saw and the sentence the module produced could drift apart, and did (the
+            paragraph said every bucket fails on concentration; the module's own bar
+            fails most of them on count first). One string now, from the derivation,
+            with the code in front of it and the figure it declined to publish printed
+            immediately before the reason that figure cannot be trusted. */}
+        {market.refusal && (
+          <div className="mt-2">
+            <RefusalMark>
+              <span className="text-note text-secondary">
+                {refusalSentence(market.refusal)}
+              </span>
+            </RefusalMark>
+          </div>
+        )}
+        </>
+      }>
+        <Disclosure summary="How the sample was built" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <p className="text-body leading-relaxed text-muted">
           The curve above says when production declines. It does not say when{" "}
           <span className="text-ink">this league</span> stops paying, and those
@@ -1005,9 +1044,10 @@ export default async function MethodologyPage() {
           pick-only sides, {market.sidesNoPricedCost} with no priced cost, and{" "}
           {market.sidesPickHeavy} where picks outweighed the players.
         </p>
-
+        </Disclosure>
+        <Disclosure summary="Return by age at the trade" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full text-meta">
+          <table className="w-full text-note">
             <caption className="sr-only">
               Realised return by age at the time of the trade, with sample size
               and, for every bucket, the code naming why its ratio is not a
@@ -1064,30 +1104,14 @@ export default async function MethodologyPage() {
             </tbody>
           </table>
         </div>
-
-        {/* THE REFUSAL WAS ALREADY IN THE DATA AND NOTHING RENDERED IT.
-            `deriveExitWindow` has returned a `refusal` since it was written, and this
-            page hand-wrote an equivalent paragraph beside it - so the sentence a reader
-            saw and the sentence the module produced could drift apart, and did (the
-            paragraph said every bucket fails on concentration; the module's own bar
-            fails most of them on count first). One string now, from the derivation,
-            with the code in front of it and the figure it declined to publish printed
-            immediately before the reason that figure cannot be trusted. */}
-        {market.refusal && (
-          <div className="mt-2">
-            <RefusalMark>
-              <span className="text-meta leading-snug text-secondary">
-                {refusalSentence(market.refusal)}
-              </span>
-            </RefusalMark>
-          </div>
-        )}
-        <p className="mt-2 text-meta leading-snug text-secondary">
+        </Disclosure>
+        <Disclosure summary="Limits, and what the gap means" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
+        <p className="mt-2 text-note text-secondary">
           The table is published anyway, because looking and finding nothing is a
           result, and because the count of trades at each age is itself the thing
           worth knowing.
         </p>
-        <p className="mt-2 text-meta leading-snug text-secondary">
+        <p className="mt-2 text-note text-secondary">
           Two limits, stated rather than buried. Everything here is priced at
           today&apos;s value, so it describes how deals turned out, not how they
           were reasoned, and it is not a forecast. And picks are a separate
@@ -1095,7 +1119,7 @@ export default async function MethodologyPage() {
           player who came with it; commissioner-run trades record no picks at
           all, which is not detectable and not corrected for.
         </p>
-        <p className="mt-2 text-meta leading-snug text-secondary">
+        <p className="mt-2 text-note text-secondary">
           The gap between the two halves is the finding. Production keeps a
           measured schedule:{" "}
           <span className="figure text-ink">{decline29to34}%</span> of a
@@ -1112,22 +1136,16 @@ export default async function MethodologyPage() {
           and the other on {market.acquisitions}. Only the first half is allowed
           to move a price.
         </p>
-      </Card>
-      </Subsection>
+        </Disclosure>
+      </Section>
 
-      <Subsection id="position" title="3 · Positional value - from YOUR scoring">
-      <Card>
-        <p className="mb-3 text-body leading-relaxed text-muted">
-          Each position&apos;s canonical stat line is scored under this
-          league&apos;s actual settings, then normalized. Steals &amp; blocks
-          are weighted {scoring.stl ?? 0}× / {scoring.blk ?? 0}× here, which
-          lifts the positions that produce them.
-        </p>
+      <Section id="position" title="Positional value, from your scoring" lead={
+        <>
         <div className="grid grid-cols-5 gap-1.5">
           {Object.entries(posMults).map(([pos, m]) => (
             <div
               key={pos}
-              className="rounded-[--radius-sm] border border-border bg-surface p-2 text-center"
+              className="rounded-control bg-surface-2 p-2 text-center"
             >
               <div className="text-meta text-secondary">{pos}</div>
               <div className="figure text-body leading-relaxed font-semibold text-ink">
@@ -1136,28 +1154,28 @@ export default async function MethodologyPage() {
             </div>
           ))}
         </div>
-      </Card>
-      </Subsection>
-
-      <Subsection id="injury" title="4 · Injury - by body part, note and age">
-      <Card>
-        <p className="text-body leading-relaxed text-muted">
-          An injury is not one number. The same word means different things to
-          different bodies at different ages, so this term reads what actually
-          happened and how old the player was when it did.
+          <p className="mt-2 text-note text-secondary">
+            Steals and blocks weigh {scoring.stl ?? 0}× / {scoring.blk ?? 0}× here.
+          </p>
+        </>
+      }>
+        <Disclosure summary="How it is computed" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
+        <p className="mb-3 text-body leading-relaxed text-muted">
+          Each position&apos;s canonical stat line is scored under this
+          league&apos;s actual settings, then normalized. Steals &amp; blocks
+          are weighted {scoring.stl ?? 0}× / {scoring.blk ?? 0}× here, which
+          lifts the positions that produce them.
         </p>
-        <p className="mt-3 rounded-[--radius-sm] bg-bg/60 p-3 text-center font-mono text-note text-accent-text">
+        </Disclosure>
+      </Section>
+
+      <Section id="injury" title="Injury, by body part, note and age" lead={
+        <>
+        <p className="mt-3 rounded-control bg-surface-2 p-3 text-center font-mono text-note text-accent-text">
           injury = 1 − class × note × status × age
         </p>
-        <p className="mt-3 text-body leading-relaxed text-muted">
-          Each class penalty below is the share of dynasty value a{" "}
-          <span className="text-ink">surgical</span> event in that class costs a{" "}
-          {cfg.injury.ageReference}-year-old. The age column is how much that
-          grows per decade older, and it is the whole point: an Achilles rupture
-          at 33 is often career-altering, at 23 it is a lost season.
-        </p>
         <div className="mt-3 overflow-x-auto">
-          <table className="w-full min-w-[290px] figure text-meta">
+          <table className="w-full min-w-[290px] figure text-note">
             <thead>
               <tr className="border-b border-border text-left text-secondary">
                 <th className="py-1 pr-2 font-normal">Class</th>
@@ -1171,7 +1189,7 @@ export default async function MethodologyPage() {
                   <td className="py-1 pr-2 text-ink">
                     {c.label}
                     {c.parts && (
-                      <span className="block text-micro text-faint">
+                      <span className="block text-meta text-secondary">
                         {c.parts}
                       </span>
                     )}
@@ -1187,12 +1205,26 @@ export default async function MethodologyPage() {
             </tbody>
           </table>
         </div>
-      </Card>
-
-      <Card className="mt-2">
+        </>
+      }>
+        <Disclosure summary="How classes and age combine" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
+        <p className="text-body leading-relaxed text-muted">
+          An injury is not one number. The same word means different things to
+          different bodies at different ages, so this term reads what actually
+          happened and how old the player was when it did.
+        </p>
+        <p className="mt-3 text-body leading-relaxed text-muted">
+          Each class penalty below is the share of dynasty value a{" "}
+          <span className="text-ink">surgical</span> event in that class costs a{" "}
+          {cfg.injury.ageReference}-year-old. The age column is how much that
+          grows per decade older, and it is the whole point: an Achilles rupture
+          at 33 is often career-altering, at 23 it is a lost season.
+        </p>
+        </Disclosure>
+        <Disclosure summary="Note and status scales" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <div className="grid grid-cols-2 gap-4 text-body leading-relaxed">
           <div>
-            <div className="mb-1 text-meta uppercase tracking-wide text-secondary">
+            <div className="mb-1 text-meta font-semibold text-secondary">
               Note (vs surgery)
             </div>
             <ul className="space-y-0.5 font-mono text-note leading-snug text-muted">
@@ -1207,7 +1239,7 @@ export default async function MethodologyPage() {
             </ul>
           </div>
           <div>
-            <div className="mb-1 text-meta uppercase tracking-wide text-secondary">
+            <div className="mb-1 text-meta font-semibold text-secondary">
               Status
             </div>
             <ul className="space-y-0.5 font-mono text-note leading-snug text-muted">
@@ -1227,12 +1259,8 @@ export default async function MethodologyPage() {
           season-ending injury day-to-day cannot be trusted to say how bad
           something is.
         </p>
-      </Card>
-
-      <Card className="mt-2">
-        <p className="text-body leading-relaxed font-semibold text-ink">
-          What this cannot see
-        </p>
+        </Disclosure>
+        <Disclosure summary="What this cannot see" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <p className="mt-1.5 text-body leading-relaxed text-muted">
           Only the injury a player is carrying{" "}
           <span className="text-ink">today</span>. Sleeper publishes no injury
@@ -1247,27 +1275,20 @@ export default async function MethodologyPage() {
           list of players we happen to think are fragile. An acknowledged gap
           beats a confident guess.
         </p>
-      </Card>
-      </Subsection>
+        </Disclosure>
+      </Section>
 
-      <Subsection id="role" title="5 · Role">
-      <Card>
-        <ul className="space-y-0.5 font-mono text-note leading-snug text-muted">
-          <li>starter: {cfg.role.starter}×</li>
-          <li>2nd unit: {cfg.role.secondary}×</li>
-          <li>bench: {cfg.role.bench}×</li>
-        </ul>
-      </Card>
-      </Subsection>
+      <Section id="role" title="Role" lead={
+        <div className="grid grid-cols-3 gap-2">
+          <Tile label="Starter" value={`${cfg.role.starter}×`} />
+          <Tile label="2nd unit" value={`${cfg.role.secondary}×`} />
+          <Tile label="Bench" value={`${cfg.role.bench}×`} />
+        </div>
+      } />
 
-      <Subsection id="picks" title="6 · Draft picks - slot-aware, lottery-aware">
-      <Card>
-        <p className="text-body leading-relaxed text-muted">
-          Picks are NOT priced by round. The 1.01 and the 1.
-          {String(teams).padStart(2, "0")} are wildly different assets, so value
-          decays exponentially over the OVERALL pick number, toward a floor:
-        </p>
-        <p className="mt-2 rounded-[--radius-sm] bg-bg/60 p-2.5 text-center font-mono text-note text-accent-text">
+      <Section id="picks" title="Draft picks, slot-aware and lottery-aware" lead={
+        <>
+        <p className="mt-2 rounded-control bg-surface-2 p-2.5 text-center font-mono text-note text-accent-text">
           value = {cfg.pick.floor} + ({cfg.pick.topPickValue.toLocaleString()} −{" "}
           {cfg.pick.floor}) · e^(−{cfg.pick.slotDecay} · (overall − 1))
         </p>
@@ -1276,12 +1297,16 @@ export default async function MethodologyPage() {
           The raw slot curve across all {rounds} rounds ({teams * rounds}{" "}
           picks), before time and class adjustments.
         </p>
-      </Card>
-
-      <Card className="mt-2">
-        <p className="text-body leading-relaxed font-semibold text-ink">
-          Which slot? A distribution, not a guess.
+        </>
+      }>
+        <Disclosure summary="Why the overall pick, not the round" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
+        <p className="text-body leading-relaxed text-muted">
+          Picks are NOT priced by round. The 1.01 and the 1.
+          {String(teams).padStart(2, "0")} are wildly different assets, so value
+          decays exponentially over the OVERALL pick number, toward a floor:
         </p>
+        </Disclosure>
+        <Disclosure summary="Which slot? A distribution, not a guess." className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <ul className="mt-1.5 space-y-1.5 text-body leading-relaxed text-muted">
           <li>
             <span className="font-semibold text-ink">Known slot</span> (draft
@@ -1330,9 +1355,9 @@ export default async function MethodologyPage() {
           {pickExamples.map((e) => (
             <div
               key={e.label}
-              className="flex items-baseline justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5"
+              className="flex items-baseline justify-between gap-2 rounded-control bg-surface-2 px-2.5 py-1.5"
             >
-              <span className="min-w-0 line-clamp-1 text-note text-ink">
+              <span className="min-w-0 text-note text-ink">
                 {e.label}
               </span>
               <span className="shrink-0 figure text-note text-muted">
@@ -1344,16 +1369,8 @@ export default async function MethodologyPage() {
             </div>
           ))}
         </div>
-      </Card>
-
-      {/* MOVED HERE FROM THE /roster PICK PANEL. The claim "a future pick's price
-          tracks the owing roster's rank" rests on the draft actually being ordered by
-          the standings, so the measurement of whether it is belongs beside the model,
-          not beside one page's reading of it. */}
-      <Card className="mt-2">
-        <p className="text-body leading-relaxed font-semibold text-ink">
-          Does this league&apos;s order actually follow reverse standings?
-        </p>
+        </Disclosure>
+        <Disclosure summary="Does this league&apos;s order actually follow reverse standings?" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <p className="mt-1.5 text-body leading-relaxed text-muted">
           {orderFidelity.note}
         </p>
@@ -1362,9 +1379,9 @@ export default async function MethodologyPage() {
             {orderFidelity.seasons.map((s) => (
               <div
                 key={s.season}
-                className="flex items-baseline justify-between gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5"
+                className="flex items-baseline justify-between gap-2 rounded-control bg-surface-2 px-2.5 py-1.5"
               >
-                <span className="min-w-0 line-clamp-1 figure text-note text-ink">
+                <span className="min-w-0 figure text-note text-ink">
                   {s.season} draft
                   <span className="text-secondary">
                     {" "}
@@ -1395,12 +1412,8 @@ export default async function MethodologyPage() {
           played is priced as a spread over the slots it could land on, and
           carries the marker.
         </p>
-      </Card>
-
-      <Card className="mt-2">
-        <p className="text-body leading-relaxed font-semibold text-ink">
-          Class strength - subjective, on purpose.
-        </p>
+        </Disclosure>
+        <Disclosure summary="Class strength - subjective, on purpose." className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <p className="mt-1 text-body leading-relaxed text-muted">
           A class can be strong at the very top (a generational talent lifts the
           1.01 and almost nothing else) or deep (the middle and late picks lift
@@ -1423,24 +1436,19 @@ export default async function MethodologyPage() {
           ))}
           <li>any unlisted season: neutral (1.0 / 1.0)</li>
         </ul>
-      </Card>
-      </Subsection>
+        </Disclosure>
+      </Section>
 
-      <Subsection id="timelines" title="7 · Timelines - Dynasty Duration & TCI">
-      <Card>
-        <p className="text-body leading-relaxed text-muted">
-          Every asset is a claim on production at some point in TIME. Borrowing
-          Macaulay duration from fixed income, each asset&apos;s{" "}
-          <span className="font-semibold text-ink">duration</span> is the
-          value-weighted average number of seasons until it pays out - the age
-          curve is the payout profile, and a pick is the wait until it converts
-          plus the duration of the rookie it becomes.
+      <Section id="timelines" title="Timelines: duration and TCI" lead={
+        <>
+        <p className="mt-2 rounded-control bg-surface-2 p-2.5 text-center font-mono text-note text-accent-text">
+          TCI = 100 · (1 − min(1, dispersion / 3))
         </p>
         <div className="mt-2 grid grid-cols-4 gap-1.5 text-center">
           {durationExamples.map((e) => (
             <div
               key={e.label}
-              className="rounded-[--radius-sm] border border-border bg-surface p-2"
+              className="rounded-control bg-surface-2 p-2"
             >
               <div className="text-meta leading-tight text-secondary">
                 {e.label}
@@ -1451,6 +1459,17 @@ export default async function MethodologyPage() {
             </div>
           ))}
         </div>
+        </>
+      }>
+        <Disclosure summary="What duration and TCI are" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
+        <p className="text-body leading-relaxed text-muted">
+          Every asset is a claim on production at some point in TIME. Borrowing
+          Macaulay duration from fixed income, each asset&apos;s{" "}
+          <span className="font-semibold text-ink">duration</span> is the
+          value-weighted average number of seasons until it pays out - the age
+          curve is the payout profile, and a pick is the wait until it converts
+          plus the duration of the rookie it becomes.
+        </p>
         <p className="mt-3 text-body leading-relaxed text-muted">
           A roster&apos;s duration says WHEN its value arrives. The{" "}
           <span className="font-semibold text-ink">
@@ -1459,9 +1478,8 @@ export default async function MethodologyPage() {
           says whether its assets AGREE: it is the value-weighted dispersion of
           duration, inverted onto 0-100.
         </p>
-        <p className="mt-2 rounded-[--radius-sm] bg-bg/60 p-2.5 text-center font-mono text-note text-accent-text">
-          TCI = 100 · (1 − min(1, dispersion / 3))
-        </p>
+        </Disclosure>
+        <Disclosure summary="What TCI does and does not say" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <ul className="mt-2 space-y-1.5 text-body leading-relaxed text-muted">
           <li>
             <span className="font-semibold text-ink">
@@ -1524,16 +1542,24 @@ export default async function MethodologyPage() {
             different size or shape is not something we have established.
           </li>
         </ul>
-        <p className="mt-2 text-meta leading-relaxed text-secondary">
+        <p className="mt-2 text-note text-secondary">
           This is only computable because players and picks are valued on one
           common scale (sections 1-5). See the league quadrant on the League
           page.
         </p>
-      </Card>
-      </Subsection>
+        </Disclosure>
+      </Section>
 
-      <Subsection id="fragility" title="8 · Fragility - the RFI">
-      <Card>
+      <Section id="fragility" title="Fragility: the RFI" lead={
+        <>
+        <p className="mt-2 rounded-control bg-surface-2 p-2.5 text-center font-mono text-note text-accent-text">
+          RFI = 100 · ({W_LOO} · damage + {W_CONCENTRATION} · concentration +{" "}
+          {W_EXPOSURE} · exposure)
+        </p>
+          <p className="mt-2 text-note text-secondary">0 to 100, higher is more fragile.</p>
+        </>
+      }>
+        <Disclosure summary="What it measures" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <p className="text-body leading-relaxed text-muted">
           Duration says WHEN a roster&apos;s value arrives; the{" "}
           <span className="font-semibold text-ink">Roster Fragility Index</span>{" "}
@@ -1543,10 +1569,8 @@ export default async function MethodologyPage() {
           is three measurements of that difference, weighted and combined onto
           0-100, higher = more fragile:
         </p>
-        <p className="mt-2 rounded-[--radius-sm] bg-bg/60 p-2.5 text-center font-mono text-note text-accent-text">
-          RFI = 100 · ({W_LOO} · damage + {W_CONCENTRATION} · concentration +{" "}
-          {W_EXPOSURE} · exposure)
-        </p>
+        </Disclosure>
+        <Disclosure summary="The three components" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <ul className="mt-2 space-y-1.5 text-body leading-relaxed text-muted">
           <li>
             <span className="font-semibold text-ink">
@@ -1579,6 +1603,8 @@ export default async function MethodologyPage() {
             index rather than driving it.
           </li>
         </ul>
+        </Disclosure>
+        <Disclosure summary="What it refuses to count" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <p className="mt-3 text-body leading-relaxed text-muted">
           <span className="font-semibold text-ink">
             What it refuses to count.
@@ -1593,18 +1619,29 @@ export default async function MethodologyPage() {
           index and its components are reading the count rather than the
           roster, so RFI declines the figure rather than publish one.
         </p>
-        <p className="mt-2 text-meta leading-relaxed text-secondary">
+        <p className="mt-2 text-note text-secondary">
           Bands (resilient / balanced / brittle) are league-relative quartiles,
           for the same reason posture is: brittle only means something next to
           the rosters you actually have to beat. Each reference constant was
           calibrated against the observed spread of a real 14-team league, not a
           theoretical worst case.
         </p>
-      </Card>
-      </Subsection>
+        </Disclosure>
+      </Section>
 
-      <Subsection id="lockin" title="9 · This week's lock-in numbers">
-      <Card>
+      <Section id="lockin" title="This week's lock-in numbers" lead={
+        <>
+          <p className="text-meta font-medium text-secondary">The lean in a backtest</p>
+          <p className="mt-1 figure text-display font-bold text-ink">
+            +{LEAN_RECORD.gainPerTeamWeek.toFixed(1)}
+            <span className="ml-1.5 text-note font-medium text-secondary">pts per team-week</span>
+          </p>
+          <p className="mt-1 text-note text-secondary">
+            95% interval {LEAN_RECORD.interval95[0].toFixed(1)} to {LEAN_RECORD.interval95[1].toFixed(1)}, n={LEAN_RECORD.n} active team-weeks
+          </p>
+        </>
+      }>
+        <Disclosure summary="The three numbers on each open starter" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <p className="text-body leading-relaxed text-muted">
           Each starting slot banks one game a week. You can lock a starter&apos;s score
           after a game and before his next tip. If you never lock him, the slot takes
@@ -1647,11 +1684,8 @@ export default async function MethodologyPage() {
           <span className="font-semibold text-ink">Lock state.</span>{" "}
           {MODEL_INFO.lockStateNote}
         </p>
-      </Card>
-      <Card className="mt-2">
-        <h3 className="text-note font-semibold uppercase tracking-[0.16em] text-muted">
-          Left out on purpose
-        </h3>
+        </Disclosure>
+        <Disclosure summary="Left out on purpose" className="mt-1" bodyClassName="space-y-3 bg-transparent px-0 pt-1 text-body">
         <ul className="mt-2 space-y-2">
           <li className="text-body leading-relaxed text-muted">
             <span className="text-ink">His record against tonight&apos;s opponent.</span>{" "}
@@ -1666,17 +1700,17 @@ export default async function MethodologyPage() {
             is not in the forecast yet.
           </li>
         </ul>
-        <p className="mt-3 text-meta leading-relaxed text-secondary">
+        <p className="mt-3 text-note text-secondary">
           Forecast fit: {MODEL_INFO.fit.method}, R² {MODEL_INFO.fit.r2}, n=
           {MODEL_INFO.fit.n.toLocaleString()} games. Constants in{" "}
           <span className="font-mono">lib/lockin/model.js</span> and{" "}
           <span className="font-mono">lib/lockin/index.js</span>, from the lock-in study
           of 2026-11-16.
         </p>
-      </Card>
-      </Subsection>
+        </Disclosure>
+      </Section>
 
-      <p className="mt-6 text-center text-meta leading-relaxed text-secondary">
+      <Disclosure summary="Where the constants live" className="mt-6">
         Player and pick constants live in{" "}
         <span className="font-mono">lib/valuation/config.js</span>; the timeline
         math in <span className="font-mono">lib/metrics/duration.js</span> and{" "}
@@ -1687,7 +1721,7 @@ export default async function MethodologyPage() {
         distribution actually cliffs, instead of at fixed thresholds. A
         crowdsourced vote-driven market is intentionally deferred until
         there&apos;s enough participation to trust it.
-      </p>
+      </Disclosure>
       <Onward from="/methodology" />
     </div>
   );
