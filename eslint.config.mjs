@@ -61,6 +61,12 @@ const eslintConfig = defineConfig([
      * ones being linted. Nothing under here is source.
      */
     ".claude/**",
+    /*
+     * The lock-in study and its reproduction scripts (scripts/lockin/README.md): kept
+     * as the record that produced lib/lockin's constants, so they are not reworked to
+     * the app's lint rules. They run with node directly and are never bundled.
+     */
+    "scripts/lockin/**",
   ]),
 ]);
 

@@ -29,7 +29,6 @@ export const metadata = {
  * here reads as a mistake (D6). All figures come from lib/lab/regret.
  */
 const fmt = (n) => n.toLocaleString("en-US", { maximumFractionDigits: 1 });
-const whole = (n) => Math.round(n).toLocaleString("en-US");
 
 function ParStrip({ par, marks }) {
   const W = 320;
@@ -250,11 +249,11 @@ export default async function RegretPage({ searchParams }) {
       {seasonNav(played)}
 
       <div className="grid grid-cols-3 gap-2">
-        <StatTile label="Banked" value={whole(ledger.bankedTotal)} sub={`${share}% of available`} />
-        <StatTile label="Available" value={whole(ledger.bestTotal)} sub={`${ledger.slotsTotal} slots`} />
+        <StatTile label="Banked" value={fmt(ledger.bankedTotal)} sub={`${share}% of available`} />
+        <StatTile label="Available" value={fmt(ledger.bestTotal)} sub={`${ledger.slotsTotal} slots`} />
         <StatTile
           label="On the table"
-          value={whole(ledger.gapTotal)}
+          value={fmt(ledger.gapTotal)}
           tone="accent"
           sub={`${ledger.weeks.length} weeks`}
         />

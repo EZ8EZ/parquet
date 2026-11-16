@@ -39,7 +39,7 @@
  * The refusal LABEL in the figure slot is deliberate and is D95's rule, not a shortcut.
  * A refusal that renders as a dash reads as a missing number, which is a claim the
  * derivation just declined to make; `windowShort` returns the register's human label
- * for the same reason (it returned the raw code until VISION.md's kill-list flagged
+ * for the same reason (it returned the raw code until a design review flagged
  * internal constants in reader-facing prose - the code still lives on the refusal
  * object for tests, grep, and serialization).
  *

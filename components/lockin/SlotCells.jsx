@@ -22,7 +22,8 @@ export function SlotCells({ slots }) {
               </span>
             </span>
           );
-          const spoken = `${s.label}: ${s.name ?? "empty"}${s.banked == null ? "" : `, ${fmt(s.banked)}`}, ${SLOT_STATES[key].long}`;
+          // Starts with the visible text ("PG 31.0") so speech input can target it (WCAG 2.5.3).
+          const spoken = `${s.label} ${s.banked == null ? "-" : fmt(s.banked)}: ${s.name ?? "empty"}, ${SLOT_STATES[key].long}`;
           return (
             <li key={s.index} className="min-w-0">
               {s.playerId ? (

@@ -21,7 +21,7 @@ import {
   ListOrdered,
   Palette,
   ScrollText,
-  Settings,
+  Search,
   Share2,
   ShieldCheck,
   Target,
@@ -52,7 +52,7 @@ export const NAV_ICONS = {
   // never have been noticed by anything - which is exactly why it goes now.
   "/about": Info,
   "/methodology": FlaskConical,
-  "/settings": Settings,
+  "/settings": Search,
   "/design": Palette,
   "/teams": Repeat,
   "/lab/pulse": Activity,

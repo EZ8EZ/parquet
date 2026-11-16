@@ -1,5 +1,6 @@
 import { cn } from "@/lib/ui";
 import { DeckTrigger } from "./PlayerDeck";
+import { Opp } from "./Opp";
 
 const CELL = {
   banked: "figure font-bold text-ink underline decoration-accent decoration-2 underline-offset-[3px]",
@@ -75,7 +76,9 @@ export function WeekGrid({ grid, caption, single = false, triggers = false }) {
                     </span>
                   ) : (
                     <span className={CELL[c.kind]} aria-hidden="true">
-                      {c.text}
+                      {/* A crest beside the code where the row has room (one player's week);
+                          the seven-night grid keeps the code alone at 390px. */}
+                      {single && (c.kind === "upcoming" || c.kind === "live") ? <Opp team={c.text} /> : c.text}
                     </span>
                   )}
                   <span className="sr-only">{c.sr}</span>

@@ -357,7 +357,7 @@ export default async function LeaguePage() {
           />
           <StatTile
             label="Points for"
-            value={mine.pointsFor != null ? Math.round(mine.pointsFor).toLocaleString("en-US") : "–"}
+            value={mine.pointsFor != null ? mine.pointsFor.toLocaleString("en-US", { maximumFractionDigits: 1 }) : "–"}
             sub={mine.pfRank ? `${ordinal(mine.pfRank)} most` : "no games yet"}
             visual={mine.pfRank ? <RankStrip rank={mine.pfRank} of={standings.rows.length} /> : null}
           />

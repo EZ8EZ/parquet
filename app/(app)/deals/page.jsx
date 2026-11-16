@@ -70,6 +70,11 @@ export default async function DealsPage({ searchParams }) {
   const filtered = Boolean(pairing || manager);
   const view = !filtered && VIEWS.some((v) => v.id === one("view")) ? one("view") : "deals";
   const byOwner = new Map(ledger.managers.map((m) => [m.ownerId, m]));
+  const avatarFor = (rosterId) => {
+    const ownerId = h.rostersById.get(rosterId)?.ownerId;
+    const u = ownerId ? h.usersById.get(ownerId) : null;
+    return { avatarId: u?.avatar ?? null, teamLogoUrl: u?.teamLogoUrl ?? null };
+  };
 
   let trades = ledger.trades;
   if (pairing) {
@@ -192,6 +197,7 @@ export default async function DealsPage({ searchParams }) {
                   <DealRow
                     key={t.id}
                     t={t}
+                    avatarFor={avatarFor}
                     meRosterId={ledger.meRosterId}
                     ticks={mag.byId.get(t.id)?.ticks ?? null}
                   />
@@ -212,13 +218,23 @@ export default async function DealsPage({ searchParams }) {
 }
 
 /** One deal, one row, one link into its receipt. Names wrap (D111). */
-function DealRow({ t, meRosterId, ticks = null }) {
+function DealRow({ t, meRosterId, ticks = null, avatarFor = null }) {
   const mine = t.sides.some((s) => s.rosterId === meRosterId);
   return (
     <li>
       <ListRow
         href={dealHref(t.id)}
         highlight={mine}
+        avatar={
+          avatarFor ? (
+            // The two (or more) managers' avatars, overlapped; names are printed beside.
+            <span aria-hidden="true" className="flex -space-x-2">
+              {t.sides.slice(0, 2).map((s) => (
+                <TeamAvatar key={s.rosterId} name={s.name} {...avatarFor(s.rosterId)} size="xs" isMe={s.rosterId === meRosterId} />
+              ))}
+            </span>
+          ) : null
+        }
         title={t.sides.map((s, i) => (
           <span key={s.rosterId}>
             {i > 0 && <span className="font-normal text-secondary"> &harr; </span>}

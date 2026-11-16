@@ -1,13 +1,14 @@
 import { History } from "lucide-react";
 import { Chip } from "@/components/ui";
 import { fmt } from "@/lib/lockin/view";
+import { Opp } from "./Opp";
 
 /** Past meetings with the next opponent: history, on a sunken tile apart from the decision. */
 export function OpponentHistory({ v }) {
   return (
     <section className="rounded-control bg-bg p-3" aria-label={`History against ${v.opponent ?? "the next opponent"}`}>
       <div className="flex flex-wrap items-center justify-between gap-2">
-        <h3 className="text-body font-semibold text-ink">{v.opponent ? `Past games vs ${v.opponent}` : "Past games vs next opponent"}</h3>
+        <h3 className="text-body font-semibold text-ink">{v.opponent ? <>Past games vs <Opp team={v.opponent} /></> : "Past games vs next opponent"}</h3>
         <Chip icon={History} size="sm">
           History only
         </Chip>

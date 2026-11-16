@@ -59,3 +59,6 @@ next-env.d.ts
 
 # Agent worktrees are whole checkouts of this repo; never source.
 .claude/worktrees/
+
+# Sleeper responses and outputs of the lock-in study scripts (scripts/lockin/README.md).
+scripts/lockin/cache/

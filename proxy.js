@@ -12,11 +12,19 @@ import {
   entryRedirectTarget,
   LENS_COOKIE,
   needsEntryPick,
+  parseLens,
+  PATH_HEADER,
 } from "@/lib/auth/entry";
 export function proxy(req) {
-  const hasLens = req.cookies.has(LENS_COOKIE);
+  const hasLens = parseLens(req.cookies.get(LENS_COOKIE)?.value) != null;
   const { pathname, search } = req.nextUrl;
-  if (!needsEntryPick(pathname, hasLens)) return NextResponse.next();
+  if (!needsEntryPick(pathname, hasLens)) {
+    // The page path, so a lens that parses but names no roster (lib/history.js) can be
+    // bounced to the picker with the same `next=` a first-time visitor gets.
+    const headers = new Headers(req.headers);
+    headers.set(PATH_HEADER, `${pathname}${search}`);
+    return NextResponse.next({ request: { headers } });
+  }
   return NextResponse.redirect(
     new URL(entryRedirectTarget(pathname, search), req.url),
   );

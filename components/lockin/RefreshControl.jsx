@@ -21,7 +21,7 @@ function stamp(iso) {
  * rate-limited to once per roster per 20 s) and re-renders. Polls only while a game is
  * live and the tab is visible; never outside a live window.
  */
-export function RefreshControl({ rosterId, asOf, live = false, updating = false, disabled = false }) {
+export function RefreshControl({ asOf, live = false, updating = false, disabled = false }) {
   const router = useRouter();
   const [pending, start] = useTransition();
   const [note, setNote] = useState(null);
@@ -32,7 +32,7 @@ export function RefreshControl({ rosterId, asOf, live = false, updating = false,
     if (busy.current || disabled) return;
     busy.current = true;
     start(async () => {
-      const r = await refreshLockDesk(rosterId).catch(() => ({ ok: false, reason: "error" }));
+      const r = await refreshLockDesk().catch(() => ({ ok: false, reason: "error" }));
       busy.current = false;
       if (r.ok) {
         setNote(null);
