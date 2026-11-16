@@ -453,56 +453,9 @@ details[open] .disclosure-body {
   }
 }
 
-/*
- * ======================= THE TIER SHEEN (M8, moment three) =======================
- *
- * A one-time light pass across a Franchise or Cornerstone card as it scrolls into
- * view - VISION.md M8's third signature moment, and the only motion in the app that
- * exists purely to say "this row is one of the few that matter." The tier word
- * already says it in text; the sheen makes it FELT once, then never again.
- *
- * The element is a skewed accent-alpha gradient band (`color-mix` into transparent -
- * an alpha move over the one accent, zero new hues, the same argument D64 recorded)
- * that translates across the card and parks past its right edge, clipped by the
- * row's own `overflow-hidden`. Transform-only, so it composites. Mounted by
- * `ValueAssetRow` only after its one-shot IntersectionObserver fires - the mount is
- * the trigger, the observer disconnects, and the state never resets, which is what
- * makes "one-time" a mechanism rather than a hope.
- *
- * 650ms with a 150ms lead-in: longer than the interaction ceiling this file's
- * header sets, deliberately - that ceiling is about answering INPUT, and this
- * answers nothing; it is a decoration with a schedule, and at interaction speeds
- * a sheen reads as a glitch rather than a glint. The delay lets the row's own
- * `.arrive` settle first when both fire on the same paint (the top rows of
- * /values are in view at load, so both do).
- *
- * Removed outright under reduced motion - the base transform parks it off-card
- * and clipped, so with the animation gone it simply never appears. Pure
- * decoration; nothing is lost.
- */
-@keyframes tier-sheen {
-  from { transform: translateX(-120%) skewX(-14deg); }
-  to { transform: translateX(340%) skewX(-14deg); }
-}
+/* The tier sheen is retired with the other materials (DESIGN.md, Removed). */
 .tier-sheen {
-  position: absolute;
-  inset-block: 0;
-  left: 0;
-  width: 38%;
-  pointer-events: none;
-  background: linear-gradient(
-    105deg,
-    transparent,
-    color-mix(in srgb, var(--color-accent) 13%, transparent) 50%,
-    transparent
-  );
-  transform: translateX(-120%) skewX(-14deg);
-  animation: tier-sheen 650ms var(--ease-out) 150ms both;
-}
-@media (prefers-reduced-motion: reduce) {
-  .tier-sheen {
-    animation: none;
-  }
+  display: none;
 }
 
 /*

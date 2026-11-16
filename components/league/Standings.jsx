@@ -1,83 +1,97 @@
-import Link from "next/link";
 import { TeamAvatar } from "@/components/TeamAvatar";
-import { cn } from "@/lib/ui";
+import { PostureGlyph } from "@/components/PostureTag";
+import { ButtonLink, Chip, List, ListRow, Sheet, StatTile } from "@/components/ui";
+import { ordinal } from "@/lib/derive/describe";
+import { fmtValue } from "@/lib/ui";
+
+function Fact({ label, children }) {
+  return (
+    <div className="flex items-baseline justify-between gap-3 py-2">
+      <dt className="text-note text-secondary">{label}</dt>
+      <dd className="min-w-0 text-right figure text-note font-semibold text-ink">{children}</dd>
+    </div>
+  );
+}
 
 /**
- * The standings, one row per team: place, team, W-L, points for, and value rank. A
- * win-share bar under the record makes the pack readable at a glance; the numbers
- * carry the same facts.
+ * The standings as tappable rows: place, team, W-L and points for. A tap opens the
+ * team in a bottom sheet (record, points, value and the window reading) with the
+ * dossier one button away. `details` is the power ranking's precomputed row per
+ * roster id; nothing is derived here.
  */
-export function Standings({ standings }) {
+export function Standings({ standings, details = {} }) {
   const { rows, hasRecords } = standings;
-  const games = Math.max(1, ...rows.map((r) => (r.wins ?? 0) + (r.losses ?? 0)));
   return (
-    <div className="overflow-hidden rounded-[--radius] border border-border bg-surface">
-      <div
-        aria-hidden="true"
-        className="flex items-center gap-2 border-b border-border px-2.5 py-1 text-micro font-semibold uppercase tracking-wide text-secondary"
-      >
-        <span className="w-5 text-right">#</span>
-        <span className="flex-1">Team</span>
-        <span className="w-12 text-right">W-L</span>
-        <span className="w-12 text-right">PF</span>
-        <span className="w-10 text-right">Value</span>
-      </div>
-      <ol>
-        {rows.map((r, i) => (
-          <li key={r.rosterId} className="border-b border-border last:border-b-0">
-            <Link
-              href={`/managers/${r.rosterId}`}
-              className={cn(
-                "flex min-h-11 items-center gap-2 px-2.5 py-1.5 transition-colors hover:bg-surface-2",
-                r.isMe && "bg-accent-wash",
-              )}
-            >
-              <span className="w-5 shrink-0 text-right figure text-meta font-semibold text-secondary">
-                {hasRecords ? (r.rank ?? "–") : i + 1}
-              </span>
-              <span className="flex min-w-0 flex-1 items-center gap-2">
-                <TeamAvatar
-                  name={r.name}
-                  avatarId={r.avatarId}
-                  teamLogoUrl={r.teamLogoUrl}
-                  size="xs"
-                  className="shrink-0 rounded-full"
-                />
-                <span
-                  className={cn(
-                    "min-w-0 text-body leading-snug break-words",
-                    r.isMe ? "font-semibold text-ink" : "text-ink",
-                  )}
-                >
-                  {r.name}
-                  {r.isMe && <span className="sr-only"> (you)</span>}
-                </span>
-              </span>
-              <span className="w-12 shrink-0 text-right">
-                <span className="block figure text-body font-semibold text-ink">
-                  <span className="sr-only">record </span>
-                  {r.wins != null ? `${r.wins}-${r.losses}` : "–"}
-                </span>
-                {r.wins != null && (
-                  <span aria-hidden="true" className="mt-0.5 ml-auto block h-1 w-10 rounded-full bg-border">
-                    <span
-                      className="block h-1 rounded-full bg-secondary"
-                      style={{ width: `${Math.round((r.wins / games) * 100)}%` }}
+    <List>
+      {rows.map((r, i) => {
+        const d = details[r.rosterId];
+        const record = r.wins != null ? `${r.wins}-${r.losses}` : "–";
+        const place = hasRecords ? (r.rank ?? "–") : i + 1;
+        return (
+          <li key={r.rosterId}>
+            <Sheet
+              triggerLabel={`${place}. ${r.name}${r.isMe ? " (you)" : ""}, record ${record}. Show details`}
+              title={r.name}
+              subtitle={r.ownerName}
+              trigger={
+                <ListRow
+                  as="span"
+                  chevron
+                  highlight={r.isMe}
+                  leading={place}
+                  avatar={
+                    <TeamAvatar
+                      name={r.name}
+                      avatarId={r.avatarId}
+                      teamLogoUrl={r.teamLogoUrl}
+                      size="sm"
+                      className="rounded-full"
                     />
-                  </span>
-                )}
-              </span>
-              <span className="w-12 shrink-0 text-right figure text-meta text-secondary">
-                <span className="sr-only">points for </span>
-                {r.pointsFor != null ? Math.round(r.pointsFor).toLocaleString() : "–"}
-              </span>
-              <span className="w-10 shrink-0 text-right figure text-meta text-secondary">
-                <span className="sr-only">value rank </span>#{r.valueRank}
-              </span>
-            </Link>
+                  }
+                  title={r.name}
+                  badge={r.isMe ? <Chip tone="accent" size="sm">You</Chip> : null}
+                  meta={`Value #${r.valueRank}`}
+                  value={record}
+                  valueSub={r.pointsFor != null ? `${Math.round(r.pointsFor).toLocaleString("en-US")} PF` : null}
+                />
+              }
+            >
+              <div className="grid grid-cols-3 gap-2">
+                <StatTile className="bg-surface-2" size="sm" label="Record" value={record} sub={hasRecords && r.rank ? `${ordinal(r.rank)} place` : "no games"} />
+                <StatTile
+                  className="bg-surface-2"
+                  size="sm"
+                  label="Points for"
+                  value={r.pointsFor != null ? Math.round(r.pointsFor).toLocaleString("en-US") : "unknown"}
+                  sub={r.pfRank ? `${ordinal(r.pfRank)} most` : null}
+                />
+                <StatTile className="bg-surface-2" size="sm" label="Value" value={`#${r.valueRank}`} sub={d ? fmtValue(d.totalValue) : null} />
+              </div>
+              {d && (
+                <dl className="mt-3 divide-y divide-border">
+                  <Fact label="Window">{d.window ?? "unknown"}</Fact>
+                  <Fact label="Posture">
+                    {d.posture ? (
+                      <>
+                        <PostureGlyph posture={d.posture} className="mr-1" />
+                        {d.posture}
+                      </>
+                    ) : (
+                      "unknown"
+                    )}
+                  </Fact>
+                  <Fact label="TCI">{d.tci ?? "unknown"}</Fact>
+                  <Fact label="Fragility (RFI)">{d.fragility ?? "unknown"}</Fact>
+                  <Fact label="Core age">{d.age.replace(/^age /, "")}</Fact>
+                </dl>
+              )}
+              <ButtonLink href={`/managers/${r.rosterId}`} block className="mt-4">
+                {r.isMe ? "Open your dossier" : "Open the dossier"}
+              </ButtonLink>
+            </Sheet>
           </li>
-        ))}
-      </ol>
-    </div>
+        );
+      })}
+    </List>
   );
 }

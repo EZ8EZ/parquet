@@ -45,7 +45,7 @@ import Link from "next/link";
 import { ChevronRight } from "lucide-react";
 import { PostureGlyph } from "@/components/PostureTag";
 import { TeamAvatar } from "@/components/TeamAvatar";
-import { DeltaValue } from "@/components/ui";
+import { Chip, DeltaValue } from "@/components/ui";
 import { useLeagueSelection } from "@/components/LeagueSelection";
 import { fmtValue } from "@/lib/ui";
 export function PowerRanking({ rows }) {
@@ -60,7 +60,7 @@ export function PowerRanking({ rows }) {
      * are both grouped and enumerable.
      */
     <div role="group" aria-label="Select a roster to read on both boards">
-      <ul className="space-y-1">
+      <ul className="divide-y divide-border overflow-hidden rounded-card bg-surface">
         {rows.map((r) => (
           <Row key={r.rosterId} r={r} />
         ))}
@@ -74,15 +74,13 @@ function Row({ r }) {
   return (
     <li
       className={
-        `overflow-hidden rounded-[--radius-sm] border transition-colors ` +
-        // THE SELECTION RULE, as the row's own left border: the same orthogonal ink mark
-        // the window map's ordinal gutter uses, so one state has one mark on this page,
-        // and it costs the text column nothing because a border is not a flex child.
+        `transition-colors ` +
+        // Selection: an inset accent rule on the left edge plus the raised tone.
         (on
-          ? "border-ink border-l-2 bg-surface-2"
+          ? "bg-surface-2 shadow-[inset_3px_0_0_var(--color-accent)]"
           : r.isMe
-            ? "border-accent-edge bg-surface hover:border-border-strong hover:bg-surface-2"
-            : "border-border bg-surface hover:border-border-strong hover:bg-surface-2")
+            ? "bg-accent-wash hover:bg-surface-2"
+            : "hover:bg-surface-2")
       }
     >
       <button
@@ -94,7 +92,7 @@ function Row({ r }) {
         // control, and it is the same set of facts the live region reads back when the
         // selection lands - one derivation, both readings.
         aria-label={r.facts}
-        className="flex min-h-11 w-full min-w-0 items-center gap-2.5 px-2.5 py-1.5 text-left"
+        className="flex min-h-14 w-full min-w-0 items-center gap-3 px-4 py-2.5 text-left"
       >
         <span
           aria-hidden="true"
@@ -114,14 +112,10 @@ function Row({ r }) {
         />
         <span className="min-w-0 flex-1">
           <span className="flex items-center gap-1.5">
-            <span className="line-clamp-1 text-body font-semibold leading-tight text-ink">
+            <span className="min-w-0 text-body font-semibold text-ink">
               {r.name}
             </span>
-            {r.isMe && (
-              <span className="shrink-0 rounded-full bg-accent-wash px-1.5 text-meta font-semibold leading-tight text-accent-text">
-                you
-              </span>
-            )}
+            {r.isMe && <Chip tone="accent" size="sm">You</Chip>}
           </span>
           {/* Owner name, record, standing, core age. `line-clamp-2` rather than
                 `truncate`: this is real content and a single line cut a rank number
@@ -149,9 +143,9 @@ function Row({ r }) {
               {r.posture}
             </span>
           </span>
-          <span className="mt-1 block h-[3px] w-full overflow-hidden rounded-full bg-elevated">
+          <span className="mt-1.5 block h-1 w-full overflow-hidden rounded-full bg-elevated">
             <span
-              className={`block h-full rounded-full ${r.isMe ? "bg-accent" : "bg-accent-strong"}`}
+              className={`block h-full rounded-full ${r.isMe ? "bg-accent" : "bg-secondary"}`}
               style={{ width: `${r.pct}%` }}
             />
           </span>
@@ -170,7 +164,7 @@ function Row({ r }) {
       {on && (
         <Link
           href={`/managers/${r.rosterId}`}
-          className="flex min-h-11 items-center gap-0.5 border-t border-border px-2.5 text-meta font-semibold text-accent-text"
+          className="flex min-h-11 items-center gap-0.5 px-4 pb-1 text-note font-semibold text-accent-text"
         >
           Open the dossier
           <ChevronRight size={13} aria-hidden="true" />

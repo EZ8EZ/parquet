@@ -1,612 +1,112 @@
 @import "tailwindcss";
-/* How the app answers a finger: motion tokens, press feedback, reduced-motion, and
- * the one view transition. Separate file, separate concern - see its header. */
 @import "./interaction.css";
 
 /*
- * PARQUET design system.
- * Dark, editorial, high-contrast. One sharp accent (parquet gold). Financial
- * terminal x sports magazine. Tokens documented in DESIGN.md.
- * Data figures use a mono face for the terminal feel; headlines a serif display.
+ * PARQUET - clean sports app, dark only. Spec and usage: DESIGN.md.
+ * Surfaces separate by tone, not by borders. One brand accent (violet = yours),
+ * info blue = the field. Every ink below clears 4.5:1 on every surface step,
+ * so no ground needs to restate a token. Ratios measured against #15181d
+ * (surface) unless noted; full table in DESIGN.md.
  */
-
 @theme {
-  /*
-   * SURFACES. The ground (#0b0c0e) is unchanged - four rounds of votes settled it and
-   * it was never the defect. What WAS the defect is the step off it: the shipped card
-   * (#131519) sits +3.4 CIE L* above the ground, at or below the just-noticeable
-   * difference for a large flat field, so a card did not read as a card. Grafana's
-   * first elevation step is ~4.7 L*, Sleeper's ~8. Every value below is re-tinted at
-   * constant hue rather than re-picked: B-R stays +3 exactly as before, so the ground
-   * keeps its deliberate coolness and only luminance moves.
-   *
-   *   surface    +3.43 L* -> +4.94 L*
-   *   surface-2  +7.40 L* -> +10.29 L*
-   *   elevated  +11.25 L* -> +15.92 L*
-   */
-  --color-bg: #0b0c0e;
-  --color-surface: #16181d;
-  --color-surface-2: #1f232a;
-  --color-elevated: #2a2f37;
-
-  /*
-   * BORDERS. These are the app's ONLY depth cue - there is not one box-shadow in any
-   * component - and both shipped values computed to APCA Lc 0.0 against the surface
-   * they sat on. Formally invisible. Not "subtle": absent.
-   *
-   *   border         #262b33 -> #3c434f   Lc 0.0 -> 8.2 on --color-surface
-   *   border-strong  #363c46 -> #525b6a   Lc 0.0 -> 17.1, clears APCA's Lc 15 floor
-   *
-   * WCAG 2 scores these 1.28:1 and 1.65:1 and calls both "the same"; APCA separates
-   * them. On dark grounds APCA is the number to trust - see the note on --color-faint.
-   */
-  --color-border: #3c434f;
-  --color-border-strong: #525b6a;
-
-  /*
-   * INK - four steps, split by JOB rather than by brightness.
-   *
-   * `faint` was doing two unrelated jobs: it carried real data (a projection, a delta,
-   * a date you are meant to read) AND it drew chrome (separators, the "·" glue between
-   * two facts, axis ticks, rank ordinals). It was 57% of all text in the app at
-   * 3.45:1 WCAG - which sounds borderline - but APCA Lc 25, which is below the floor
-   * for text at ANY size. The fix was to split it by JOB, and that split still stands.
-   *
-   * WHAT WAS STILL WRONG: the numbers were measured against --color-bg, and almost
-   * nothing in this app sits on --color-bg. Text sits on cards. The shipped `faint`
-   * (#656c78) measured 3.70:1 on the ground it was recorded against, 3.36:1 on
-   * --color-surface where it actually renders, 2.98:1 on --color-surface-2 and
-   * 2.44:1 on --color-accent-wash (the /deals pill ground). Roughly 260 call sites
-   * inherited one authoring-time mistake, and every one of them failed SC 1.4.3.
-   *
-   * Both new values are re-picked at constant hue - only CIE L* moves - so the cool
-   * grey ink family is unchanged and only luminance does the work. Ratios are against
-   * --color-surface, the ground these actually render on:
-   *
-   *   ink        #f3f5f8  L* 96.5  16.26:1 / Lc 100  primary
-   *   muted      #9aa1ad  L* 66.0   6.83:1 / Lc  50  supporting prose
-   *   secondary  #8b93a2  L* 60.8   5.74:1 / Lc  43  anything carrying a DATUM
-   *                                 (was #858d9c: 5.32:1 here, but 4.03:1 on
-   *                                 --color-elevated and 3.86:1 on the wash)
-   *   faint      #7b8493  L* 54.9   4.71:1 / Lc  35  chrome: separators, "·", axis
-   *                                 ticks, rank ordinals (was #656c78, 3.36:1)
-   *
-   * On --color-bg the same four are 17.92 / 7.52 / 6.33 / 5.18. The lifted grounds
-   * (surface-2, elevated, accent-wash) are handled by the ground-scoped block below
-   * the theme definitions: no single ink value clears 4.5:1 on the accent wash
-   * without overtaking the step above it, so the ground restates the token.
-   *
-   * KNOWN MISMATCH, deliberately not fixed here: the reservation "chrome ONLY, never
-   * a number" is not what the code does. Real prose and real figures are set in
-   * `text-faint` at ~130 call sites. Raising the token makes all of them legible;
-   * moving them onto `text-secondary` is a pass over call sites, not a token edit.
-   */
-  --color-ink: #f3f5f8;
-  --color-muted: #9aa1ad;
-  --color-secondary: #8b93a2;
-  --color-faint: #7b8493;
-
-  /* Brand + semantic (single sharp accent = parquet gold) */
-  --color-accent: #e6b34d;
-  --color-accent-dim: #a07e34;
-  --color-accent-ink: #1a1206;
-  /*
-   * One hue, split by job - Grafana's Main/Text pattern. `accent` FILLS (bars, dots,
-   * the slider thumb, bg-accent buttons). `accent-text` is the same gold tuned to be
-   * READ at 11-12px: 11.6:1 / Lc 72.6 on the ground, 7.6:1 / Lc 67.3 on the wash.
-   */
-  --color-accent-text: #edc167;
-  --color-positive: #37d383;
-  --color-negative: #f2585f;
-  --color-info: #5aa9ff;
-  --color-warn: #f0a83c;
-
-  /* Fonts (wired to next/font variables in layout) */
-  --font-display: var(--font-fraunces), Georgia, serif;
-  --font-sans: var(--font-inter), ui-sans-serif, system-ui, sans-serif;
-  --font-mono: var(--font-jetbrains), ui-monospace, monospace;
-
-  /*
-   * TYPE SCALE - six steps, and they are the whole scale.
-   *
-   * Seven rounds of parallel authorship left the app with 17 distinct arbitrary sizes
-   * plus Tailwind's own defaults, including a half-pixel family (12.5 / 11.5 / 10.5 /
-   * 13.5, 37 usages) and seven sizes used once or twice in the entire codebase. That is
-   * a fingerprint of many hands, not a designed scale: nothing in the product ever
-   * needed 12.5px to be distinguishable from 12px, and at 390px a reader cannot tell
-   * them apart anyway. Home alone rendered nine sizes.
-   *
-   * These six are named for their JOB rather than their size, so a future edit picks a
-   * role instead of guessing a number. Arbitrary `text-[Npx]` in a component is now the
-   * exception that has to justify itself, not the default.
-   *
-   *   micro   10px  CHROME ONLY - axis labels, state dots. Never a datum.
-   *   meta    12px  captions, figures, the app's dominant secondary voice
-   *   note    12px  alias of meta (see below)
-   *   body    13px  primary reading size - row titles, prose, findings
-   *   lede    17px  card headings and the big figures that head a panel
-   *   display 30px  page titles (font-display) and the hero figures that anchor
-   *                 a page (Stat, TradeBuilder's price, the counterfactual delta)
-   *
-   * THE 11px FLOOR IS GONE. 46.8% of every piece of text in this app was exactly
-   * 11px, and at 390px on a phone 11 and 12 were never distinguishable from each
-   * other - they were two names for one size that happened to be a pixel too small.
-   * `--text-meta` moves to 12px and `--text-note` becomes an alias of it, so the ~340
-   * `text-note` call sites need no edit and the two roles converge on one legible
-   * size instead of a fake distinction.
-   *
-   * `--text-micro` is retired from anything carrying a datum. It survives for chrome
-   * that a reader scans rather than reads.
-   *
-   * Tailwind still generates `text-sm`/`text-lg`/etc. because they are built in; they
-   * are simply not used by this app's own components any more.
-   *
-   * DISPLAY RAISED 25 -> 30px (round 9, "the owner's flat/timid complaint"). The step
-   * from `lede` (17) to the old `display` was 1.47x - smaller than `body` (13) to
-   * `lede` (17) at 1.31x was NOT what made the jump feel timid; 25px next to a page
-   * built almost entirely of 12/13px chrome just wasn't a big enough number to read as
-   * a masthead. 30px keeps the six-step scale at six steps (the fix is a value moving,
-   * not a seventh step appearing) and widens the top jump to 1.76x, which is the one
-   * place in the whole scale a reader is supposed to feel a jolt. Checked at 375/390/430
-   * that "You said rebuild. You bought win-now." (the longest headline on Home) still
-   * wraps to two lines, not three - the sentence is written short specifically because
-   * it is set in the biggest type on the page, so a size change that forced a third
-   * line would have been trading the jolt for a worse wrap.
-   */
-  --text-micro: 10px;
-  --text-meta: 12px;
-  --text-note: var(--text-meta);
-  --text-body: 13px;
-  --text-lede: 17px;
-  --text-display: 30px;
-
-  /* Radii */
-  --radius-sm: 8px;
-  --radius: 12px;
-  --radius-lg: 18px;
-
-  /* The two grain washes on <body>. Tokens rather than literals so a theme can
-   * restate them - a gold-on-black wash is wrong on paper.
-   *
-   * RAISED 0.05/0.03 -> 0.09/0.05 (round 9). DESIGN.md has claimed a "faint gold+blue
-   * radial grain" since round 1, and at the old alphas it was true only in the
-   * technical sense that the pixels were not literally identical to `--color-bg` -
-   * on a real screen, in the actual viewport (not zoomed into a screenshot), it read
-   * as flat black, which is the exact "looks the same"/"flat" complaint this round
-   * responds to. This is texture, not a new hue: same two rgba stops, same
-   * `radial-gradient` geometry, only the alpha channel moves, so it costs nothing
-   * against the one-accent rule. Kept well short of decorative - still under 0.10,
-   * still fully behind every opaque card (`--color-surface` and up paint over it
-   * completely), and it only ever touches text that sits directly on bare `--color-bg`,
-   * which this app already keeps sparse and low-emphasis (the Wordmark tagline, the
-   * "First time here?" footer line) - re-checked against 4.5:1 at the new alpha and
-   * neither moved enough to matter (bg's own luminance shift from the wash is <0.003
-   * in relative-luminance terms at these strengths). */
-  --grain-1: rgba(230, 179, 77, 0.09);
-  --grain-2: rgba(90, 169, 255, 0.05);
-  --selection: rgba(230, 179, 77, 0.28);
-
-  /*
-   * THE PARQUET GROUND - the corrected Boston Garden geometry (D96).
-   *
-   * The floor is NOT herringbone, and the press consensus that says so is wrong.
-   * Flooring sources describe it correctly: a basket-weave block parquet on a SQUARE
-   * GRID - alternating squares of red oak with the grain rotated 90 degrees between
-   * neighbours. 247 panels, 5ft x 5ft, laid from post-war scrap oak precisely so a
-   * damaged panel could be swapped and so uneven lengths still yielded. Herringbone is
-   * diagonal interlocked rectangles, which is a different floor in a different building.
-   *
-   * WHY THE CORRECTION IS LOAD-BEARING RATHER THAN COSMETIC. This app reserves the
-   * 45-degree diagonal for a REFUSAL - components/RefusalMark.jsx shipped the first
-   * instance of it in D95, and D96 makes it the rule. Orthogonal marks are data; the
-   * diagonal is the one angle that means "we will not say." A herringbone ground runs at
-   * 45 degrees, so the old mark and the grammar could not both be right. A square grid
-   * guarantees by construction that nothing else in the product runs at 45 degrees,
-   * which is what lets a hatched mark identify itself in any theme, at any size,
-   * without a colour and without a caption.
-   *
-   *   --parquet-block  one oak block. 24px: integer CSS px and a multiple of 4, so it
-   *                    lands on whole device pixels at DPR 2 AND 3. A fractional module
-   *                    or one expressed as a percentage of a flexible container shimmers
-   *                    during scroll on a 3x screen, which is the most common way a CSS
-   *                    floor ships as a bug rather than as a floor.
-   *   --parquet-tile   one full period of the ALTERNATION, which is 2x2 blocks and so
-   *                    is DERIVED from the block rather than stated beside it. The
-   *                    block is what a reader sees; the tile is what repeats, and the
-   *                    two cannot drift apart into a half-block phase error.
-   *   --parquet-grain  the only colour, per theme, as a LITERAL rather than a
-   *                    color-mix(): the build constant-folds color-mix() over a theme
-   *                    variable down to the default theme's value, which is the same
-   *                    trap the theme-toggle block further down this file records.
-   *
-   * THE ALPHA IS MEASURED, AND THE FIRST NUMBER TRIED WAS WRONG. 3.5% white on
-   * --color-bg composites to #131416, which is +3.06 CIE L* above the ground - the same
-   * size of step the surfaces block above calls "at or below the JND for a large flat
-   * field" and then deliberately WIDENED so that a card would read as a card. A ground
-   * texture running at card-elevation volume is not a ground texture; the live render at
-   * 390px read as a plaid competing with the type, which is exactly the failure the
-   * research warns a full-bleed pattern ships as.
-   *
-   * So the target is about HALF a JND: felt as surface, never resolved as pattern.
-   *
-   *   dark   1.6% -> #0f1012, +1.25 L*, 1.026:1 against --color-bg
-   *   paper  1.5% -> -1.1 L* against --color-bg, 1.023:1
-   *
-   * Paper carries the larger alpha for the smaller effect: L* is compressed near white,
-   * so a dark grain on a warm near-white moves less per unit of alpha than a light grain
-   * does on near-black. Two numbers, one geometry.
-   */
-  --parquet-block: 24px;
-  --parquet-tile: calc(var(--parquet-block) * 2);
-  --parquet-grain: rgba(243, 245, 248, 0.016);
-
-  /*
-   * THE GOLD WASH - three tokens replacing THIRTEEN ad-hoc alphas.
-   *
-   * The app was tinting viewer-owned surfaces with `bg-accent/10 /12 /15 /16` and
-   * edging them with `border-accent/25 /30 /40 /45 /50 /60` - values picked one at a
-   * time, none of them measurable. And they were not measurable in principle: a
-   * translucent fill's effective ground depends on whatever is painted behind it, so
-   * its contrast can only be guessed. That is exactly why a prior round recorded ~8
-   * pills as "unfixable."
-   *
-   * These are OPAQUE - the same gold composited over --color-surface once, here, at
-   * 16% / 40% / 75%. One measurable pair instead of eight guesses:
-   *   accent-text on accent-wash = 7.63:1 / APCA Lc 67.3
-   *   ink        on accent-wash = 11.81:1 / Lc 95.6
-   *
-   *   accent-wash    tinted ground for a pill or a row that belongs to the viewer
-   *   accent-edge    the border on that pill
-   *   accent-strong  a heavier fill that is still not the full accent
-   */
-  --color-accent-wash: #373125;
-  --color-accent-edge: #695630;
-  --color-accent-strong: #b28c41;
-
-  /*
-   * THE SAME TREATMENT FOR THE OTHER FOUR SEMANTIC HUES.
-   *
-   * `accent` was migrated to an opaque wash and the other four were not, so
-   * `toneClasses` in components/ui.tsx kept shipping `bg-positive/12 text-positive`:
-   * a colour tinting its own ground at 12% alpha, which is the exact pattern the
-   * block above calls unmeasurable. It is unmeasurable for the same reason - the
-   * effective ground depends on whatever is painted behind the pill.
-   *
-   * Same recipe: the hue composited over --color-surface once, here, at 16% (wash)
-   * and 40% (edge). Negative alone composites at 12%, because at 16% its own text
-   * value lands at 4.42:1 and 12% brings it to 4.66:1.
-   *
-   * Measured, self-on-own-wash (this is the pair a Tag actually renders):
-   *   positive #37d383 on #1b362d = 6.70:1 / Lc 60.2
-   *   negative #f2585f on #302025 = 4.66:1 / Lc 40.6
-   *   info     #5aa9ff on #212f41 = 5.53:1 / Lc 49.3
-   *   warn     #f0a83c on #392f22 = 6.47:1 / Lc 58.0
-   */
-  --color-positive-wash: #1b362d;
-  --color-positive-edge: #236346;
-  --color-negative-wash: #302025;
-  --color-negative-edge: #6e3237;
-  --color-info-wash: #212f41;
-  --color-info-edge: #315277;
-  --color-warn-wash: #392f22;
-  --color-warn-edge: #6d5229;
-
-  /*
-   * THE TITLE-CARD GROUND (VISION M7, the 30-for-30 lesson).
-   *
-   * One ground for the Superlatives' posters: the award name set huge over a
-   * near-black plate, one stat as the deck, nothing else. It sits BELOW the page
-   * ground rather than above it - every other card in the app steps UP from the bg
-   * (+4.94 L*, see the surfaces block), and a poster that stepped up too would just
-   * be a thirteenth grey card. Stepping down (~1 L* under --color-bg) makes the
-   * poster read as a window cut into the page, which is what a monochrome title
-   * card is. The article's border does the delineating; the plate itself stays
-   * within a JND of the ground on purpose.
-   *
-   * Measured on the dark value (#08090b): ink 18.24:1, muted 7.66:1, accent-text
-   * 11.79:1, and the accent fill (the gold floor-line, a non-text graphic) 10.36:1
-   * - everything the poster sets clears its bar with room. Only ink, muted,
-   * accent-text and the accent fill may sit on this ground: `faint` and
-   * `secondary` are ground-scoped tokens (see the block below the themes) and
-   * .bg-poster is deliberately not in that scoping, so a component that used them
-   * here would be reading values measured against a different ground.
-   */
+  /* Surfaces: base, then three tonal steps. */
+  --color-bg: #0b0d10;
+  --color-surface: #15181d;
+  --color-surface-2: #1e2229;
+  --color-elevated: #282d36;
+  /* Below-ground plate for title cards. */
   --color-poster: #08090b;
 
-  /*
-   * DEPTH - now a three-tier MATERIAL system, not two declarations (round 10).
-   *
-   * The old rule here read "cards separate by SURFACE, never by shadow," and after
-   * three owner verdicts of "flat / looks the same" that rule is the thing being
-   * revised, deliberately (see D88). The teardown evidence: Linear does run
-   * surface-ladder-plus-hairline depth, but Vercel's Geist composes MULTI-LAYER
-   * shadow stacks where each layer has one job (hairline ring, ambient softness,
-   * depth at distance, inner top highlight) - "cards feel built, not floating."
-   * Parquet had the Linear half and none of the Geist half, which is exactly the
-   * clean-but-flat verdict. The tiers, cheapest first:
-   *
-   *   card-lit    a card that is BUILT: its own surface + `--sheen` (a white-alpha
-   *               vertical light gradient, not a hue) + `--shadow-card` (one contact
-   *               shadow + one soft ambient) + the top catchlight. For the cards
-   *               that anchor a page - Home's figures, the first-run team rows.
-   *   hero-mesh   the identity moment: the same lit card with the accent-family
-   *               radial mesh (`--mesh-1/2`, the SAME two hues the body grain has
-   *               always used, at wash strength) and the `--noise` grain baked over
-   *               it. One per page, at most - a masthead, never a list row.
-   *   desk-sheet  the one plane that genuinely floats: real glass (see below).
-   *
-   * `--shadow-raised` keeps its old job - the drawer, a scrim-adjacent popover -
-   * and `--edge-hilite` keeps being the one-pixel top catchlight (`.edge-hilite`).
-   */
-  --shadow-raised: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 24px rgb(0 0 0 / 0.28);
-  --edge-hilite: inset 0 1px 0 rgb(255 255 255 / 0.045);
-  /* Geist-style stack, halved: contact + ambient. No spread games - the border
-   * utilities already draw the hairline ring, so the shadow never doubles it. */
-  --shadow-card: 0 1px 2px rgb(0 0 0 / 0.35), 0 5px 16px rgb(0 0 0 / 0.22);
-  /* Light falling from above, as a gradient rather than a second surface hex:
-   * white-alpha so it is hue-free and works over any ground it is composited on. */
-  --sheen: linear-gradient(180deg, rgb(255 255 255 / 0.04), rgb(255 255 255 / 0) 55%);
+  /* Hairlines only: dividers inside a list, an input's edge. Never a card frame. */
+  --color-border: #252930;
+  --color-border-strong: #3a414c;
 
-  /*
-   * GLASS - the Desk's material. The sheet was `--color-bg` at 93% alpha with a
-   * bare blur, which is translucency, not glass: nothing caught light at the edge
-   * and nothing separated it from the page it floated over. The 2025-era recipe
-   * (Apple's Liquid Glass, Linear's take on it) is blur + SATURATE so the page
-   * behind stays alive instead of going grey, a light-gradient on the pane itself,
-   * an upward shadow, and a hairline that catches light at the top edge. The
-   * catchlight (`--edge-glow`) is the accent at alpha, brightest mid-edge and gone
-   * at the corners - one hue, spent where the eye reads "lit object."
-   */
-  --glass-fill: rgb(17 18 22 / 0.82);
-  --glass-hilite: linear-gradient(180deg, rgb(255 255 255 / 0.06), rgb(255 255 255 / 0) 45%);
-  --shadow-dock: 0 -1px 0 rgb(255 255 255 / 0.04), 0 -12px 36px rgb(0 0 0 / 0.42);
-  --edge-glow: linear-gradient(
-    90deg,
-    transparent 4%,
-    rgb(230 179 77 / 0.55) 50%,
-    transparent 96%
-  );
-  /* The static halo behind the lit tab's icon - position + gold text already say
-   * "you are here"; this makes the lit tab read as LIT rather than merely tinted. */
-  --tab-halo: rgb(230 179 77 / 0.2);
+  /* Ink. On elevated (the lightest ground): 12.7 / 6.7 / 5.9 / 5.0. */
+  --color-ink: #f3f5f8;
+  --color-muted: #adb5c1;
+  --color-secondary: #a2aab7;
+  --color-faint: #939cab;
 
-  /*
-   * THE MESH + NOISE PAIR behind `hero-mesh`. Same two hues as `--grain-1/2` - the
-   * gold+blue the ground has carried since round 1, so this costs nothing against
-   * the one-accent rule - at wash strength instead of whisper strength, plus a real
-   * grain: an inline feTurbulence tile at 4% so the panel has TOOTH instead of the
-   * airbrushed-gradient look every default-styled app has. The noise alpha is baked
-   * into the SVG so one asset serves both themes (4% grey noise reads as paper
-   * grain on paper and as film grain on dark).
-   */
-  --mesh-1: rgb(230 179 77 / 0.15);
-  --mesh-2: rgb(90 169 255 / 0.07);
-  --noise: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.8' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='140' height='140' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  /* Brand: violet. `accent` fills, `accent-text` is read (7.7:1), `accent-ink`
+   * sits on an accent fill (6.0:1). wash/edge are opaque composites over surface. */
+  --color-accent: #8b7dff;
+  --color-accent-strong: #7a6bf0;
+  --color-accent-dim: #7166d8;
+  --color-accent-text: #a99fff;
+  --color-accent-ink: #0b0d10;
+  --color-accent-wash: #282841;
+  --color-accent-edge: #444077;
 
-  /*
-   * TCI HEAT RAMP - four steps, red to green, used by the coherence x fragility
-   * board (components/CoherenceFragilityQuadrant.tsx) and nowhere else yet.
-   *
-   * Owner asked for a red-to-green scale. Hue alone is not a scale: roughly 8% of men
-   * cannot separate these two hues, so the ORDERING is carried by lightness, and the
-   * hue only makes it feel intuitive to everyone else. OKLCH L runs 0.55 -> 0.82 in
-   * even 0.09 steps here, and the same direction (darker = less coherent) is used in
-   * every theme, so a colour-blind reader learns one ordering rather than three.
-   *
-   * Verified, not eyeballed. Under Machado 2009 protanopia and deuteranopia at
-   * severity 1.0 the simulated OKLab lightness stays strictly increasing across all
-   * four steps in all three themes (smallest simulated gap 0.071), adjacent OKLab
-   * dE stays above the 6.0 floor (worst 7.7), and every step clears 3:1 against its
-   * own theme's chart surface (worst 3.42 here). Because three adjacent pairs land in
-   * the 6-8 dE warn band, the ramp is never the only encoding: the same value is the
-   * dot's y position, and the list under the chart prints the number.
-   *
-   * Only TCI gets a ramp. Fragility deliberately has no colour - see D23, and the
-   * comment at the top of lib/metrics/quadrant.ts.
-   */
-  --tci-1: #c92f30;
-  --tci-2: #ca7400;
-  --tci-3: #84bb50;
-  --tci-4: #53e39c;
+  /* Semantic. Fill value doubles as text value (all >= 7.3:1 on surface);
+   * text on its own wash: positive 7.6, negative 5.9, info 6.4, warn 8.1. */
+  --color-positive: #4ade9e;
+  --color-positive-wash: #1a3631;
+  --color-positive-edge: #21634f;
+  --color-negative: #ff8080;
+  --color-negative-wash: #3a2529;
+  --color-negative-edge: #73393c;
+  --color-info: #7cb5fb;
+  --color-info-wash: #212f40;
+  --color-info-edge: #335075;
+  --color-warn: #fbc94a;
+  --color-warn-wash: #3a331e;
+  --color-warn-edge: #715b20;
 
-  /*
-   * MOTION lives in interaction.css, imported at the top of this file into the same
-   * `@theme`. It was briefly declared in both places - two agents fixing the same
-   * missing-declaration bug independently - and two copies of a token is how the
-   * declarations went missing in the first place. One copy, next to the animation
-   * CSS that uses it: see `--motion-fast/base/slow` and `--ease-out` there.
-   */
+  /* TCI heat ramp (CoherenceFragilityQuadrant only). Lightness carries order. */
+  --tci-1: #d9483f;
+  --tci-2: #e08a2c;
+  --tci-3: #8cc152;
+  --tci-4: #4fdc9a;
+
+  --selection: rgb(139 125 255 / 0.32);
+
+  /* Type. One family; weight and size carry hierarchy. Figures are tabular
+   * everywhere (body sets tnum). Nothing below 11px; body copy 14px. */
+  --font-sans: var(--font-inter), ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-display: var(--font-sans);
+  --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+
+  --text-micro: 11px;
+  --text-micro--line-height: 14px;
+  --text-meta: 12px;
+  --text-meta--line-height: 16px;
+  --text-note: 13px;
+  --text-note--line-height: 18px;
+  --text-body: 14px;
+  --text-body--line-height: 20px;
+  --text-lede: 17px;
+  --text-lede--line-height: 22px;
+  --text-display: 28px;
+  --text-display--line-height: 32px;
+  --text-hero: 44px;
+  --text-hero--line-height: 46px;
+
+  /* Radii. Use rounded-card / rounded-control / rounded-full in new code. */
+  --radius-sm: 10px;
+  --radius: 16px;
+  --radius-lg: 24px;
+  --radius-card: 16px;
+  --radius-control: 12px;
+  --radius-sheet: 24px;
+
+  /* Elevation: flat by default. Only things that float above the page get one. */
+  --shadow-raised: 0 -8px 32px rgb(0 0 0 / 0.5);
+  --shadow-pop: 0 12px 40px rgb(0 0 0 / 0.55);
+
+  /* Shell metrics, shared by layout padding and the fixed chrome. */
+  --header-h: 48px;
+  --statusbar-h: 40px;
+  --tabbar-h: 58px;
 }
 
 :root {
   color-scheme: dark;
 }
 
-/*
- * THEMES. Dark is the identity (DECISIONS D15) and stays the default - light is an
- * escape hatch, not a rebrand, which is why it is an override of the same token names
- * rather than a second design system (D64). Tailwind v4 compiles every utility down to
- * `var(--color-*)`, so restating those variables here re-colors the whole app without
- * one component knowing a theme exists.
- *
- * Selector is `:root[data-theme=...]`, one specificity step above the `:root` that
- * `@theme` writes to, so these win without `!important`.
- */
-
-/* Paper. Warm rather than pure white, so the editorial feel survives the flip. */
-:root[data-theme="light"] {
-  color-scheme: light;
-
-  --color-bg: #f6f4f0;
-  --color-surface: #fffefb;
-  --color-surface-2: #efece5;
-  --color-elevated: #e5e1d8;
-  --color-border: #dcd7cc;
-  --color-border-strong: #b9b2a4;
-
-  --color-ink: #15171b;
-  --color-muted: #4f5661;
-  /* Both of these are set by measurement, not taste: at the 10-11px this app uses for
-   * secondary text, the first values tried (#6b7280 faint, #8a6414 accent) came in at
-   * 4.40 and 4.31 against their own surfaces - under the 4.5 body-text bar. Darkened
-   * until the whole app cleared it. See the sweep in the round-5 report. */
-  --color-faint: #616875;
-  /* The data voice on paper. Sits between `muted` and `faint` and clears the body
-   * bar on every paper surface: 6.09:1 / APCA Lc 80.1 on --color-surface, 5.21:1 /
-   * Lc 69.5 on --color-surface-2. */
-  --color-secondary: #5b626e;
-
-  /* Gold has to darken to carry text weight on paper, and `accent-ink` flips to a
-   * light value because `bg-accent` surfaces now need light text on top. */
-  --color-accent: #7a5810;
-  --color-accent-dim: #a8842c;
-  --color-accent-ink: #fffdf6;
-  /* On paper the type-weight gold goes DARKER than the fill gold, not lighter:
-   * 7.66:1 / APCA Lc 86.1 on --color-surface. */
-  --color-accent-text: #6d4d0b;
-  --color-positive: #0f7040;
-  /* Darkened from #b3252c by measurement: at the old value, positive and negative
-   * were near-identical under red-green color blindness (CVD deltaE 3.3 against a
-   * floor of 6). Dropping only lightness keeps the hue and pushes deltaE to 10.1
-   * while holding 7.9:1 text contrast on paper. */
-  --color-negative: #a30d1e;
-  --color-info: #1a5aa8;
-  --color-warn: #855400;
-
-  /* Same round-9 lift as the dark theme's, same ratio, re-picked against a warm
-   * off-white ground rather than assumed - the wash reads differently on light. */
-  --grain-1: rgba(122, 88, 16, 0.08);
-  --grain-2: rgba(26, 90, 168, 0.05);
-  --selection: rgba(122, 88, 16, 0.22);
-  /* The floor inverts on paper: the grain has to be the ink, not the light. Same
-   * geometry, same integer module - only this one value moves, which is the property
-   * that makes the floor theme-proof rather than re-drawn per theme. The alpha is
-   * larger than dark's for a smaller effect, because L* is compressed near white -
-   * see the measurement in the parquet block of the @theme above. */
-  --parquet-grain: rgba(21, 23, 27, 0.015);
-  /* Same three jobs, this theme's gold composited over this theme's surface.
-   * accent-text on accent-wash = 5.09:1 / APCA Lc 65.9. */
-  --color-accent-wash: #eae3d5;
-  --color-accent-edge: #cabc9d;
-  --color-accent-strong: #9b824b;
-
-  /* Same recipe as the dark theme's, this theme's hues over this theme's surface at
-   * 16% / 40%. Self-on-own-wash: positive 4.81:1, negative 5.85:1, info 5.31:1,
-   * warn 5.04:1. Paper needs no alpha exception - the darker inks clear it at 16%. */
-  --color-positive-wash: #d9e7dd;
-  --color-positive-edge: #9fc5b0;
-  --color-negative-wash: #f0d7d8;
-  --color-negative-edge: #da9ea3;
-  --color-info-wash: #dae4ee;
-  --color-info-edge: #a3bcda;
-  --color-warn-wash: #ebe3d3;
-  --color-warn-edge: #ceba97;
-
-  /* The title-card plate on paper is DEEP CREAM, not near-black - paper is "a good
-   * magazine", and a magazine's full-page title card is a heavier stock of the same
-   * paper, never a black insert. Same relationship to the ground as dark's (a step
-   * the body cards don't take, here downward into warmth: 1.17:1 against the bg),
-   * and the same measured pairs: ink 13.91:1, muted 5.74:1, accent-text 5.99:1,
-   * accent fill 5.04:1. */
-  --color-poster: #e9e2d2;
-
-  /* Paper does not need the raised shadow to be as heavy - a near-white page reads
-   * depth from a much smaller value, and the dark theme's would look like soot. */
-  --shadow-raised:
-    0 1px 2px rgb(60 50 30 / 0.1), 0 8px 24px rgb(60 50 30 / 0.09);
-  --edge-hilite: inset 0 1px 0 rgb(255 255 255 / 0.7);
-
-  /* The material tiers, re-tuned for paper: shadows warm and lighter (soot rule
-   * above), the sheen and glass-hilite much STRONGER because white-on-white light
-   * needs amplitude to register, the mesh re-picked from this theme's own accent
-   * ink, and the glass fill this theme's own warm white. `--noise` is shared -
-   * grey grain at 4% IS paper grain here. */
-  --shadow-card: 0 1px 2px rgb(60 50 30 / 0.07), 0 5px 18px rgb(60 50 30 / 0.08);
-  --sheen: linear-gradient(180deg, rgb(255 255 255 / 0.7), rgb(255 255 255 / 0) 60%);
-  --glass-fill: rgb(250 248 243 / 0.85);
-  --glass-hilite: linear-gradient(180deg, rgb(255 255 255 / 0.85), rgb(255 255 255 / 0) 50%);
-  --shadow-dock: 0 -1px 0 rgb(255 255 255 / 0.6), 0 -12px 36px rgb(60 50 30 / 0.16);
-  --edge-glow: linear-gradient(
-    90deg,
-    transparent 4%,
-    rgb(122 88 16 / 0.4) 50%,
-    transparent 96%
-  );
-  --tab-halo: rgb(122 88 16 / 0.12);
-  --mesh-1: rgb(191 144 44 / 0.14);
-  --mesh-2: rgb(26 90 168 / 0.06);
-
-  /* Same ramp, same direction, re-stepped for a near-white chart surface: OKLCH L
-   * 0.36 -> 0.60. The dark theme's values are invisible on paper and vice versa, so
-   * the ramp is a themed token like every other colour here rather than a constant in
-   * a component. Worst contrast 3.64:1 vs #fffefb; simulated-L still monotone. */
-  --tci-1: #78000a;
-  --tci-2: #794300;
-  --tci-3: #477900;
-  --tci-4: #00995f;
-}
-
-/*
- * GROUND-SCOPED INK - the second half of the --color-faint fix.
- *
- * A contrast ratio is a property of a PAIR, and every ink token in this file is one
- * value trying to serve four grounds. On the dark theme those grounds span 12 CIE L*
- * (bg #0b0c0e through accent-wash #373125), which is enough to move `faint` from
- * 5.18:1 to 2.44:1 without a single component changing a class. That is how ~260 call
- * sites failed SC 1.4.3 while the token file recorded a passing number.
- *
- * There is no single value that fixes it. `faint` has to clear 4.5:1 on the accent
- * wash AND stay recessive under `secondary`, and on the dark theme those two demands
- * cross. So the GROUND restates the token, and a component still writes `text-faint`
- * and gets a measured pair either way.
- *
- * Custom properties inherit from the nearest ancestor that sets them, so nesting
- * resolves correctly on its own: a `.bg-surface` card inside a `.bg-surface-2` shell
- * picks the base values back up from the reset rules below.
- *
- * DARK, on --color-surface-2 / --color-elevated / --color-accent-wash:
- *   faint      #909bac  5.61 / 4.79 / 4.59  (was 2.98 / 2.54 / 2.44)
- *   secondary  #9aa1ad  6.06 / 5.18 / 4.96  (was 4.72 / 4.03 / 3.86)
- * `secondary` lands on `muted`'s value here rather than a fifth grey: on these three
- * grounds the scale is two steps, not three, and inventing a value between them would
- * be a distinction no reader could see.
- */
-.bg-surface-2,
-.bg-elevated,
-.bg-accent-wash,
-/* The hero mesh peaks at the same strength as the accent wash, so its ink gets the
- * same wash-grade restatement rather than the bare-surface values. */
-.hero-mesh {
-  --color-faint: #909bac;
-  --color-secondary: #9aa1ad;
-}
-
-.bg-bg,
-.bg-surface {
-  --color-faint: #7b8493;
-  --color-secondary: #8b93a2;
-}
-
-/* PAPER. Only `faint` crosses the line here, and only on the two darkest paper
- * grounds: #616875 measures 4.30:1 on --color-elevated and 4.39:1 on the wash.
- * #5c636f takes those to 4.64:1 and 4.74:1 (5.13:1 on --color-surface-2) and stays
- * lighter than `secondary`, so the ordering survives the flip. */
-:root[data-theme="light"] .bg-surface-2,
-:root[data-theme="light"] .bg-elevated,
-:root[data-theme="light"] .bg-accent-wash,
-:root[data-theme="light"] .hero-mesh {
-  --color-faint: #5c636f;
-  --color-secondary: #5b626e;
-}
-:root[data-theme="light"] .bg-bg,
-:root[data-theme="light"] .bg-surface {
-  --color-faint: #616875;
-  --color-secondary: #5b626e;
-}
-
 html {
   height: 100%;
   -webkit-text-size-adjust: 100%;
+  background: var(--color-bg);
 }
 
 body {
@@ -614,237 +114,65 @@ body {
   background: var(--color-bg);
   color: var(--color-ink);
   font-family: var(--font-sans);
+  font-size: var(--text-body);
+  line-height: var(--text-body--line-height);
+  font-variant-numeric: tabular-nums;
   -webkit-font-smoothing: antialiased;
-  text-rendering: optimizeLegibility;
-  /* The parquet grain: the gold+blue radial wash the ground has always carried,
-   * now with the film-grain noise tile over it (round 10) so bare ground has
-   * TOOTH under a fingertip-sized zoom instead of a smooth vignette. The noise is
-   * 4%-alpha inside its own SVG, far below any text-contrast threshold - same
-   * argument as the wash itself (see --grain-1's comment). */
-  background-image:
-    var(--noise),
-    radial-gradient(120% 80% at 50% -10%, var(--grain-1), transparent 60%),
-    radial-gradient(100% 60% at 100% 0%, var(--grain-2), transparent 55%);
-  background-attachment: fixed;
 }
 
-/*
- * THE FLOOR, as one class with one call site (app/layout.jsx).
- *
- * MASK, DO NOT PAINT. The tile below carries zero colour information - it is an alpha
- * stencil, and `%23000` in it is opacity, not ink. The only colour is the flat
- * `background-color` underneath, which is a `var()` and therefore themed. That ordering
- * is the whole reason this survives two themes and would survive a third: a data-URI
- * SVG is a separate document and NEVER receives a custom property, so any hex baked
- * into one as PAINT is frozen at the theme it was authored in. As a MASK it cannot
- * carry a hex at all.
- *
- * THE GEOMETRY, and it is the corrected one. A 48px tile holding four 24px oak blocks,
- * grain rotated 90 degrees between edge-neighbours, so diagonal neighbours agree and
- * orthogonal neighbours differ - a checkerboard whose only variable is orientation.
- * Three slats per block: 2px of ink on an 8px pitch, which divides 24 exactly, so the
- * phase does not break at a tile boundary. Every number here is an integer.
- *
- * NOT FULL-BLEED, DELIBERATELY. This is applied to ONE bounded element - a decorative
- * div scoped to the app's own content column - and never to `body`, never to a
- * viewport-fixed layer, and never behind a scroll region that repaints it. A full-bleed
- * masked ground was the one thing the panel that specified this direction named as a
- * risk on its own recommendation, and the mitigation is scope rather than a smaller
- * alpha: bounded, unfixed, no children to mask, and no `mask-composite` anywhere (the
- * spec and `-webkit-` keyword sets for that property are NOT aliases of each other and
- * composing masks is where that divergence bites).
- *
- * `-webkit-mask-*` is written first because full `mask-*` support starts at iOS 15.4 and
- * the prefixed properties reach back to 3.2. `repeat`, never `space`: `mask-repeat:
- * space` is a stale WebKit defect.
- */
-.parquet-ground {
-  background-color: var(--parquet-grain);
-  --parquet-tile-src: url("data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' width='48' height='48' shape-rendering='crispEdges'><g fill='%23000'><rect x='0' y='0' width='2' height='24'/><rect x='8' y='0' width='2' height='24'/><rect x='16' y='0' width='2' height='24'/><rect x='24' y='0' width='24' height='2'/><rect x='24' y='8' width='24' height='2'/><rect x='24' y='16' width='24' height='2'/><rect x='0' y='24' width='24' height='2'/><rect x='0' y='32' width='24' height='2'/><rect x='0' y='40' width='24' height='2'/><rect x='24' y='24' width='2' height='24'/><rect x='32' y='24' width='2' height='24'/><rect x='40' y='24' width='2' height='24'/></g></svg>");
-  -webkit-mask-image: var(--parquet-tile-src);
-  mask-image: var(--parquet-tile-src);
-  -webkit-mask-size: var(--parquet-tile) var(--parquet-tile);
-  mask-size: var(--parquet-tile) var(--parquet-tile);
-  -webkit-mask-repeat: repeat;
-  mask-repeat: repeat;
+/* Legacy radius classes. `rounded-[--radius]` compiles to an invalid value under
+ * Tailwind v4, so ~150 call sites rendered square; these make them round. */
+.rounded-\[--radius\] {
+  border-radius: var(--radius);
+}
+.rounded-\[--radius-sm\] {
+  border-radius: var(--radius-sm);
+}
+.rounded-\[--radius-lg\] {
+  border-radius: var(--radius-lg);
 }
 
-/*
- * The one honest opt-out. `prefers-reduced-transparency` is NOT supported in Safari
- * desktop through v27 nor in iOS Safari through 26.6, so building the accessibility
- * story on it would be building it on a query the app's primary browser does not ship.
- * `prefers-contrast` IS supported everywhere that matters, and a reader who has asked
- * for more contrast has asked for less texture. Dropping the colour is enough - the
- * mask then stencils nothing.
- *
- * `prefers-reduced-motion` deliberately does NOT appear here: nothing in this floor
- * moves, and that query is not a reduce-texture signal.
- */
-@media (prefers-contrast: more) {
-  .parquet-ground {
-    background-color: transparent;
-  }
-}
-
-/* Typographic primitives */
 .font-display {
   font-family: var(--font-display);
-  font-optical-sizing: auto;
-  letter-spacing: -0.01em;
+  letter-spacing: -0.015em;
 }
 .font-mono {
   font-family: var(--font-mono);
-  font-feature-settings: "tnum";
+  font-variant-numeric: tabular-nums;
 }
-/* `.tnum` used to live here. It was the half-measure `.figure` replaced - tabular
- * figures without the slashed zero - and by the end of the type swap it had exactly
- * one call site left, on the Desk's status lead. Two classes that mean almost the
- * same thing is how a figure ends up set two ways in one card, so there is one. */
-/*
- * THE FIGURE FACE.
- *
- * This app used to set its NUMBERS in the mono face and its REASONING in generic UI
- * sans - exactly inverted for a product whose thesis is "a memory of your own
- * decisions, not a stat site." 1,227 mono nodes against 34 serif ones, and literally
- * one serif node on /values.
- *
- * The serif never touches a number at the FT, the WSJ, The Athletic or Brex. Vercel
- * and Linear both reserve mono for code and identifiers and set figures in their sans
- * with tabular + slashed-zero; Vercel's design doc says so outright. Inter's tabular
- * figures give the same column alignment mono was being used for, without mono's
- * "this is a terminal" cost - and slashed-zero keeps 0 and O apart, which was the
- * other real thing mono was buying.
- *
- * So: `.figure` on quantities, `font-mono` on IDENTIFIERS ONLY (pick notation,
- * transaction ids, asset keys - codes, not amounts), `font-display` on captured
- * reasoning. Where a number and an identifier share a row they get different faces,
- * and that is correct rather than an inconsistency.
- */
+/* Quantities: tabular with a slashed zero. */
 .figure {
   font-variant-numeric: tabular-nums slashed-zero;
-  font-feature-settings: "tnum", "zero";
-}
-/* The catchlight on a plane that genuinely floats. Class rather than a utility so the
- * theme override is the only place the value is stated. */
-.edge-hilite {
-  box-shadow: var(--edge-hilite);
 }
 
-/*
- * THE MATERIALS (round 10, D88). Three classes, three tiers - see the token block's
- * comment for the argument. Each composes onto an ordinary `bg-*` card rather than
- * replacing it, so adopting a material is one class added, never a rewrite.
- */
-
-/* Tier 1: a BUILT card. Sheen + contact/ambient stack + top catchlight. */
-.card-lit {
-  background-image: var(--sheen);
-  box-shadow: var(--shadow-card), var(--edge-hilite);
-}
-
-/* Tier 2: the identity moment - one per page at most. Noise over accent-family
- * mesh over the card surface; text on it keeps its measured pairs because the
- * mesh peaks at wash strength (see the ground-scoped ink block below, which
- * treats this ground exactly like the accent wash). */
-.hero-mesh {
+/* Retired materials, kept as flat aliases so old call sites stay legible.
+ * New code must not use them (DESIGN.md, "Removed"). */
+.hero-mesh,
+.hero-card,
+.stock-franchise,
+.stock-cornerstone {
   background-color: var(--color-surface);
-  background-image:
-    var(--noise),
-    radial-gradient(130% 110% at 12% 0%, var(--mesh-1), transparent 58%),
-    radial-gradient(95% 90% at 100% 4%, var(--mesh-2), transparent 55%);
-  box-shadow: var(--shadow-card), var(--edge-hilite);
+  background-image: none;
 }
-
-/* Tier 3: the glass the Desk is made of. Fill + pane-light + blur-and-saturate
- * (saturate is what keeps the page behind alive instead of going grey), an upward
- * shadow so the dock visibly floats over the scroll, and the gold catchlight
- * laid along the top edge - brightest mid-edge, gone by the rounded corners. */
-.desk-sheet {
-  position: relative;
-  background-color: var(--glass-fill);
-  background-image: var(--glass-hilite);
-  -webkit-backdrop-filter: blur(20px) saturate(1.4);
-  backdrop-filter: blur(20px) saturate(1.4);
-  box-shadow: var(--shadow-dock);
+.stock-fringe {
+  background-color: transparent;
 }
-.desk-sheet::before {
-  content: "";
-  position: absolute;
-  top: -1px;
-  left: 0;
-  right: 0;
-  height: 1px;
-  pointer-events: none;
-  background: var(--edge-glow);
-}
-
-/* The lit tab's halo (components/Desk.jsx). Static - a material, not a motion. */
-.tab-glow {
-  position: relative;
-}
-.tab-glow::before {
-  content: "";
-  position: absolute;
-  top: 4px;
-  left: 50%;
-  width: 38px;
-  height: 32px;
-  transform: translateX(-50%);
-  border-radius: 9999px;
-  pointer-events: none;
-  background: radial-gradient(closest-side, var(--tab-halo), transparent);
-}
-
-/*
- * THE SECOND HUE, DECIDED (VISION.md M4A). A violet duotone variant was built and
- * screenshotted here for one round; the owner instead approved COURT BLUE with
- * exactly one product-wide meaning: gold = yours, blue = the field/the market/
- * everyone-else. No new token exists for it - the field's side of a comparison
- * uses the existing `--color-info` blue, re-tuned here if a surface ever needs it,
- * never a fifth semantic. A use that cannot be written as "this is the field's
- * side of a comparison" does not get the hue (decorative blue is still out, and
- * D47's rules still bind: never the sole encoding, fill/text split per theme).
- * First application: the /teams value bars (components/TeamPicker.jsx).
- */
-
-/*
- * THEME TOGGLE selection state - CSS, not React, on purpose.
- *
- * Switching themes swaps every token on the page in one full-document style
- * recalc, which can hold the main thread long enough that a React-rendered
- * selection ring visibly trails the repaint it is supposed to describe (1-2s
- * on a slow device). Keying the ring off the same [data-theme] attribute that
- * applies the theme means both move in the same recalc - the ring cannot lag
- * by construction. React still owns aria-checked; only the paint is CSS.
- */
-[data-theme-choice] .theme-active-check {
+.ghost-rank {
   display: none;
 }
-:root[data-theme="dark"] [data-theme-choice="dark"],
-:root[data-theme="light"] [data-theme-choice="light"] {
-  color: var(--color-accent);
-}
-:root[data-theme="dark"] button[data-theme-choice="dark"],
-:root[data-theme="light"] button[data-theme-choice="light"] {
-  border-color: var(--color-accent);
-  /* Each theme's own wash token, NOT color-mix(var(--color-accent)...): the build
-   * constant-folds that to the default theme's literal gold, which would tint the
-   * active button with dark's accent under every theme. */
-  background-color: var(--color-accent-wash);
-}
-:root[data-theme="dark"] [data-theme-choice="dark"] .theme-active-check,
-:root[data-theme="light"] [data-theme-choice="light"] .theme-active-check {
-  display: inline;
+
+/* A divider line. */
+.rule {
+  height: 1px;
+  background: var(--color-border);
 }
 
-/* Accessible focus states */
 :where(a, button, input, textarea, select, summary, [tabindex]):focus-visible {
-  outline: 2px solid var(--color-accent);
+  outline: 2px solid var(--color-accent-text);
   outline-offset: 2px;
-  border-radius: 4px;
+  border-radius: 6px;
 }
 
-/* Minimum tap targets on interactive controls */
 button,
 a[role="button"],
 [data-tap] {
@@ -855,14 +183,19 @@ a[role="button"],
   background: var(--selection);
 }
 
-/* Thin scrollbars where scrolling is unavoidable */
 .scroll-x {
   overflow-x: auto;
   scrollbar-width: thin;
   -webkit-overflow-scrolling: touch;
 }
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
 
-/* Skeleton shimmer (loading states are skeletons, never spinners) */
+/* Skeletons: three cycles, under the 5s bar of SC 2.2.2. */
 @keyframes shimmer {
   0% {
     background-position: -200% 0;
@@ -874,119 +207,50 @@ a[role="button"],
 .skeleton {
   background: linear-gradient(
     90deg,
-    var(--color-surface) 25%,
-    var(--color-surface-2) 37%,
-    var(--color-surface) 63%
+    var(--color-surface-2) 25%,
+    var(--color-elevated) 37%,
+    var(--color-surface-2) 63%
   );
   background-size: 200% 100%;
-  /*
-   * `3 both`, not `infinite`. This was a live WCAG failure, not a preference.
-   *
-   * SC 2.2.2 Pause, Stop, Hide (Level A) applies to any motion that starts
-   * automatically, lasts more than five seconds, and runs in parallel with other
-   * content. The shipped `infinite` was all three, and the app offers no control to
-   * stop it. The prefers-reduced-motion block below does NOT satisfy 2.2.2 - that
-   * criterion is not conditioned on a user setting, and most people never set one.
-   *
-   * Three cycles is 4.2s, under the five-second bar, and `both` holds the final frame
-   * so a skeleton that outlives the animation still looks like a skeleton rather than
-   * snapping to a flat block.
-   */
   animation: shimmer 1.4s ease-in-out 3 both;
   border-radius: var(--radius-sm);
 }
-
 @media (prefers-reduced-motion: reduce) {
   .skeleton {
     animation: none;
   }
 }
 
-/* Editorial rule */
-.rule {
-  height: 1px;
-  background: linear-gradient(90deg, var(--color-border-strong), transparent);
-}
-
-/*
- * THE DESK's open animation (components/Desk.tsx).
- *
- * The drawer carries `hidden` + `inert` when collapsed, which is display:none, which
- * no height transition can animate out of - and that is the right trade: an element
- * that is genuinely absent from the accessibility tree and from find-in-page is worth
- * more than a sliding one. So the motion is on the content arriving, not on the box
- * growing. 180ms, one ease-out, no spring and no rubber-band anywhere in this
- * component: an overshoot on a panel bolted to the bottom edge of the screen reads as
- * the whole page wobbling.
- *
- * Under `prefers-reduced-motion` it degrades to an opacity snap rather than to
- * nothing, because a panel that appears with no transition at all is the flicker the
- * setting is usually trying to avoid, and opacity is the one channel it permits.
- */
-/*
- * The one control in the app still under the 44pt minimum the rule above sets for
- * every button, and it has to be stated HERE rather than as a `min-h-0` utility:
- * that rule is unlayered, Tailwind's utilities are not, and an unlayered declaration
- * beats every layered one regardless of specificity.
- *
- * 24pt, not 19pt: a Lighthouse/axe `target-size` audit (WCAG 2.5.8) measures this
- * button's own box, and 19pt failed it outright. The fix grows the box upward only
- * (padding-top 8px -> 13px) rather than downward or via a wider min-height override,
- * because upward is the one direction that costs nothing already spoken for: the
- * handle's BOTTOM edge - the one that sits ~97pt clear of the home indicator's swipe
- * zone (context row 44 + tab row 53) - never moves, so that clearance is exactly as
- * documented in components/Desk.tsx still. Only the Desk's total resting height moves,
- * 116pt -> 121pt, eating 5pt of the 20pt of "air" app/layout.tsx budgets above it
- * (still comfortably positive - see that file's comment for the updated number).
- * Full-bleed width is unchanged, and the More tab two rows below remains the
- * fully-sized alternative for the identical action either way.
- */
-.desk-handle {
-  min-height: 0;
-  height: 24px;
-  padding: 13px 0 5px;
-}
-
-@keyframes desk-drawer-in {
+/* The Menu panel (components/Desk.jsx). */
+@keyframes rise-in {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
-@keyframes desk-fade-in {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
-}
-/*
- * THE EXITS, which did not exist. The drawer arrived over 180ms and then vanished in a
- * single frame when `hidden` came back, and the scrim did the same - opening was a
- * considered gesture and dismissing was a snap. These are the same token, the same
- * curve and the same 10px of travel, reversed, so the two halves cannot drift.
- *
- * `both` matters: it holds the last frame for the few milliseconds between the
- * animation finishing and Desk.tsx putting `hidden` back on the node, which is the
- * gap that would otherwise show one frame of a fully opaque drawer at the end of its
- * own dismissal.
- */
-@keyframes desk-drawer-out {
+@keyframes rise-out {
   from {
     opacity: 1;
     transform: translateY(0);
   }
   to {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(12px);
   }
 }
-@keyframes desk-fade-out {
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+@keyframes fade-out {
   from {
     opacity: 1;
   }
@@ -994,48 +258,71 @@ a[role="button"],
     opacity: 0;
   }
 }
-/*
- * The Desk drawer is the ONE thing in this app that genuinely floats above the page,
- * so it is the one thing that gets `--shadow-raised`. Everything else - every card,
- * every panel - separates from its ground by surface, never by shadow. Stated here
- * rather than as a utility in Desk.tsx so the rule stays enforceable from one place:
- * if a second selector ever appears in this block, that is the review.
- */
 .desk-drawer:not([hidden]) {
-  animation: desk-drawer-in var(--motion-base) var(--ease-out);
-  box-shadow: var(--shadow-raised), var(--edge-hilite);
+  animation: rise-in var(--motion-base) var(--ease-out);
 }
-/* Same specificity as the rule above and written after it, so the exit wins for the
- * one render pass in which both selectors match. */
 .desk-drawer[data-closing] {
-  animation: desk-drawer-out var(--motion-base) var(--ease-out) both;
+  animation: rise-out var(--motion-base) var(--ease-out) both;
 }
 .desk-scrim {
-  animation: desk-fade-in var(--motion-base) linear;
+  animation: fade-in var(--motion-base) linear;
 }
 .desk-scrim[data-closing] {
-  animation: desk-fade-out var(--motion-base) linear both;
+  animation: fade-out var(--motion-base) linear both;
+}
+
+/* Bottom sheet (components/ui/Sheet.jsx), a native modal <dialog>. */
+.sheet {
+  margin: auto auto 0;
+  width: 100%;
+  max-width: 42rem;
+  max-height: min(88dvh, 100% - 2rem);
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-sheet) var(--radius-sheet) 0 0;
+  background: var(--color-surface);
+  color: var(--color-ink);
+  box-shadow: var(--shadow-raised);
+  overscroll-behavior: contain;
+}
+.sheet[open] {
+  display: flex;
+  flex-direction: column;
+  animation: rise-in var(--motion-slow) var(--ease-out);
+}
+.sheet::backdrop {
+  background: rgb(0 0 0 / 0.6);
+  animation: fade-in var(--motion-base) linear;
+}
+html:has(.sheet[open]) {
+  overflow: hidden;
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .desk-drawer:not([hidden]) {
-    animation: desk-fade-in var(--motion-fast) linear;
+  .desk-drawer:not([hidden]),
+  .sheet[open] {
+    animation: fade-in var(--motion-fast) linear;
   }
-  /* Reduced, not removed, and still symmetric: the travel goes and the fade stays,
-   * in both directions. */
   .desk-drawer[data-closing] {
-    animation: desk-fade-out var(--motion-fast) linear both;
+    animation: fade-out var(--motion-fast) linear both;
   }
   .desk-scrim,
-  .desk-scrim[data-closing] {
+  .desk-scrim[data-closing],
+  .sheet::backdrop {
     animation: none;
   }
 }
 
-/* /rank blend-weight control. A bare native range renders as a hairline track
- * with a tiny thumb - fine with a mouse, not fine as a 44px-minimum touch
- * target. Sized up so the thumb itself reads as a real control; the fill color
- * is set inline per-value in RankingBoard since that part is data-driven. */
+.tab-panel:not([hidden]) {
+  animation: fade-in var(--motion-base) var(--ease-out);
+}
+@media (prefers-reduced-motion: reduce) {
+  .tab-panel:not([hidden]) {
+    animation: none;
+  }
+}
+
+/* /rank blend-weight slider: a 28px thumb so the control meets touch size. */
 .weight-slider {
   -webkit-appearance: none;
   appearance: none;
@@ -1058,7 +345,6 @@ a[role="button"],
   border-radius: 9999px;
   background: var(--color-accent);
   border: 3px solid var(--color-accent-ink);
-  box-shadow: 0 0 0 1px var(--color-border-strong);
   cursor: pointer;
 }
 .weight-slider::-moz-range-thumb {
@@ -1067,141 +353,5 @@ a[role="button"],
   border-radius: 9999px;
   background: var(--color-accent);
   border: 3px solid var(--color-accent-ink);
-  box-shadow: 0 0 0 1px var(--color-border-strong);
   cursor: pointer;
-}
-
-/*
- * ============================================================================
- * THE DATA-SURFACE DEPTH KIT (round 10, "make the numbers feel alive").
- *
- * NEW BLOCK, appended rather than woven into the token sections above - three
- * parallel sessions share this file and an additive block merges; a rewrite of
- * the sections above does not.
- *
- * The owner's third flag on the same wound: the data pages are "clean, dense,
- * correct - and flat." Every row weighed the same, every card sat on the same
- * ground, and the one number a page exists to deliver was set in the same 13px
- * as its own chrome. This kit is the shared vocabulary the data surfaces
- * (/rank, /roster, and the shared asset row) use to break that sameness:
- *
- *   --text-hero    the ONE number that anchors a data surface (a roster's total
- *                  value, the blend weight, a trade's delta). 44px against a
- *                  30px masthead: Apple Fitness and the Sofascore rating hero
- *                  both set the anchor DATUM well above the page title, because
- *                  on a data surface the number IS the headline. This is a
- *                  seventh type role, added deliberately against the "six steps
- *                  are the whole scale" note above: the six-step scale had no
- *                  size at which a datum outranks the masthead, and reusing
- *                  --text-display for both is how every hero number in the app
- *                  ended up exactly as loud as every page title. Used ONLY via
- *                  `text-hero`, only on figures, never on prose.
- *
- *   .glass         sticky chrome that genuinely floats over scrolling data
- *                  (the /values filter bar). Translucent ground + blur +
- *                  saturate is the one depth cue borders cannot give, and it is
- *                  scoped to chrome that overlaps content - never to cards,
- *                  which still separate by surface (see the DEPTH note above).
- *
- *   .hero-card     the raised, gold-washed ground for a hero moment: an
- *                  opaque surface with a single radial wash of the accent in
- *                  its top corner (gradient-within-hue, so it costs nothing
- *                  against the one-accent rule) plus the existing edge
- *                  catchlight. Vercel's dashboard cards use exactly this
- *                  corner-spot to make one card read as the headline without
- *                  a second hue.
- *
- *   .ghost-rank    an oversized, near-ground ordinal behind a hero row's
- *                  content - depth via layering rather than shadow. Alpha is
- *                  low enough that it never competes with text on top of it
- *                  (it is aria-hidden decoration restating a rank the row
- *                  already prints).
- *
- * Both themes restate the four alphas below; nothing here introduces a hue the
- * theme does not already own.
- */
-@theme {
-  --text-hero: 44px;
-  --glass-bg: rgba(11, 12, 14, 0.72);
-  --hero-spot: rgba(230, 179, 77, 0.16);
-  --hero-spot-faint: rgba(230, 179, 77, 0.05);
-  --ghost-ink: rgba(230, 179, 77, 0.13);
-}
-:root[data-theme="light"] {
-  --glass-bg: rgba(246, 244, 240, 0.78);
-  --hero-spot: rgba(122, 88, 16, 0.13);
-  --hero-spot-faint: rgba(122, 88, 16, 0.04);
-  --ghost-ink: rgba(122, 88, 16, 0.12);
-}
-
-.glass {
-  background-color: var(--glass-bg);
-  -webkit-backdrop-filter: blur(14px) saturate(1.5);
-  backdrop-filter: blur(14px) saturate(1.5);
-}
-
-.hero-card {
-  background-color: var(--color-surface);
-  background-image:
-    radial-gradient(120% 90% at 100% 0%, var(--hero-spot), transparent 58%),
-    linear-gradient(180deg, var(--hero-spot-faint), transparent 45%);
-  box-shadow: var(--edge-hilite);
-}
-
-.ghost-rank {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  right: 3.25rem;
-  z-index: 0;
-  font-family: var(--font-display);
-  font-weight: 700;
-  font-size: 88px;
-  line-height: 1;
-  letter-spacing: -0.04em;
-  color: var(--ghost-ink);
-  pointer-events: none;
-  user-select: none;
-}
-
-/*
- * THE PRINT LEDGER'S CARD STOCK (VISION.md M1, fork resolved as B by the owner).
- *
- * Basketball-card grammar, Fleer '86 -> Prizm: tier is carried by the card's
- * MATERIAL - border, keyline, finish - never by a printed grade (D6-safe: the
- * tier is already the model's published output; this only lets the stock say
- * what the right-hand label already says). The ladder, top to bottom:
- *
- *   .stock-franchise    double keyline (border, 2px gap, 1px inner line) plus a
- *                       restrained diagonal sheen - the gold /10 parallel
- *   .stock-cornerstone  single gold keyline, no sheen
- *   (plain stock)       every middle tier - the base card, today's row
- *   .stock-fringe       uncoated: flat, borderless, the page's own ground
- *
- * The double keyline is drawn with two inset ring-shadows (a bg-colored 2px ring
- * under a 3px accent ring leaves exactly a 1px line, 2px inside the border),
- * which costs no layout and no extra node. The sheen is the depth kit's own
- * hero wash at its faint stop - gradient-within-hue, nothing new against the
- * one-accent rule.
- */
-.stock-franchise {
-  border-color: var(--color-accent-edge);
-  background-color: var(--color-surface);
-  background-image: linear-gradient(
-    160deg,
-    var(--hero-spot-faint),
-    transparent 45%
-  );
-  box-shadow:
-    inset 0 0 0 2px var(--color-surface),
-    inset 0 0 0 3px var(--color-accent-edge),
-    var(--edge-hilite);
-}
-.stock-cornerstone {
-  border-color: var(--color-accent-edge);
-  background-color: var(--color-surface);
-}
-.stock-fringe {
-  border-color: transparent;
-  background-color: transparent;
 }

@@ -21,21 +21,21 @@ export function Onward({ from, steps, className }) {
   if (items.length === 0) return null;
   return (
     <nav aria-label="Where to next" className={cn("mt-6", className)}>
-      <h2 className="mb-1.5 text-note font-semibold uppercase tracking-[0.16em] text-muted">
+      <h2 className="mb-2 text-lede font-semibold tracking-tight text-ink">
         Where next
       </h2>
-      <ul className="space-y-1">
+      <ul className="divide-y divide-border overflow-hidden rounded-card bg-surface">
         {items.map((s) => (
           <li key={s.href}>
             <Link
               href={s.href}
-              className="group flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2 transition-colors hover:border-accent-edge hover:bg-surface-2"
+              className="group flex min-h-14 items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-2"
             >
               <span className="min-w-0 flex-1">
-                <span className="block line-clamp-1 text-body font-semibold leading-tight text-ink group-hover:text-accent-text">
+                <span className="block text-body font-semibold leading-tight text-ink group-hover:text-accent-text">
                   {s.why}
                 </span>
-                <span className="block line-clamp-1 text-meta leading-tight text-secondary">
+                <span className="block text-meta leading-tight text-secondary">
                   {s.label}
                 </span>
               </span>

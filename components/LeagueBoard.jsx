@@ -45,6 +45,7 @@ import { WindowMap } from "@/components/WindowMap";
 import { BOARD_TABS, boardSearch, readBoard } from "@/lib/league/url";
 import { RosterChip, useLeagueSelection } from "@/components/LeagueSelection";
 import { cn } from "@/lib/ui";
+import { Disclosure } from "@/components/ui";
 export function LeagueBoard({ windows, view, crossed }) {
   // Seeded from the query string exactly once, through `useSearchParams` so the SERVER
   // render already has the right board and a shared /league?board=fragility link opens
@@ -70,7 +71,7 @@ export function LeagueBoard({ windows, view, crossed }) {
       <div
         role="tablist"
         aria-label="Board"
-        className="mb-1.5 flex gap-1 rounded-full border border-border bg-surface p-1"
+        className="mb-2 flex gap-1 rounded-full bg-surface p-1"
       >
         {BOARD_TABS.map((t) => {
           const on = t.id === board;
@@ -107,7 +108,7 @@ export function LeagueBoard({ windows, view, crossed }) {
       </div>
 
       {board === "windows" ? (
-        <div className="rounded-[--radius] border border-border bg-surface p-2.5">
+        <div className="rounded-card bg-surface p-3">
           <WindowMap
             rows={windows.rows}
             first={windows.first}
@@ -224,13 +225,13 @@ export function LeagueBoard({ windows, view, crossed }) {
                 most rosters. Saying that first is cheaper than letting a reader infer a
                 projection and then hedging it. The arithmetic is unchanged; this is the
                 framing catching up to it. See components/WindowMap.jsx. */}
-          <p className="mt-1.5 text-meta leading-snug text-secondary">
+          <Disclosure className="mt-1" summary="How to read the seasons">
             The seasons are an ordering, not a forecast. Every roster in a
             dynasty league holds players in the same narrow age range, so all
             fourteen spans land within a few seasons of each other and most of
             them overlap. Read this as who is dated earlier and who is dated
             later than you, not as a claim about a named year.
-          </p>
+          </Disclosure>
 
           {/* The COUNT of the refused rows is in the seat card's synthesis; what is not
                 there, and cannot be, is why the state is worth looking for.
@@ -280,9 +281,10 @@ export function LeagueBoard({ windows, view, crossed }) {
           grade (D6), and the median is stated as a median so nobody reads it as a bar.
         */}
       {crossed && crossed.rosters.length > 0 && (
-        <div className="mt-1.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2">
-          <p className="text-note leading-snug text-ink/85">
-            {crossed.sentence}
+        <div className="mt-3 rounded-card bg-surface p-4">
+          <p className="text-note font-semibold text-ink">
+            In your seasons, above the fragility median
+            <span className="ml-1.5 figure text-secondary">{crossed.rosters.length}</span>
           </p>
           {/* Chips, not a comma list, and the same chips the seat card uses - a name a
               reader can act on should be a control wherever it appears. */}
@@ -291,6 +293,9 @@ export function LeagueBoard({ windows, view, crossed }) {
               <RosterChip key={r.rosterId} roster={r} />
             ))}
           </div>
+          <Disclosure className="mt-1" summary="What this means">
+            {crossed.sentence}
+          </Disclosure>
         </div>
       )}
     </div>

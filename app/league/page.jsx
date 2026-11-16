@@ -18,7 +18,9 @@ import { LeagueSelectionProvider } from "@/components/LeagueSelection";
 import { PowerRanking } from "@/components/PowerRanking";
 import { SeatCard } from "@/components/SeatCard";
 import { SelectedRoster } from "@/components/SelectedRoster";
-import { PageHeader, SectionHeader } from "@/components/ui";
+import Link from "next/link";
+import { ChevronRight } from "lucide-react";
+import { Chip, Disclosure, PageHeader, RankStrip, StatTile, Tabs } from "@/components/ui";
 import { fmtValue } from "@/lib/ui";
 import { ordinal } from "@/lib/derive/describe";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
@@ -29,69 +31,12 @@ import { TabIndex } from "@/components/TabIndex";
 import { standingsRows } from "@/lib/league/standings";
 export const dynamic = "force-dynamic";
 /**
- * THE LEAGUE - one question, three facets, in that order.
- *
- * ---------------------------------------------------------------------------------
- * WHAT THIS PAGE WAS, AND WHY IT WAS RESTRUCTURED RATHER THAN TIDIED
- * ---------------------------------------------------------------------------------
- * Five sections stacked, each with an uppercase tracked label, which is the typographic
- * register for a TAXONOMY - five unrelated nouns. They were not five unrelated things.
- * They were four different renderings of a single question and one tally that answered
- * nothing, and the tally was in the highest slot on the page.
- *
- * The question a manager arrives with is about their own seat. The page answers it in
- * three facets, and the section headers are literal sentence-case QUESTIONS
- * (`SectionHeader as="question"`) so they read as three parts of one enquiry rather than
- * as three categories:
- *
- *   1. Where does your value land?     the seat card - your span, your rank, and the
- *                                      other thirteen rosters named against it
- *   2. How does the league sit around  one board, two lensed views of the same fourteen
- *      you?                            rosters, plus the roster you have selected
- *   3. Who do you talk to?             the power ranking, which is simultaneously the
- *                                      text rendering of both charts and their control
- *
- * ---------------------------------------------------------------------------------
- * WHAT WAS CUT, AND THE MEASUREMENT THAT JUSTIFIED CUTTING IT
- * ---------------------------------------------------------------------------------
- * The four posture-census tiles that used to lead this page are gone (SHELVED.md S12).
- * Three of their four counts were counts of QUARTILE MEMBERSHIP - `classify` in
- * lib/metrics/duration.js hands out contending / ascending / rebuilding by
- * `shortnessPercentile`, and its own comment says the consequence out loud: "somebody
- * carries the label in every league, however that league is built."
- *
- * Measured on the live fourteen-roster league rather than asserted, and the measurement
- * found something worse than tautology. The quartiles are taken over ALL FOURTEEN
- * rosters while the three labels are only handed to the seven that clear the coherence
- * floor - so the tile read "1 contending" while three of the four shortest-dated rosters
- * were disqualified for INCOHERENCE rather than for timing. A reader took "one team is
- * trying to win now" from a tile that meant "one team is both shortest-dated-quartile and
- * coherent", and a one-word label has nowhere to put the difference.
- *
- * The fourth count, straddling, was the honest one - it comes off the ABSOLUTE coherence
- * floor rather than a quantile - and it is already said twice on this page in better
- * places: the split rows on the window map, and `windowRefusalSummary`, which states it
- * in a sentence with its reason attached.
- *
- * What replaced it as this page's league-wide tally is `buildQuadrantView().counts`,
- * rendered beside the axes it was read from rather than floating at the page head. An
- * intersection of two median splits is genuinely free to come out 0, which is the
- * property the census never had.
- *
- * ---------------------------------------------------------------------------------
- * ONE NUMBERING, ONE SELECTION, AND ALL DERIVATION ON THE SERVER
- * ---------------------------------------------------------------------------------
- * `buildQuadrantView` numbers by its own reading order (worst corner first) and the
- * window map used to number by TCI rank. Both key to the power ranking instead, because
- * a page with one list and two charts needs the dot labelled 7 to be row 7 or the charts
- * are decoration.
- *
- * Selection is one piece of page state in `?roster=` (lib/league/url.js), and every
- * string it can produce is built HERE, on the server, and passed down: the pairwise
- * thesis, the refusal sentence for the pairs that have none, and the live region's
- * announcement. Nothing in a client component composes a claim about a roster - what a
- * screen-reader user hears has to be the same claim a sighted reader sees, and one string
- * read by both is the only way to guarantee it.
+ * THE LEAGUE. The first screen answers "where do I stand?": your place, points for and
+ * value rank as tiles, then the standings as tappable rows (detail in a bottom sheet).
+ * Power ranking and the window boards sit behind segmented tabs and share one
+ * selection (`?roster=`, lib/league/url.js). Every string a selection can produce is
+ * built here on the server so what is heard and what is seen cannot drift. The posture
+ * census that once led this page stays retired (SHELVED.md S12).
  */
 export default async function LeaguePage() {
   const h = await getLeagueHistory();
@@ -377,121 +322,151 @@ export default async function LeaguePage() {
       facts: factsById[String(r.rosterId)] ?? r.teamName ?? r.ownerName,
     };
   });
+  const detailsById = Object.fromEntries(rankingRows.map((r) => [r.rosterId, r]));
+  const mine = standings.me;
+  const season = standings.season ?? h.currentLeague.season;
   return (
     <div>
       <PageHeader
-        kicker={<span className="block line-clamp-1">{h.currentLeague.name}</span>}
-        title="The League"
-        aside={
-          <OpenInSleeper
-            href={sleeperLeagueUrl(h.currentLeague.leagueId)}
-            label="Sleeper"
-          />
-        }
+        kicker={h.currentLeague.name}
+        title="League"
+        aside={<OpenInSleeper href={sleeperLeagueUrl(h.currentLeague.leagueId)} label="Sleeper" />}
         below={
-          <p className="mt-1 figure text-meta text-secondary">
-            {h.currentLeague.totalRosters} teams · {h.chain.length} seasons ·{" "}
-            {h.currentLeague.season} · {fmtValue(h.transactions.length)}{" "}
-            transactions
-          </p>
+          <div className="mt-2 flex flex-wrap gap-1.5">
+            <Chip>{h.currentLeague.totalRosters} teams</Chip>
+            <Chip>
+              {season}
+              {standings.hasRecords && !standings.isLive ? " final" : ""}
+            </Chip>
+            <Chip>{h.chain.length} seasons on record</Chip>
+          </div>
         }
       />
 
-      <SectionHeader
-        title={
-          standings.hasRecords
-            ? `Standings · ${standings.season}${standings.isLive ? "" : " final"}`
-            : "Standings · no games yet, by value"
-        }
-      />
-      <Standings standings={standings} />
-      <TabIndex tab="league" section="Record" title="Record" className="mt-4" />
-      <TabIndex tab="league" section="History" title="History" className="mt-4" />
+      {mine && (
+        <div className="grid grid-cols-3 gap-2">
+          <StatTile
+            label="Your place"
+            value={standings.hasRecords && mine.rank ? ordinal(mine.rank) : "–"}
+            sub={
+              standings.hasRecords && mine.wins != null
+                ? `${mine.wins}-${mine.losses} record`
+                : "no games yet"
+            }
+            visual={standings.hasRecords ? <RankStrip rank={mine.rank} of={standings.rows.length} /> : null}
+          />
+          <StatTile
+            label="Points for"
+            value={mine.pointsFor != null ? Math.round(mine.pointsFor).toLocaleString("en-US") : "–"}
+            sub={mine.pfRank ? `${ordinal(mine.pfRank)} most` : "no games yet"}
+            visual={mine.pfRank ? <RankStrip rank={mine.pfRank} of={standings.rows.length} /> : null}
+          />
+          <StatTile
+            label="Value rank"
+            value={ordinal(mine.valueRank)}
+            sub="by asset value"
+            href="/roster"
+            visual={<RankStrip rank={mine.valueRank} of={standings.rows.length} />}
+          />
+        </div>
+      )}
 
-      <h2 className="mb-1 mt-6 border-t border-border pt-4 font-display text-lede font-semibold text-ink">
-        Where everyone&apos;s value sits
-      </h2>
-      {/* Suspense because the selection provider and the board read the query string
-          through `useSearchParams`, the same contract /values' list is mounted under.
-          This page is force-dynamic, so the boundary never actually suspends. One
-          boundary around all three acts, because all three share the selection. */}
+      {/* One selection is shared by the power ranking and both boards (?roster=). */}
       <Suspense fallback={null}>
         <LeagueSelectionProvider
           myRosterId={meId ?? null}
           rosterIds={board.points.map((p) => p.rosterId)}
           factsById={factsById}
         >
-          {/* ---------------- ACT ONE ---------------- */}
-          <SectionHeader as="question" title="Where does your value land?" />
-          <SeatCard seat={seat} />
-
-          {/* ---------------- ACT TWO ---------------- */}
-          <SectionHeader
-            as="question"
-            title="How does the league sit around you?"
-            href="/methodology"
-            cta="how TCI and RFI work"
+          <Tabs
+            className="mt-5"
+            variant="segmented"
+            label="League views"
+            items={[
+              {
+                id: "standings",
+                label: "Standings",
+                content: (
+                  <>
+                    <Standings standings={standings} details={detailsById} />
+                    <p className="mt-2 px-1 text-meta text-secondary">
+                      {standings.hasRecords
+                        ? `${season}${standings.isLive ? "" : " final"} · tap a team for its detail`
+                        : "No games yet, so ordered by asset value · tap a team for its detail"}
+                    </p>
+                  </>
+                ),
+              },
+              {
+                id: "power",
+                label: "Power",
+                content: (
+                  <>
+                    <div className="mb-2 flex items-center justify-between gap-3 px-1">
+                      <p className="figure text-meta text-secondary">
+                        By roster value · median {fmtValue(median)}
+                      </p>
+                      {!seasonLive && (
+                        <p className="text-right text-meta text-secondary">records are last season&rsquo;s</p>
+                      )}
+                    </div>
+                    <PowerRanking rows={rankingRows} />
+                    <Disclosure className="mt-1" summary="How the power ranking works">
+                      Rosters ordered by total asset value (league total {fmtValue(leagueValue)}).
+                      Each row carries the same window, TCI and fragility figures the Windows
+                      boards draw, and selecting one reads it on both boards.
+                    </Disclosure>
+                  </>
+                ),
+              },
+              {
+                id: "windows",
+                label: "Windows",
+                content: (
+                  <>
+                    <SeatCard seat={seat} />
+                    <div className="mt-3">
+                      <LeagueBoard
+                        windows={{
+                          rows: windows.rows.map((w) => ({
+                            rosterId: w.rosterId,
+                            n: nByRoster.get(w.rosterId) ?? 0,
+                            name: w.teamName ?? w.ownerName,
+                            isMe: w.isMe,
+                            state: w.state,
+                            refusal: w.refusal ?? null,
+                            open: w.open,
+                            peak: w.peak,
+                            close: w.close,
+                          })),
+                          first: windows.first,
+                          last: windows.last,
+                          currentSeason: windows.currentSeason,
+                          refusalSummary: windowRefusalSummary(windows.rows),
+                        }}
+                        view={board}
+                        crossed={crossed}
+                      />
+                    </div>
+                    <SelectedRoster rosters={rosterPanels} myOwnerId={meId != null ? ownerIdOf(meId) : null} />
+                    <Link
+                      href="/methodology"
+                      className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text"
+                    >
+                      How TCI and RFI work
+                      <ChevronRight size={16} aria-hidden="true" />
+                    </Link>
+                  </>
+                ),
+              },
+            ]}
           />
-          <LeagueBoard
-            windows={{
-              rows: windows.rows.map((w) => ({
-                rosterId: w.rosterId,
-                n: nByRoster.get(w.rosterId) ?? 0,
-                name: w.teamName ?? w.ownerName,
-                isMe: w.isMe,
-                state: w.state,
-                // The refused row's own code and proof travel with it. This projection
-                // used to drop them, which meant the chart's screen-reader label and the
-                // sentence under it each had to reconstruct the reason from `state` - the
-                // same word, two guesses at what it meant.
-                refusal: w.refusal ?? null,
-                open: w.open,
-                peak: w.peak,
-                close: w.close,
-              })),
-              first: windows.first,
-              last: windows.last,
-              currentSeason: windows.currentSeason,
-              refusalSummary: windowRefusalSummary(windows.rows),
-            }}
-            view={board}
-            crossed={crossed}
-          />
-          <SelectedRoster
-            rosters={rosterPanels}
-            myOwnerId={meId != null ? ownerIdOf(meId) : null}
-          />
-
-          {/* ---------------- ACT THREE ---------------- */}
-          <SectionHeader
-            as="question"
-            title="Who do you talk to?"
-            action={
-              !seasonLive ? (
-                <span className="min-w-0 shrink text-right text-meta leading-tight text-secondary">
-                  records are last season&rsquo;s final
-                </span>
-              ) : undefined
-            }
-          />
-          <p className="mb-1.5 text-meta leading-snug text-secondary">
-            By roster value. Every figure both boards draw is on these rows, and
-            picking one reads it on both.
-          </p>
-          <PowerRanking rows={rankingRows} />
         </LeagueSelectionProvider>
       </Suspense>
 
-      <p className="mt-2 figure text-meta text-secondary">
-        league value {fmtValue(leagueValue)} · median {fmtValue(median)}
-      </p>
+      <TabIndex tab="league" section="Record" title="Record" className="mt-6" />
+      <TabIndex tab="league" section="History" title="History" className="mt-5" />
 
-      {/* This is also /commissioner's first inbound link in the app's history, and
-            the onward row is the right register for it: a page saying what THIS reader
-            might want next can offer a commissioner-only tool without putting it in
-            front of the twelve managers who cannot use it. The pill row that used to
-            sit above the board could not make that distinction, which is part of why
-            it is gone - see lib/nav.js. */}
       <Onward from="/league" />
     </div>
   );

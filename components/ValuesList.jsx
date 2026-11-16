@@ -372,6 +372,47 @@ export function ValueAssetRow({
 
       {open && (
         <div className="border-t border-border bg-bg/40 px-2.5 py-2">
+          <ValueAssetDetail
+            name={name}
+            age={age}
+            tier={tier}
+            playerId={playerId}
+            injury={injury}
+            injuryDetail={injuryDetail}
+            consensusRank={consensusRank}
+            pricedRank={pricedRank}
+            productionBacked={productionBacked}
+            productionRefusal={productionRefusal}
+            rankAxisMax={rankAxisMax}
+            provenance={provenance}
+            depth={depth}
+          />
+        </div>
+      )}
+    </li>
+  );
+}
+/**
+ * The facts behind one asset: both ranks, tier, injury, depth chart, age curve and
+ * where he came from. Shared by the inline expansion here and /roster's bottom sheet.
+ */
+export function ValueAssetDetail({
+  name,
+  age,
+  tier,
+  playerId,
+  injury,
+  injuryDetail,
+  consensusRank,
+  pricedRank,
+  productionBacked,
+  productionRefusal,
+  rankAxisMax,
+  provenance,
+  depth,
+}) {
+  return (
+    <>
           {/*
               FACTS ONLY. What the model knows about this player, never what it did with
               it: the multipliers are the model's internals and they live on
@@ -515,9 +556,7 @@ export function ValueAssetRow({
               )}
             </>
           )}
-        </div>
-      )}
-    </li>
+    </>
   );
 }
 /**
