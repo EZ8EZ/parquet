@@ -70,7 +70,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
 
   if (desk.status !== "in_season") {
     return (
-      <section aria-label="Lock-in" data-lockin-board={mode} data-status={desk.status}>
+      <section aria-label="Lock-in" data-lockin-board={mode} data-status={desk.status} data-requests={`${desk.requests.count}/${desk.requests.budget}`} data-engine-ms={desk.requests.wallMs ?? ""}>
         {header}
         <div className="mt-2">
           <Gaps desk={desk} />
@@ -95,7 +95,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
     ) : null;
 
   return (
-    <section aria-label="Lock-in" data-lockin-board={mode} data-status={desk.status}>
+    <section aria-label="Lock-in" data-lockin-board={mode} data-status={desk.status} data-requests={`${desk.requests.count}/${desk.requests.budget}`} data-engine-ms={desk.requests.wallMs ?? ""}>
       {header}
       <div className="mt-2">
         <Gaps desk={desk} />
