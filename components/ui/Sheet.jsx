@@ -1,5 +1,5 @@
 "use client";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/ui";
 
@@ -11,18 +11,52 @@ import { cn } from "@/lib/ui";
  * open, so a list of sheets costs no DOM until used. Motion: globals.css `.sheet`.
  * `footer` (alias `actions`) pins a row of buttons under the scrolling body;
  * `leading` puts an avatar beside the title.
+ *
+ * Open state: uncontrolled by default (the trigger opens it). `defaultOpen` opens it
+ * on mount, e.g. for a deep link such as /values?focus=<id>. `open` + `onOpenChange`
+ * make it controlled; every dismissal path (Escape, backdrop, close button) reports
+ * `onOpenChange(false)` and the trigger reports `onOpenChange(true)`.
  */
-export function Sheet({ trigger, triggerLabel, triggerClassName, title, subtitle, leading, children, footer, actions }) {
+export function Sheet({
+  trigger,
+  triggerLabel,
+  triggerClassName,
+  title,
+  subtitle,
+  leading,
+  children,
+  footer,
+  actions,
+  open,
+  defaultOpen = false,
+  onOpenChange,
+}) {
   const foot = footer ?? actions;
   const ref = useRef(null);
-  const [opened, setOpened] = useState(false);
+  const [inner, setInner] = useState(defaultOpen);
+  const isOpen = open ?? inner;
+  // Children mount on first open and stay mounted (so a reopen keeps its state).
+  const [opened, setOpened] = useState(isOpen);
   const titleId = useId();
 
-  const show = () => {
-    setOpened(true);
-    ref.current?.showModal();
+  const request = (next) => {
+    if (open === undefined) setInner(next);
+    onOpenChange?.(next);
   };
+  const show = () => request(true);
   const close = () => ref.current?.close();
+
+  // The <dialog> follows the state; showModal only exists after mount.
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (isOpen && !d.open) {
+      setOpened(true);
+      d.showModal();
+    } else if (!isOpen && d.open) {
+      d.close();
+    }
+  }, [isOpen]);
 
   return (
     <>
@@ -39,6 +73,9 @@ export function Sheet({ trigger, triggerLabel, triggerClassName, title, subtitle
         ref={ref}
         aria-labelledby={titleId}
         className="sheet"
+        onClose={() => {
+          if (isOpen) request(false);
+        }}
         onClick={(e) => {
           if (e.target === ref.current) close();
         }}

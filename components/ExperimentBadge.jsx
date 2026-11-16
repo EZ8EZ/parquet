@@ -1,8 +1,8 @@
 import { FlaskConical } from "lucide-react";
-import { Tag } from "@/components/ui";
+import { Chip } from "@/components/ui";
 /**
  * The Lab's marker. Every experimental surface wears one, in the house idiom
- * (`Tag`, warn tone, a small mark) rather than inventing a new visual language for
+ * (a warn `Chip` with its icon, sentence case) rather than inventing a new visual language for
  * being unfinished.
  *
  * Its own component rather than a shared "beta" one: the trade web's `BetaBadge` was
@@ -12,9 +12,8 @@ import { Tag } from "@/components/ui";
  */
 export function ExperimentBadge() {
   return (
-    <Tag tone="warn">
-      <FlaskConical size={11} aria-hidden="true" />
+    <Chip tone="warn" icon={FlaskConical}>
       Experiment
-    </Tag>
+    </Chip>
   );
 }
