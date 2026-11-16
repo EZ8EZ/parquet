@@ -16,6 +16,8 @@ export function List({ children, className, as: As = "ul", ...rest }) {
  * Names wrap, never truncate (D111). `href` makes it a link; inside a Sheet trigger
  * pass `as="span"` so it nests in the trigger button. `highlight` marks the viewer's
  * own row (accent wash + a "You" chip supplied by the caller, never colour alone).
+ * `trailing` is any node after the value (a Chip, a small button); `dense` drops the
+ * row to the 44px touch minimum for long secondary lists.
  */
 export function ListRow({
   href,
@@ -29,6 +31,8 @@ export function ListRow({
   valueSub,
   chevron,
   highlight,
+  trailing,
+  dense,
   className,
   children,
   ...rest
@@ -58,11 +62,13 @@ export function ListRow({
           {valueSub && <span className="block text-meta text-secondary">{valueSub}</span>}
         </span>
       )}
+      {trailing != null && <span className="shrink-0">{trailing}</span>}
       {showChevron && <ChevronRight size={18} aria-hidden="true" className="-mr-1 shrink-0 text-faint" />}
     </>
   );
   const cls = cn(
-    "flex min-h-14 w-full items-center gap-3 px-4 py-2.5 text-left",
+    "flex w-full items-center gap-3 px-4 text-left",
+    dense ? "min-h-11 py-2" : "min-h-14 py-2.5",
     highlight && "bg-accent-wash",
     (href || as === "span") && "transition-colors hover:bg-surface-2",
     className,

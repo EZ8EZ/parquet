@@ -2,15 +2,10 @@ import Link from "next/link";
 /**
  * THE MARK, AS A TOKEN CITIZEN.
  *
- * It used to fill three hardcoded hexes: a `#131519` tile (a surface value that no
- * longer exists - `--color-surface` is `#16181d`) and a `#f0c268`/`#c9922f` gradient
- * that was a third gold, matching neither `--color-accent` nor `--color-accent-text`.
- * On the paper theme that made the logo a dark tile in a warm-white page: unthemed.
- *
- * Now the tile is `--color-surface` and the gradient runs `--color-accent-text` into
- * `--color-accent` - the same two golds the rest of the app already splits by job, so
- * the mark re-tunes itself on paper (dark gold on warm white) instead of staying
- * frozen at dark's values.
+ * The tile is `--color-surface` and the gradient runs `--color-accent-text` into
+ * `--color-accent`: the brand violet, split by job exactly as the rest of the app
+ * splits it. No hex lives here; public/icon.svg carries frozen copies of the same
+ * tokens because a standalone SVG cannot read custom properties.
  *
  * `var()` goes through `style`, not a presentation attribute: presentation attributes
  * are the weakest cascade level and `stop-color` in particular is inconsistent about
@@ -53,8 +48,7 @@ import Link from "next/link";
  *
  * The gradient also stops running corner-to-corner. `x2="0" y2="1"` is a vertical
  * axis, which both removes the last 45-degree line of any kind from the mark and
- * matches how the rest of the app models light (`--edge-hilite` is a top catchlight;
- * this floor is lit from above too). Same two golds, same tokens, no new colour.
+ * reads as light from above. Same two tokens, no new colour.
  */
 export function BrandMark({ size = 36, gradientId = "parquet-mark" }) {
   return (
@@ -102,14 +96,14 @@ export function Wordmark({ tagline }) {
         aria-label="Parquet home"
         className="-m-1 flex min-h-11 min-w-11 shrink-0 items-center justify-center"
       >
-        <BrandMark size={36} gradientId="wordmark-gold" />
+        <BrandMark size={36} gradientId="wordmark-mark" />
       </Link>
       <div>
-        <div className="font-display text-lede font-semibold leading-none tracking-tight">
+        <div className="text-lede font-bold leading-none tracking-tight">
           Parquet
         </div>
         {tagline && (
-          <div className="mt-0.5 text-meta uppercase tracking-[0.16em] text-secondary">
+          <div className="mt-0.5 text-meta text-secondary">
             {tagline}
           </div>
         )}

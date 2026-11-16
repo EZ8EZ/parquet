@@ -55,7 +55,7 @@ function RowLabel({ live, children }) {
   return (
     <span
       className={cn(
-        "text-micro font-semibold uppercase tracking-[0.12em]",
+        "text-meta font-semibold",
         swap,
         live ? "text-accent-text" : "text-faint",
       )}
@@ -133,12 +133,12 @@ function ValueModelChart({ model, active }) {
   const liveValue = active === "value";
   const curveInk = liveCurve ? CHART_ACCENT : CHART_MARK;
   return (
-    <div className="card-lit rounded-[--radius] border border-border bg-surface px-3 pb-2.5 pt-2.5">
+    <div className="rounded-card bg-surface-2 px-3 pb-3 pt-3">
       <div className="flex items-baseline justify-between gap-2">
-        <p className="text-micro font-semibold uppercase tracking-[0.16em] text-muted">
+        <p className="text-meta font-semibold text-muted">
           The value model, drawn once
         </p>
-        <p className="min-w-0 line-clamp-1 text-meta text-secondary">
+        <p className="min-w-0 text-right text-meta text-secondary">
           <span className="font-semibold text-ink">{ex.name}</span>
           {ex.position ? ` · ${ex.position}` : ""}
           {ex.age != null ? ` · ${ex.age}y` : ""}
@@ -197,7 +197,7 @@ function ValueModelChart({ model, active }) {
           fill={curveInk}
         />
       </svg>
-      <div className="grid grid-cols-[52px_minmax(0,1fr)_64px] items-center gap-x-2 gap-y-1">
+      <div className="mt-1 grid grid-cols-[60px_minmax(0,1fr)_64px] items-center gap-x-2 gap-y-1">
         {/* The rank prior's mix: two lengths, weights straight off the config. */}
         <RowLabel live={liveBlend}>rank mix</RowLabel>
         <svg viewBox={`0 0 ${RW} 14`} className="block h-3.5 w-full" aria-hidden="true">
@@ -282,7 +282,7 @@ function ValueModelChart({ model, active }) {
           {ex.value.toLocaleString()}
         </span>
       </div>
-      <p className="mt-1.5 text-micro leading-snug text-faint">
+      <p className="mt-2 text-meta text-secondary">
         Each term drawn as its distance from ×1.00; the value bar runs to{" "}
         <span className="figure text-secondary">
           {model.ceiling.toLocaleString()}
@@ -350,19 +350,19 @@ export function MethodologyWalkthrough({ model, steps }) {
           appendix below is read without it. */}
       <div
         className="sticky z-20"
-        style={{ top: "max(8px, env(safe-area-inset-top))" }}
+        style={{ top: "calc(var(--header-h) + env(safe-area-inset-top) + 8px)" }}
       >
         <ValueModelChart model={model} active={active} />
       </div>
       <div className="mt-4 space-y-6">
         {steps.map((step, i) => (
           <section key={step.id} data-step={step.id}>
-            <p className="text-meta font-semibold uppercase tracking-[0.18em] text-accent-text">
+            <p className="text-meta font-semibold text-accent-text">
               Step {i + 1} · {step.kicker}
             </p>
-            <h2 className="mt-0.5 font-display text-lede font-semibold leading-tight text-ink">
+            <h3 className="mt-0.5 text-lede font-semibold text-ink">
               {step.title}
-            </h2>
+            </h3>
             <div className="mt-1.5 space-y-2">{step.body}</div>
           </section>
         ))}

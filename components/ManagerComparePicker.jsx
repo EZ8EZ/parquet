@@ -32,7 +32,7 @@ function SideSelect({
       value={value ?? ""}
       onChange={(e) => onPick(e.target.value || null)}
       aria-label={label}
-      className="min-h-11 w-full min-w-0 rounded-[--radius-sm] border border-border bg-surface px-2 text-note font-semibold text-ink focus:border-accent focus:outline-none"
+      className="min-h-11 w-full min-w-0 rounded-control border border-border-strong bg-surface px-3 text-body font-semibold text-ink focus:border-accent focus:outline-none"
     >
       <option value="">Pick a manager…</option>
       <optgroup label="In the league">
@@ -93,7 +93,7 @@ export function ManagerComparePicker({ options, a, b }) {
         onClick={() => go({ a: b, b: a })}
         disabled={!a && !b}
         aria-label="Swap the two sides"
-        className="flex h-11 w-11 shrink-0 items-center justify-center rounded-[--radius-sm] border border-border bg-surface text-faint transition-colors hover:text-accent-text disabled:opacity-40 motion-reduce:transition-none"
+        className="flex size-11 shrink-0 items-center justify-center rounded-full bg-surface-2 text-muted transition-colors hover:text-ink disabled:text-faint motion-reduce:transition-none"
       >
         <ArrowLeftRight size={14} aria-hidden="true" />
       </button>

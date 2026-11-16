@@ -1,6 +1,6 @@
 name: Snapshot lineups
 
-# Hourly copy of this week's lock-in lineups (scripts/snapshot-lineups.js), because
+# Frequent copy of this week's lock-in lineups (scripts/snapshot-lineups.js), because
 # Sleeper keeps neither lock state nor mid-week lineup changes. Files are committed to
 # a dedicated orphan `data` branch, never to main:
 #  - ci.yml and codeql.yml run on pull_request and on pushes to main only, so pushes
@@ -11,7 +11,9 @@ name: Snapshot lineups
 # Scheduled workflows run from the default branch: this starts once it is on main.
 on:
   schedule:
-    - cron: "17 * * * *" # hourly, off the top of the hour (GitHub delays :00 runs)
+    # Every 10 minutes. GitHub drops scheduled runs freely (the hourly schedule fired once
+    # in its first 16 hours), and identical payloads write nothing, so extra runs are free.
+    - cron: "3-59/10 * * * *"
   workflow_dispatch:
 
 permissions:

@@ -35,7 +35,7 @@ export function ManagerRail({
         <Link
           key={l.href}
           href={l.href}
-          className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-2.5 text-meta font-semibold text-muted transition-colors hover:border-accent-edge hover:text-accent-text"
+          className="inline-flex min-h-11 items-center rounded-full bg-elevated px-3.5 text-note font-semibold text-ink transition-colors hover:bg-border-strong"
         >
           {l.label}
         </Link>

@@ -14,7 +14,7 @@ import { ValuesList } from "@/components/ValuesList";
 import { VALUE_ROWS } from "@/lib/values/url";
 import { fmtValue } from "@/lib/ui";
 import { Onward } from "@/components/Onward";
-import { PageHeader } from "@/components/ui";
+import { ButtonLink, Disclosure, PageHeader, StatTile } from "@/components/ui";
 import { MarketGapList } from "@/components/MarketGapList";
 import { marketGaps, marketSourceCounts } from "@/lib/marketgap";
 export const dynamic = "force-dynamic";
@@ -118,91 +118,55 @@ export default async function ValuesPage({ searchParams }) {
   ]
     .filter(Boolean)
     .join(", ");
+  // The dataset's own caveat, said once: how many values rest on consensus alone.
+  const consensusOnly = rows.filter((r) => r.productionBacked === false).length;
   return (
     <div>
       <PageHeader
-        kicker="Dynasty values"
+        kicker="Trade"
         title="Asset values"
-        action={
-          <Link
-            href="/methodology"
-            className="inline-flex min-h-11 shrink-0 items-center rounded-full border border-border px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
-          >
-            Methodology
-          </Link>
+        subtitle="This league's scoring, one value scale"
+        aside={
+          <ButtonLink href="/rank" variant="secondary" size="sm">
+            Your ranking
+          </ButtonLink>
         }
-        subtitle={
-          <>
-            A transparent, tunable model - not a scraped market. Computed from
-            this league&apos;s own scoring settings. Tiers break where the value
-            distribution actually cliffs.
-          </>
-        }
-      >
-        <dl className="mt-2 grid grid-cols-3 divide-x divide-border rounded-[--radius-sm] border border-border bg-surface">
-          <Figure label="ranked" value={`${rows.length}`} />
-          <Figure
-            label="top value"
-            value={top ? fmtValue(top.value) : "-"}
-            sub={top?.name}
-          />
-          <Figure
-            label="median"
-            value={fmtValue(median)}
-            sub={`${franchise} franchise tier`}
-          />
-        </dl>
-      </PageHeader>
-      {sourceLine && (
-        <p className="mt-1.5 text-meta leading-snug text-muted">
-          Market ordinal: Sleeper, as of today ({sourceLine}).
-        </p>
-      )}
-      <MarketGapList
-        gaps={gaps}
-        ownerName={ownerName}
-        myRosterId={h.me?.rosterId ?? null}
       />
-
-      {/* This is somebody else's board (Sleeper's search rank). /rank is where
-            that stops being true - drag your own order in and blend it against
-            this one at whatever weight you trust. */}
-      <nav aria-label="Values sections" className="mt-2 flex gap-1.5">
-        <Link
-          href="/rank"
-          className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
-        >
-          Build your own ranking
-          <ChevronRight size={13} aria-hidden="true" />
+      <div className="grid grid-cols-3 gap-2">
+        <StatTile size="sm" label="Ranked" value={`${rows.length}`} sub="players" />
+        <StatTile size="sm" label="Top value" value={top ? fmtValue(top.value) : "-"} sub={top?.name} />
+        <StatTile size="sm" label="Median" value={fmtValue(median)} sub={`${franchise} franchise tier`} />
+      </div>
+      <Disclosure className="mt-1" summary="How values are built">
+        <p>
+          A transparent, tunable model, not a scraped market, computed from this
+          league&apos;s scoring settings. Tiers break where the value distribution cliffs.
+        </p>
+        {sourceLine && <p className="mt-2">Market ordinal: Sleeper, as of today ({sourceLine}).</p>}
+        {consensusOnly > 0 && (
+          <p className="mt-2">
+            {consensusOnly === rows.length
+              ? "Every value here is priced from consensus alone: this league has no eight-week production record to reorder them with."
+              : `${consensusOnly} of ${rows.length} players are priced from consensus alone (under eight rostered weeks here); each says so in its sheet.`}
+          </p>
+        )}
+        <Link href="/methodology" className="mt-2 inline-flex min-h-11 items-center gap-1 font-semibold text-accent-text">
+          Methodology
+          <ChevronRight size={14} aria-hidden="true" />
         </Link>
-      </nav>
+      </Disclosure>
 
-      {/*
-          Suspense because ValuesList reads the query string through useSearchParams -
-          filters, sort, page size and a focused row are all addressable now
-          (lib/values/url.ts), so returning from a dossier or a search result lands
-          back where you were instead of row 1. This page is force-dynamic, so the
-          boundary never actually suspends in practice; it is here so that dependency
-          can never turn into a render-mode surprise later (same reasoning the deleted
-          /web carried - see D30/D37).
-        */}
-      <Suspense fallback={null}>
-        <ValuesList rows={rows} />
-      </Suspense>
+      {/* Hidden entirely when there are no disagreements (the production term is off,
+          D121), so no empty heading is left behind. */}
+      <MarketGapList gaps={gaps} ownerName={ownerName} myRosterId={h.me?.rosterId ?? null} />
+
+      {/* Suspense because ValuesList reads the query string through useSearchParams. */}
+      <div className="mt-3">
+        <Suspense fallback={null}>
+          <ValuesList rows={rows} />
+        </Suspense>
+      </div>
       <Onward from="/values" />
-    </div>
-  );
-}
-function Figure({ label, value, sub }) {
-  return (
-    <div className="min-w-0 px-2.5 py-1.5">
-      <dt className="text-meta uppercase tracking-wide text-secondary">
-        {label}
-      </dt>
-      <dd className="line-clamp-1 figure text-lede leading-snug font-semibold text-ink">
-        {value}
-      </dd>
-      {sub && <dd className="text-meta leading-snug text-muted">{sub}</dd>}
     </div>
   );
 }

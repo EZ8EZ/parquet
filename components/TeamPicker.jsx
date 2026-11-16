@@ -1,21 +1,24 @@
 "use client";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import { Check, Loader2, Search } from "lucide-react";
-import { cn, fmtValue } from "@/lib/ui";
+import { Check, Loader2 } from "lucide-react";
+import { Chip, Disclosure, List, ListRow } from "@/components/ui";
 import { TeamAvatar } from "@/components/TeamAvatar";
-export function TeamPicker({
-  teams,
-  currentRosterId,
-  username,
-  nextHref = "/",
-}) {
+
+/**
+ * The first-run picker: one row per team, one tap to choose. The row is the whole
+ * target (avatar, team name, manager and record), and the team you are already
+ * viewing as carries a "Viewing" chip with a check, never colour alone. The Sleeper
+ * username path is kept as a secondary route behind a Disclosure: most people
+ * recognise their team faster than they type their handle.
+ */
+export function TeamPicker({ teams, currentRosterId, username = "", nextHref = "/" }) {
   const router = useRouter();
   const [pending, setPending] = useState(null);
-  const [q, setQ] = useState("");
   const [name, setName] = useState(username);
   const [resolving, setResolving] = useState(false);
   const [error, setError] = useState(null);
+
   async function choose(rosterId) {
     setPending(rosterId);
     try {
@@ -30,6 +33,7 @@ export function TeamPicker({
       setPending(null);
     }
   }
+
   async function resolveUsername(e) {
     e.preventDefault();
     if (!name.trim() || resolving) return;
@@ -54,46 +58,62 @@ export function TeamPicker({
       setResolving(false);
     }
   }
-  const filtered = q
-    ? teams.filter(
-        (t) =>
-          t.teamName.toLowerCase().includes(q.toLowerCase()) ||
-          t.ownerName.toLowerCase().includes(q.toLowerCase()),
-      )
-    : teams;
-  // Each row's value bar restates its printed total-value figure as a length,
-  // against the best-stocked team in the league - a fact the sort order already
-  // implies, now visible without reading fourteen numbers. Non-text and
-  // proportional, so it encodes an amount, never a verdict (D6).
-  //
-  // COURT BLUE (VISION.md M4A, owner-approved): gold means yours, blue means the
-  // field - and this list is literally the field with your seat in it. The
-  // field's bars take the existing `info` blue (one token, not a new hue); the
-  // one row that is yours keeps the gold bar. Before a seat exists the whole
-  // list is the field, so every bar is blue and the first gold thing a new
-  // reader ever sees is the team they picked.
-  const maxValue = Math.max(...teams.map((x) => x.totalValue), 1);
+
   return (
     <div>
-      {/* Username entry - the primary path: type your own Sleeper handle and we
-            resolve it to your roster in this league. Team name works too, since
-            people often type that instead. */}
-      <form
-        onSubmit={resolveUsername}
-        className="card-lit mb-5 rounded-[--radius] border border-border bg-surface p-4"
-      >
-        <label
-          htmlFor="sleeper-username"
-          className="mb-1.5 block text-meta font-semibold uppercase tracking-wide text-muted"
-        >
-          Your Sleeper username
-        </label>
-        <div className="flex gap-2">
-          <div className="relative flex-1">
-            <Search
-              size={15}
-              className="absolute left-3 top-1/2 -translate-y-1/2 text-faint"
-            />
+      <List aria-label="Teams in this league">
+        {teams.map((t) => {
+          const active = t.rosterId === currentRosterId;
+          return (
+            <li key={t.rosterId}>
+              <button
+                type="button"
+                onClick={() => choose(t.rosterId)}
+                disabled={pending !== null}
+                aria-current={active ? "true" : undefined}
+                className="block w-full text-left disabled:cursor-wait"
+              >
+                <ListRow
+                  as="span"
+                  highlight={active}
+                  avatar={
+                    <TeamAvatar
+                      name={t.teamName}
+                      avatarId={t.avatarId}
+                      teamLogoUrl={t.teamLogoUrl}
+                      size="md"
+                      isMe={active}
+                      className="rounded-full"
+                    />
+                  }
+                  title={t.teamName}
+                  badge={
+                    active ? (
+                      <Chip tone="accent" size="sm" icon={Check}>
+                        Viewing
+                      </Chip>
+                    ) : null
+                  }
+                  meta={`${t.ownerName} · ${t.record}`}
+                  chevron={pending !== t.rosterId}
+                  value={
+                    pending === t.rosterId ? (
+                      <Loader2 size={18} aria-label="Opening" className="animate-spin text-accent-text" />
+                    ) : null
+                  }
+                />
+              </button>
+            </li>
+          );
+        })}
+      </List>
+
+      <Disclosure summary="Use your Sleeper username instead" className="mt-3">
+        <form onSubmit={resolveUsername}>
+          <label htmlFor="sleeper-username" className="mb-1.5 block text-meta font-semibold text-muted">
+            Sleeper username or team name
+          </label>
+          <div className="flex gap-2">
             <input
               id="sleeper-username"
               value={name}
@@ -103,130 +123,24 @@ export function TeamPicker({
               }}
               autoComplete="username"
               placeholder="e.g. EZ8"
-              className="w-full rounded-full border border-border bg-bg/60 py-2.5 pl-9 pr-3 text-body leading-relaxed text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
+              className="min-h-11 w-full min-w-0 flex-1 rounded-full border border-border-strong bg-surface px-4 text-body text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
             />
+            <button
+              type="submit"
+              disabled={resolving || !name.trim()}
+              className="inline-flex min-h-11 shrink-0 items-center gap-1.5 rounded-full bg-accent px-5 text-body font-semibold text-accent-ink disabled:bg-elevated disabled:text-secondary"
+            >
+              {resolving ? <Loader2 size={15} aria-hidden="true" className="animate-spin" /> : null}
+              Go
+            </button>
           </div>
-          <button
-            type="submit"
-            disabled={resolving || !name.trim()}
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-full bg-accent px-4 text-body leading-relaxed font-semibold text-accent-ink disabled:opacity-40"
-          >
-            {resolving ? <Loader2 size={15} className="animate-spin" /> : null}
-            Go
-          </button>
-        </div>
-        {error ? (
-          <p className="mt-2 text-meta leading-relaxed text-negative">
-            {error}
-          </p>
-        ) : (
-          <p className="mt-2 text-meta leading-relaxed text-secondary">
-            Your team name works too. Not in this league? Pick a team below to
-            explore.
-          </p>
-        )}
-      </form>
-
-      <div className="relative mb-3">
-        <Search
-          size={15}
-          className="absolute left-3 top-1/2 -translate-y-1/2 text-faint"
-        />
-        <input
-          value={q}
-          onChange={(e) => setQ(e.target.value)}
-          placeholder="Find a team…"
-          className="w-full rounded-full border border-border bg-surface py-2.5 pl-9 pr-3 text-body leading-relaxed text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
-        />
-      </div>
-
-      <ul className="space-y-2">
-        {filtered.map((t) => {
-          const active = t.rosterId === currentRosterId;
-          const share = Math.max(
-            4,
-            Math.round((t.totalValue / maxValue) * 100),
-          );
-          return (
-            <li key={t.rosterId}>
-              <button
-                onClick={() => choose(t.rosterId)}
-                disabled={pending !== null}
-                aria-current={active ? "true" : undefined}
-                className={cn(
-                  "card-lit flex w-full flex-wrap items-center gap-3 rounded-[--radius] border p-4 text-left transition-colors",
-                  active
-                    ? "border-accent-edge bg-accent-wash"
-                    : "border-border bg-surface hover:border-border-strong hover:bg-surface-2",
-                  pending !== null && "opacity-60",
-                )}
-              >
-                <TeamAvatar
-                  name={t.teamName}
-                  avatarId={t.avatarId}
-                  teamLogoUrl={t.teamLogoUrl}
-                  size="md"
-                  isMe={active}
-                />
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="line-clamp-1 text-body leading-relaxed font-semibold text-ink">
-                      {t.teamName}
-                    </span>
-                    {active && (
-                      <Check size={14} className="shrink-0 text-accent-text" />
-                    )}
-                  </div>
-                  <div className="mt-0.5 flex flex-wrap items-center gap-x-2 text-meta text-faint">
-                    <span>{t.ownerName}</span>
-                    <span>·</span>
-                    <span className="figure">{t.record}</span>
-                    <span>·</span>
-                    {/* Core age, in the neutral tone the whole app now gives it: it is
-                        an age, not a strategy, and it used to be spelled with posture's
-                        words (see lib/metrics/axes.js). */}
-                    <span className="text-muted">{t.coreAgeBand}</span>
-                  </div>
-                  {t.tags.length > 0 && (
-                    <div className="mt-1.5 line-clamp-1 text-meta text-muted">
-                      {t.tags.slice(0, 3).join(" · ")}
-                    </div>
-                  )}
-                </div>
-                <div className="shrink-0 text-right">
-                  <div className="figure text-body leading-relaxed font-semibold text-ink">
-                    {fmtValue(t.totalValue)}
-                  </div>
-                  <div className="text-micro text-faint">total value</div>
-                </div>
-                {pending === t.rosterId && (
-                  <Loader2
-                    size={16}
-                    className="animate-spin text-accent-text"
-                  />
-                )}
-                {/* basis-full wraps the bar onto its own row inside the same
-                    button; the flex-wrap above is what makes that legal. */}
-                <span
-                  aria-hidden="true"
-                  className="-mt-1 h-[3px] basis-full overflow-hidden rounded-full bg-elevated"
-                >
-                  <span
-                    className="block h-full rounded-full"
-                    style={{
-                      width: `${share}%`,
-                      background: active
-                        ? "linear-gradient(90deg, var(--color-accent-dim), var(--color-accent))"
-                        : "var(--color-info)",
-                      opacity: active ? 1 : 0.75,
-                    }}
-                  />
-                </span>
-              </button>
-            </li>
-          );
-        })}
-      </ul>
+          {error && (
+            <p role="alert" className="mt-2 text-note text-negative">
+              {error}
+            </p>
+          )}
+        </form>
+      </Disclosure>
     </div>
   );
 }

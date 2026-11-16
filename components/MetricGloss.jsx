@@ -77,7 +77,7 @@ export function MetricGloss({ metrics = ["tci", "rfi"], className }) {
           className="disclosure-chevron group-open:rotate-90"
         />
       </summary>
-      <div className="disclosure-body mb-2 space-y-2 rounded-[--radius-sm] border border-border bg-surface p-2.5">
+      <div className="disclosure-body mb-2 space-y-2 rounded-control bg-surface-2 p-3">
         {metrics.map((m) => {
           const g = METRIC_GLOSS[m];
           return (

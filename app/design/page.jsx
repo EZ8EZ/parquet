@@ -13,8 +13,12 @@ import {
   SectionHeader,
   Segmented,
   Sheet,
+  RankStrip,
+  SkeletonHeader,
   SkeletonRows,
+  SkeletonStat,
   SkeletonStats,
+  SkeletonTabs,
   StatTile,
   Tabs,
 } from "@/components/ui";
@@ -57,7 +61,12 @@ export default function DesignPage() {
     <div>
       <PageHeader kicker="Menu" title="Design system" subtitle="Every primitive, in every variant. Spec: DESIGN.md." />
 
-      <SectionHeader title="Colour" />
+      <Tabs
+        label="Design system"
+        items={[
+          { id: "found", label: "Foundations", content: (
+            <>
+      <SectionHeader className="mt-2" title="Colour" />
       <div className="grid grid-cols-3 gap-2">
         {SWATCHES.map(([name, cls]) => (
           <div key={name} className="rounded-control bg-surface p-2">
@@ -77,12 +86,29 @@ export default function DesignPage() {
         ))}
       </Card>
 
-      <SectionHeader title="Stat tiles" />
+      <SectionHeader title="Cards" />
+      <div className="grid grid-cols-2 gap-2">
+        <Card>default</Card>
+        <Card tone="raised">raised</Card>
+        <Card tone="accent">accent (yours)</Card>
+        <Card tone="sunken">sunken</Card>
+      </div>
+
+            </>
+          ) },
+          { id: "data", label: "Data", content: (
+            <>
+      <SectionHeader className="mt-2" title="Stat tiles" />
       <StatTile label="Total value" value="26,641" sub="9th of 14 rosters" size="hero" tone="accent" />
       <div className="mt-2 grid grid-cols-3 gap-2">
         <StatTile label="Record" value="1-2" sub="9th of 14" />
         <StatTile label="Core age" value="28.4" delta={1.2} sub="veteran core" />
         <StatTile label="Picks" value="7" href="/design" sub="tile as link" />
+      </div>
+      <div className="mt-2 grid grid-cols-3 gap-2">
+        <StatTile size="sm" label="size sm" value="12.4" sub="secondary figure" />
+        <StatTile size="sm" label="Value rank" value="9th" visual={<RankStrip rank={9} of={14} />} />
+        <StatTile size="sm" label="Points" value="566" delta={-14} deltaTone="negative" />
       </div>
 
       <SectionHeader title="Chips" />
@@ -105,10 +131,23 @@ export default function DesignPage() {
           <ListRow href="/design" leading="9" highlight avatar={<Avatar initials="MJ" />} title="mjrooney20" badge={<Chip tone="accent" size="sm">You</Chip>} meta="1-2 · 566 PF" value="1-2" valueSub="9th" />
         </li>
         <li>
+          <ListRow avatar={<Avatar initials="PF" />} title="PF / C" meta="no trailing value, no link" />
+        </li>
+        <li>
+          <ListRow dense leading="12" title="A dense row with a trailing chip, no avatar" trailing={<Chip tone="warn" size="sm" icon={AlertTriangle}>Thin</Chip>} />
+        </li>
+        <li>
           <Sheet
             triggerLabel="Karl-Anthony Towns, value 4,120. Show details"
             title="Karl-Anthony Towns"
             subtitle="C · NYK · 30"
+            leading={<Avatar initials="KT" />}
+            actions={
+              <>
+                <ButtonLink href="/design" className="flex-1">Open in Trade</ButtonLink>
+                <ButtonLink href="/design" variant="secondary" className="flex-1">Values</ButtonLink>
+              </>
+            }
             trigger={<ListRow as="span" chevron avatar={<Avatar initials="KT" />} title="Karl-Anthony Towns" meta="C · NYK · 30" value="4,120" valueSub="Starter" />}
           >
             <div className="grid grid-cols-2 gap-2">
@@ -120,7 +159,25 @@ export default function DesignPage() {
         </li>
       </List>
 
-      <SectionHeader title="Tabs and segmented control" />
+      <SectionHeader title="Chart: bar list" />
+      <Card>
+        <BarList
+          label="Value by position"
+          items={[
+            { label: "PG", value: 9200 },
+            { label: "C", value: 7400, highlight: true, sub: "largest share" },
+            { label: "SF", value: 5100 },
+            { label: "PF", value: 3300 },
+          ]}
+          format={(n) => n.toLocaleString("en-US")}
+        />
+      </Card>
+
+            </>
+          ) },
+          { id: "controls", label: "Controls", content: (
+            <>
+      <SectionHeader className="mt-2" title="Tabs and segmented control" />
       <Tabs
         label="Example tabs"
         items={[
@@ -153,20 +210,6 @@ export default function DesignPage() {
         Explanation lives here, one tap away, collapsed by default.
       </Disclosure>
 
-      <SectionHeader title="Chart: bar list" />
-      <Card>
-        <BarList
-          label="Value by position"
-          items={[
-            { label: "PG", value: 9200 },
-            { label: "C", value: 7400, highlight: true, sub: "largest share" },
-            { label: "SF", value: 5100 },
-            { label: "PF", value: 3300 },
-          ]}
-          format={(n) => n.toLocaleString("en-US")}
-        />
-      </Card>
-
       <SectionHeader title="Buttons" />
       <div className="flex flex-wrap gap-2">
         <Button>Primary</Button>
@@ -177,22 +220,42 @@ export default function DesignPage() {
         </ButtonLink>
       </div>
 
-      <SectionHeader title="Empty state" />
+            </>
+          ) },
+          { id: "states", label: "States", content: (
+            <>
+      <SectionHeader className="mt-2" title="Empty state" />
       <EmptyState icon={<Inbox size={28} aria-hidden="true" />} title="Nothing captured yet" cta={{ href: "/design", label: "Capture a move" }}>
         Your first decision shows up here.
       </EmptyState>
 
-      <SectionHeader title="Skeletons" />
-      <SkeletonStats />
-      <SkeletonRows rows={3} className="mt-2" />
+      <EmptyState
+        className="mt-2"
+        tone="negative"
+        icon={<AlertTriangle size={28} aria-hidden="true" />}
+        title="Could not load this"
+        action={
+          <>
+            <Button>Try again</Button>
+            <ButtonLink href="/design" variant="secondary">Home</ButtonLink>
+          </>
+        }
+      >
+        With an action node instead of a single link.
+      </EmptyState>
 
-      <SectionHeader title="Cards" />
-      <div className="grid grid-cols-2 gap-2">
-        <Card>default</Card>
-        <Card tone="raised">raised</Card>
-        <Card tone="accent">accent (yours)</Card>
-        <Card tone="sunken">sunken</Card>
-      </div>
+      <SectionHeader title="Skeletons" />
+      <SkeletonHeader />
+      <SkeletonStat size="hero" />
+      <SkeletonStats className="mt-2" />
+      <SkeletonTabs className="mt-3" />
+      <SkeletonRows rows={3} className="mt-2" />
+      <SkeletonRows rows={2} avatar={false} className="mt-2" />
+
+            </>
+          ) },
+        ]}
+      />
 
       <Onward from="/design" />
     </div>
