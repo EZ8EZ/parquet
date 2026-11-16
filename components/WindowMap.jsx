@@ -169,7 +169,7 @@ import {
   CHART_GRID,
   CHART_NEUTRAL,
 } from "@/lib/chart-colors";
-import { windowRefusalCode } from "@/lib/metrics/window";
+import { windowRefusalCode } from "@/lib/metrics/windowRefusal";
 import { refusalSentence } from "@/lib/refusal";
 const W = 320;
 /**

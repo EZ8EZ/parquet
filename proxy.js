@@ -2,8 +2,8 @@
  * The one job: a browser that has never picked a team meets the picker, not EZ8.
  *
  * All of the reasoning, and all of the tests, live in `lib/auth/entry.ts` - this file
- * is deliberately a five-line shell around two pure functions. Middleware runs on
- * every matched request in the app, so anything it imports is on the hot path of the
+ * is deliberately a five-line shell around two pure functions. Proxy (the file
+ * convention formerly called middleware, renamed in Next 16) runs on every matched request in the app, so anything it imports is on the hot path of the
  * whole site; keeping the decision in a dependency-free module is what stops that
  * from mattering.
  */
@@ -13,7 +13,7 @@ import {
   LENS_COOKIE,
   needsEntryPick,
 } from "@/lib/auth/entry";
-export function middleware(req) {
+export function proxy(req) {
   const hasLens = req.cookies.has(LENS_COOKIE);
   const { pathname, search } = req.nextUrl;
   if (!needsEntryPick(pathname, hasLens)) return NextResponse.next();

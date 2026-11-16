@@ -1559,10 +1559,10 @@ export default async function MethodologyPage() {
 
       <p className="mt-6 text-center text-meta leading-relaxed text-secondary">
         Player and pick constants live in{" "}
-        <span className="font-mono">lib/valuation/config.ts</span>; the timeline
-        math in <span className="font-mono">lib/metrics/duration.ts</span> and{" "}
-        <span className="font-mono">lib/metrics/window.ts</span>; fragility in{" "}
-        <span className="font-mono">lib/metrics/fragility.ts</span>. Ranking
+        <span className="font-mono">lib/valuation/config.js</span>; the timeline
+        math in <span className="font-mono">lib/metrics/duration.js</span> and{" "}
+        <span className="font-mono">lib/metrics/window.js</span>; fragility in{" "}
+        <span className="font-mono">lib/metrics/fragility.js</span>. Ranking
         tiers are not part of the model - they break where the value
         distribution actually cliffs, instead of at fixed thresholds. A
         crowdsourced vote-driven market is intentionally deferred until
