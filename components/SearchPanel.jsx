@@ -59,15 +59,14 @@ import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import {
   ArrowLeftRight,
-  ChevronRight,
   GitBranch,
   Loader2,
   Search,
 } from "lucide-react";
 import { PlayerAvatar } from "./PlayerAvatar";
 import { TeamAvatar } from "./TeamAvatar";
-import { Tag } from "./ui";
-import { cn, fmtValue } from "@/lib/ui";
+import { Chip, List, ListRow } from "./ui";
+import { fmtValue } from "@/lib/ui";
 import { dealHref, playerLineageHref } from "@/lib/tradegraph/url";
 import { valuesFocusHref } from "@/lib/values/url";
 const DEBOUNCE_MS = 220;
@@ -108,7 +107,6 @@ export function SearchPanel({ basePath, param = "q" }) {
   const [loading, setLoading] = useState(
     () => !!searchParams.get(param)?.trim(),
   );
-  const [expandedTrade, setExpandedTrade] = useState(null);
   const abortRef = useRef(null);
   const handleQueryChange = useCallback(
     (value) => {
@@ -161,256 +159,130 @@ export function SearchPanel({ basePath, param = "q" }) {
     <div>
       <div className="relative">
         <Search
-          size={15}
+          size={16}
           aria-hidden="true"
-          className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-faint"
+          className="pointer-events-none absolute left-3.5 top-1/2 -translate-y-1/2 text-secondary"
         />
         <input
+          type="search"
           value={query}
           onChange={(e) => handleQueryChange(e.target.value)}
-          placeholder="Search a player, manager, trade or pick"
+          placeholder="Player, manager, trade or pick"
           aria-label="Search"
-          className="h-11 w-full rounded-full border border-border bg-surface pl-9 pr-3 text-body leading-relaxed text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
+          className="h-12 w-full rounded-full border border-border-strong bg-surface pl-10 pr-10 text-body text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
         />
         {loading && (
           <Loader2
-            size={15}
+            size={16}
             aria-hidden="true"
-            className="absolute right-3 top-1/2 -translate-y-1/2 animate-spin text-faint"
+            className="absolute right-3.5 top-1/2 -translate-y-1/2 animate-spin text-secondary"
           />
         )}
       </div>
 
-      <div className="mt-2">
-        {!query.trim() && (
-          <p className="px-1 text-note leading-snug text-muted">
-            Start typing to search across every player, manager, trade and draft
-            pick in the league.
-          </p>
-        )}
-
+      <div className="mt-3" aria-live="polite">
         {query.trim() && !loading && totalCount(result) === 0 && (
-          <p className="px-1 text-note leading-snug text-muted">
+          <p className="px-1 text-note text-muted">
             No matches for &ldquo;{result.query || query}&rdquo;.
           </p>
         )}
 
         {result.players.length > 0 && (
-          <Section title="Players">
-            <ul className="space-y-1">
-              {result.players.map((p) => (
-                <PlayerRow key={p.id} p={p} />
-              ))}
-            </ul>
+          <Section title="Players" count={result.players.length}>
+            {result.players.map((p) => (
+              <li key={p.id} className="flex items-stretch">
+                <ListRow
+                  href={valuesFocusHref(p.id)}
+                  className="min-w-0 flex-1"
+                  chevron={false}
+                  avatar={<PlayerAvatar name={p.name} team={p.team} playerId={p.id} size="sm" />}
+                  title={p.name}
+                  meta={[p.position, p.team, p.age != null ? `${p.age}y` : null].filter(Boolean).join(" · ")}
+                  value={fmtValue(p.value)}
+                  valueSub={p.tier}
+                />
+                {/* A sibling, not nested: the row is already one link. Search is where a
+                    reader arrives with a name and no context, so "how did he get here"
+                    is one tap away. */}
+                <Link
+                  href={playerLineageHref(p.id)}
+                  aria-label={`Where ${p.name} came from`}
+                  className="flex w-12 shrink-0 items-center justify-center text-secondary transition-colors hover:bg-surface-2 hover:text-accent-text"
+                >
+                  <GitBranch size={18} aria-hidden="true" />
+                </Link>
+              </li>
+            ))}
           </Section>
         )}
 
         {result.managers.length > 0 && (
-          <Section title="Managers">
-            <ul className="space-y-1">
-              {result.managers.map((m) => (
-                <ManagerRow key={m.id} m={m} />
-              ))}
-            </ul>
+          <Section title="Managers" count={result.managers.length}>
+            {result.managers.map((m) => (
+              <li key={m.id}>
+                <ListRow
+                  href={m.href}
+                  avatar={
+                    <TeamAvatar name={m.name} avatarId={m.avatar} teamLogoUrl={m.teamLogoUrl} size="sm" className="rounded-full" />
+                  }
+                  title={m.name}
+                  badge={
+                    m.isFormer ? (
+                      <Chip size="sm">former{m.tenureLabel ? ` · ${m.tenureLabel}` : ""}</Chip>
+                    ) : null
+                  }
+                  meta={m.displayName !== m.name ? m.displayName : null}
+                />
+              </li>
+            ))}
           </Section>
         )}
 
         {result.trades.length > 0 && (
-          <Section title="Trades">
-            <ul className="space-y-1">
-              {result.trades.map((t) => (
-                <TradeRow
-                  key={t.id}
-                  t={t}
-                  expanded={expandedTrade === t.id}
-                  onToggle={() =>
-                    setExpandedTrade((cur) => (cur === t.id ? null : t.id))
-                  }
+          <Section title="Trades" count={result.trades.length}>
+            {result.trades.map((t) => (
+              <li key={t.id}>
+                <ListRow
+                  href={dealHref(t.id)}
+                  avatar={<ArrowLeftRight size={18} aria-hidden="true" className="text-info" />}
+                  title={<span className="text-note font-medium">{t.description}</span>}
+                  meta={`${t.season} · week ${t.week}`}
                 />
-              ))}
-            </ul>
+              </li>
+            ))}
           </Section>
         )}
 
         {result.picks.length > 0 && (
-          <Section title="Picks">
-            <ul className="space-y-1">
-              {result.picks.map((p) => (
-                <PickRow key={p.id} p={p} />
-              ))}
-            </ul>
+          <Section title="Picks" count={result.picks.length}>
+            {result.picks.map((p) => (
+              <li key={p.id}>
+                <ListRow
+                  href={p.href}
+                  avatar={<GitBranch size={18} aria-hidden="true" className="text-secondary" />}
+                  title={p.label}
+                  meta={
+                    p.resolved
+                      ? `${p.playerName ?? "no player"} · ${p.ownerName}`
+                      : `Not yet drafted · held by ${p.ownerName}`
+                  }
+                />
+              </li>
+            ))}
           </Section>
         )}
       </div>
     </div>
   );
 }
-function Section({ title, children }) {
+function Section({ title, count, children }) {
   return (
-    <div className="mb-3">
-      <h2 className="mb-1 px-1 text-meta font-semibold uppercase tracking-[0.16em] text-secondary">
+    <section className="mb-4">
+      <h2 className="mb-1.5 flex items-baseline gap-1.5 px-1 text-note font-semibold text-muted">
         {title}
+        <span className="figure text-meta font-medium text-secondary">{count}</span>
       </h2>
-      {children}
-    </div>
-  );
-}
-function PlayerRow({ p }) {
-  return (
-    <li>
-      <Link
-        href={valuesFocusHref(p.id)}
-        className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
-      >
-        <PlayerAvatar name={p.name} team={p.team} playerId={p.id} size="sm" />
-        <div className="min-w-0 flex-1">
-          <div className="line-clamp-1 text-body font-semibold leading-tight text-ink">
-            {p.name}
-          </div>
-          <div className="line-clamp-1 text-meta leading-tight text-secondary">
-            {[p.position, p.team, p.age != null ? `${p.age}y` : null]
-              .filter(Boolean)
-              .join(" - ")}
-          </div>
-        </div>
-        <div className="shrink-0 text-right">
-          <div className="figure text-note font-semibold text-ink">
-            {fmtValue(p.value)}
-          </div>
-          <div className="text-micro uppercase tracking-wide text-accent-text">
-            {p.tier}
-          </div>
-        </div>
-      </Link>
-      {/* A sibling, not nested: the row above is already one `<Link>`. Search is the
-            one place a reader arrives with a name and no context at all, which makes it
-            the place where "how did he get where he is" is most worth one tap. */}
-      <Link
-        href={playerLineageHref(p.id)}
-        className="flex min-h-11 items-center gap-1 px-2.5 text-meta font-semibold text-faint transition-colors hover:text-accent-text"
-      >
-        Where he came from
-        <ChevronRight size={12} aria-hidden="true" />
-      </Link>
-    </li>
-  );
-}
-function ManagerRow({ m }) {
-  return (
-    <li>
-      <Link
-        href={m.href}
-        className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
-      >
-        <TeamAvatar
-          name={m.name}
-          avatarId={m.avatar}
-          teamLogoUrl={m.teamLogoUrl}
-          size="sm"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="flex items-baseline gap-1.5">
-            <span className="line-clamp-1 text-body font-semibold leading-tight text-ink">
-              {m.name}
-            </span>
-            {m.displayName !== m.name && (
-              <span className="min-w-0 shrink line-clamp-1 text-meta leading-tight text-secondary">
-                {m.displayName}
-              </span>
-            )}
-          </div>
-          {m.isFormer && (
-            <Tag className="mt-0.5">
-              former{m.tenureLabel ? ` - ${m.tenureLabel}` : ""}
-            </Tag>
-          )}
-        </div>
-        <ChevronRight
-          size={15}
-          aria-hidden="true"
-          className="shrink-0 text-faint"
-        />
-      </Link>
-    </li>
-  );
-}
-function TradeRow({ t, expanded, onToggle }) {
-  return (
-    <li
-      className={cn(
-        "overflow-hidden rounded-[--radius-sm] border transition-colors",
-        expanded
-          ? "border-border-strong bg-surface-2"
-          : "border-border bg-surface",
-      )}
-    >
-      <button
-        type="button"
-        onClick={onToggle}
-        aria-expanded={expanded}
-        className="flex min-h-11 w-full items-start gap-2.5 px-2.5 py-1.5 text-left"
-      >
-        <ArrowLeftRight
-          size={15}
-          aria-hidden="true"
-          className="mt-0.5 shrink-0 text-info"
-        />
-        <div className="min-w-0 flex-1">
-          <div
-            className={cn(
-              "text-note leading-snug text-ink",
-              !expanded && "line-clamp-1",
-            )}
-          >
-            {t.description}
-          </div>
-          <div className="mt-0.5 figure text-micro text-faint">
-            {t.season} - week {t.week}
-          </div>
-        </div>
-      </button>
-      {expanded && (
-        <div className="border-t border-border px-2.5 py-1.5">
-          <Link
-            href={dealHref(t.id)}
-            className="inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent-text"
-          >
-            Open this deal
-            <ChevronRight size={13} aria-hidden="true" />
-          </Link>
-        </div>
-      )}
-    </li>
-  );
-}
-function PickRow({ p }) {
-  return (
-    <li>
-      <Link
-        href={p.href}
-        className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2"
-      >
-        <GitBranch
-          size={16}
-          aria-hidden="true"
-          className="shrink-0 text-faint"
-        />
-        <div className="min-w-0 flex-1">
-          <div className="line-clamp-1 text-body font-semibold leading-tight text-ink">
-            {p.label}
-          </div>
-          <div className="line-clamp-1 text-meta leading-tight text-secondary">
-            {p.resolved
-              ? `${p.playerName ?? "no player"} - ${p.ownerName}`
-              : `Not yet drafted - held by ${p.ownerName}`}
-          </div>
-        </div>
-        <ChevronRight
-          size={15}
-          aria-hidden="true"
-          className="shrink-0 text-faint"
-        />
-      </Link>
-    </li>
+      <List>{children}</List>
+    </section>
   );
 }

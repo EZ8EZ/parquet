@@ -1,98 +1,66 @@
 import Link from "next/link";
-import { AlertTriangle, ArrowRight, ChevronRight, Target } from "lucide-react";
+import { AlertTriangle, ArrowRight, Check } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { buildGamePlan } from "@/lib/gameplan";
 import { getPrincipals } from "@/lib/principals";
+import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
+import { directionSummary } from "@/lib/team";
 import { breakAssetNames, cachedLeagueTimelines } from "@/lib/metrics/duration";
 import { leagueWindows, windowShort } from "@/lib/metrics/window";
-import { PageHeader, Tag } from "@/components/ui";
-import { MetricGloss } from "@/components/MetricGloss";
+import {
+  ButtonLink,
+  Card,
+  Chip,
+  Disclosure,
+  EmptyState,
+  PageHeader,
+  SectionHeader,
+  StatTile,
+} from "@/components/ui";
+import { DirectionCard } from "@/components/team/DirectionCard";
 import { TeamAvatar } from "@/components/TeamAvatar";
-import { cn, fmtValue } from "@/lib/ui";
+import { fmtValue } from "@/lib/ui";
 export const dynamic = "force-dynamic";
 /*
- * NEUTRAL, LIKE POSTURE - for the same reason (components/PostureTag.jsx).
- *
- * `direction` is read directly off posture (lib/gameplan/index.js: contend from
- * contending, ascend from ascending, rebuild from rebuilding, retool from straddling),
- * so it inherits the same fact: these are four theses about what to do, not a ranking
- * of them. `ascend: positive` told the reader "ascending is good" and `retool: warn`
- * told them "retooling is bad" before they read a word of `dx.because`. `contend:
- * accent` had the same second problem PostureTag records - gold means "you" everywhere
- * else, and this pill has nothing to do with the viewer's identity, only their roster's
- * recommended call.
+ * GAME PLAN. The page answers "what should I consider doing with this roster?": the
+ * direction as one word with the three inputs that decided it (the same card /roster
+ * opens with), then each move as a card - what you send, what you get, both totals,
+ * the counterparty and one action. The reasoning, the cost, the timeline check and the
+ * caveats each sit one tap away. Every figure comes from lib/gameplan; this page only
+ * composes. The direction is the plan's reading of the inputs, never a grade (D6).
  */
-const DIR_LABEL = {
-  contend: { label: "Contend" },
-  ascend: { label: "Ascend" },
-  rebuild: { label: "Rebuild" },
-  retool: { label: "Retool" },
-};
 export default async function PlanPage() {
   const h = await getLeagueHistory();
   const rosterId = h.me.rosterId;
   if (rosterId == null) {
     return (
-      <p className="text-muted">
-        Couldn&apos;t identify your roster.{" "}
-        <Link href="/teams" className="text-accent-text underline">
-          Pick a team
-        </Link>
-        .
-      </p>
+      <EmptyState title="No roster picked" cta={{ href: "/teams", label: "Pick a team" }}>
+        Couldn&apos;t identify your roster.
+      </EmptyState>
     );
   }
   const principals = await getPrincipals(h);
   const plan = buildGamePlan(h, rosterId, principals);
   const dx = plan.diagnosis;
-  const dir = DIR_LABEL[dx.direction];
   const myUser = h.usersById.get(h.me.userId);
+  const analysis = leagueValueRanking(h).find((r) => r.rosterId === rosterId) ?? null;
+  const form = (await currentFormByRoster(h)).get(rosterId) ?? null;
+  const summary = directionSummary({ dx, analysis, form });
+  const dirWord = (summary?.label ?? dx.direction ?? "").toLowerCase();
   /*
-   * THE TIMELINE CHECK, WHICH IS NOW A CHECK RATHER THAN A COMPARISON OF INSTRUMENTS.
-   *
-   * The direction used to be derived from the core-age band and this panel compared it
-   * with the posture, so "the plan says X but your value is dated like a Y roster - one
-   * of them is wrong" fired on 8 of 14 rosters on the live league, and on most of them
-   * nothing was wrong except that the two labels came off different instruments.
-   * `diagnose` now reads the posture (lib/metrics/axes.js), so the only thing that can
-   * put the plan and the reading on different feet is the standing override - which is
-   * a fact worth stating, and states itself in `directionNote`.
+   * The timeline check: `diagnose` reads the posture, so the plan and the timeline can
+   * only stand on different feet when the standing override decided the call - stated
+   * by `directionNote`. The window is the span or its refusal code (D95), linked to
+   * /league, which owns the full synthesis.
    */
   const tl = cachedLeagueTimelines(h).find((t) => t.rosterId === rosterId);
   const timelineAgrees = dx.directionBasis === "posture";
-  /*
-   * THE WINDOW, AS ONE LINE AND A LINK. /league OWNS THE SYNTHESIS NOW.
-   *
-   * This page used to render `windowSynthesis` itself, and the two call sites had
-   * DIFFERENT GATES for the same string, which is how one function came to give two
-   * pages two different wrong answers:
-   *
-   *   /league  ungated. A refused roster printed `refusalSentence(...)` as unmarked
-   *            plain text, so a stated refusal arrived looking exactly like a reading -
-   *            the failure lib/refusal.js exists to end.
-   *   /plan    gated on `state === "window"`. A refused roster saw nothing at all, so
-   *            the one page whose subject is the decision silently dropped the fact that
-   *            the decision could not be read.
-   *
-   * One owner fixes both. /league's seat card renders every state this function can
-   * return - window, split, NO_RECORD, INSUFFICIENT_SAMPLE - and routes the refused ones
-   * through `RefusalMark`, which is what they always were. What /plan needs from it is
-   * not the paragraph: it is the one fact that changes a move, which is the span itself,
-   * plus a way to get to the page that reads it properly. So this is the span or its
-   * refusal CODE (D95 - never a dash, which reads as a missing number rather than as a
-   * refusal), and a link.
-   *
-   * The counts are deliberately not restated here. They belong beside the chart that
-   * draws them, and this page has been cut back from density like that repeatedly.
-   */
   const windows = leagueWindows(h);
   const myWindow = windows.me
-    ? {
-        readable: windows.me.state === "window",
-        short: windowShort(windows.me),
-        peak: windows.me.peak,
-      }
+    ? { readable: windows.me.state === "window", short: windowShort(windows.me), peak: windows.me.peak }
     : null;
+  const brk = tl && breakAssetNames(tl.timelineBreak) ? tl.timelineBreak : null;
+
   return (
     <div>
       <PageHeader
@@ -105,397 +73,211 @@ export default async function PlanPage() {
             isMe
           />
         }
-        kicker="Game plan"
-        kickerAction={
-          <Link
-            href="/roster"
-            className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
-          >
-            your roster
-            <ChevronRight size={12} aria-hidden="true" />
-          </Link>
-        }
-        title="How to improve this team"
-      >
-        <div className="flex flex-wrap items-center gap-x-2 figure text-meta text-faint">
-          <span className="line-clamp-1">{h.me.teamName ?? h.me.displayName}</span>
-          <span aria-hidden="true">·</span>
-          <span>
-            #{dx.valueRank} of {dx.teams} by asset value
-          </span>
-        </div>
-      </PageHeader>
+        kicker={h.me.teamName ?? h.me.displayName}
+        title="Game plan"
+        subtitle={`${plan.moves.length} ${plan.moves.length === 1 ? "move" : "moves"} to consider`}
+      />
 
-      {/* The recommendation, up top - the one thing that must be readable on landing. */}
-      <section className="rounded-[--radius] border border-border bg-surface p-2.5">
-        <div className="mb-1 flex items-center gap-2">
-          <Tag>{dir.label}</Tag>
-          <span className="text-meta uppercase tracking-wide text-secondary">
-            recommended direction
-          </span>
-        </div>
-        <h2 className="font-display text-lede font-semibold leading-tight text-ink">
-          {dx.headline}
-        </h2>
-        {/* What decided the direction, always stated (lib/metrics/axes.js stanceOf). */}
-        <p className="mt-1 text-note leading-snug text-secondary">
-          {dx.directionNote}
-        </p>
-        <ul className="mt-1.5 space-y-1">
-          {dx.because.map((b, i) => (
-            <li key={i} className="flex gap-1.5 text-note leading-snug">
-              <span
-                aria-hidden="true"
-                className="mt-[7px] h-1 w-1 shrink-0 rounded-full bg-accent"
-              />
-              <span className="text-ink/85">{b}</span>
-            </li>
-          ))}
-        </ul>
-      </section>
-
-      {/* Diagnosis figures as one strip, with the position reads folded in. */}
-      <div className="mt-1.5 flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface">
-        {[
-          {
-            v: dx.starCount,
-            l: `valued ${fmtValue(dx.starLine.value)}+`,
-            s: `line in ${dx.starLine.tier} tier`,
-            tone: "text-ink",
-          },
-          {
-            v: fmtValue(dx.pickTotal),
-            l: "pick value",
-            s:
-              dx.extraFirsts >= 0
-                ? `+${dx.extraFirsts} extra 1sts`
-                : `${dx.extraFirsts} 1sts`,
-            tone: dx.extraFirsts >= 0 ? "text-positive" : "text-negative",
-          },
-          {
-            v: dx.deadWeight,
-            l: "dead weight",
-            s: `under ${fmtValue(dx.deadLine.value)}`,
-            tone: "text-ink",
-          },
-        ].map((s) => (
-          <div key={s.l} className="flex-1 px-1.5 py-1.5 text-center">
-            <div
-              className={cn(
-                "figure text-lede font-semibold leading-tight",
-                s.tone,
-              )}
-            >
-              {s.v}
-            </div>
-            <div className="text-meta uppercase tracking-wide text-secondary">
-              {s.l}
-            </div>
-            <div className="text-meta leading-tight text-muted">{s.s}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Timeline check - "your assets disagree about when you win" is directly
-            actionable here, so it sits next to the diagnosis it qualifies. */}
-      {tl && (
-        <div
-          className={`mt-1.5 rounded-[--radius-sm] border px-2.5 py-2 ${
-            tl.posture === "straddling"
-              ? "border-negative/30 bg-negative/[0.06]"
-              : timelineAgrees
-                ? "border-border bg-surface"
-                : "border-warn/30 bg-warn/[0.05]"
-          }`}
-        >
-          <div className="flex items-baseline justify-between gap-2">
-            <span className="text-meta font-semibold uppercase tracking-wide text-muted">
-              Timeline check
-            </span>
-            <Link
-              href="/league"
-              className="figure text-meta text-secondary underline-offset-2 hover:text-accent-text hover:underline"
-            >
-              TCI {tl.tci} · value ~{tl.rosterDuration.toFixed(1)}s out
-            </Link>
-          </div>
-          <p className="mt-0.5 text-note leading-snug text-ink/85">
-            {tl.posture === "straddling"
-              ? `Your assets do not agree about when you win: ${Math.round(tl.nowShare * 100)}% of your value pays off inside two seasons while ${Math.round(tl.laterShare * 100)}% arrives four or more out. Every move below should pull the roster onto ONE timeline - a move that adds value but widens the spread makes this worse.`
-              : timelineAgrees
-                ? `The ${dir.label.toLowerCase()} call is read off this timeline - value concentrated around ${tl.rosterDuration.toFixed(1)} seasons out, assets agreed about it (that is what "${tl.posture}" means). Protect that alignment: do not add pieces dated far from it.`
-                : `The ${dir.label.toLowerCase()} call above was decided by standing, not by this timeline (value ~${tl.rosterDuration.toFixed(1)} seasons out, ${tl.posture}). The two answer different questions - when your value arrives, and what your standing argues for - so this is a choice in front of you rather than a contradiction. Each move below is chosen for the ${dir.label.toLowerCase()} call.`}
-          </p>
-          {myWindow && (
-            <p className="mt-1.5 flex flex-wrap items-baseline gap-x-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
-              <span>
-                {myWindow.readable ? (
-                  <>
-                    The middle half of your value is dated{" "}
-                    <span className="figure font-semibold">
-                      {myWindow.short}
-                    </span>
-                    {myWindow.peak != null && (
-                      <>
-                        , heaviest in{" "}
-                        <span className="figure">{myWindow.peak}</span>
-                      </>
-                    )}
-                    .
-                  </>
-                ) : (
-                  <>
-                    Your window is not readable:{" "}
-                    <span className="figure font-semibold">
-                      {myWindow.short}
-                    </span>
-                    .
-                  </>
-                )}
-              </span>
-              <Link
-                href="/league"
-                className="text-meta font-semibold text-accent-text underline-offset-2 hover:underline"
-              >
-                Who is standing in it
-              </Link>
-            </p>
+      {summary && (
+        <DirectionCard summary={summary} href="/roster" cta="Roster">
+          {dx.headline && <p className="mt-2 font-semibold text-ink">{dx.headline}</p>}
+          {dx.because.length > 0 && (
+            <ul className="mt-2 list-disc space-y-1 pl-4">
+              {dx.because.map((b, i) => (
+                <li key={i}>{b}</li>
+              ))}
+            </ul>
           )}
-          {/*
-           * THE BREAK WAS COMPUTED HERE ALL ALONG AND NEVER PRINTED.
-           *
-           * `tl.timelineBreak` names the one asset - or, since D114, the correlated PAIR
-           * of assets - this roster's own timeline is least able to explain
-           * (lib/metrics/duration.js), and /plan has been fetching it inside `tl` without
-           * ever showing it. It is also the asset(s) the trade finder is STRUCTURALLY
-           * LEAST LIKELY to suggest moving, because the finder's give pool is sorted by
-           * what a partner wants most rather than by what you would most like to be rid
-           * of - so the roster's own diagnosed problem could be invisible to every
-           * suggestion the app makes. The link carries `move=`, comma-joined for a pair,
-           * which forces every named asset into every package the finder considers.
-           *
-           * Stated as a misfit, never as a mistake: `findTimelineBreak`'s own docstring
-           * is explicit that this is frequently the roster's best player (or one of a
-           * named pair).
-           */}
-          {breakAssetNames(tl.timelineBreak) &&
-            (() => {
-              const brk = tl.timelineBreak;
-              const plural = brk.assets.length > 1;
-              const lead = plural ? "Two assets do" : "One asset does";
-              const named = brk.assets
-                .map((a) => `${a.label}, ${a.duration.toFixed(1)} seasons`)
-                .join(", and ");
-              const moveIds = brk.assets.map((a) => String(a.id)).join(",");
-              return (
-                <p className="mt-1.5 border-t border-border pt-1.5 text-note leading-snug text-ink/85">
-                  {lead} not fit that story: {named}.{" "}
-                  <Link
-                    href={`/trade/finder?${new URLSearchParams({ move: moveIds }).toString()}`}
-                    className="text-meta font-semibold text-accent-text underline-offset-2 hover:underline"
-                  >
-                    Find a deal that moves them
-                  </Link>
-                </p>
-              );
-            })()}
-        </div>
+        </DirectionCard>
       )}
-      {/* The index appears here as a bare figure - give a first-time reader the
-            definition in place instead of a detour. Closed by default, one faint line. */}
-      {tl && <MetricGloss metrics={["tci"]} className="mt-0.5" />}
 
       {(dx.weakPositions.length > 0 || dx.strengthPositions.length > 0) && (
-        <div className="mt-1.5 flex flex-wrap gap-1">
+        <div className="mt-2 flex flex-wrap gap-1.5">
           {dx.strengthPositions.map((p) => (
-            <Tag key={`s-${p}`} tone="positive">
-              strong at {p}
-            </Tag>
+            <Chip key={`s-${p}`} tone="positive" icon={Check}>
+              Strong at {p}
+            </Chip>
           ))}
           {dx.weakPositions.map((p) => (
-            <Tag key={`w-${p}`} tone="negative">
-              thin at {p}
-            </Tag>
+            <Chip key={`w-${p}`} tone="warn" icon={AlertTriangle}>
+              Thin at {p}
+            </Chip>
           ))}
         </div>
       )}
 
-      {/* The moves - the actual point of the page. */}
-      <div className="mb-1.5 mt-4 flex items-baseline justify-between gap-3">
-        <h2 className="text-meta font-semibold uppercase tracking-[0.16em] text-muted">
-          {plan.moves.length} moves to consider
-        </h2>
-        <Link
-          href="/trade"
-          className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-accent-text"
-        >
-          price one out
-          <ChevronRight size={12} aria-hidden="true" />
-        </Link>
-      </div>
-
-      <div className="space-y-2">
-        {plan.moves.map((m, i) => {
-          return (
-            <article
-              key={m.id}
-              className="rounded-[--radius] border border-border bg-surface p-2.5"
+      <SectionHeader title="Moves" href="/trade" cta="Trade builder" />
+      <ol className="space-y-3">
+        {plan.moves.map((m, i) => (
+          <li key={m.id}>
+            <Card
+              as="article"
+              data-plan-move
+              data-counterparty={m.package?.counterparty.name ?? ""}
+              aria-labelledby={`move-${m.id}`}
             >
               <div className="flex items-baseline gap-2">
-                <span
-                  aria-hidden="true"
-                  className="shrink-0 figure text-meta font-semibold text-accent-text"
-                >
-                  {String(i + 1).padStart(2, "0")}
+                <span aria-hidden="true" className="shrink-0 figure text-note font-bold text-accent-text">
+                  {i + 1}
                 </span>
-                <h3 className="min-w-0 flex-1 font-display text-lede font-semibold leading-tight text-ink">
+                <h3 id={`move-${m.id}`} className="min-w-0 flex-1 text-body font-semibold text-ink">
                   {m.title}
                 </h3>
               </div>
-              <p className="mt-1 text-note leading-snug text-ink/85">
-                {m.detail}
-              </p>
-
-              {/*
-               * A TRADE MOVE IS A NAMED PACKAGE (lib/gameplan/packages.js): the trade
-               * finder's best deal under this move's constraints, with both sides and
-               * their values on the app's own scale. Non-trade moves (cuts, holding
-               * picks) keep their plain send/get lines. Send and get sit side by side
-               * even at 390px: the comparison is the point. Names wrap, never truncate.
-               */}
               {m.package && (
-                <p className="mt-1.5 text-meta uppercase tracking-wide text-secondary">
-                  With{" "}
-                  <span className="normal-case text-ink">
-                    {m.package.counterparty.name}
-                  </span>
+                <p className="mt-0.5 pl-5 text-note text-secondary">
+                  With <span className="font-semibold text-ink">{m.package.counterparty.name}</span>
                 </p>
               )}
-              <div className="mt-1 grid grid-cols-2 gap-1.5">
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 {[
                   {
                     label: "You send",
-                    tone: "text-negative",
                     assets: m.package?.give,
                     total: m.package?.giveValue,
                     plain: m.give,
                   },
                   {
                     label: m.package ? "You get" : "You target",
-                    tone: "text-positive",
                     assets: m.package?.get,
                     total: m.package?.getValue,
                     plain: m.get,
                   },
                 ].map((side) => (
-                  <div
-                    key={side.label}
-                    className="rounded-[--radius-sm] border border-border bg-bg/40 px-2 py-1.5"
-                  >
-                    <div className="flex items-baseline justify-between gap-1 text-meta uppercase tracking-wide">
-                      <span className={side.tone}>{side.label}</span>
-                      {side.total != null && (
-                        <span className="figure text-secondary">
-                          {fmtValue(side.total)}
-                        </span>
-                      )}
-                    </div>
+                  <div key={side.label} data-side={side.label} className="min-w-0 rounded-control bg-surface-2 p-3">
+                    <p className="text-meta font-medium text-secondary">{side.label}</p>
+                    {side.total != null && (
+                      <p data-total className="figure text-lede font-bold text-ink">
+                        {fmtValue(side.total)}
+                      </p>
+                    )}
                     {side.assets ? (
-                      <ul className="mt-0.5 space-y-0.5">
+                      <ul className="mt-1.5 space-y-1">
                         {side.assets.map((x) => (
-                          <li key={x.id} className="text-note leading-snug text-ink">
-                            {x.name}
-                            <span className="figure text-meta text-muted">
-                              {" "}
-                              · {fmtValue(x.value)}
-                              {x.tier ? ` · ${x.tier}` : ""}
-                            </span>
+                          <li key={x.id} className="flex items-baseline justify-between gap-2 text-note leading-snug">
+                            <span className="min-w-0 text-ink">{x.name}</span>
+                            <span className="shrink-0 figure text-meta text-secondary">{fmtValue(x.value)}</span>
                           </li>
                         ))}
                       </ul>
                     ) : (
-                      <div className="text-note leading-snug text-ink">
-                        {side.plain.join(", ") || "-"}
-                      </div>
+                      <p data-plain className="mt-1 text-note text-ink">
+                        {side.plain.join(", ") || "none"}
+                      </p>
                     )}
                   </div>
                 ))}
               </div>
-
               {m.package && (
-                <Link
-                  href={m.package.builderHref}
-                  className="mt-1.5 flex min-h-11 items-center gap-2 rounded-[--radius-sm] border border-info/25 bg-info/[0.06] px-2 py-1.5 transition-colors hover:border-info/50 hover:bg-info/[0.1]"
-                >
-                  <Target
-                    size={13}
-                    aria-hidden="true"
-                    className="shrink-0 text-info"
-                  />
-                  <span className="min-w-0 flex-1 text-note font-semibold text-ink">
-                    Open this package in the trade builder
-                  </span>
-                  <ArrowRight
-                    size={13}
-                    aria-hidden="true"
-                    className="shrink-0 text-info"
-                  />
-                </Link>
+                <ButtonLink href={m.package.builderHref} variant="secondary" size="sm" block className="mt-3">
+                  Open in trade builder
+                  <ArrowRight size={16} aria-hidden="true" />
+                </ButtonLink>
               )}
+              <Disclosure className="-mb-2 mt-1" summary="Why, and the cost">
+                <p>{m.detail}</p>
+                <p className="mt-2 flex items-start gap-1.5 text-warn">
+                  <AlertTriangle size={14} aria-hidden="true" className="mt-0.5 shrink-0" />
+                  <span>
+                    <span className="font-semibold">The cost:</span> {m.cost}
+                  </span>
+                </p>
+              </Disclosure>
+            </Card>
+          </li>
+        ))}
+      </ol>
 
-              <p className="mt-1.5 flex items-start gap-1.5 text-meta leading-snug text-warn">
-                <AlertTriangle
-                  size={12}
-                  aria-hidden="true"
-                  className="mt-0.5 shrink-0"
-                />
-                <span>
-                  <span className="font-semibold">The cost:</span> {m.cost}
-                </span>
-              </p>
-            </article>
-          );
-        })}
+      <SectionHeader title="Where the roster stands" />
+      <div className="grid grid-cols-3 gap-2">
+        <StatTile
+          size="sm"
+          label={`${dx.starLine.tier} or better`}
+          value={dx.starCount}
+          sub={`valued ${fmtValue(dx.starLine.value)}+`}
+        />
+        <StatTile
+          size="sm"
+          label="Pick value"
+          value={fmtValue(dx.pickTotal)}
+          sub={dx.extraFirsts >= 0 ? `+${dx.extraFirsts} extra 1sts` : `${dx.extraFirsts} 1sts`}
+        />
+        <StatTile
+          size="sm"
+          label="Dead weight"
+          value={dx.deadWeight}
+          sub={`under ${fmtValue(dx.deadLine.value)}`}
+        />
       </div>
 
-      {plan.caveats.length > 0 && (
-        <>
-          <h2 className="mb-1.5 mt-4 text-meta font-semibold uppercase tracking-[0.16em] text-muted">
-            Read this before you act
-          </h2>
-          <ul className="space-y-1">
-            {plan.caveats.map((c, i) => (
-              <li
-                key={i}
-                className="rounded-[--radius-sm] border border-warn/25 bg-warn/[0.05] px-2.5 py-1.5 text-note leading-snug text-ink/85"
+      {tl && (
+        <Disclosure
+          className="mt-2"
+          summary={`Timeline check: TCI ${tl.tci}, value ~${tl.rosterDuration.toFixed(1)}s out`}
+        >
+          <p>
+            {tl.posture === "straddling"
+              ? `Your assets do not agree about when you win: ${Math.round(tl.nowShare * 100)}% of your value pays off inside two seasons while ${Math.round(tl.laterShare * 100)}% arrives four or more out. A move that adds value but widens the spread makes this worse.`
+              : timelineAgrees
+                ? `The ${dirWord} call is read off this timeline: value concentrated around ${tl.rosterDuration.toFixed(1)} seasons out, assets agreed about it ("${tl.posture}"). Pieces dated far from it would pull against it.`
+                : `The ${dirWord} call was decided by standing, not by this timeline (value ~${tl.rosterDuration.toFixed(1)} seasons out, ${tl.posture}). The two answer different questions, so this is a choice rather than a contradiction.`}
+          </p>
+          {myWindow && (
+            <p className="mt-2">
+              {myWindow.readable ? (
+                <>
+                  The middle half of your value is dated <span className="figure font-semibold">{myWindow.short}</span>
+                  {myWindow.peak != null && (
+                    <>
+                      , heaviest in <span className="figure">{myWindow.peak}</span>
+                    </>
+                  )}
+                  .
+                </>
+              ) : (
+                <>
+                  Your window is not readable: <span className="figure font-semibold">{myWindow.short}</span>.
+                </>
+              )}{" "}
+              <Link href="/league" className="font-semibold text-accent-text underline underline-offset-2">
+                Who is standing in it
+              </Link>
+            </p>
+          )}
+          {brk && (
+            <p className="mt-2">
+              {brk.assets.length > 1 ? "Two assets do" : "One asset does"} not fit that story:{" "}
+              {brk.assets.map((a) => `${a.label}, ${a.duration.toFixed(1)} seasons`).join(", and ")}.{" "}
+              <Link
+                href={`/trade/finder?${new URLSearchParams({ move: brk.assets.map((a) => String(a.id)).join(",") }).toString()}`}
+                className="font-semibold text-accent-text underline underline-offset-2"
               >
-                {c}
-              </li>
-            ))}
-          </ul>
-        </>
+                Find a deal that moves {brk.assets.length > 1 ? "them" : "it"}
+              </Link>
+            </p>
+          )}
+          <p className="mt-2">
+            <Link href="/methodology" className="font-semibold text-accent-text underline underline-offset-2">
+              How TCI works
+            </Link>
+          </p>
+        </Disclosure>
       )}
 
-      <div className="mt-3 flex flex-wrap gap-1.5">
-        {[
-          { href: "/trade", label: "Price a trade" },
-          { href: "/values", label: "Asset values" },
-          { href: "/managers", label: "Scout managers" },
-        ].map((a) => (
-          <Link
-            key={a.href}
-            href={a.href}
-            className="inline-flex min-h-11 items-center rounded-full border border-border bg-surface px-3 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
-          >
-            {a.label}
-          </Link>
-        ))}
-      </div>
-
-      <p className="mt-2 text-meta leading-relaxed text-secondary">
-        Parquet can&apos;t execute trades - copy a pitch and send it from
-        Sleeper.
-      </p>
+      <Disclosure
+        summary={`Before you act${plan.caveats.length ? ` (${plan.caveats.length} ${plan.caveats.length === 1 ? "note" : "notes"})` : ""}`}
+      >
+        {plan.caveats.length > 0 && (
+          <ul className="list-disc space-y-1.5 pl-4">
+            {plan.caveats.map((c, i) => (
+              <li key={i}>{c}</li>
+            ))}
+          </ul>
+        )}
+        <p className={plan.caveats.length ? "mt-2" : undefined}>
+          Parquet can&apos;t execute trades; send a pitch from Sleeper.
+        </p>
+      </Disclosure>
     </div>
   );
 }

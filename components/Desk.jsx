@@ -3,7 +3,8 @@
  * THE BOTTOM CHROME, bottom-up:
  *
  *   tab bar     58px  This Week, Team, Trade, League, and the Menu button
- *   status bar  40px  your team and this week's scorebug (links to the standings)
+ *   status bar  40px  this week's scorebug (lib/desk.js): links to Home during a lock-in
+ *                     week, to the standings otherwise
  *
  * The Menu opens a panel above the status bar: search, then the utility pages
  * (lib/nav.js `utilitySurfaces`). Collapsed, `<nav aria-label="Primary">` wraps the

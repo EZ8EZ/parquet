@@ -499,3 +499,19 @@ details[open] .disclosure-body {
   animation-duration: var(--motion-slow);
   animation-timing-function: var(--ease-out);
 }
+
+/*
+ * Belt and braces for the reduced-motion contract. lib/view-transition.js already
+ * skips startViewTransition under the setting; this also stills any transition the
+ * platform or React's <ViewTransition> might start on its own (route navigations are
+ * React transitions in this Next version), so no path can animate past the setting.
+ * Route changes themselves are cuts by design: the skeletons in loading.jsx carry the
+ * continuity, and a page-enter fade would fail the one-object test above.
+ */
+@media (prefers-reduced-motion: reduce) {
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation: none !important;
+  }
+}

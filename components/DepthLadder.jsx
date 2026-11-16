@@ -69,11 +69,13 @@ function EntryCell({ entry, anchorId, holder, valueHref }) {
   const own = holder(entry.playerId);
   const href = valueHref(entry.playerId);
   const isAnchor = entry.playerId === anchorId;
+  // Tone, not lines: a tile inside the card. The anchor gets the accent wash; your
+  // own player gets the quiet accent edge plus "your roster" in words.
   const ground = isAnchor
-    ? "border-accent-edge bg-accent-wash"
+    ? "bg-accent-wash"
     : own?.isMe
-      ? "border-accent-edge bg-surface"
-      : "border-border bg-surface";
+      ? "bg-surface-2 shadow-[inset_3px_0_0_var(--color-accent-dim)]"
+      : "bg-surface-2";
   return (
     <div
       aria-current={isAnchor ? "true" : undefined}
@@ -81,7 +83,7 @@ function EntryCell({ entry, anchorId, holder, valueHref }) {
          10rem basis makes two cells demand 326px and wrap. 8rem lets a tied PAIR - by
          far the common case, 41 of the 44 tied groups - sit side by side as intended,
          and lets a triple wrap to 2+1 inside its brace rather than to 1+1+1. */
-      className={`min-w-0 flex-1 basis-[8rem] rounded-[--radius-sm] border px-2.5 py-1.5 ${ground}`}
+      className={`min-w-0 flex-1 basis-[8rem] rounded-control px-3 py-2 ${ground}`}
     >
       <div className="flex items-center gap-2">
         <span className="min-w-0 flex-1">
@@ -92,7 +94,7 @@ function EntryCell({ entry, anchorId, holder, valueHref }) {
               allowed a second line; the meta beside it is not, because it is already a
               summary and its own last clause is the least load-bearing. Single-cell
               rungs have room and never wrap in practice. */}
-          <span className="block text-body font-semibold leading-tight text-ink">
+          <span className="block text-body font-semibold text-ink">
             {href ? (
               <Link href={href} className="hover:text-accent-text">
                 {entry.name}
@@ -101,7 +103,7 @@ function EntryCell({ entry, anchorId, holder, valueHref }) {
               entry.name
             )}
           </span>
-          <span className="figure block line-clamp-1 text-meta leading-tight text-secondary">
+          <span className="figure mt-0.5 block text-meta text-secondary">
             {entry.offPosition
               ? `listed ${entry.listedPosition}`
               : (entry.listedPosition ?? "position not stated")}

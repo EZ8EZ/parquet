@@ -25,7 +25,7 @@ import {
   requestOrigin,
 } from "@/lib/auth/server";
 import { CopyBlock } from "@/components/CopyBlock";
-import { SectionHeader, Tag } from "@/components/ui";
+import { Disclosure, SectionHeader, Tag } from "@/components/ui";
 export async function SeatLinks({ h }) {
   const secret = authSecret();
   if (!secret) {
@@ -35,19 +35,19 @@ export async function SeatLinks({ h }) {
           title="Seats"
           action={<Tag tone="neutral">single user</Tag>}
         />
-        <div className="rounded-[--radius] border border-border bg-surface p-3">
+        <div className="rounded-card bg-surface p-4">
           <div className="flex items-start gap-2.5">
             <KeyRound
               size={15}
               aria-hidden="true"
-              className="mt-0.5 shrink-0 text-faint"
+              className="mt-0.5 shrink-0 text-secondary"
             />
             <div className="min-w-0">
-              <p className="text-body font-semibold leading-tight text-ink">
+              <p className="text-body font-semibold text-ink">
                 Everyone who opens this app can write as whoever they are
                 viewing
               </p>
-              <p className="mt-1 text-meta leading-relaxed text-muted">
+              <Disclosure summary="How to hand it to the league" className="mt-1" bodyClassName="bg-surface-2">
                 That is the right default for one person running Parquet on
                 their own machine. To hand the app to the league, set an{" "}
                 <span className="font-mono">AUTH_SECRET</span> environment
@@ -56,7 +56,7 @@ export async function SeatLinks({ h }) {
                 link per manager for you to hand out. Nothing else about the app
                 changes: every public number stays readable as any team, by
                 anyone.
-              </p>
+              </Disclosure>
             </div>
           </div>
         </div>
@@ -105,7 +105,7 @@ export async function SeatLinks({ h }) {
           title="Seats"
           action={<Tag tone="warn">unavailable</Tag>}
         />
-        <div className="rounded-[--radius] border border-warn/30 bg-warn/[0.06] p-3">
+        <div className="rounded-card border border-warn-edge bg-warn-wash p-4">
           <div className="flex items-start gap-2.5">
             <AlertTriangle
               size={15}
@@ -113,10 +113,10 @@ export async function SeatLinks({ h }) {
               className="mt-0.5 shrink-0 text-warn"
             />
             <div className="min-w-0">
-              <p className="text-body font-semibold leading-tight text-ink">
+              <p className="text-body font-semibold text-ink">
                 Claim links cannot be built on this request
               </p>
-              <p className="mt-1 text-meta leading-relaxed text-muted">
+              <p className="mt-1 text-note text-muted">
                 A claim link needs to know where this deployment lives, and this
                 request arrived with no <span className="font-mono">Host</span>{" "}
                 header to read it from. Rather than hand you links missing their
@@ -141,13 +141,13 @@ export async function SeatLinks({ h }) {
         title="Seats"
         action={<Tag tone="positive">{managers.length} links</Tag>}
       />
-      <div className="mb-2 flex items-start gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-2">
+      <div className="mb-2 flex items-start gap-2.5 rounded-card bg-surface p-4">
         <ShieldCheck
           size={15}
           aria-hidden="true"
           className="mt-0.5 shrink-0 text-positive"
         />
-        <p className="min-w-0 text-meta leading-relaxed text-muted">
+        <p className="min-w-0 text-note text-muted">
           Send each manager their own link, once. Opening it in the browser they
           use claims that seat and lets them capture reasoning as themselves.
           Treat a link like a key: whoever holds it holds that seat. Rotating{" "}
@@ -159,14 +159,14 @@ export async function SeatLinks({ h }) {
         {managers.map((m) => (
           <div
             key={m.ownerId}
-            className="rounded-[--radius] border border-border bg-surface p-2.5"
+            className="rounded-card bg-surface p-3"
           >
-            <div className="mb-1.5 flex items-baseline gap-2">
-              <span className="min-w-0 line-clamp-1 text-body font-semibold text-ink">
+            <div className="mb-1.5 flex flex-wrap items-baseline gap-x-2">
+              <span className="min-w-0 text-body font-semibold text-ink">
                 {m.displayName}
               </span>
               {m.teamName && (
-                <span className="min-w-0 line-clamp-1 text-meta text-secondary">
+                <span className="min-w-0 text-meta text-secondary">
                   {m.teamName}
                 </span>
               )}
@@ -179,7 +179,7 @@ export async function SeatLinks({ h }) {
           </div>
         ))}
         {unsignable.length > 0 && (
-          <div className="rounded-[--radius] border border-warn/30 bg-warn/[0.06] p-2.5">
+          <div className="rounded-card border border-warn-edge bg-warn-wash p-3">
             <div className="flex items-start gap-2.5">
               <AlertTriangle
                 size={15}
@@ -187,12 +187,12 @@ export async function SeatLinks({ h }) {
                 className="mt-0.5 shrink-0 text-warn"
               />
               <div className="min-w-0">
-                <p className="text-body font-semibold leading-tight text-ink">
+                <p className="text-body font-semibold text-ink">
                   {unsignable.length === 1
                     ? "One manager has no link"
                     : `${unsignable.length} managers have no link`}
                 </p>
-                <p className="mt-1 text-meta leading-relaxed text-muted">
+                <p className="mt-1 text-note text-muted">
                   A seat token is separator-delimited, so an owner id containing
                   a <span className="font-mono">.</span> (or anything outside
                   letters, digits, <span className="font-mono">_</span> and{" "}

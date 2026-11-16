@@ -38,7 +38,7 @@ import {
   reorder,
   syncCustomOrder,
 } from "@/lib/rankings/customOrder";
-import { Card, EmptyState, SectionHeader } from "@/components/ui";
+import { Card, Disclosure, EmptyState, SectionHeader } from "@/components/ui";
 import { PlayerAvatar, photosEnabled } from "@/components/PlayerAvatar";
 import { cn, fmtValue, fold } from "@/lib/ui";
 // Row pitch: 64px row (h-16) + 4px gap (gap-1). The drag math below assumes
@@ -51,7 +51,7 @@ import { cn, fmtValue, fold } from "@/lib/ui";
 // at the old width even with the avatar gone, screenshotted on the live
 // 120-player board. Two meta lines plus the name line is 64px at this type
 // scale with room to spare; 56px was not.
-const ROW_HEIGHT = 64;
+const ROW_HEIGHT = 72;
 const ROW_GAP = 4;
 const ROW_PITCH = ROW_HEIGHT + ROW_GAP;
 /**
@@ -350,15 +350,15 @@ export function RankingBoard({ players, scoring }) {
   }
   return (
     <div>
-      <dl className="grid grid-cols-3 divide-x divide-border rounded-[--radius-sm] border border-border bg-surface/60">
-        <Figure label="in pool" value={`${order.length}`} />
+      <dl className="grid grid-cols-3 gap-2">
+        <Figure label="In pool" value={`${order.length}`} />
         <Figure
-          label="moved"
+          label="Moved"
           value={`${movedCount}`}
           sub={customized ? "saved" : "unsaved"}
         />
         <Figure
-          label="top gap"
+          label="Top gap"
           value={gaps[0] ? `${Math.abs(gaps[0].delta).toFixed(0)}` : "-"}
           sub={gaps[0]?.name}
         />
@@ -366,20 +366,20 @@ export function RankingBoard({ players, scoring }) {
 
       {/* THE PAGE'S OWN INSTRUMENT (round 10). The blend weight is the one control
           this surface exists for, and it was set in the same 16px as a stat cell.
-          Hero treatment: the shared gold-washed ground (hero-card, see globals.css)
+          The weight at hero size: the number IS this page's headline.
           and the weight at --text-hero - the number IS this page's headline. */}
-      <Card className="hero-card mt-2.5">
+      <Card className="mt-2">
         <div className="flex items-end justify-between gap-2">
           <label
             htmlFor="blend-weight"
-            className="pb-1 text-[12px] font-semibold uppercase tracking-[0.16em] text-muted"
+            className="pb-1 text-meta font-medium text-secondary"
           >
             Blend weight
-            <span className="mt-0.5 block normal-case tracking-normal text-secondary">
+            <span className="mt-0.5 block text-meta text-muted">
               yours vs consensus
             </span>
           </label>
-          <span className="figure text-hero font-semibold leading-none text-accent-text">
+          <span className="figure text-hero font-bold leading-none tracking-tight text-ink">
             {weight}
             <span className="text-lede font-semibold text-muted">%</span>
           </span>
@@ -401,7 +401,7 @@ export function RankingBoard({ players, scoring }) {
             background: `linear-gradient(to right, var(--color-accent) ${weight}%, var(--color-info-wash) ${weight}%)`,
           }}
         />
-        <p className="mt-1.5 text-meta leading-snug text-muted">
+        <p className="mt-1.5 text-note text-muted">
           {weightCopy(weight)}
         </p>
       </Card>
@@ -413,10 +413,10 @@ export function RankingBoard({ players, scoring }) {
             type="button"
             onClick={handleReset}
             className={cn(
-              "inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border px-3 text-meta font-semibold transition-colors",
+              "inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border px-3.5 text-note font-semibold transition-colors",
               resetArmed
                 ? "border-negative-edge bg-negative-wash text-negative"
-                : "border-border text-muted hover:border-border-strong",
+                : "border-transparent bg-elevated text-ink hover:bg-border-strong",
             )}
           >
             <RotateCcw size={13} aria-hidden="true" />
@@ -424,11 +424,7 @@ export function RankingBoard({ players, scoring }) {
           </button>
         }
       />
-      <p className="-mt-1 mb-1.5 text-meta leading-snug text-faint">
-        Drag the handle to reorder - your position in this list is your rank.
-        Nobody hand-ranks {order.length} players: the board shows your top{" "}
-        {WORKING_SET}, and search pulls anyone else into view.
-      </p>
+      <p className="-mt-1 mb-2 text-note text-muted">Drag the handle to reorder.</p>
 
       {/* THE FINDER (VISION kill list, item 5). The 120-row wall is gone as the
           primary surface: you disagree with the model about the assets you care
@@ -447,10 +443,11 @@ export function RankingBoard({ players, scoring }) {
           onChange={(e) => setQ(e.target.value)}
           placeholder={`Find any of the ${order.length} to rank him`}
           aria-label="Find a player on the board"
-          className="h-11 w-full rounded-full border border-border bg-surface pl-9 pr-3 text-sm text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
+          type="search"
+          className="h-11 w-full rounded-full border border-border-strong bg-surface pl-9 pr-3 text-body text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
         />
         {q.trim() && (
-          <ul className="mt-1 space-y-0.5 rounded-[--radius-sm] border border-border bg-surface p-1">
+          <ul className="mt-1 divide-y divide-border overflow-hidden rounded-card bg-surface">
             {matches.length === 0 && (
               <li className="px-2 py-1.5 text-meta text-secondary">
                 No player matches.
@@ -461,12 +458,12 @@ export function RankingBoard({ players, scoring }) {
                 <button
                   type="button"
                   onClick={() => jumpTo(id, idx)}
-                  className="flex min-h-11 w-full items-center gap-2 rounded-[--radius-sm] px-2 text-left transition-colors hover:bg-surface-2"
+                  className="flex min-h-11 w-full items-center gap-2 px-3 text-left transition-colors hover:bg-surface-2"
                 >
                   <span className="w-8 shrink-0 text-right figure text-meta text-secondary">
                     {idx + 1}
                   </span>
-                  <span className="min-w-0 flex-1 line-clamp-1 text-[13px] font-semibold text-ink">
+                  <span className="min-w-0 flex-1 text-body font-semibold text-ink">
                     {p.fullName}
                   </span>
                   <span className="shrink-0 figure text-meta text-faint">
@@ -519,10 +516,10 @@ export function RankingBoard({ players, scoring }) {
                 // overflow-hidden added for the two zero-height marks below (the
                 // bottom value bar and the moved edge) - the row's OWN height is
                 // exactly the ROW_HEIGHT the drag arithmetic assumes, unchanged.
-                "relative flex h-16 items-center gap-2 overflow-hidden rounded-[--radius-sm] border px-2 transition-colors",
+                "relative flex h-[72px] items-center gap-2 overflow-hidden rounded-control px-2 transition-colors",
                 dragging
-                  ? "z-10 border-accent-edge bg-surface-2 shadow-lg"
-                  : "border-border bg-surface/60",
+                  ? "z-10 bg-surface-2 shadow-lg ring-1 ring-accent-edge"
+                  : "bg-surface",
                 flashId === id && "ring-2 ring-accent",
               )}
             >
@@ -570,8 +567,8 @@ export function RankingBoard({ players, scoring }) {
                 className={cn(
                   "w-6 shrink-0 text-right figure",
                   i < 3
-                    ? "text-lede font-semibold leading-none text-accent-text"
-                    : "text-meta text-faint",
+                    ? "text-lede font-bold leading-none text-ink"
+                    : "text-note font-semibold text-secondary",
                 )}
               >
                 {i + 1}
@@ -603,11 +600,11 @@ export function RankingBoard({ players, scoring }) {
               )}
               <span className="min-w-0 flex-1">
                 <span className="flex items-center gap-1.5">
-                  <span className="line-clamp-1 text-[13px] font-semibold leading-tight text-ink">
+                  <span className="min-w-0 text-body font-semibold leading-tight text-ink">
                     {p.fullName}
                   </span>
                   {injury && (
-                    <span className="shrink-0 rounded bg-negative-wash px-1 text-meta font-semibold leading-tight text-negative">
+                    <span className="shrink-0 rounded-full bg-negative-wash px-1.5 text-micro font-semibold leading-tight text-negative">
                       {injury}
                     </span>
                   )}
@@ -617,18 +614,18 @@ export function RankingBoard({ players, scoring }) {
                       rank mid-number ("cons #..."), screenshotted on the live
                       120-player board. `line-clamp-2` wraps instead - the row's
                       height (ROW_HEIGHT above) was raised to fit it. */}
-                <span className="mt-px line-clamp-2 block figure text-meta text-faint">
+                <span className="mt-px line-clamp-2 block figure text-meta text-secondary">
                   {p.position ?? "-"}
                   {p.team ? ` · ${p.team}` : ""}
                   {p.age != null ? ` · ${p.age}y` : ""} · cons #{p.searchRank}
                 </span>
               </span>
               <span className="w-[4.5rem] shrink-0 text-right">
-                <span className="block figure text-[13px] font-semibold leading-tight text-ink">
+                <span className="block figure text-body font-bold leading-tight text-ink">
                   {v ? fmtValue(v.value) : "-"}
                 </span>
                 {tier && (
-                  <span className="block text-meta leading-tight text-faint">
+                  <span className="block text-meta leading-tight text-secondary">
                     {tier}
                   </span>
                 )}
@@ -643,7 +640,7 @@ export function RankingBoard({ players, scoring }) {
           <button
             type="button"
             onClick={() => setLimit((l) => l + WORKING_SET)}
-            className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full border border-border bg-surface text-sm font-semibold text-ink transition-colors hover:border-accent hover:text-accent-text"
+            className="flex min-h-11 flex-1 items-center justify-center gap-1.5 rounded-full bg-elevated text-body font-semibold text-ink transition-colors hover:bg-border-strong"
           >
             Show {Math.min(WORKING_SET, order.length - shownCount)} more
             <span className="figure text-meta text-secondary">
@@ -653,7 +650,7 @@ export function RankingBoard({ players, scoring }) {
           <button
             type="button"
             onClick={() => setLimit(order.length)}
-            className="flex min-h-11 shrink-0 items-center justify-center rounded-full border border-border px-4 text-sm font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
+            className="flex min-h-11 shrink-0 items-center justify-center rounded-full px-4 text-body font-semibold text-accent-text transition-colors hover:bg-surface-2"
           >
             All {order.length}
           </button>
@@ -661,17 +658,18 @@ export function RankingBoard({ players, scoring }) {
       )}
 
       <SectionHeader title="Where you disagree with consensus" />
-      <p className="-mt-1 mb-1.5 text-meta leading-snug text-faint">
-        Sorted biggest gap first. This cuts both ways: it is your strongest
-        convictions and, read the other way, exactly where you are most likely
-        wrong.
-      </p>
+      <Disclosure className="-mt-1 mb-1" summary="How to read the gaps">
+        Sorted biggest gap first. This cuts both ways: it is your strongest convictions
+        and, read the other way, exactly where you are most likely wrong. Your position in
+        the board is your rank; it shows your top {WORKING_SET} of {order.length}, and
+        search pulls anyone else into view.
+      </Disclosure>
       {gaps.length === 0 ? (
         <EmptyState title="No disagreements yet">
           Drag a few players out of consensus order to see them surface here.
         </EmptyState>
       ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface/60">
+        <ul className="divide-y divide-border overflow-hidden rounded-card bg-surface">
           {/* THE GAPS AS GEOMETRY (round 10). This list used to state each gap as a
               green-or-red signed number - but a rank disagreement has no good end
               (the page's own caption says it cuts both ways), so the valence pair
@@ -691,13 +689,13 @@ export function RankingBoard({ players, scoring }) {
             return (
               <li
                 key={g.playerId}
-                className="flex min-h-11 items-center gap-2.5 px-2.5 py-1.5"
+                className="flex min-h-14 items-center gap-2.5 px-4 py-2.5"
               >
                 <span className="min-w-0 flex-1">
-                  <span className="block line-clamp-1 text-[13px] font-semibold leading-tight text-ink">
+                  <span className="block text-body font-semibold leading-tight text-ink">
                     {g.name}
                   </span>
-                  <span className="block line-clamp-1 figure text-meta text-faint">
+                  <span className="block figure text-meta text-secondary">
                     you #{g.yourRank} · consensus #{g.consensusRank}
                   </span>
                 </span>
@@ -737,12 +735,10 @@ export function RankingBoard({ players, scoring }) {
 }
 function Figure({ label, value, sub }) {
   return (
-    <div className="min-w-0 px-2.5 py-1.5">
-      <dt className="text-meta uppercase tracking-wide text-faint">{label}</dt>
-      <dd className="line-clamp-1 figure text-lede font-semibold text-ink">
-        {value}
-      </dd>
-      {sub && <dd className="line-clamp-1 text-meta text-muted">{sub}</dd>}
+    <div className="min-w-0 rounded-card bg-surface p-3">
+      <dt className="text-meta font-medium text-secondary">{label}</dt>
+      <dd className="figure text-lede font-bold text-ink">{value}</dd>
+      {sub && <dd className="text-meta text-muted">{sub}</dd>}
     </div>
   );
 }

@@ -108,12 +108,7 @@ export default async function DepthChartPage({ params, searchParams }) {
         kicker="Depth chart"
         leading={<TeamLogo team={abbr} size="lg" />}
         title={teamShortName(abbr) || abbr}
-        subtitle={
-          <>
-            Sleeper&apos;s own depth chart for {teamName(abbr)}, the same data
-            their app shows. Sorted by their order, never ranked by it.
-          </>
-        }
+        subtitle={<>Sleeper&apos;s own depth chart for {teamName(abbr)}, in their order</>}
         below={
           <p className="mt-1 figure text-meta text-secondary">
             <span className="font-semibold text-ink">{chart.chartedCount}</span>{" "}
@@ -149,20 +144,18 @@ export default async function DepthChartPage({ params, searchParams }) {
                now (`NO_RECORD` vs `SOURCE_GAP`), so the ordering of these two branches
                is a layout choice again rather than the thing keeping the page honest. */
             <RefusalMark>
-              <span className="text-body leading-relaxed text-muted">
+              <span className="text-note text-muted">
                 {refusalSentence(standingRefusal(chart, anchorId))}
               </span>
             </RefusalMark>
           ) : standing ? (
             <>
-              <h2 className="font-display text-lede leading-tight font-semibold text-ink">
+              <h2 className="text-lede font-semibold text-ink">
                 {anchor?.fullName}
               </h2>
-              <p className="mt-1 text-body leading-relaxed text-muted">
-                {standingSentence(standing, anchor?.fullName ?? "He")}
-              </p>
+              <p className="mt-1 text-note text-muted">{standingSentence(standing, anchor?.fullName ?? "He")}</p>
               {standing.entry.offPosition && (
-                <p className="mt-1.5 text-body leading-relaxed text-muted">
+                <p className="mt-1.5 text-note text-muted">
                   Sleeper lists him as a{" "}
                   <span className="font-semibold text-ink">
                     {standing.entry.listedPosition}
@@ -171,14 +164,10 @@ export default async function DepthChartPage({ params, searchParams }) {
                   <span className="font-semibold text-ink">
                     {standing.position}
                   </span>
-                  . Both are theirs; the chart&apos;s own position is the one
-                  this page groups by.
+                  ; this page groups by the chart&apos;s position.
                 </p>
               )}
-              <RefusalMark className="mt-2">
-                Where a player sits on a depth chart is not a claim about his
-                minutes, his role or his value, and this page does not make one.
-              </RefusalMark>
+              <RefusalMark className="mt-2">Not a claim about his minutes, role or value.</RefusalMark>
               <div className="mt-2">
                 <OpenInSleeper
                   href={sleeperPlayerUrl(anchorId)}
@@ -188,7 +177,7 @@ export default async function DepthChartPage({ params, searchParams }) {
             </>
           ) : (
             <>
-              <h2 className="font-display text-lede leading-tight font-semibold text-ink">
+              <h2 className="text-lede font-semibold text-ink">
                 {anchor?.fullName ?? "This player"}
               </h2>
               {/* ONE STATEMENT, from the module that knows the condition. This was a
@@ -198,7 +187,7 @@ export default async function DepthChartPage({ params, searchParams }) {
                   refusal is `SOURCE_GAP` and it comes from lib/depth with its numbers
                   already in it; the mark is the drawn half of the same object. */}
               <RefusalMark className="mt-2">
-                <span className="text-body leading-relaxed text-muted">
+                <span className="text-note text-muted">
                   {refusalSentence(standingRefusal(chart, anchorId))}
                 </span>
               </RefusalMark>
@@ -215,7 +204,7 @@ export default async function DepthChartPage({ params, searchParams }) {
            into a chat, which is the entire argument of lib/refusal.js. */
         <Card>
           <RefusalMark>
-            <span className="text-body leading-relaxed text-muted">
+            <span className="text-note text-muted">
               {refusalSentence(chartRefusal(chart))}
             </span>
           </RefusalMark>
@@ -254,21 +243,21 @@ export default async function DepthChartPage({ params, searchParams }) {
                 figure. It was a paragraph holding the base rate in prose - the right
                 fact in a channel that does not survive being copied out. */}
             <RefusalMark className="mb-2">
-              <span className="text-body leading-relaxed text-muted">
+              <span className="text-note text-muted">
                 {refusalSentence(unplacedRefusal(chart))}
               </span>
             </RefusalMark>
-            <ul className="space-y-1">
+            <ul className="divide-y divide-border">
               {chart.unplaced.map((entry) => {
                 const own = holder(entry.playerId);
                 const href = valueHref(entry.playerId);
                 return (
                   <li
                     key={entry.playerId}
-                    className="flex items-center gap-2 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5"
+                    className="flex min-h-11 items-center gap-2 py-2"
                   >
                     <span className="min-w-0 flex-1">
-                      <span className="block line-clamp-1 text-body font-semibold leading-tight text-ink">
+                      <span className="block text-body font-semibold text-ink">
                         {href ? (
                           <Link href={href} className="hover:text-accent-text">
                             {entry.name}
@@ -277,7 +266,7 @@ export default async function DepthChartPage({ params, searchParams }) {
                           entry.name
                         )}
                       </span>
-                      <span className="block line-clamp-1 figure text-meta leading-tight text-secondary">
+                      <span className="block figure text-meta text-secondary">
                         {entry.listedPosition ?? "position not stated"}
                         {own
                           ? own.isMe
@@ -294,13 +283,7 @@ export default async function DepthChartPage({ params, searchParams }) {
         </section>
       )}
 
-      <SectionHeader title="Where this chart comes from" />
-      <Card>
-        {/* The paragraph that used to open this card said "this is Sleeper's depth
-            chart, not Parquet's reading of one" - which is the page subtitle, three
-            inches above, at three times the length. The Disclosure below is the
-            caveat layer and stays whole. */}
-        <Disclosure summary="Where this chart can be wrong">
+      <Disclosure className="mt-3" summary="Where this chart can be wrong">
           <p>
             Sleeper&apos;s orders are not ranks, and this page draws them as
             rungs rather than rows for that reason. Measured across the live
@@ -326,7 +309,6 @@ export default async function DepthChartPage({ params, searchParams }) {
             Both are stated where they occur rather than smoothed over.
           </p>
         </Disclosure>
-      </Card>
 
       <Onward
         steps={depthOnwardSteps({

@@ -1,17 +1,26 @@
 "use client";
 import { useId, useRef, useState } from "react";
 import { cn } from "@/lib/ui";
+import { useRail } from "./useRail";
 
 /**
  * Tabs within a page. `items` = [{ id, label, count?, content }], content rendered
  * on the server and passed in. Inactive panels are `hidden`, so they cost no reading
  * and no layout. Arrow keys, Home and End move between tabs (WAI-ARIA tabs pattern).
  * `variant="segmented"` draws the pill control; the default is an underline bar.
+ * `onChange(id)` reports a switch (for a URL or a parent); `value` makes it
+ * controlled. A tab's `count` is printed in a small pill beside its label.
  */
-export function Tabs({ items, label, defaultId, variant = "underline", className, panelClassName }) {
-  const [active, setActive] = useState(defaultId ?? items[0]?.id);
+export function Tabs({ items, label, defaultId, value, onChange, variant = "underline", className, panelClassName }) {
+  const [inner, setInner] = useState(defaultId ?? items[0]?.id);
+  const active = value ?? inner;
+  const setActive = (id) => {
+    setInner(id);
+    onChange?.(id);
+  };
   const base = useId();
   const tabRefs = useRef([]);
+  const [railRef, railStyle] = useRail(active);
 
   const onKeyDown = (e, i) => {
     const last = items.length - 1;
@@ -31,14 +40,14 @@ export function Tabs({ items, label, defaultId, variant = "underline", className
   return (
     <div className={className}>
       <div
+        ref={railRef}
         role="tablist"
         aria-label={label}
         className={cn(
-          seg
-            ? "grid gap-1 rounded-full bg-surface p-1"
-            : "no-scrollbar flex gap-5 overflow-x-auto border-b border-border",
+          "no-scrollbar relative flex overflow-x-auto",
+          seg ? "gap-1 rounded-full bg-surface p-1" : "gap-5 border-b border-border",
         )}
-        style={seg ? { gridTemplateColumns: `repeat(${items.length}, minmax(0, 1fr))` } : undefined}
+        style={railStyle}
       >
         {items.map((t, i) => {
           const selected = t.id === active;
@@ -52,14 +61,15 @@ export function Tabs({ items, label, defaultId, variant = "underline", className
               aria-selected={selected}
               aria-controls={`${base}-panel-${t.id}`}
               tabIndex={selected ? 0 : -1}
+              data-active={selected ? "true" : undefined}
               onClick={() => setActive(t.id)}
               onKeyDown={(e) => onKeyDown(e, i)}
               className={cn(
                 "inline-flex items-center justify-center gap-1.5 whitespace-nowrap text-note font-semibold transition-colors",
                 seg
-                  ? cn("rounded-full px-3", selected ? "bg-elevated text-ink" : "text-secondary hover:text-ink")
+                  ? cn("flex-[1_0_0%] rounded-full px-3", selected ? "bg-elevated text-ink" : "text-secondary hover:text-ink")
                   : cn(
-                      "-mb-px border-b-2 px-0.5",
+                      "-mb-px shrink-0 border-b-2 px-0.5",
                       selected ? "border-accent text-ink" : "border-transparent text-secondary hover:text-ink",
                     ),
               )}

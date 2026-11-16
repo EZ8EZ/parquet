@@ -22,24 +22,27 @@ function RecordDots({ wins, losses }) {
  * inputs as figures, the reasoning one tap away. A stance is the plan's reading of
  * the inputs, not a grade of anyone's past moves (D6).
  */
-export function DirectionCard({ summary }) {
+export function DirectionCard({ summary, href = "/plan", cta = "Full plan", headingLevel = 2, children }) {
+  const H = `h${headingLevel}`;
   if (!summary) return null;
   return (
     <section aria-labelledby="direction-title" className="rounded-card bg-surface p-4">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
           <p className="text-meta font-medium text-secondary">The plan&apos;s direction</p>
-          <h2 id="direction-title" className="text-display font-bold tracking-tight text-accent-text">
+          <H id="direction-title" data-plan-direction className="text-display font-bold tracking-tight text-accent-text">
             {summary.label}
-          </h2>
+          </H>
         </div>
+        {href && (
         <Link
-          href="/plan"
+          href={href}
           className="-mr-2 inline-flex min-h-11 shrink-0 items-center gap-0.5 px-2 text-note font-semibold text-accent-text"
         >
-          Full plan
+          {cta}
           <ChevronRight size={16} aria-hidden="true" />
         </Link>
+        )}
       </div>
       <dl className="mt-3 grid grid-cols-3 gap-2">
         {summary.inputs.map((input) => (
@@ -58,9 +61,10 @@ export function DirectionCard({ summary }) {
           </div>
         ))}
       </dl>
-      {summary.note && (
+      {(summary.note || children) && (
         <Disclosure className="-mb-2 mt-1" summary={`Why ${summary.label.toLowerCase()}`}>
           {summary.note}
+          {children}
         </Disclosure>
       )}
     </section>

@@ -1,66 +1,118 @@
 /**
- * THE ONE PAGE SKELETON, and the reason every route now has a loading boundary.
+ * THE PAGE SKELETONS, and the reason every route has a loading boundary.
  *
- * This is not a decoration. In the App Router, `<Link>` prefetch of a dynamic route
- * fetches the route's LOADING BOUNDARY, not its content - and a route with no
- * `loading.tsx` therefore has nothing to prefetch. Measured against a production
- * build of this app before this file existed: a prefetch of `/plan` (which had a
- * boundary) returned 9,406 bytes of ready-to-paint shell; a prefetch of `/roster`,
- * `/ledger` or `/awards` returned 185 bytes containing no UI at all. Three of the
- * Desk's four permanent destinations were in the second group. Tapping one meant a
- * blocking server round trip with the previous page still on screen and no evidence
- * the tap had registered - the single worst thing this app's navigation did.
+ * In the App Router, `<Link>` prefetch of a dynamic route fetches the route's LOADING
+ * BOUNDARY, not its content, so a route with no `loading.jsx` has nothing to prefetch
+ * and a tap shows the previous page until the server answers. `app/loading.jsx` gives
+ * every route a boundary, and every boundary renders one of these.
  *
- * So the fix is structural, not animated: `app/loading.tsx` gives every route in the
- * app a boundary, and every boundary renders this. No transition you could write
- * competes with painting the next page's shape immediately.
+ * SHAPE, not entertainment. Each layout mirrors the primitives the real page is built
+ * from, at the same heights (components/ui/Skeleton.jsx), so the regions a reader
+ * looks at first land in their final position and do not jump when data arrives:
  *
- * SHAPE, not entertainment. The skeleton mirrors `PageHeader` exactly - kicker, title,
- * subtitle - because that header is the one region every page in this app shares, so
- * the part a reader looks at first lands in its final position and does not move when
- * the content arrives. Below it, cards, which is what most of these pages are. The
- * count is the only knob: a route whose real content is two cards passes `cards={2}`
- * rather than flashing three and dropping one.
+ *   default  PageHeader, a row of three StatTiles, a List of rows. The converted
+ *            pattern ("the number leads, then the list"), so it is the right guess for
+ *            a route that does not say otherwise.
+ *   team     /roster: avatar header with chips, the hero value card, the direction
+ *            card with three tiles, the Players / Picks / Outlook tabs, rows.
+ *   league   /league: header with chips, three tiles, a segmented tab bar, rows.
+ *   list     a header, a segmented control, a long list (boards, indexes).
+ *   cards    a header and `cards` stacked cards (long-form pages).
  *
- * Skeleton rather than spinner, and that is a claim about knowledge, not a style
- * preference: a skeleton says "the shape is known, the values are not," which is
- * exactly true here. A spinner would say we do not know what is coming.
+ * Skeleton rather than spinner: a skeleton says "the shape is known, the values are
+ * not", which is exactly true here. Motion is three shimmer cycles and none under
+ * prefers-reduced-motion (globals.css `.skeleton`).
  */
-import { SkeletonCard, SkeletonLine } from "@/components/ui";
+import {
+  SkeletonCard,
+  SkeletonHeader,
+  SkeletonLine,
+  SkeletonRows,
+  SkeletonStat,
+  SkeletonStats,
+  SkeletonTabs,
+} from "@/components/ui";
+
+function Chips({ count = 3 }) {
+  return (
+    <div className="-mt-2 mb-4 flex gap-2">
+      {Array.from({ length: count }, (_, i) => (
+        <div key={i} className="skeleton h-6 w-16 rounded-full" />
+      ))}
+    </div>
+  );
+}
+
 export function PageSkeleton({
-  /** How many card placeholders sit under the header. */
+  layout = "default",
+  /** For `cards`: how many card placeholders sit under the header. */
   cards = 3,
   /** Width of the kicker line, matched to the route's real kicker where it differs. */
   kicker = "w-28",
   /** Width of the title line. */
   title = "w-2/3",
+  /** For list layouts: how many rows. */
+  rows = 6,
 }) {
   return (
-    <div
-      /*
-       * aria-hidden plus a single polite status line, rather than labelling every bar.
-       * A screen reader gets one useful sentence; without this it would read a dozen
-       * empty divs, or - worse, with `aria-busy` alone - nothing at all.
-       */
-      aria-hidden="true"
-    >
-      <div className="mb-3">
-        <SkeletonLine className={`h-3 ${kicker}`} />
-        <SkeletonLine className={`mt-2 h-7 ${title}`} />
-        <SkeletonLine className="mt-1.5 h-4 w-full" />
-      </div>
-      <div className="space-y-2">
-        {Array.from({ length: cards }, (_, i) => (
-          <SkeletonCard key={i} />
-        ))}
-      </div>
+    // aria-hidden: the bars say nothing; LoadingPage's status line is what reaches
+    // assistive tech.
+    <div aria-hidden="true">
+      {layout === "team" ? (
+        <>
+          <SkeletonHeader avatar subtitle={false} kickerWidth="w-20" titleWidth="w-1/2" />
+          <Chips count={4} />
+          <SkeletonStat size="hero" className="p-4" />
+          <div className="mt-3 space-y-3 rounded-card bg-surface p-4">
+            <SkeletonLine className="h-3.5 w-1/3" />
+            <SkeletonLine className="h-7 w-1/3" />
+            <div className="grid grid-cols-3 gap-2">
+              {Array.from({ length: 3 }, (_, i) => (
+                <div key={i} className="skeleton h-24 rounded-control" />
+              ))}
+            </div>
+          </div>
+          <SkeletonTabs count={3} className="mt-6" />
+          <SkeletonRows rows={rows} className="mt-3" />
+        </>
+      ) : layout === "league" ? (
+        <>
+          <SkeletonHeader subtitle={false} kickerWidth={kicker} titleWidth="w-1/3" />
+          <Chips count={3} />
+          <SkeletonStats count={3} />
+          <SkeletonTabs variant="segmented" className="mt-4" />
+          <SkeletonRows rows={rows} className="mt-3" />
+        </>
+      ) : layout === "list" ? (
+        <>
+          <SkeletonHeader kickerWidth={kicker} titleWidth={title} />
+          <SkeletonTabs variant="segmented" />
+          <SkeletonRows rows={rows} className="mt-3" />
+        </>
+      ) : layout === "cards" ? (
+        <>
+          <SkeletonHeader kickerWidth={kicker} titleWidth={title} />
+          <div className="space-y-3">
+            {Array.from({ length: cards }, (_, i) => (
+              <SkeletonCard key={i} />
+            ))}
+          </div>
+        </>
+      ) : (
+        <>
+          <SkeletonHeader kickerWidth={kicker} titleWidth={title} />
+          <SkeletonStats count={3} />
+          <SkeletonLine className="mb-2 mt-6 h-5 w-1/3" />
+          <SkeletonRows rows={rows} />
+        </>
+      )}
     </div>
   );
 }
+
 /**
- * What a route's `loading.tsx` should export. Keeps the announcement in one place:
- * the visual skeleton is `aria-hidden`, and this is the line that actually reaches
- * assistive tech. `polite`, never `assertive` - a page load is not an interruption.
+ * What a route's `loading.jsx` exports. The visual skeleton is `aria-hidden`; this
+ * one polite status line is what reaches assistive tech.
  */
 export function LoadingPage(props) {
   return (

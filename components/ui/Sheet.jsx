@@ -1,5 +1,5 @@
 "use client";
-import { useId, useRef, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import { X } from "lucide-react";
 import { cn } from "@/lib/ui";
 
@@ -9,39 +9,84 @@ import { cn } from "@/lib/ui";
  * behind is inert, focus stays inside, Escape closes, and focus returns to the
  * trigger. Backdrop tap and the close button also dismiss. Children mount on first
  * open, so a list of sheets costs no DOM until used. Motion: globals.css `.sheet`.
+ * `footer` (alias `actions`) pins a row of buttons under the scrolling body;
+ * `leading` puts an avatar beside the title.
+ *
+ * Open state: uncontrolled by default (the trigger opens it). `defaultOpen` opens it
+ * on mount, e.g. for a deep link such as /values?focus=<id>. `open` + `onOpenChange`
+ * make it controlled; every dismissal path (Escape, backdrop, close button) reports
+ * `onOpenChange(false)` and the trigger reports `onOpenChange(true)`. Without a
+ * `trigger` the sheet is opened only through `open` (several triggers elsewhere, e.g.
+ * components/lockin/PlayerDeck).
  */
-export function Sheet({ trigger, triggerLabel, triggerClassName, title, subtitle, children, footer }) {
+export function Sheet({
+  trigger,
+  triggerLabel,
+  triggerClassName,
+  title,
+  subtitle,
+  leading,
+  children,
+  footer,
+  actions,
+  open,
+  defaultOpen = false,
+  onOpenChange,
+}) {
+  const foot = footer ?? actions;
   const ref = useRef(null);
-  const [opened, setOpened] = useState(false);
+  const [inner, setInner] = useState(defaultOpen);
+  const isOpen = open ?? inner;
+  // Children mount on first open and stay mounted (so a reopen keeps its state).
+  const [opened, setOpened] = useState(isOpen);
   const titleId = useId();
 
-  const show = () => {
-    setOpened(true);
-    ref.current?.showModal();
+  const request = (next) => {
+    if (open === undefined) setInner(next);
+    onOpenChange?.(next);
   };
+  const show = () => request(true);
   const close = () => ref.current?.close();
+
+  // The <dialog> follows the state; showModal only exists after mount.
+  useEffect(() => {
+    const d = ref.current;
+    if (!d) return;
+    if (isOpen && !d.open) {
+      setOpened(true);
+      d.showModal();
+    } else if (!isOpen && d.open) {
+      d.close();
+    }
+  }, [isOpen]);
 
   return (
     <>
-      <button
-        type="button"
-        aria-haspopup="dialog"
-        aria-label={triggerLabel}
-        onClick={show}
-        className={cn("block w-full text-left", triggerClassName)}
-      >
-        {trigger}
-      </button>
+      {trigger != null && (
+        <button
+          type="button"
+          aria-haspopup="dialog"
+          aria-label={triggerLabel}
+          onClick={show}
+          className={cn("block w-full text-left", triggerClassName)}
+        >
+          {trigger}
+        </button>
+      )}
       <dialog
         ref={ref}
         aria-labelledby={titleId}
         className="sheet"
+        onClose={() => {
+          if (isOpen) request(false);
+        }}
         onClick={(e) => {
           if (e.target === ref.current) close();
         }}
       >
         <span aria-hidden="true" className="mx-auto mt-2 block h-1 w-10 shrink-0 rounded-full bg-border-strong" />
         <div className="flex items-start gap-3 px-4 pb-2 pt-2">
+          {leading && <div className="shrink-0 pt-2">{leading}</div>}
           <div className="min-w-0 flex-1 pt-2.5">
             <h2 id={titleId} className="text-lede font-semibold text-ink">
               {title}
@@ -57,10 +102,21 @@ export function Sheet({ trigger, triggerLabel, triggerClassName, title, subtitle
             <X size={18} aria-hidden="true" />
           </button>
         </div>
-        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)]">
+        {/* A focusable, labelled scroll region: keyboard users can scroll it even when the
+            content has nothing focusable (axe scrollable-region-focusable). */}
+        <div
+          role="region"
+          aria-labelledby={titleId}
+          tabIndex={0}
+          className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-4 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent"
+        >
           {opened && children}
         </div>
-        {footer && opened && <div className="border-t border-border px-4 py-3">{footer}</div>}
+        {foot && opened && (
+          <div className="flex flex-wrap gap-2 border-t border-border px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)]">
+            {foot}
+          </div>
+        )}
       </dialog>
     </>
   );

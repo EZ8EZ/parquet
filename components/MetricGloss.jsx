@@ -4,9 +4,8 @@
  *
  * The problem this solves: "62 TCI" is legible to the manager who has lived with
  * the app and gibberish to a leaguemate seeing it for the first time. The fix is
- * NOT a tour or a tooltip library - it is one quiet, closed-by-default <details>
- * disclosure (the same native pattern the commissioner page and the recap already
- * use) that a first-time reader can open, read in fifteen seconds, and close.
+ * NOT a tour or a tooltip library - it is one closed-by-default Disclosure (the
+ * house primitive, a native <details>) that a first-time reader can open, read in fifteen seconds, and close.
  * Regulars never pay for it: closed, it is one faint line.
  *
  * The caveats are load-bearing, not fine print. Each definition carries the thing
@@ -16,7 +15,7 @@
  */
 import Link from "next/link";
 import { ChevronRight, HelpCircle } from "lucide-react";
-import { cn } from "@/lib/ui";
+import { Disclosure } from "@/components/ui";
 /** Exported as data so the copy test can hold the exact shipped words. */
 export const METRIC_GLOSS = {
   tci: {
@@ -67,43 +66,33 @@ export function MetricGloss({ metrics = ["tci", "rfi"], className }) {
       ? `What ${METRIC_GLOSS[metrics[0]].abbr} measures`
       : "What TCI and RFI measure";
   return (
-    <details className={cn("group", className)}>
-      <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-meta font-semibold text-faint transition-colors hover:text-accent-text">
-        <HelpCircle size={12} aria-hidden="true" className="shrink-0" />
-        {label}
-        <ChevronRight
-          size={12}
-          aria-hidden="true"
-          className="disclosure-chevron group-open:rotate-90"
-        />
-      </summary>
-      <div className="disclosure-body mb-2 space-y-2 rounded-[--radius-sm] border border-border bg-surface p-2.5">
-        {metrics.map((m) => {
-          const g = METRIC_GLOSS[m];
-          return (
-            <p key={m} className="text-note leading-snug text-muted">
-              <span className="font-semibold text-ink">
-                {g.abbr} · {g.name}
-              </span>{" "}
-              <span className="figure text-meta text-secondary">
-                ({g.scale})
-              </span>
-              <br />
-              {g.body}
-            </p>
-          );
-        })}
-        <p className="text-meta leading-snug text-secondary">
-          {METRIC_GLOSS_NOTE}
-        </p>
-        <Link
-          href="/methodology"
-          className="inline-flex min-h-11 items-center gap-0.5 text-meta font-semibold text-accent-text"
-        >
-          The full method
-          <ChevronRight size={12} aria-hidden="true" />
-        </Link>
-      </div>
-    </details>
+    <Disclosure
+      className={className}
+      icon={<HelpCircle size={16} />}
+      summary={label}
+      bodyClassName="space-y-2"
+    >
+      {metrics.map((m) => {
+        const g = METRIC_GLOSS[m];
+        return (
+          <p key={m}>
+            <span className="font-semibold text-ink">
+              {g.abbr} · {g.name}
+            </span>{" "}
+            <span className="figure text-meta text-secondary">({g.scale})</span>
+            <br />
+            {g.body}
+          </p>
+        );
+      })}
+      <p className="text-secondary">{METRIC_GLOSS_NOTE}</p>
+      <Link
+        href="/methodology"
+        className="-mb-2 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text"
+      >
+        The full method
+        <ChevronRight size={16} aria-hidden="true" />
+      </Link>
+    </Disclosure>
   );
 }

@@ -81,80 +81,52 @@ export function LedgerItem({
     }
   }
   return (
-    <div
-      className={cn(
-        showChrome
-          ? cn(
-              "rounded-[--radius] border p-4",
-              // The accent border is a call to action ("this one still needs your
-              // why"), so a reader who cannot act on it gets the calm treatment
-              // instead.
-              readOnly || (alreadyAnnotated && !editing)
-                ? "border-border bg-surface"
-                : "border-accent-edge bg-surface",
-            )
-          : "px-2.5 pb-2.5",
-      )}
-    >
-      {/* The date/week/type line belongs to whatever printed the summary row, if
-            anything did. The description does NOT: the row above truncates it to one
-            line to stay scannable, and the full sentence is exactly what you need in
-            front of you while writing down why you did it. */}
+    <div className={showChrome ? "rounded-card bg-surface p-4" : "px-4 pb-4"}>
+      {/* The full sentence stays in front of you while you write down why: the row
+          that summarises it elsewhere is one line. */}
       {showChrome && (
-        <div className="mb-1 flex items-center gap-2 text-meta uppercase tracking-wide text-secondary">
-          <span className="figure">{season}</span>
-          <span>·</span>
-          <span>wk {week}</span>
-          <span>·</span>
-          <span>{type.replace("_", " ")}</span>
-        </div>
+        <p className="mb-1 figure text-meta text-secondary">
+          {season} · wk {week} · {type.replace("_", " ")}
+        </p>
       )}
-      <p className="text-body font-medium leading-snug text-ink">
-        {description}
-      </p>
+      <p className="text-body font-medium text-ink">{description}</p>
 
       {editing && !readOnly ? (
-        <div className={showChrome ? "mt-3" : ""}>
+        <div className="mt-3">
           <textarea
             value={reasoning}
             onChange={(e) => setReasoning(e.target.value)}
             rows={3}
             autoFocus={autoFocus}
+            aria-label="Your reasoning"
             placeholder="What's the reasoning? What has to be true for this to work?"
-            className="w-full resize-y rounded-[--radius-sm] border border-border bg-bg p-3 font-display text-body leading-relaxed text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
+            className="w-full resize-y rounded-control border border-border-strong bg-surface-2 p-3 text-body text-ink placeholder:text-secondary focus:border-accent focus:outline-none"
           />
-          <div className="mt-2 flex flex-wrap gap-1.5">
+          <div className="mt-2 flex flex-wrap gap-1.5" role="group" aria-label="Posture">
             {POSTURES.map((p) => (
               <button
                 key={p}
                 type="button"
+                aria-pressed={posture === p}
                 onClick={() => setPosture(posture === p ? null : p)}
                 className={cn(
-                  "rounded-full border px-2.5 py-1 text-meta font-medium transition-colors",
-                  posture === p
-                    ? "border-accent bg-accent-wash text-accent-text"
-                    : "border-border text-muted hover:border-border-strong",
+                  "inline-flex min-h-11 items-center rounded-full px-3.5 text-note font-semibold transition-colors",
+                  posture === p ? "bg-accent-wash text-accent-text" : "bg-elevated text-muted hover:text-ink",
                 )}
               >
                 {p}
               </button>
             ))}
           </div>
-          {error && (
-            <p className="mt-2 text-note leading-snug text-negative">{error}</p>
-          )}
+          {error && <p className="mt-2 text-note text-negative">{error}</p>}
           <div className="mt-3 flex items-center gap-2">
             <button
               type="button"
               onClick={save}
               disabled={saving || !reasoning.trim()}
-              className="inline-flex items-center gap-1.5 rounded-full bg-accent px-4 py-2 text-body leading-relaxed font-semibold text-accent-ink disabled:opacity-50"
+              className="inline-flex min-h-11 items-center gap-1.5 rounded-full bg-accent px-5 text-body font-semibold text-accent-ink transition-colors hover:bg-accent-strong disabled:opacity-50"
             >
-              {saving ? (
-                <Loader2 size={15} className="animate-spin" />
-              ) : (
-                <Check size={15} />
-              )}
+              {saving ? <Loader2 size={16} className="animate-spin" /> : <Check size={16} />}
               Save
             </button>
             {alreadyAnnotated && (
@@ -165,7 +137,7 @@ export function LedgerItem({
                   setReasoning(initialReasoning ?? "");
                   setPosture(initialPosture);
                 }}
-                className="rounded-full border border-border px-4 py-2 text-body leading-relaxed text-muted"
+                className="inline-flex min-h-11 items-center rounded-full bg-elevated px-5 text-body font-semibold text-ink"
               >
                 Cancel
               </button>
@@ -173,40 +145,24 @@ export function LedgerItem({
           </div>
         </div>
       ) : (
-        <div
-          className={cn(
-            reasoning || posture ? "mt-2.5" : "",
-            justSaved && "arrive",
-          )}
-        >
+        <div className={cn(reasoning || posture ? "mt-2.5" : "", justSaved && "arrive")}>
           {posture && (
-            <span className="mb-1.5 inline-block rounded-full border border-border px-2 py-0.5 text-meta text-muted">
+            <span className="mb-1.5 inline-flex rounded-full bg-elevated px-2.5 py-0.5 text-meta font-semibold text-muted">
               {posture}
             </span>
           )}
-          {/* The captured reasoning is the one thing in this app that is genuinely the
-                viewer's own writing, so it gets the serif. Nothing around it does - see
-                the note on .figure in globals.css. */}
-          {reasoning && (
-            <p className="font-display text-body italic leading-relaxed text-ink">
-              &ldquo;{reasoning}&rdquo;
-            </p>
-          )}
+          {reasoning && <p className="text-body text-ink">&ldquo;{reasoning}&rdquo;</p>}
           {notPersisted && (
-            <p className="mt-1.5 text-meta leading-snug text-warn">
-              Held for this session only - no database is connected, so this
-              note will not survive a reload.
-            </p>
+            <p className="mt-1.5 text-meta text-warn">Saved for this session only; no database is connected.</p>
           )}
-          {/* No seat, no pencil. The API refuses the write anyway, so offering the
-                affordance would only teach the reader that the app is broken. */}
+          {/* No seat, no pencil: the API refuses the write anyway. */}
           {!readOnly && (
             <button
               type="button"
               onClick={() => setEditing(true)}
-              className="mt-2 inline-flex items-center gap-1 text-note leading-snug font-medium text-faint hover:text-accent-text"
+              className="-ml-2 mt-1 inline-flex min-h-11 items-center gap-1 px-2 text-note font-semibold text-accent-text"
             >
-              <Pencil size={12} /> edit
+              <Pencil size={14} aria-hidden="true" /> edit
             </button>
           )}
         </div>

@@ -17,24 +17,22 @@
 
     EVERY COLOUR HERE IS FROZEN, AND THAT IS UNAVOIDABLE RATHER THAN AN OVERSIGHT.
     A standalone SVG referenced from the manifest is a separate document: it never
-    receives a custom property, so it cannot re-tune itself on the paper theme the way
-    <BrandMark> does. The three values are therefore the DARK theme's own tokens,
-    copied rather than picked - #0b0c0e is color-bg, #3c434f is color-border (which
-    replaces the stale #262b33 this file was still carrying from before the contrast
-    pass), and #edc167 into #e6b34d is color-accent-text into color-accent, the same
-    two golds the rest of the app splits by job, replacing a third gold that matched
-    neither. Regenerate the PNG set with `pnpm gen:icons` after any edit here.
+    receives a custom property. The values are copied from the tokens in
+    app/globals.css, the same ones BrandMark reads: #15181d is color-surface (the tile),
+    #252930 is color-border (the hairline edge), and #a99fff into #8b7dff is
+    color-accent-text into color-accent, the violet brand. Regenerate the PNG set with
+    `pnpm gen:icons` after any edit here.
     (No double hyphens anywhere in this comment: XML forbids them, and sharp's SVG
     parser rejects the whole file rather than the comment.)
   -->
   <defs>
     <linearGradient id="g" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0" stop-color="#edc167"/>
-      <stop offset="1" stop-color="#e6b34d"/>
+      <stop offset="0" stop-color="#a99fff"/>
+      <stop offset="1" stop-color="#8b7dff"/>
     </linearGradient>
   </defs>
-  <rect width="512" height="512" rx="112" fill="#0b0c0e"/>
-  <rect x="6" y="6" width="500" height="500" rx="106" fill="none" stroke="#3c434f" stroke-width="4"/>
+  <rect width="512" height="512" rx="112" fill="#15181d"/>
+  <rect x="6" y="6" width="500" height="500" rx="106" fill="none" stroke="#252930" stroke-width="4"/>
   <g fill="url(#g)" shape-rendering="crispEdges">
     <!-- top-left block: grain vertical -->
     <rect x="76"  y="76"  width="44"  height="168"/>

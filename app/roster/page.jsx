@@ -236,7 +236,7 @@ export default async function RosterPage() {
           return (
             <Fragment key={v.playerId}>
               {(i === 0 || a.valued[i - 1].tier !== v.tier) && (
-                <li aria-hidden="true" className="bg-bg/40 px-4 py-1.5 text-meta font-semibold text-secondary">
+                <li aria-hidden="true" className="bg-surface-2 px-4 py-1.5 text-meta font-semibold text-secondary">
                   {v.tier}
                 </li>
               )}

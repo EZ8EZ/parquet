@@ -1,20 +1,9 @@
 import Link from "next/link";
-import {
-  ChevronRight,
-  GitBranch,
-  GraduationCap,
-  Hourglass,
-  Layers,
-} from "lucide-react";
+import { GitBranch, GraduationCap, Layers } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
-import {
-  buildDraftIndex,
-  getDraftSeasons,
-  getTradedPickLineages,
-} from "@/lib/lineage";
-import { EmptyState, PageHeader, SectionHeader, Tag } from "@/components/ui";
-import { cn } from "@/lib/ui";
-import { LineageCard, SeasonTile } from "./parts";
+import { buildDraftIndex, getDraftSeasons, getTradedPickLineages } from "@/lib/lineage";
+import { Chip, EmptyState, List, ListRow, PageHeader, SectionHeader, StatTile, Tabs } from "@/components/ui";
+import { LineageCard } from "./parts";
 import { Onward } from "@/components/Onward";
 export const dynamic = "force-dynamic";
 export default async function DraftsPage() {
@@ -36,22 +25,19 @@ export default async function DraftsPage() {
   const gotResolved = got.filter((l) => l.resolved);
   const mineOpen = [...mine].filter((l) => !l.resolved);
   const noDrafts = !index.supported || seasons.length === 0;
+  const lineageList = (list, perspectiveOf, empty, showBadge = false) =>
+    list.length === 0 ? (
+      empty
+    ) : (
+      <List>
+        {list.map((l) => (
+          <LineageCard key={`${l.season}-${l.round}-${l.originalRoster}`} l={l} perspective={perspectiveOf(l)} inList showBadge={showBadge} />
+        ))}
+      </List>
+    );
   return (
     <div>
-      <PageHeader
-        kicker="Pick lineage"
-        kickerAction={
-          <Link
-            href="/values"
-            className="-my-2 inline-flex min-h-11 items-center gap-1 text-meta font-semibold text-muted transition-colors hover:text-accent-text"
-          >
-            pick values
-            <ChevronRight size={12} aria-hidden="true" />
-          </Link>
-        }
-        title="What that pick became"
-        subtitle="Every traded pick, traced to the player it turned into. Tap one to land on it in its own draft."
-      />
+      <PageHeader title="Drafts" subtitle="Every traded pick, traced to the player it became" />
 
       {noDrafts ? (
         <EmptyState icon={<Layers size={28} />} title="No draft data">
@@ -61,180 +47,89 @@ export default async function DraftsPage() {
         </EmptyState>
       ) : (
         <>
-          <div className="flex items-stretch divide-x divide-border rounded-[--radius] border border-border bg-surface">
-            {[
-              {
-                v: gaveResolved.length,
-                l: "gave up",
-                s: "became players",
-                tone: gaveResolved.length ? "text-negative" : "text-ink",
-              },
-              {
-                v: gotResolved.length,
-                l: "acquired",
-                s: "became players",
-                tone: gotResolved.length ? "text-positive" : "text-ink",
-              },
-              {
-                v: mineOpen.length,
-                l: "in flight",
-                s: "not drafted yet",
-                tone: "text-ink",
-              },
-            ].map((s) => (
-              <div key={s.l} className="flex-1 px-1.5 py-1.5 text-center">
-                <div
-                  className={cn(
-                    "figure text-lede font-semibold leading-tight",
-                    s.tone,
-                  )}
-                >
-                  {s.v}
-                </div>
-                <div className="text-meta uppercase tracking-wide text-secondary">
-                  {s.l}
-                </div>
-                <div className="text-meta leading-tight text-muted">{s.s}</div>
-              </div>
-            ))}
+          <div className="grid grid-cols-3 gap-2">
+            <StatTile size="sm" label="You gave up" value={String(gaveResolved.length)} sub="became players" />
+            <StatTile size="sm" label="You acquired" value={String(gotResolved.length)} sub="became players" />
+            <StatTile size="sm" label="In flight" value={String(mineOpen.length)} sub="not drafted yet" />
           </div>
 
-          {/* Same nav pattern as /values -> /rank: a pill below the header stats
-                rather than a header action, since this leads to a different question
-                ("how did the drafting go") than the page above it ("what became of
-                this pick"). */}
-          <nav aria-label="Drafts sections" className="mt-2 flex gap-1.5">
-            <Link
-              href="/drafts/grades"
-              className="inline-flex min-h-11 shrink-0 items-center gap-1 rounded-full border border-border bg-surface px-3 text-note leading-snug font-semibold text-muted transition-colors hover:border-accent hover:text-accent-text"
-            >
-              <GraduationCap size={13} aria-hidden="true" />
-              Draft report cards
-              <ChevronRight size={13} aria-hidden="true" />
-            </Link>
-          </nav>
-
-          {/* Boards first: this is the page's navigation, and each tile carries its
-                own counts so the shortcut costs no information. */}
-          <SectionHeader
-            title="Draft boards"
-            action={
-              <span className="figure text-meta text-secondary">
-                {seasons.length} on record
-              </span>
-            }
+          <h2 className="sr-only">Your traded picks</h2>
+          <Tabs
+            className="mt-4"
+            label="Your traded picks"
+            items={[
+              {
+                id: "gave",
+                label: "Gave up",
+                count: gaveResolved.length,
+                content: lineageList(
+                  gaveResolved,
+                  () => "gave",
+                  <EmptyState icon={<GitBranch size={26} />} title="Nothing traced yet">
+                    None of the picks you traded away has been used in a draft yet.
+                  </EmptyState>,
+                ),
+              },
+              {
+                id: "got",
+                label: "Acquired",
+                count: gotResolved.length,
+                content: lineageList(
+                  gotResolved,
+                  () => "got",
+                  <EmptyState icon={<GitBranch size={26} />} title="Nothing traced yet">
+                    None of the picks you acquired has been used in a draft yet.
+                  </EmptyState>,
+                ),
+              },
+              {
+                id: "open",
+                label: "In flight",
+                count: mineOpen.length,
+                content: lineageList(
+                  mineOpen,
+                  (l) => (me != null && l.fromRoster === me ? "gave" : "got"),
+                  <EmptyState icon={<GitBranch size={26} />} title="Nothing in flight">
+                    Every pick you traded has been drafted.
+                  </EmptyState>,
+                  true,
+                ),
+              },
+            ]}
           />
-          <div className="grid grid-cols-2 gap-1.5">
+
+          <SectionHeader title="Draft boards" href="/drafts/grades" cta="Report cards" />
+          <List aria-label="Draft boards by season">
             {seasons.map((s) => (
-              <SeasonTile
-                key={s.draftId}
-                season={s.season}
-                rounds={s.rounds}
-                teams={s.teams}
-                pickCount={s.pickCount}
-                tradedCount={s.tradedCount}
-                mineCount={s.mineCount}
-              />
-            ))}
-          </div>
-
-          <SectionHeader
-            title="Picks you traded away"
-            action={
-              gaveResolved.length > 0 ? (
-                <span className="figure text-meta text-negative">
-                  {gaveResolved.length}
-                </span>
-              ) : undefined
-            }
-          />
-          {/* SHELVED.md S3: the question a reader actually has on this page is
-                "which players did other managers take with my old picks", not a
-                truncated sample of somebody else's twelve. This section already IS
-                that data - `getTradedPickLineages` filtered to fromRoster === me -
-                the one-line frame below just says so, since "drafted by" only
-                appears on the card when the last trade partner didn't keep it. */}
-          <p className="-mt-1 mb-1.5 text-meta leading-snug text-muted">
-            Every pick you sent away that has since been used in a draft, and
-            who ended up drafting with it.
-          </p>
-          {gaveResolved.length === 0 ? (
-            <EmptyState
-              icon={<GitBranch size={26} />}
-              title="Nothing traced yet"
-            >
-              None of the picks you&apos;ve traded away have been used in a
-              draft yet. Once they are, they show up here with the player they
-              became.
-            </EmptyState>
-          ) : (
-            <div className="space-y-1.5">
-              {gaveResolved.map((l) => (
-                <LineageCard
-                  key={`${l.season}-${l.round}-${l.originalRoster}`}
-                  l={l}
-                  perspective="gave"
+              <li key={s.draftId}>
+                <ListRow
+                  href={`/drafts/${s.season}`}
+                  aria-label={`${s.season} draft board`}
+                  title={<span className="figure">{s.season}</span>}
+                  badge={
+                    <>
+                      {s.pickCount === 0 && <Chip size="sm">upcoming</Chip>}
+                      {s.mineCount > 0 && (
+                        <Chip size="sm" tone="accent">
+                          {s.mineCount} yours
+                        </Chip>
+                      )}
+                    </>
+                  }
+                  meta={`${s.rounds} rounds · ${s.teams} teams${s.tradedCount > 0 ? ` · ${s.tradedCount} traded` : ""}`}
+                  value={s.pickCount === 0 ? null : s.pickCount}
+                  valueSub={s.pickCount === 0 ? null : "picks"}
                 />
-              ))}
-            </div>
-          )}
-
-          {gotResolved.length > 0 && (
-            <>
-              <SectionHeader
-                title="Picks you acquired"
-                action={
-                  <span className="figure text-meta text-positive">
-                    {gotResolved.length}
-                  </span>
-                }
-              />
-              <div className="space-y-1.5">
-                {gotResolved.map((l) => (
-                  <LineageCard
-                    key={`${l.season}-${l.round}-${l.originalRoster}`}
-                    l={l}
-                    perspective="got"
-                  />
-                ))}
-              </div>
-            </>
-          )}
-
-          {mineOpen.length > 0 && (
-            <>
-              <SectionHeader
-                title="Still in flight"
-                action={
-                  <Tag tone="warn">
-                    <Hourglass size={11} aria-hidden="true" />
-                    {mineOpen.length}
-                  </Tag>
-                }
-              />
-              <div className="space-y-1.5">
-                {mineOpen.map((l) => (
-                  <LineageCard
-                    key={`${l.season}-${l.round}-${l.originalRoster}`}
-                    l={l}
-                    perspective={
-                      me != null && l.fromRoster === me ? "gave" : "got"
-                    }
-                  />
-                ))}
-              </div>
-            </>
-          )}
-
-          {/* "Around the league" - twelve of the other managers' fifty-six resolved
-                picks - sat here until 2026-08-10. Shelved (SHELVED.md, S3): a truncated
-                sample with no filter, at the foot of a 5,318px page, that was neither
-                complete nor yours. /drafts/grades answers "how did the class go"
-                properly. Revived (D-next): "Picks you traded away" above already ran
-                the right join (`getTradedPickLineages` filtered to fromRoster === me)
-                and it's complete and yours by construction - it only needed the
-                "drafted by" fact stated plainly on every row instead of just the
-                multi-hop mismatch case, and a line saying what the section answers. */}
+              </li>
+            ))}
+          </List>
+          <Link
+            href="/values"
+            className="mt-1 inline-flex min-h-11 items-center gap-1.5 text-note font-semibold text-accent-text"
+          >
+            <GraduationCap size={16} aria-hidden="true" />
+            What each pick is worth
+          </Link>
         </>
       )}
       <Onward from="/drafts" />

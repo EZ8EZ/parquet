@@ -39,15 +39,11 @@ import { cn } from "@/lib/ui";
  */
 export function AwardPoster({ as: Heading = "h3", title, deck, children }) {
   return (
-    <div className="bg-poster px-3 pb-3 pt-4">
-      {/* The gold floor-line - the one accent element a monochrome card gets. */}
-      <span aria-hidden="true" className="block h-[3px] w-7 bg-accent" />
-      <Heading className="mt-2.5 text-balance font-display text-display font-bold leading-[1.05] tracking-[-0.02em] text-ink">
-        {title}
-      </Heading>
-      <p className="figure mt-1.5 font-mono text-note font-medium leading-snug text-accent-text">
-        {deck}
-      </p>
+    <div className="bg-poster px-4 pb-4 pt-4">
+      {/* The violet floor-line - the one accent element a monochrome card gets. */}
+      <span aria-hidden="true" className="block h-[3px] w-7 rounded-full bg-accent" />
+      <Heading className="mt-2.5 text-balance text-display font-bold tracking-tight text-ink">{title}</Heading>
+      <p className="figure mt-1 text-note font-semibold text-accent-text">{deck}</p>
       {children}
     </div>
   );
@@ -64,8 +60,8 @@ export function AwardMiniCard({ href, icon: Icon, title, deck }) {
     <Link
       href={href}
       className={cn(
-        "relative block min-h-11 overflow-hidden rounded-[--radius] border border-border bg-poster px-3 py-2.5",
-        "transition-colors hover:border-accent-edge",
+        "relative block min-h-11 overflow-hidden rounded-card bg-surface px-3 py-3",
+        "transition-colors hover:bg-surface-2",
       )}
     >
       {Icon && (
@@ -76,13 +72,9 @@ export function AwardMiniCard({ href, icon: Icon, title, deck }) {
           className="absolute -right-1 -top-1 text-accent opacity-[0.16]"
         />
       )}
-      <span aria-hidden="true" className="block h-0.5 w-5 bg-accent" />
-      <span className="mt-1.5 block text-balance font-display text-lede font-bold leading-tight tracking-[-0.01em] text-ink">
-        {title}
-      </span>
-      <span className="figure mt-0.5 block font-mono text-meta leading-snug text-accent-text">
-        {deck}
-      </span>
+      <span aria-hidden="true" className="block h-0.5 w-5 rounded-full bg-accent" />
+      <span className="mt-1.5 block text-balance pr-6 text-body font-bold text-ink">{title}</span>
+      <span className="figure mt-0.5 block text-meta font-semibold text-accent-text">{deck}</span>
     </Link>
   );
 }
