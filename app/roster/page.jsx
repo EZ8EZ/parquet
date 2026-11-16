@@ -1,27 +1,38 @@
 import { Fragment } from "react";
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
+import { AlertTriangle, ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { leagueValueRanking, currentFormByRoster } from "@/lib/roster";
 import { depthChartsByTeam, depthRowFor } from "@/lib/depth";
 import { leagueTimelines } from "@/lib/metrics/duration";
 import { leagueFragility, lineupSlots } from "@/lib/metrics/fragility";
-import { Card, PageHeader, SectionHeader, Tag } from "@/components/ui";
+import {
+  BarList,
+  Card,
+  Chip,
+  Disclosure,
+  List,
+  ListRow,
+  PageHeader,
+  SectionHeader,
+  Sheet,
+  StatTile,
+  Tabs,
+} from "@/components/ui";
 import { PostureTag } from "@/components/PostureTag";
 import { TeamAvatar } from "@/components/TeamAvatar";
-import { ValueAssetRow } from "@/components/ValuesList";
+import { ValueAssetDetail } from "@/components/ValuesList";
 import { ProvenanceRail } from "@/components/ProvenanceRail";
 import { buildProvenance } from "@/lib/provenance";
 import { loadProvenanceSource } from "@/lib/provenance/source";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { AgeStrip, BarChart, PositionRadar } from "@/components/charts";
+import { AgeStrip } from "@/components/charts";
 import { DistributionStrip } from "@/components/DistributionStrip";
 import { Onward } from "@/components/Onward";
 import { ageMultiplier, isStarTier } from "@/lib/valuation";
 import { fmtValue } from "@/lib/ui";
 import { OpenInSleeper } from "@/components/OpenInSleeper";
 import { sleeperTeamUrl } from "@/lib/sleeperLinks";
-import { ordinal } from "@/lib/derive/describe";
 import {
   awayPicks,
   posturesByRoster,
@@ -36,6 +47,12 @@ import { TabIndex } from "@/components/TabIndex";
 import { getPrincipals } from "@/lib/principals";
 import { diagnose } from "@/lib/gameplan";
 import { directionSummary } from "@/lib/team";
+/**
+ * TEAM. The first screen answers "where does my team stand?": total value and its
+ * rank, then the plan's direction with its three inputs. Players, picks and the
+ * league-relative outlook sit behind tabs; a player row opens his detail in a bottom
+ * sheet. All numbers come from lib/; this page only composes.
+ */
 export const dynamic = "force-dynamic";
 /** How many seasons of trajectory the sparkline shows, current season included. */
 const TRAJECTORY_SEASONS = 4;
@@ -205,267 +222,180 @@ export default async function RosterPage() {
     agencyReads,
     awayPicks(h, rosterId, a.picks.picks),
   );
-  return (
-    <div>
-      {/* Identity, record, window and core age in one block - what used to be a
-            header plus a separate window card. min-w-0 lets long names truncate
-            instead of pushing the Sleeper link off a 390px screen. */}
-      <PageHeader
-        leading={
-          <TeamAvatar
-            name={a.teamName ?? a.ownerName}
-            avatarId={user?.avatar}
-            teamLogoUrl={user?.teamLogoUrl}
-            size="md"
-            isMe
-          />
-        }
-        kicker={
-          <span className="block line-clamp-1">{a.teamName ?? "Your team"}</span>
-        }
-        title={a.ownerName}
-        aside={
-          <OpenInSleeper
-            href={sleeperTeamUrl(h.currentLeague.leagueId, rosterId)}
-            label="Sleeper"
-          />
-        }
-        below={
-          <>
-            <div className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1">
-              {/* One string, so a wrap never leaves a dangling separator. */}
-              <span className="figure text-meta text-secondary">
-                <span className="font-semibold text-ink">
-                  {form
-                    ? `${form.wins}-${form.losses}`
-                    : `${a.record.wins}-${a.record.losses}`}
-                </span>{" "}
-                {form && !form.isLive && (
-                  <span className="text-secondary">
-                    ({form.season} final, {ordinal(form.rank)} of {form.teams}
-                    ){" "}
-                  </span>
-                )}
-                · {a.valued.length} players · {a.picks.picks.length} picks ·
-                core age{" "}
-                <span className="font-semibold text-ink">
-                  {a.coreAge ?? "-"}
-                </span>
-                {injured > 0 && (
-                  <>
-                    {" "}
-                    {/* Separator inside the nowrap span so a wrap never leaves it
-                    stranded at the end of a line. */}
-                    <span className="whitespace-nowrap">
-                      · <span className="text-negative">{injured} injured</span>
-                    </span>
-                  </>
-                )}
-              </span>
-            </div>
-          </>
-        }
-      />
-
-      <DirectionCard summary={direction} />
-
-      <RosterCrunchPanel
-        h={h}
-        rosterId={rosterId}
-        onlyWhenRelevant
-        className="mt-3"
-      />
-
-      <SectionHeader
-        title="Roster - by value"
-        href="/values"
-        cta="all values"
-      />
-      <p className="-mt-1 mb-1.5 figure text-meta text-secondary">
-        {a.valued.length} players · bar = share of {fmtValue(a.playerValue)}{" "}
-        player value · line = {TRAJECTORY_SEASONS}-season age-curve trajectory
-      </p>
-      <ul className="space-y-1">
-        {a.valued.map((v, i) => (
-          <Fragment key={v.playerId}>
-            {/* TIER SEAMS, same device as /values (round 10): a labelled beat where
-                the tier changes, so seventeen rows read as the tiers they already
-                belong to instead of one unbroken column. The list is value-sorted
-                by construction (analyzeRoster), so tiers are contiguous. */}
-            {i > 0 && a.valued[i - 1].tier !== v.tier && (
-              <li
-                aria-hidden="true"
-                className="flex items-center gap-2 px-1 pb-0.5 pt-2"
-              >
-                <span className="text-meta font-semibold uppercase tracking-[0.16em] text-accent-text">
+  const record = form ? `${form.wins}-${form.losses}` : `${a.record.wins}-${a.record.losses}`;
+  const roundLabel = (r) => (r === 1 ? "1st" : r === 2 ? "2nd" : r === 3 ? "3rd" : `${r}th`);
+  const players = (
+    <>
+      <RosterCrunchPanel h={h} rosterId={rosterId} onlyWhenRelevant className="mb-3" />
+      <List aria-label="Players by value">
+        {a.valued.map((v, i) => {
+          const traj = valueTrajectory(v);
+          const meta = [v.position ?? "-", v.team, v.age != null ? `${v.age}` : null]
+            .filter(Boolean)
+            .join(" · ");
+          return (
+            <Fragment key={v.playerId}>
+              {(i === 0 || a.valued[i - 1].tier !== v.tier) && (
+                <li aria-hidden="true" className="bg-bg/40 px-4 py-1.5 text-meta font-semibold text-secondary">
                   {v.tier}
-                </span>
-                <span className="rule min-w-0 flex-1" />
+                </li>
+              )}
+              <li>
+                <Sheet
+                  triggerLabel={`${v.name}, value ${fmtValue(v.value)}. Show details`}
+                  title={v.name}
+                  subtitle={`${meta}${v.tier ? ` · ${v.tier}` : ""}`}
+                  trigger={
+                    <ListRow
+                      as="span"
+                      chevron
+                      avatar={<PlayerAvatar name={v.name} team={v.team} playerId={v.playerId} size="sm" />}
+                      title={v.name}
+                      badge={
+                        v.injury ? (
+                          <Chip tone="negative" size="sm" icon={AlertTriangle}>
+                            {v.injury}
+                          </Chip>
+                        ) : null
+                      }
+                      meta={meta}
+                      value={fmtValue(v.value)}
+                      valueSub={a.playerValue ? `${Math.round((v.value / a.playerValue) * 100)}% of team` : null}
+                    />
+                  }
+                >
+                  <div className="grid grid-cols-2 gap-2">
+                    <StatTile className="bg-surface-2" label="Value" value={fmtValue(v.value)} sub={v.tier} />
+                    <StatTile
+                      className="bg-surface-2"
+                      label="Share of team"
+                      value={a.playerValue ? `${Math.round((v.value / a.playerValue) * 100)}%` : "unknown"}
+                      sub={`of ${fmtValue(a.playerValue)} player value`}
+                    />
+                  </div>
+                  {traj && (
+                    <div className="mt-3 rounded-card bg-surface-2 p-3">
+                      <p className="text-meta font-medium text-secondary">
+                        Age curve alone, against this season
+                      </p>
+                      <ol className="mt-2 grid grid-cols-3 gap-2">
+                        {traj.slice(1).map((t, n) => {
+                          const pct = traj[0] ? Math.round((t / traj[0] - 1) * 100) : 0;
+                          return (
+                            <li key={n}>
+                              <span className="block text-micro text-secondary">+{n + 1} yr</span>
+                              <span className="block figure text-note font-semibold text-ink">
+                                {pct > 0 ? `+${pct}` : pct}%
+                              </span>
+                            </li>
+                          );
+                        })}
+                      </ol>
+                      <p className="mt-1.5 text-micro text-secondary">Injury, role and position held fixed.</p>
+                    </div>
+                  )}
+                  <div className="mt-3">
+                    <ValueAssetDetail
+                      name={v.name}
+                      age={v.age}
+                      tier={v.tier}
+                      playerId={v.playerId}
+                      injury={v.injury}
+                      injuryDetail={v.injuryDetail}
+                      consensusRank={v.consensusRank}
+                      pricedRank={v.pricedRank}
+                      productionBacked={v.productionBacked}
+                      productionRefusal={v.productionRefusal}
+                      rankAxisMax={rosterRankAxisMax}
+                      depth={depthRowFor(charts, h.players.get(v.playerId))}
+                      provenance={
+                        provenance[v.playerId] && (
+                          <ProvenanceRail chain={provenance[v.playerId]} names={ctx.names} showTitle />
+                        )
+                      }
+                    />
+                  </div>
+                </Sheet>
               </li>
-            )}
-            <ValueAssetRow
-            // WHY HE IS HERE, in place. This is the page that asks the question, so
-            // this is the page that answers it without a navigation: expanding a row
-            // shows the whole chain back to whichever of the five origins it ends on.
-            // Seventeen rails is seventeen array walks over data already in hand -
-            // the only real cost is `loadProvenanceSource` above, which is two
-            // memoized on-demand loaders and not a corpus change (D25).
-            provenance={
-              provenance[v.playerId] && (
-                // `names` only, and that is the whole prop list on purpose. The
-                // per-gap scenes, the draft hairlines and the hold population are
-                // deliberately NOT computed here: this page draws one rail per
-                // rostered player, and /lineage is where a single asset earns the
-                // full treatment. The rail degrades to ordering plus proportion,
-                // which is what an inline expansion wants anyway.
-                <ProvenanceRail
-                  chain={provenance[v.playerId]}
-                  names={ctx.names}
-                  showTitle
-                />
-              )
-            }
-            name={v.name}
-            team={v.team}
-            position={v.position}
-            age={v.age}
-            value={v.value}
-            tier={v.tier}
-            playerId={v.playerId}
-            injury={v.injury}
-            injuryDetail={v.injuryDetail}
-            share={a.playerValue ? v.value / a.playerValue : 0}
-            consensusRank={v.consensusRank}
-            pricedRank={v.pricedRank}
-            productionBacked={v.productionBacked}
-            productionRefusal={v.productionRefusal}
-            // The rank scale is shared across this roster's own rows. /values computes
-            // the same thing over its 260, so the two pages scale to their own lists -
-            // which is correct: a dumbbell is only ever compared with the rows beside it.
-            rankAxisMax={rosterRankAxisMax}
-            depth={depthRowFor(charts, h.players.get(v.playerId))}
-            trajectory={valueTrajectory(v)}
-            // ONE HUE, EVERY ROW (round 10). This used to leave the Sparkline's
-            // default valence pair in play: a declining line drew itself red, which
-            // painted most of an aging roster as a wall of warnings - colour
-            // restating slope as judgment, exactly what D6 forbids and what the
-            // line's own geometry already carries. Age-curve trajectories are the
-            // model unwinding a premium, not a verdict, so every row draws in the
-            // same dimmed accent and the slope alone does the talking.
-            trajectoryColor="var(--color-accent-dim)"
-            // The roster's own best asset gets the podium frame - same `hero`
-            // vocabulary as the /values board (see ValueAssetRow).
-            hero={i === 0 ? "lead" : undefined}
-            enterIndex={i}
-          />
-          </Fragment>
-        ))}
-      </ul>
+            </Fragment>
+          );
+        })}
+      </List>
+      <Link
+        href="/values"
+        className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text"
+      >
+        Every asset in the league
+        <ChevronRight size={16} aria-hidden="true" />
+      </Link>
+    </>
+  );
 
-      {/* Pick capital - in dynasty, picks are assets, so they get real estate.
-            One row per season instead of one card per season. */}
-      <SectionHeader
-        title={`Draft capital - ${a.picks.picks.length} picks`}
-        href="/drafts"
-        cta="lineage"
-      />
+  const picks = (
+    <>
       {a.picks.picks.length === 0 ? (
-        <Card className="p-3">
-          <p className="text-body leading-relaxed text-muted">
-            No draft picks owned. Every future pick has been traded away - that
-            caps how much this roster can change.
-          </p>
+        <Card>
+          <p className="text-body text-muted">No draft picks owned; every future pick has been traded away.</p>
         </Card>
       ) : (
-        <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
-          {a.picks.seasons.map((season) => {
-            const forSeason = a.picks.picks.filter((p) => p.season === season);
-            if (!forSeason.length) return null;
-            return (
-              <li key={season}>
-                {/* Season label and total on one line, chips using the FULL width
-                        below it - attribution ("via X") is long, and giving the chips
-                        the whole row costs fewer lines than an inline column. */}
-                <Link
-                  href="/drafts"
-                  className="block min-h-11 px-2.5 py-2 transition-colors hover:bg-surface-2"
-                >
-                  <span className="flex items-baseline justify-between gap-2">
-                    <span className="figure text-body font-semibold text-ink">
-                      {season}
-                    </span>
-                    <span className="flex items-center gap-1 figure text-meta text-muted">
-                      {forSeason.length} picks ·{" "}
-                      {fmtValue(forSeason.reduce((s, p) => s + p.value, 0))}
-                      <ChevronRight
-                        size={13}
-                        aria-hidden="true"
-                        className="text-faint"
-                      />
-                    </span>
-                  </span>
-                  <span className="mt-1 flex flex-wrap gap-1">
-                    {forSeason.map((p) => (
-                      <Tag
-                        key={`${p.season}-${p.round}-${p.originalRoster}`}
-                        tone={p.round === 1 ? "accent" : "neutral"}
-                      >
-                        {p.round === 1
-                          ? "1st"
-                          : p.round === 2
-                            ? "2nd"
-                            : `${p.round}rd`}
-                        {p.acquired && p.fromName ? ` via ${p.fromName}` : ""}
-                      </Tag>
-                    ))}
-                  </span>
-                </Link>
-              </li>
-            );
-          })}
-        </ul>
-      )}
-
-      {/* WHOSE SEASON DECIDES THEM. The list above says what you hold; this says
-            whether the outcome is yours. A pick set by your own season is an
-            instrument you act on, and a pick set by somebody else's is a claim on
-            their intentions - the same asset on the balance sheet, two different
-            things to own. */}
-      {agencyReads.length > 0 && (
         <>
-          <SectionHeader
-            title="Whose season decides them"
-            href="/league"
-            cta="every posture"
-          />
-          <PickAgencyPanel
-            reads={agencyReads}
-            summary={agency}
-            orderLine={orderFidelity.panelLine}
-          />
+          <div className="mb-3 grid grid-cols-2 gap-2">
+            <StatTile label="Pick capital" value={fmtValue(a.picks.total)} sub={`${a.picks.picks.length} picks`} />
+            <StatTile
+              label="Firsts"
+              value={String(a.picks.firsts)}
+              sub={
+                a.picks.extraFirsts === 0
+                  ? "at baseline"
+                  : `${a.picks.extraFirsts > 0 ? "+" : ""}${a.picks.extraFirsts} against baseline`
+              }
+            />
+          </div>
+          <List aria-label="Picks by season">
+            {a.picks.seasons.map((season) => {
+              const forSeason = a.picks.picks.filter((p) => p.season === season);
+              if (!forSeason.length) return null;
+              return (
+                <li key={season}>
+                  <ListRow
+                    href="/drafts"
+                    title={season}
+                    value={fmtValue(forSeason.reduce((s, p) => s + p.value, 0))}
+                    valueSub={`${forSeason.length} ${forSeason.length === 1 ? "pick" : "picks"}`}
+                  >
+                    <span className="mt-1 flex flex-wrap gap-1">
+                      {forSeason.map((p) => (
+                        <Chip
+                          key={`${p.season}-${p.round}-${p.originalRoster}`}
+                          size="sm"
+                          tone={p.round === 1 ? "accent" : "neutral"}
+                        >
+                          {roundLabel(p.round)}
+                          {p.acquired && p.fromName ? ` via ${p.fromName}` : ""}
+                        </Chip>
+                      ))}
+                    </span>
+                  </ListRow>
+                </li>
+              );
+            })}
+          </List>
         </>
       )}
+      {agencyReads.length > 0 && (
+        <>
+          <SectionHeader title="Whose season decides them" href="/league" cta="Postures" />
+          <PickAgencyPanel reads={agencyReads} summary={agency} orderLine={orderFidelity.panelLine} />
+        </>
+      )}
+    </>
+  );
 
-      <TabIndex tab="team" title="More on your team" />
-
-      <SectionHeader title="Against the league" />
-      {/*
-       * THE HEADLINE NUMBERS, WITH THE ONLY THING THAT MAKES THEM MEAN ANYTHING.
-       *
-       * This was two blocks: a three-cell rail printing "TOTAL VALUE 26,641" and,
-       * directly under it, a strip printing "TOTAL VALUE 26,641 - 11th of 14". Same
-       * three figures, twice, in 150px. One block now - each row keeps the
-       * destination its cell linked to, and gains the distribution the cell could
-       * never carry. A rank on its own ("11th") does not say whether the pack is
-       * bunched or strung out, and the pack is the reading.
-       */}
-      {/* Round 10: the panel is the page's hero moment. Total value is the number
-          this page anchors on, so it gets the hero weight (--text-hero) inside the
-          strip that already owns it, on the shared gold-washed ground - see the
-          depth kit in globals.css. Same figures, same ticks, new hierarchy. */}
-      <div className="hero-card space-y-1.5 rounded-[--radius] border border-accent-edge p-2">
+  const outlook = (
+    <>
+      <SectionHeader title="Against the league" className="mt-1" />
+      <Card pad="sm" className="space-y-1.5">
         <DistributionStrip
-          hero
           href="/values"
           label="Total value"
           sub={`${fmtValue(a.playerValue)} of it in players`}
@@ -477,19 +407,12 @@ export default async function RosterPage() {
         <DistributionStrip
           href="/drafts"
           label="Pick capital"
-          sub={`${a.picks.firsts} firsts${
-            a.picks.extraFirsts === 0
-              ? " at baseline"
-              : ` (${a.picks.extraFirsts > 0 ? "+" : ""}${a.picks.extraFirsts} against baseline)`
-          }`}
+          sub={`${a.picks.firsts} firsts`}
           values={dist.pickCapital}
           mine={a.picks.total}
           format={fmtValue}
           betterEnd="high"
         />
-        {/* No `betterEnd`: concentration is a shape, not a score. A top-heavy roster
-            is a contender's roster and a rebuild's problem, and the app does not get
-            to decide which one you are (D23). */}
         <DistributionStrip
           href="/plan"
           label="Top 5 share"
@@ -498,207 +421,183 @@ export default async function RosterPage() {
           mine={top5Share}
           format={(n) => `${n}%`}
         />
-        <p className="px-1.5 text-meta leading-snug text-secondary">
-          Every tick is one of the {dist.totalValue.length} rosters. The dashed
-          line is the league median, not a pass mark.
-        </p>
-      </div>
+        <Disclosure className="px-1.5" summary="How to read these strips">
+          Every tick is one of the {dist.totalValue.length} rosters. The dashed line is the
+          league median, not a pass mark. Top 5 share has no better end: concentration is a
+          shape, not a score.
+        </Disclosure>
+      </Card>
 
-      {/* Timeline: WHEN this roster's value arrives, and whether the assets agree.
-            The read is written to be useful, not flattering - do not soften it. */}
       {tl && (
         <>
-          <SectionHeader
-            title="Your timeline"
-            href="/methodology"
-            cta="how TCI works"
-          />
-          <Card className="p-3">
-            <div className="flex items-center justify-between gap-2">
-              <div className="flex items-baseline gap-3">
-                {/* Round 10: the card's two proprietary numbers at display weight
-                    rather than card-heading weight - a metric this app derives
-                    itself should not whisper (same move the /values podium and the
-                    hero strip above make; labels and facts unchanged). */}
-                <span>
-                  <span className="figure text-display leading-none font-semibold text-ink">
-                    {tl.rosterDuration.toFixed(1)}s
-                  </span>
-                  <span className="ml-1 text-meta uppercase tracking-wide text-secondary">
-                    duration
-                  </span>
-                </span>
-                <span>
-                  <span className="figure text-display leading-none font-semibold text-ink">
-                    {tl.tci}
-                  </span>
-                  {/* Just "TCI": the rank used to ride along here ("· 7/14"), but
-                      at display weight it wrapped as a dangling fragment, and the
-                      League TCI strip below already states the same rank in words. */}
-                  <span className="ml-1 text-meta uppercase tracking-wide text-secondary">
-                    TCI
-                  </span>
-                </span>
+          <SectionHeader title="Your timeline" href="/methodology" cta="How TCI works" />
+          <Card>
+            <div className="flex items-start justify-between gap-3">
+              <div className="flex gap-6">
+                <div>
+                  <p className="text-meta font-medium text-secondary">Duration</p>
+                  <p className="figure text-display font-bold text-ink">{tl.rosterDuration.toFixed(1)}s</p>
+                </div>
+                <div>
+                  <p className="text-meta font-medium text-secondary">TCI</p>
+                  <p className="figure text-display font-bold text-ink">{tl.tci}</p>
+                </div>
               </div>
               <PostureTag posture={tl.posture} />
             </div>
             <p className="mt-1 figure text-meta text-secondary">
-              {Math.round(tl.nowShare * 100)}% of value pays off inside 2
-              seasons · {Math.round(tl.laterShare * 100)}% arrives 4+ out ·
-              dispersion {tl.dispersion.toFixed(2)}s
+              {Math.round(tl.nowShare * 100)}% pays off inside 2 seasons ·{" "}
+              {Math.round(tl.laterShare * 100)}% arrives 4+ out
             </p>
-            {/* TCI is the one number in this app most often read as a percentage,
-                which it is not. Fourteen ticks say what "61" is worth here in a way
-                the rank alone does not. */}
-            <DistributionStrip
-              label="League TCI"
-              values={dist.tci}
-              mine={tl.tci}
-              betterEnd="high"
-              className="mt-1.5"
-            />
-            <p className="mt-1.5 text-note leading-snug text-ink/85">
-              {tl.read}
-            </p>
-            {/* Fragility's actionable half, on the page that owns your roster.
-                Deliberately the two numbers and not the 0-100 index: a name and a
-                share are directional and a score is not (D23), and both of these are
-                already computed for every roster by leagueFragility(). */}
+            <DistributionStrip label="League TCI" values={dist.tci} mine={tl.tci} betterEnd="high" className="mt-2" />
             {fr && fr.singlePointOfFailure && (
-              <div className="mt-1 flex items-start gap-1.5">
-                {/* The single highest-stakes name on this page - a face here is
-                    worth more than anywhere else it could go, which is exactly why
-                    it's the ONE inline avatar on this page rather than one per row. */}
+              <div className="mt-3 flex items-center gap-2.5 rounded-control bg-surface-2 p-2.5">
                 <PlayerAvatar
                   name={fr.singlePointOfFailure.name}
                   team={spofTeam}
                   playerId={fr.singlePointOfFailure.playerId}
                   size="sm"
-                  className="mt-0.5"
-                  // The sentence beside this never names his NBA team, so the crest
-                  // is new information here rather than a second copy of one.
                   teamBadge
                 />
-                <p className="text-note leading-snug text-muted">
-                  Season hinges on{" "}
-                  <span className="font-semibold text-ink">
-                    {fr.singlePointOfFailure.name}
-                  </span>{" "}
-                  <span className="figure">
-                    ({Math.round(fr.singlePointOfFailure.damageShare * 100)}% of
-                    startable value)
-                  </span>{" "}
-                  · {depthPhrase(fr.depthBeyondStarters, slotCount)}
+                <p className="min-w-0 text-note text-muted">
+                  Season hinges on <span className="font-semibold text-ink">{fr.singlePointOfFailure.name}</span>{" "}
+                  <span className="figure">({Math.round(fr.singlePointOfFailure.damageShare * 100)}% of startable value)</span>
                 </p>
               </div>
             )}
-            <div className="rule my-2.5" />
-            <div className="grid grid-cols-2 gap-2">
-              <div className="min-w-0">
-                <p className="text-meta uppercase tracking-wide text-info">
-                  Longest-dated
-                </p>
-                <ul className="mt-0.5 space-y-0.5">
-                  {longest.map((as) => (
-                    <li
-                      key={as.id}
-                      className="flex items-baseline justify-between gap-1.5 text-meta leading-snug"
-                    >
-                      {/* Wraps instead of truncating: a pick label carrying an origin
-                    qualifier ("2027 2nd (via 5-Year Plan)") no longer fits this
-                    narrow column on one line, and clipping it loses exactly the
-                    part that makes the qualifier worth having. */}
-                      <span className="min-w-0 text-ink/85">{as.label}</span>
-                      <span className="shrink-0 figure text-meta text-muted">
-                        {as.duration.toFixed(1)}s
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-              <div className="min-w-0">
-                <p className="text-meta uppercase tracking-wide text-accent-text">
-                  Shortest-dated
-                </p>
-                <ul className="mt-0.5 space-y-0.5">
-                  {shortest.map((as) => (
-                    <li
-                      key={as.id}
-                      className="flex items-baseline justify-between gap-1.5 text-meta leading-snug"
-                    >
-                      <span className="min-w-0 text-ink/85">{as.label}</span>
-                      <span className="shrink-0 figure text-meta text-muted">
-                        {as.duration.toFixed(1)}s
-                      </span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
+            <div className="mt-3 grid grid-cols-2 gap-3">
+              {[
+                ["Longest-dated", longest],
+                ["Shortest-dated", shortest],
+              ].map(([label, list]) => (
+                <div key={label} className="min-w-0">
+                  <p className="text-meta font-medium text-secondary">{label}</p>
+                  <ul className="mt-1 space-y-1">
+                    {list.map((as) => (
+                      <li key={as.id} className="flex items-baseline justify-between gap-1.5 text-meta">
+                        <span className="min-w-0 text-ink">{as.label}</span>
+                        <span className="shrink-0 figure text-muted">{as.duration.toFixed(1)}s</span>
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              ))}
             </div>
-            <details className="group mt-1.5">
-              <summary className="flex min-h-11 cursor-pointer list-none items-center gap-1.5 text-meta font-semibold uppercase tracking-wide text-accent-text">
-                <ChevronRight
-                  size={13}
-                  aria-hidden="true"
-                  className="disclosure-chevron group-open:rotate-90"
-                />
-                Every asset, by duration
-              </summary>
-              <ul className="disclosure-body space-y-0.5 pb-1">
+            <Disclosure className="mt-2" summary="What the timeline says">
+              <p>{tl.read}</p>
+              {fr && (
+                <p className="mt-2">
+                  Depth: {depthPhrase(fr.depthBeyondStarters, slotCount)}. Value spread
+                  (dispersion) {tl.dispersion.toFixed(2)}s.
+                </p>
+              )}
+            </Disclosure>
+            <Disclosure summary="Every asset, by duration">
+              <ul className="space-y-1">
                 {tl.assets.map((as) => (
-                  <li
-                    key={as.id}
-                    className="flex items-baseline justify-between gap-2 text-meta leading-snug"
-                  >
-                    <span className="min-w-0 line-clamp-1 text-ink/85">
-                      {as.label}
-                    </span>
-                    <span className="shrink-0 figure text-meta text-muted">
+                  <li key={as.id} className="flex items-baseline justify-between gap-2">
+                    <span className="min-w-0 text-ink">{as.label}</span>
+                    <span className="shrink-0 figure">
                       {as.duration.toFixed(1)}s · {fmtValue(as.value)}
                     </span>
                   </li>
                 ))}
               </ul>
-            </details>
+            </Disclosure>
           </Card>
         </>
       )}
 
-      {/* Both shape charts in one card - two section headers and two card
-            paddings for the same information was pure vertical cost. */}
       <SectionHeader title="Roster shape" />
-      <Card className="p-3">
+      <Card>
         <div className="flex items-baseline justify-between gap-2">
-          <span className="text-meta font-semibold uppercase tracking-wide text-secondary">
-            Age curve
-          </span>
-          <span className="figure text-meta text-muted">
-            {ages.length} ages · core {a.coreAge ?? "-"}
-          </span>
+          <p className="text-note font-semibold text-ink">Ages</p>
+          <p className="figure text-meta text-secondary">
+            {ages.length} players · core {a.coreAge ?? "unknown"}
+          </p>
         </div>
         <AgeStrip ages={ages} height={58} />
-        <p className="text-center text-meta text-secondary">
-          Each dot is a rostered player. The dashed line is your average.
-        </p>
-        <div className="rule my-2.5" />
-        <div className="flex items-baseline justify-between gap-2">
-          <span className="text-meta font-semibold uppercase tracking-wide text-secondary">
-            Positional value
-          </span>
-          <span className="line-clamp-1 figure text-meta text-muted">
-            {posCounts}
-          </span>
+        <p className="text-center text-meta text-secondary">One dot per player; dashed line is your average.</p>
+        <div className="mt-4 flex items-baseline justify-between gap-2">
+          <p className="text-note font-semibold text-ink">Value by position</p>
+          <p className="figure text-meta text-secondary">{posCounts}</p>
         </div>
-        {/* Radar reads shape (balanced vs. concentrated) at a glance, which a bar
-            chart can't; a roster missing 3+ distinct positions can't form a
-            legible polygon, so that rare case keeps the bar chart instead. */}
-        {posData.length >= 3 ? (
-          <PositionRadar data={posData} format={(n) => fmtValue(n)} />
-        ) : (
-          <BarChart data={posData} height={112} format={(n) => fmtValue(n)} />
-        )}
+        <BarList
+          className="mt-2"
+          label="Player value by position"
+          items={[...posData]
+            .sort((x, y) => y.value - x.value)
+            .map((p, i) => ({ key: p.label, label: p.label, value: p.value, highlight: i === 0 }))}
+          format={fmtValue}
+        />
+      </Card>
+    </>
+  );
+
+  return (
+    <div>
+      <PageHeader
+        leading={
+          <TeamAvatar
+            name={a.teamName ?? a.ownerName}
+            avatarId={user?.avatar}
+            teamLogoUrl={user?.teamLogoUrl}
+            size="lg"
+            isMe
+          />
+        }
+        kicker={a.teamName ? a.ownerName : "Your team"}
+        title={a.teamName ?? a.ownerName}
+        aside={<OpenInSleeper href={sleeperTeamUrl(h.currentLeague.leagueId, rosterId)} label="Sleeper" />}
+        below={
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            <Chip>
+              {record}
+              {form && !form.isLive ? ` · ${form.season} final` : ""}
+            </Chip>
+            <Chip>{a.valued.length} players</Chip>
+            <Chip>{a.picks.picks.length} picks</Chip>
+            {injured > 0 && (
+              <Chip tone="negative" icon={AlertTriangle}>
+                {injured} injured
+              </Chip>
+            )}
+          </div>
+        }
+      />
+
+      <Card className="mb-3">
+        <div className="flex items-end justify-between gap-3">
+          <div className="min-w-0">
+            <p className="text-meta font-medium text-secondary">Total value</p>
+            <p className="figure text-hero font-bold tracking-tight text-ink">{fmtValue(a.totalValue)}</p>
+          </div>
+          <dl className="shrink-0 space-y-1 pb-1 text-right">
+            <div>
+              <dt className="text-micro text-secondary">Players</dt>
+              <dd className="figure text-note font-semibold text-ink">{fmtValue(a.playerValue)}</dd>
+            </div>
+            <div>
+              <dt className="text-micro text-secondary">Picks</dt>
+              <dd className="figure text-note font-semibold text-ink">{fmtValue(a.picks.total)}</dd>
+            </div>
+          </dl>
+        </div>
       </Card>
 
+      <DirectionCard summary={direction} />
+
+      <Tabs
+        className="mt-5"
+        label="Team sections"
+        items={[
+          { id: "players", label: "Players", count: a.valued.length, content: players },
+          { id: "picks", label: "Picks", count: a.picks.picks.length, content: picks },
+          { id: "outlook", label: "Outlook", content: outlook },
+        ]}
+      />
+
+      <TabIndex tab="team" title="More on your team" className="mt-6" />
       <Onward from="/roster" />
     </div>
   );

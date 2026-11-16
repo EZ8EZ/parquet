@@ -372,6 +372,47 @@ export function ValueAssetRow({
 
       {open && (
         <div className="border-t border-border bg-bg/40 px-2.5 py-2">
+          <ValueAssetDetail
+            name={name}
+            age={age}
+            tier={tier}
+            playerId={playerId}
+            injury={injury}
+            injuryDetail={injuryDetail}
+            consensusRank={consensusRank}
+            pricedRank={pricedRank}
+            productionBacked={productionBacked}
+            productionRefusal={productionRefusal}
+            rankAxisMax={rankAxisMax}
+            provenance={provenance}
+            depth={depth}
+          />
+        </div>
+      )}
+    </li>
+  );
+}
+/**
+ * The facts behind one asset: both ranks, tier, injury, depth chart, age curve and
+ * where he came from. Shared by the inline expansion here and /roster's bottom sheet.
+ */
+export function ValueAssetDetail({
+  name,
+  age,
+  tier,
+  playerId,
+  injury,
+  injuryDetail,
+  consensusRank,
+  pricedRank,
+  productionBacked,
+  productionRefusal,
+  rankAxisMax,
+  provenance,
+  depth,
+}) {
+  return (
+    <>
           {/*
               FACTS ONLY. What the model knows about this player, never what it did with
               it: the multipliers are the model's internals and they live on
@@ -515,9 +556,7 @@ export function ValueAssetRow({
               )}
             </>
           )}
-        </div>
-      )}
-    </li>
+    </>
   );
 }
 /**
@@ -761,11 +800,9 @@ export function ValuesList({ rows }) {
               )}
             >
               {f}
-              {/* Only dimmed against the plain default ground: on the active pill's
-                accent-wash fill, opacity-60 pushes text-accent-text's already-tighter
-                contrast margin below WCAG AA (caught by axe-core, see e2e/a11y.spec.ts). */}
+              {/* Quieter ink, never opacity: opacity makes the contrast unmeasurable. */}
               <span
-                className={cn("figure text-meta", pos !== f && "opacity-60")}
+                className={cn("figure text-meta", pos !== f && "text-secondary")}
               >
                 {counts[f] ?? 0}
               </span>

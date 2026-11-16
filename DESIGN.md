@@ -1,190 +1,160 @@
 # DESIGN.md - Parquet design system
 
-Aesthetic: **dark, editorial, high-contrast - a financial terminal crossed with a
-well-designed sports magazine.** ("The Program", VISION.md: the collector's edition
-of your own league - printed matter about basketball, not a dashboard with
-sections.) One sharp accent (parquet gold) plus court blue with exactly one
-meaning (see below). Generous whitespace, real typographic hierarchy, data in a
-mono face for the terminal feel. Mobile-first: every screen is designed at 390px
-first, primary actions in the bottom third, a bottom sheet ("the Desk") for
-navigation, and no horizontal-scrolling tables.
+A clean sports app, dark only: flat near-black surfaces, one sans family, big numbers,
+colour-coded chips, rounded cards. Closest reference: Sleeper. Reference pages:
+`/roster` and `/league` (exemplars) and `/design` (every primitive, every variant).
 
-## Materials & depth (D88)
+## Principles
 
-Three tiers, all tokened in `app/globals.css` and re-stated per theme - compose a
-material onto an ordinary `bg-*` card by adding one class, never by rewriting it:
+1. **The number leads.** Each screen exists to deliver one or two figures. Put them first,
+   at `text-display` or `text-hero`, with their rank or context beside them. The first
+   844px must answer the page's question with no scrolling.
+2. **Tone, not lines.** Surfaces separate by stepping tone (`bg` > `surface` > `surface-2`
+   > `elevated`). No bordered box inside a bordered box. Borders are hairline dividers
+   inside a list, nothing else.
+3. **Tap for more.** Lists are rows; a row opens a bottom sheet (or links to a page).
+   Long pages become tabs. Explanation sits behind a Disclosure. The default state of a
+   screen is short.
+4. **Colour always has a partner.** Every colour that means something comes with text, an
+   icon, a shape or a position that says the same thing. Violet means "yours"; info blue
+   means "the field"; green/red/amber are status, never a grade (D6).
 
-| Class | What it is | Where |
+## Tokens (`app/globals.css` `@theme`)
+
+| Token | Value | Use |
 |---|---|---|
-| `card-lit` | a card that is *built*: `--sheen` (white-alpha light-from-above gradient) + `--shadow-card` (contact + ambient stack, the Vercel/Geist lesson) + the `--edge-hilite` top catchlight | the cards that anchor a page: Home's cover facts and figure grid, /teams rows |
-| `hero-mesh` | the identity moment: the same lit card with the accent-family radial mesh (`--mesh-1/2`, the ground's own gold+blue grain hues at wash strength) under a real film-grain `--noise` tile (inline feTurbulence SVG, 4% alpha baked in, one asset for both themes) | **one per page at most** - Home's cover, /teams' first-run masthead |
-| `desk-sheet` | true glass: `--glass-fill` + `--glass-hilite` pane light + `backdrop-filter: blur(20px) saturate(1.4)` + `--shadow-dock` (upward) + `--edge-glow`, the gold catchlight laid along the top edge | the Desk only - the one plane that genuinely floats |
+| `bg` | `#0b0d10` | page |
+| `surface` | `#15181d` | cards, list groups, tab bar |
+| `surface-2` | `#1e2229` | a tile inside a card, sheet sub-panels, selected row |
+| `elevated` | `#282d36` | neutral chips, bar tracks, active segment |
+| `border` / `border-strong` | `#252930` / `#3a414c` | list dividers / input edges |
+| `ink` `muted` `secondary` `faint` | `#f3f5f8` `#adb5c1` `#a2aab7` `#939cab` | text; all >= 4.99:1 on `elevated`, the lightest ground |
+| `accent` / `accent-text` / `accent-ink` | `#8b7dff` / `#a99fff` / `#0b0d10` | brand fill / brand text (7.7:1) / text on fill (6.0:1) |
+| `accent-wash` / `accent-edge` / `accent-strong` / `accent-dim` | `#282841` `#444077` `#7a6bf0` `#7166d8` | your row / its edge / hover fill / quiet line (3.9:1) |
+| `positive` `negative` `info` `warn` | `#4ade9e` `#ff8080` `#7cb5fb` `#fbc94a` | status; each also has `-wash` and `-edge`. Text on own wash: 7.6 / 5.9 / 6.4 / 8.1 |
+| `poster`, `tci-1..4` | unchanged roles | title cards; TCI ramp (quadrant only) |
 
-Rules that survived from the old two-declaration system: `--shadow-raised` still
-marks the things that float above the page (the drawer, the seat popover), and
-text on `hero-mesh` gets the same ground-scoped ink restatement as the accent
-wash. The old rule "cards separate by surface, NEVER by shadow" was deliberately
-revised by D88 after three owner verdicts of "flat": surface separation is still
-the base, `card-lit`'s soft stack is the lift on top of it. `.tab-glow` is the
-static halo behind the Desk's lit tab (`--tab-halo`).
+**Type** (Inter, self-hosted variable, `app/fonts/`; tabular numerals on `body`, `figure`
+adds slashed zero): `micro` 11 (tab labels, ticks only), `meta` 12 (labels, captions),
+`note` 13 (secondary lines, disclosures), `body` 14 (copy, row titles), `lede` 17
+(section titles), `display` 28 (page title, stat values), `hero` 44 (one per screen).
+Never below 11px. Weight carries hierarchy: 700 for figures and titles, 600 for row
+titles and labels that act, 400-500 otherwise. No uppercase tracked labels.
 
-## The cover grammar (VISION.md M2)
+**Radii** `rounded-card` 16 (cards, lists), `rounded-control` 12 (tiles in cards),
+`rounded-full` (chips, buttons, segmented), `rounded-sheet` 24 (sheets, menu). Legacy
+`rounded-[--radius*]` classes are shimmed in globals.css; do not write new ones.
+**Elevation** only for what floats: `--shadow-raised` (sheets), `--shadow-pop` (menu).
+**Shell metrics** `--header-h` 48, `--statusbar-h` 40, `--tabbar-h` 58.
 
-A page opens as a cover, not a header: **kicker → Fraunces headline → standfirst →
-one hero fact set in `--text-display` on the gold floor-line** (a 3px accent rule
-under the numeral - the typographic signature). Home is the reference
-implementation (`app/page.jsx`). Below the cover, sections vary their register -
-a stat grid, then plain set prose ("leads": one real sentence per story with its
-destination inline, `Lead` in `app/page.jsx`) - instead of N identically-labeled
-boxes. Collapsed accordions on a front page are retired (VISION.md kill list #3):
-the front page leads, it doesn't fold.
+### Renamed or removed (old call sites keep working unless noted)
 
-## Court blue (VISION.md M4A)
+- Kept names, new values: every colour token above, `text-*` sizes (micro 10->11, note
+  12->13, body 13->14, display 30->28), `--radius-sm/--radius/--radius-lg` (10/16/24),
+  `--shadow-raised`. `--font-display` now resolves to the sans (no serif anywhere).
+- Added: `--radius-card/-control/-sheet`, `--shadow-pop`, `--header-h`, `--statusbar-h`,
+  `--tabbar-h`, line heights for every `text-*` step.
+- Removed tokens: `--grain-1/2`, `--parquet-block/-tile/-grain`, `--noise`, `--mesh-1/2`,
+  `--sheen`, `--glass-fill`, `--glass-hilite`, `--glass-bg`, `--shadow-dock`,
+  `--edge-glow`, `--edge-hilite`, `--shadow-card`, `--tab-halo`, `--hero-spot`,
+  `--hero-spot-faint`, `--ghost-ink`. `--font-fraunces` and `--font-jetbrains` are gone
+  (`--font-mono` is the system mono stack). Light theme overrides and the ground-scoped
+  ink restatements are gone (no longer needed: every ink passes on every ground).
+- Removed classes: `.parquet-ground`, `.card-lit`, `.desk-sheet`, `.tab-glow`, `.glass`,
+  `.edge-hilite`, `.desk-handle`, theme-toggle selectors. Flat aliases kept so old pages
+  stay legible, do not use in new code: `.hero-mesh`, `.hero-card`, `.stock-franchise`,
+  `.stock-cornerstone` (plain surface), `.stock-fringe` (transparent), `.ghost-rank` and
+  `.tier-sheen` (hidden).
+- Removed modules: `lib/theme.js`, `components/ThemeToggle.jsx`, `components/ui.jsx`
+  (now `components/ui/`, same import path).
 
-The second hue, with exactly one product-wide meaning: **gold = yours, blue = the
-field / the market / everyone-else.** It is the existing `info` token, not a new
-one. A use that cannot be written as "this is the field's side of a comparison"
-does not get the hue; it is never the sole encoding (D47 still binds). First
-application: /teams' total-value bars - the field's bars blue, your row's gold.
+## Primitives (`@/components/ui`)
 
-## Typography
-- **Display / headlines:** Fraunces (serif, optical sizing) - gives the editorial,
-  magazine voice. Used for page titles and the strategy headline.
-- **UI / body:** Inter.
-- **Data / figures:** JetBrains Mono with tabular numerals - every value, record,
-  age, and delta. This is the "terminal" texture.
+Server components unless marked (client).
 
-All three are loaded via `next/font/google` and wired to CSS variables in
-`app/layout.tsx` (`--font-fraunces`, `--font-inter`, `--font-jetbrains`).
+- **Card** `tone` default|raised|accent|sunken, `pad` md|sm|none. One level only; step
+  tone (`surface-2` tile) instead of nesting cards.
+- **PageHeader** `kicker` (small, secondary), `title` (28px), `subtitle` (one line max),
+  `leading` (avatar), `aside` (one control), `below` (chips row).
+- **SectionHeader** sentence-case 17px title plus one `action` or `href`+`cta`.
+- **StatTile** `label`, `value`, `sub`, `delta` (arrow + sign), `size` sm|md|hero,
+  `visual` (e.g. RankStrip), `href`. Three across at 390px; hero spans the row.
+- **Chip** (`Tag` alias) tones neutral|accent|positive|negative|info|warn, `icon`, `size`.
+  Text is mandatory; status tones also pass an icon (AlertTriangle, Check, X, Info).
+- **List / ListRow** `leading` (rank), `avatar`, `title` (wraps, never truncates, D111),
+  `badge`, `meta`, `value`, `valueSub`, `chevron`, `highlight` (your row: wash + a "You"
+  chip). `href` makes it a link; `as="span"` nests it in a Sheet trigger.
+- **Sheet** (client) bottom sheet on a native modal `<dialog>`: `trigger`,
+  `triggerLabel` (end it with "Show details"), `title`, `subtitle`. Focus contained,
+  Escape/backdrop/close dismiss, focus returns, content mounts on first open, motion off
+  under reduced motion.
+- **Tabs** (client) `items` [{id, label, count, content}], `variant` underline|segmented.
+  Panels are server-rendered and `hidden` when inactive. Use for 2-4 views of one page.
+- **Segmented** (client) radio group for picking a value (sort, filter). Not for panels.
+- **Disclosure** native `<details>`; one-line `summary` such as "How this is measured",
+  "Why retool". The standard home for any explanation longer than one line.
+- **Button / ButtonLink** primary|secondary|ghost, `size`, `block`. One primary a screen.
+- **EmptyState** icon, one-line title, one sentence, one action.
+- **SkeletonLine / SkeletonCard / SkeletonRows / SkeletonStats** shaped like the content.
+- **BarList** horizontal bars with direct labels and printed values; the default chart.
+- **RankStrip** one tick per team, yours tall and violet. Always beside the printed rank.
 
-## Color tokens
-Defined in `app/globals.css` under Tailwind v4 `@theme` (so `bg-*`, `text-*`,
-`border-*` utilities are generated). Full set:
+## Shell
 
-| Token | Hex (dark) | Use |
-|---|---|---|
-| `bg` | `#0b0c0e` | page background (near-black) |
-| `surface` | `#16181d` | cards |
-| `surface-2` | `#1f232a` | raised cards / hover |
-| `elevated` | `#2a2f37` | chips, inset rows |
-| `border` | `#3c434f` | hairlines |
-| `border-strong` | `#525b6a` | emphasis borders |
-| `ink` | `#f3f5f8` | primary text |
-| `muted` | `#9aa1ad` | supporting prose |
-| `secondary` | `#8b93a2` | anything carrying a datum |
-| `faint` | `#7b8493` | chrome: separators, ticks, ordinals |
-| `accent` | `#e6b34d` | the brand accent as FILL (parquet gold) |
-| `accent-text` | `#edc167` | the same gold tuned to be read |
-| `accent-ink` | `#1a1206` | text on the accent |
-| `positive` | `#37d383` | gains, healthy, rebuild-positive |
-| `negative` | `#f2585f` | losses, injuries, contradictions |
-| `info` | `#5aa9ff` | rebuilding / neutral highlight - and **court blue**, the field's side of any you-vs-the-league comparison (M4A) |
-| `warn` | `#f0a83c` | cautions (dossier privacy, history checks) |
+`components/shell/AppHeader.jsx` (brand, team switcher; sticky, safe-area top) and
+`components/Desk.jsx`: status bar (scorebug -> standings) above a five-slot tab bar (This
+Week, Team, Trade, League, Menu; icon + label, active = violet pill behind the icon plus
+`aria-current`). Menu is a panel above the bar: modal, focus-trapped, Escape closes,
+page behind inert. `main` pads for header, status bar, tab bar and safe areas.
 
-Plus the material tokens (`--sheen`, `--shadow-card`, `--glass-*`, `--shadow-dock`,
-`--edge-glow`, `--mesh-1/2`, `--noise`, `--tab-halo`) documented in the Materials
-section above and defined per theme in `app/globals.css`.
+## Do / don't (from the exemplars)
 
-The near-black background carries a faint gold+blue radial grain plus a film-grain
-noise tile (`--noise`, an inline feTurbulence SVG at 4% alpha) so it never reads as
-flat black.
+- Do lead with figures: /roster opens with Total value (hero) then Direction as three
+  tiles. Don't open with a paragraph or a stack of uppercase labels.
+- Do make long lists rows that open a sheet: /roster players, /league standings. Don't
+  expand rows inline into walls of facts, or print 17 rich rows on the default view.
+- Do split a long page into tabs: Players / Picks / Outlook; Standings / Power / Windows.
+  Don't stack five sections the user must scroll past to reach the one they wanted.
+- Do put the reason behind a Disclosure: "Why retool", "How to read these strips",
+  "How the power ranking works". Don't leave the paragraph open by default.
+- Do mark your row with wash + "You" chip. Don't mark it with colour alone.
+- Don't use `font-display` serif styling, `uppercase tracking-*` labels, `border
+  border-border` frames on cards, `bg-bg/40` inset boxes, or gold.
 
-## Depth & materials (D88)
+## Copy rule
 
-Three material tiers, all tokenized in `app/globals.css` and re-stated per theme, so
-"how much light does this element catch" is a system rather than a per-card guess.
-The old rule ("cards separate by surface, never by shadow") was deliberately revised
-after three owner verdicts of "flat": Parquet had Linear's surface-ladder half of
-modern depth and none of Vercel Geist's layered-shadow half.
+A screen's default state carries at most: a title, one subtitle line, labels and figures,
+and one caption line per chart or list. Any sentence longer than one line goes in a
+Disclosure or in the sheet behind the row. Name things as a fan would ("Points for",
+"Value rank"); keep house rules: no grades or verdicts (D6), "unknown" over a guess (D19).
 
-| Class | Tokens | Job |
-|---|---|---|
-| `.card-lit` | `--sheen` (white-alpha top light), `--shadow-card` (contact + ambient), `--edge-hilite` | A card that is *built*: the anchoring cards of a page (Home's four figures, the first-run team rows). Composes onto a normal `bg-surface` card - one class, never a rewrite. |
-| `.hero-mesh` | `--mesh-1/--mesh-2` (the grain's own gold+blue at wash strength), `--noise`, plus the `.card-lit` stack | The identity moment - **one per page at most**. Home's revealed-strategy masthead and the first-run welcome panel. Its ink gets the wash-grade ground-scoped restatement, same as `bg-accent-wash`. |
-| `.desk-sheet` | `--glass-fill`, `--glass-hilite`, `blur(20px) saturate(1.4)`, `--shadow-dock`, `--edge-glow` | Real glass, for the one plane that floats: the Desk. Saturate keeps the page alive behind the blur; `--edge-glow` is a gold catchlight laid along the top edge, brightest mid-edge, gone at the corners. |
+## Charts
 
-Supporting: `.tab-glow` puts a static gold halo (`--tab-halo`) behind the lit tab's
-icon; `--shadow-raised` keeps its old job (the drawer, the seat popover). All of it
-is one hue - the mesh's second stop is the same grain-blue the ground has carried
-since round 1. A **duotone variant** (gold + violet) is committed as an inert,
-clearly-marked block gated behind `data-experiment="duotone"`; nothing sets it -
-the owner decides from the D88 side-by-side screenshots whether it ships.
+- Direct labels: name and value printed next to the mark; no legend for a single series.
+- Never colour alone: length, position or a printed number carries the value; colour
+  marks only which one is yours (CHART_ACCENT) or the field (CHART_FIELD).
+- Minimum sizes at 390px: label text 11px, bars 8px tall, tap targets 44px, dots 6px.
+- Labels are HTML text, never `<text>` inside a scaling `viewBox`.
+- `lib/chart-colors.js`: `CHART_ACCENT` (one subject), `CHART_MARK` (peers),
+  `CHART_FIELD`, `CHART_INK` for numbers, `CHART_GRID` for rules, `DIVERGING` for signed
+  values, `magnitudeOpacity` only as a third encoding.
+- Prefer BarList and StatTile + RankStrip over radar, scatter or donut.
 
-## Themes
-Two, not more: **dark** (the default identity, D15) and **light** ("Paper" in the
-toggle UI) - the standard light/dark pattern, not a second design. Both are overrides
-of the same token names in `app/globals.css` (`:root[data-theme="light"]`), so no
-component ever branches on which theme is active. Selectable from `/settings`
-(`components/ThemeToggle.jsx`), persisted to `localStorage`, and owned end-to-end by
-`lib/theme.js` (the theme list, the default, and the inline boot script that sets
-`data-theme` before first paint). A third theme, a high-contrast dark variant, shipped
-and was later removed by owner direction - D64 - once light/dark alone covered the
-same accessibility need without asking anyone to choose between designs.
+## The 45-degree diagonal
 
-## Layout & interaction rules (lessons from the competitor teardown)
-- **The Desk**, a bottom sheet fixed to the screen: a four-item destination row
-  (Home / Roster / Plan / Decision ledger, icon **and** label) over a context row
-  and a drag handle that opens a drawer with search and every other surface. Never
-  a hidden floating nav toggle. Its material is the app's one glass
-  (`desk-sheet`), the lit tab carries the gold `tab-glow` halo, and the top edge
-  carries the gold catchlight. (VISION.md M3's scorebug - the context row as a
-  persistent mono `record · rank · TCI · window` strip - is noted for the next
-  wave; see D88.)
-- **No floating overlays that occlude content.** (The competitor's FAB collided with real
-  content on every page - we have none.)
-- **Stacked cards, never clipped tables**, on mobile. Rankings/values are rows, not
-  a horizontally-scrolling grid.
-- Single centered column, `max-w-2xl`, that widens gracefully on desktop.
-- Safe-area insets respected on the Desk. (The analyst composer was the other
-  fixed-to-bottom control this rule was written for; that surface is shelved, so the
-  Desk is now the only one. See SHELVED.md, S7.)
+Still reserved for refusals (D96, `components/RefusalMark.jsx`); nothing else runs at 45.
 
-## Components
-- `components/ui.tsx` - PageHeader, Card, SectionHeader, Tag, Stat, DeltaValue,
-  EmptyState, ButtonLink, Skeletons.
-- `components/PlayerAvatar.tsx` - monogram avatars in team colors by default;
-  real headshots only behind `NEXT_PUBLIC_USE_PLAYER_PHOTOS` (see DECISIONS D8).
-- `components/charts.tsx` - hand-rolled SVG (LineChart, BarChart, AgeStrip), legible
-  at 390px, no chart library.
-- `components/Desk.tsx` (the bottom sheet / navigation), `components/Brand.tsx`
-  (wordmark + inline logo).
+## Per-page checklist (applying workers)
 
-## Logo & icons
-**A square grid of alternating-grain oak blocks** in gold on a near-black rounded
-square - `public/icon.svg`, mirrored with themed fills in `components/Brand.jsx`. This
-is the Boston Garden floor as it actually was: a basket-weave block parquet, four blocks
-in a 2x2 with the grain turned 90 degrees between edge-neighbours. It was a herringbone
-chevron until D96, and herringbone is diagonal, which is the one angle this product
-reserves. The PWA/favicon PNG set is generated from the SVG by `pnpm gen:icons` (sharp).
-No AI-generated raster art.
-
-## The reserved diagonal (D96)
-**Orthogonal marks are data. The 45-degree diagonal is reserved, everywhere in the
-product, for a refusal.** Nothing else is allowed to run at 45 degrees, which is what
-lets a refusal mark identify itself in any theme, at any size, without a colour and
-without a caption. `components/RefusalMark.jsx` is the mark; `lib/refusal.js` is the
-closed register of codes it is always paired with (D95). A diagonal carrying data is a
-bug, and there are currently none.
-
-Two consequences worth knowing before adding a mark:
-- **The ground.** `.parquet-ground` in `app/globals.css` is the corrected floor - an
-  alpha-only 48px mask tile of four 24px alternating-grain blocks over a flat themed
-  `--parquet-grain`, held to about half a JND. One class, one call site (the app column
-  in `app/layout.jsx`), deliberately not full-bleed.
-- **Chart labels.** No `<text>` inside a scaling `viewBox`. A user unit is only a real
-  pixel at scale 1, so text inside a `w-full` viewBox renders at a size no token can
-  reach and nobody chose. Either the labels move out to HTML siblings (see
-  `components/WindowMap.jsx`) or the viewBox stops scaling.
-
-## States
-- **Loading:** skeletons (`.skeleton` shimmer), never spinners, except a small
-  inline spinner on in-flight buttons (evaluate / save).
-- **Empty:** designed as onboarding, not apology - the ledger empty state is a
-  "you're all caught up", not a "no data".
-
-## Accessibility
-- Visible focus rings (`:focus-visible` → accent outline).
-- Minimum 44px tap targets on interactive controls.
-- Semantic HTML (`nav`, `header`, `main`, lists), `aria-current` on the active tab,
-  `role="img"` + labels on charts, `prefers-reduced-motion` disables shimmer.
-- High contrast: ink on near-black clears WCAG AA for body text.
+- [ ] First 844px at 390px answers the page's question; figures above the fold.
+- [ ] PageHeader used; subtitle one line or none; no uppercase tracked kickers.
+- [ ] No card frames (`border border-border` on a card), no box inside a box.
+- [ ] Every paragraph longer than one line is in a Disclosure or a Sheet.
+- [ ] Lists use List/ListRow; rich rows open a Sheet; long pages use Tabs.
+- [ ] Your row: `highlight` + "You" chip. Status chips have text and icon.
+- [ ] Figures use StatTile or `figure` + `font-bold`; no serif, no gold, no materials.
+- [ ] Charts follow the chart rules; colours from `lib/chart-colors.js`.
+- [ ] Names wrap (no `truncate`/`line-clamp-1` on names); no horizontal overflow.
+- [ ] Logic stays in `lib/`; numbers unchanged; D6 and D19 copy rules hold.
+- [ ] axe clean, including open tabs and sheets; focus visible; targets >= 44px.
+- [ ] Visible word count before and after recorded; screenshots at 390px checked.

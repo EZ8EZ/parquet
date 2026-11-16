@@ -13,18 +13,18 @@ export function TabIndex({ tab, section, title, className, exclude = [] }) {
   return (
     <section className={cn("mt-5", className)} aria-label={title}>
       {title && (
-        <h2 className="mb-1.5 text-note font-semibold uppercase tracking-[0.16em] text-muted">
+        <h2 className="mb-2 text-lede font-semibold tracking-tight text-ink">
           {title}
         </h2>
       )}
-      <ul className="divide-y divide-border overflow-hidden rounded-[--radius-sm] border border-border bg-surface">
+      <ul className="divide-y divide-border overflow-hidden rounded-card bg-surface">
         {items.map((s) => {
           const Icon = iconForSurface(s.href);
           return (
             <li key={s.href}>
               <Link
                 href={s.href}
-                className="flex min-h-11 items-center gap-2.5 px-3 py-2 transition-colors hover:bg-surface-2"
+                className="flex min-h-14 items-center gap-3 px-4 py-2.5 transition-colors hover:bg-surface-2"
               >
                 <Icon size={16} aria-hidden="true" className="shrink-0 text-accent-text" />
                 <span className="min-w-0 flex-1">

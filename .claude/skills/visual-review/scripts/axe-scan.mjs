@@ -4,7 +4,7 @@
 // whatever data the dev server is actually showing (fixture OR live), useful
 // while iterating on a specific page rather than waiting on the full suite.
 //
-// Usage: node axe-scan.mjs --base http://localhost:3200 --theme light /roster /values
+// Usage: node axe-scan.mjs --base http://localhost:3200 /roster /values
 import { chromium } from "@playwright/test";
 import { AxeBuilder } from "@axe-core/playwright";
 
@@ -14,7 +14,8 @@ function flag(name, fallback) {
   return i === -1 ? fallback : args[i + 1];
 }
 const base = flag("base", "http://localhost:3200");
-const theme = flag("theme", "dark");
+// --theme is accepted and ignored: the app has one (dark) theme.
+const theme = "dark";
 const roster = flag("roster", "1");
 const routes = args.filter((a, i) => !a.startsWith("--") && !["--base", "--theme", "--roster"].includes(args[i - 1]));
 
@@ -27,14 +28,6 @@ const execPath = process.env.VISUAL_REVIEW_CHROMIUM;
   const context = await browser.newContext({ viewport: { width: 390, height: 844 } });
   const page = await context.newPage();
   await context.addCookies([{ name: "parquet_roster", value: String(roster), url: base }]);
-  await page.addInitScript(
-    ([key, value]) => {
-      try {
-        window.localStorage.setItem(key, value);
-      } catch {}
-    },
-    ["parquet:theme", theme],
-  );
 
   let anyFailed = false;
   for (const route of routes.length ? routes : ["/"]) {

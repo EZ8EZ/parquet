@@ -1,6 +1,5 @@
 import { expect, test } from "@playwright/test";
 import { AxeBuilder } from "@axe-core/playwright";
-import { THEME_STORAGE_KEY } from "../lib/theme";
 import {
   expectNoConsoleErrors,
   expectStableChrome,
@@ -26,22 +25,8 @@ import {
  *   3. AXE. e2e/a11y.spec.js iterates `ALL_SURFACES`, so a dynamic route gets no
  *      automated accessibility coverage from it at all. Rather than leave this one
  *      surface outside the bar every other page is held to, it runs its own full axe
- *      pass in the default theme plus the contrast-only pass in the light one -
- *      exactly the two-pass shape that file uses, and for the same reason.
+ *      pass, the same shape that file uses.
  */
-async function setTheme(page, theme) {
-  await page.addInitScript(
-    ({ key, value }) => {
-      try {
-        window.localStorage.setItem(key, value);
-      } catch {
-        // Private-mode Safari throws on write; the boot script falls back to the
-        // default, which is an acceptable miss here as it is in a11y.spec.js.
-      }
-    },
-    { key: THEME_STORAGE_KEY, value: theme },
-  );
-}
 function describeViolations(violations) {
   return violations
     .map((v) => `${v.id} (${v.impact}): ${v.help} - ${v.nodes.length} node(s)`)
@@ -54,8 +39,11 @@ async function openFirstRowWithDepth(page) {
   for (let i = 0; i < count; i++) {
     await rows.nth(i).click();
     const link = page.getByRole("link", { name: /^Where he sits on / });
+    await page.getByRole("dialog").waitFor();
+    await link.first().waitFor({ timeout: 1500 }).catch(() => {});
     if ((await link.count()) > 0) return link.first();
-    await rows.nth(i).click();
+    // The row opened a bottom sheet; close it before trying the next one.
+    await page.keyboard.press("Escape");
   }
   return null;
 }
@@ -149,16 +137,5 @@ test("/depth/[team] has no automated accessibility violations", async ({
   await primeLens(page);
   await page.goto("/depth/LAL");
   const results = await new AxeBuilder({ page }).analyze();
-  expect(results.violations, describeViolations(results.violations)).toEqual([]);
-});
-test("/depth/[team] meets color-contrast in the light theme", async ({
-  page,
-}) => {
-  await setTheme(page, "light");
-  await primeLens(page);
-  await page.goto("/depth/LAL");
-  const results = await new AxeBuilder({ page })
-    .withRules(["color-contrast"])
-    .analyze();
   expect(results.violations, describeViolations(results.violations)).toEqual([]);
 });

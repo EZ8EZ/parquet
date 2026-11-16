@@ -1,24 +1,20 @@
 "use client";
 /**
- * THE DESK - the app's bottom chrome, bottom-up:
+ * THE BOTTOM CHROME, bottom-up:
  *
- *   tab row      53pt  This Week, Team, Trade, League, and the Menu button
- *   context row  44pt  your team and this week's scorebug
- *   handle       24pt  the grip that opens the menu above it
+ *   tab bar     58px  This Week, Team, Trade, League, and the Menu button
+ *   status bar  40px  your team and this week's scorebug (links to the standings)
  *
- * The menu is small on purpose: search, then the utility pages (lib/nav.js
- * `utilitySurfaces`). Everything else lives under a tab, so the tab that owns the
- * current page stays lit (`tabOf`).
- *
- * Collapsed, `<nav aria-label="Primary">` wraps the sheet (the landmark every e2e
- * route asserts) and the drawer is `hidden` + `inert`. Expanded, the sheet is a modal
- * dialog: focus is trapped, Escape closes, and the page behind is `inert`. Drag is an
- * accelerator only; the handle and the Menu tab are real buttons.
+ * The Menu opens a panel above the status bar: search, then the utility pages
+ * (lib/nav.js `utilitySurfaces`). Collapsed, `<nav aria-label="Primary">` wraps the
+ * chrome and the panel is `hidden` + `inert`. Open, the chrome is a modal dialog:
+ * focus is trapped, Escape closes, the page behind is `inert`, and focus returns
+ * to the Menu button.
  */
 import { Fragment, Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { ChevronDown, ChevronRight, ExternalLink, Menu } from "lucide-react";
+import { ChevronRight, ExternalLink, Menu, X } from "lucide-react";
 import { primarySurfaces, tabOf, utilitySurfaces } from "@/lib/nav";
 import { cn } from "@/lib/ui";
 import { iconForSurface } from "./nav-icons";
@@ -28,9 +24,41 @@ import { SearchPanel } from "./SearchPanel";
 export const APP_CONTENT_ID = "app-content";
 const DESK_SEARCH_PARAM = "find";
 
+function TabItem({ href, label, Icon, active, current, onClick, button, buttonRef, expanded, controls }) {
+  const cls = cn(
+    "flex min-w-0 flex-col items-center justify-center gap-1 transition-colors",
+    active ? "text-ink" : "text-secondary hover:text-ink",
+  );
+  const body = (
+    <>
+      <span
+        aria-hidden="true"
+        className={cn(
+          "flex h-7 w-12 items-center justify-center rounded-full transition-colors",
+          active && "bg-accent-wash text-accent-text",
+        )}
+      >
+        <Icon size={20} strokeWidth={active ? 2.25 : 1.75} />
+      </span>
+      <span className="max-w-full whitespace-nowrap text-micro font-semibold">{label}</span>
+    </>
+  );
+  if (button) {
+    return (
+      <button ref={buttonRef} type="button" aria-expanded={expanded} aria-controls={controls} onClick={onClick} className={cls}>
+        {body}
+      </button>
+    );
+  }
+  return (
+    <Link href={href} aria-current={current} className={cls}>
+      {body}
+    </Link>
+  );
+}
+
 export function Desk({ data }) {
   const pathname = usePathname() ?? "/";
-  // Keyed to the pathname so a navigation from inside the menu closes it.
   const [openOn, setOpenOn] = useState(null);
   const [closingOn, setClosingOn] = useState(null);
   const closeTimer = useRef(null);
@@ -60,12 +88,12 @@ export function Desk({ data }) {
 
   const sheetRef = useRef(null);
   const drawerRef = useRef(null);
-  const handleRef = useRef(null);
+  const menuRef = useRef(null);
   const drawerId = useId();
 
   const close = useCallback(() => {
     setExpanded(false);
-    handleRef.current?.focus();
+    menuRef.current?.focus();
   }, [setExpanded]);
 
   useEffect(() => {
@@ -113,33 +141,6 @@ export function Desk({ data }) {
     if (expanded) drawerRef.current?.focus();
   }, [expanded]);
 
-  const dragRef = useRef(null);
-  const suppressClickRef = useRef(false);
-  const onPointerDown = (e) => {
-    e.currentTarget.setPointerCapture(e.pointerId);
-    dragRef.current = { y: e.clientY, moved: false };
-  };
-  const onPointerMove = (e) => {
-    const d = dragRef.current;
-    if (d && Math.abs(e.clientY - d.y) > 24) d.moved = true;
-  };
-  const onPointerUp = (e) => {
-    const d = dragRef.current;
-    dragRef.current = null;
-    if (!d?.moved) return;
-    suppressClickRef.current = true;
-    const up = e.clientY < d.y;
-    setExpanded(up);
-    if (!up) handleRef.current?.focus();
-  };
-  const onHandleClick = () => {
-    if (suppressClickRef.current) {
-      suppressClickRef.current = false;
-      return;
-    }
-    setExpanded(!expanded);
-  };
-
   const activeTab = tabOf(pathname);
   const menuActive = expanded || activeTab === "utility";
 
@@ -150,10 +151,7 @@ export function Desk({ data }) {
           aria-hidden="true"
           onClick={expanded ? close : undefined}
           data-closing={closing ? "" : undefined}
-          className={cn(
-            "desk-scrim fixed inset-0 z-40 bg-bg/60",
-            closing && "pointer-events-none",
-          )}
+          className={cn("desk-scrim fixed inset-0 z-40 bg-black/60", closing && "pointer-events-none")}
         />
       )}
 
@@ -163,8 +161,7 @@ export function Desk({ data }) {
           role={expanded ? "dialog" : undefined}
           aria-modal={expanded ? true : undefined}
           aria-label={expanded ? "Menu" : undefined}
-          className="desk-sheet mx-auto w-full max-w-2xl rounded-t-[--radius-lg] border-t border-border"
-          style={{ paddingBottom: "env(safe-area-inset-bottom)" }}
+          className="mx-auto w-full max-w-2xl"
         >
           <nav aria-label="Primary">
             <div
@@ -175,15 +172,26 @@ export function Desk({ data }) {
               inert={!expanded}
               data-closing={closing ? "" : undefined}
               className={cn(
-                "desk-drawer outline-none",
+                "desk-drawer mx-2 mb-2 rounded-sheet bg-surface-2 shadow-[var(--shadow-pop)] outline-none",
                 (expanded || closing) && "flex flex-col",
               )}
             >
-              <div className="max-h-[calc(100dvh-10.5rem-env(safe-area-inset-bottom))] overflow-y-auto overscroll-contain px-3.5 pb-2 pt-3">
+              <div className="flex items-center justify-between px-4 pt-3">
+                <h2 className="text-lede font-semibold text-ink">Menu</h2>
+                <button
+                  type="button"
+                  onClick={close}
+                  aria-label="Close the menu"
+                  className="-mr-2 flex size-11 items-center justify-center rounded-full text-muted transition-colors hover:text-ink"
+                >
+                  <X size={18} aria-hidden="true" />
+                </button>
+              </div>
+              <div className="max-h-[calc(100dvh-var(--header-h)-var(--statusbar-h)-var(--tabbar-h)-5rem-env(safe-area-inset-bottom)-env(safe-area-inset-top))] overflow-y-auto overscroll-contain px-3 pb-3">
                 <Suspense fallback={null}>
                   <SearchPanel basePath={pathname} param={DESK_SEARCH_PARAM} />
                 </Suspense>
-                <ul className="mt-2 space-y-1">
+                <ul className="mt-3 divide-y divide-border overflow-hidden rounded-card bg-surface">
                   {utilitySurfaces().map((s) => {
                     const Icon = iconForSurface(s.href);
                     const active = pathname === s.href;
@@ -193,24 +201,20 @@ export function Desk({ data }) {
                           href={s.href}
                           aria-current={active ? "page" : undefined}
                           className={cn(
-                            "flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border bg-surface px-2.5 py-1.5 transition-colors hover:border-border-strong hover:bg-surface-2",
-                            active ? "border-accent-edge" : "border-border",
+                            "flex min-h-14 items-center gap-3 px-3.5 py-2 transition-colors hover:bg-surface-2",
+                            active && "bg-accent-wash",
                           )}
                         >
                           <Icon
-                            size={15}
+                            size={18}
                             aria-hidden="true"
-                            className={cn("shrink-0", active ? "text-accent-text" : "text-faint")}
+                            className={cn("shrink-0", active ? "text-accent-text" : "text-secondary")}
                           />
                           <span className="min-w-0 flex-1">
-                            <span className="block text-note font-semibold leading-tight text-ink">
-                              {s.label}
-                            </span>
-                            <span className="block text-micro leading-snug text-secondary">
-                              {s.sub}
-                            </span>
+                            <span className="block text-body font-semibold text-ink">{s.label}</span>
+                            <span className="block text-meta text-secondary">{s.sub}</span>
                           </span>
-                          <ChevronRight size={13} aria-hidden="true" className="shrink-0 text-faint" />
+                          <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-faint" />
                         </Link>
                       </li>
                     );
@@ -221,9 +225,9 @@ export function Desk({ data }) {
                         href={data.seat.sleeperHref}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex min-h-11 items-center gap-2.5 rounded-[--radius-sm] border border-border bg-surface px-2.5 py-1.5 text-note font-semibold text-ink transition-colors hover:border-border-strong hover:bg-surface-2"
+                        className="flex min-h-14 items-center gap-3 px-3.5 py-2 text-body font-semibold text-ink transition-colors hover:bg-surface-2"
                       >
-                        <ExternalLink size={15} aria-hidden="true" className="shrink-0 text-faint" />
+                        <ExternalLink size={18} aria-hidden="true" className="shrink-0 text-secondary" />
                         Open my team in Sleeper
                       </a>
                     </li>
@@ -232,113 +236,77 @@ export function Desk({ data }) {
               </div>
             </div>
 
-            <button
-              ref={handleRef}
-              type="button"
-              aria-expanded={expanded}
-              aria-controls={drawerId}
-              aria-label={expanded ? "Drag handle: close the menu" : "Drag handle: open the menu"}
-              onClick={onHandleClick}
-              onPointerDown={onPointerDown}
-              onPointerMove={onPointerMove}
-              onPointerUp={onPointerUp}
-              onPointerCancel={() => (dragRef.current = null)}
-              className="desk-handle flex w-full items-center justify-center touch-none"
-            >
-              <span
-                aria-hidden="true"
-                className={cn(
-                  "block h-1 w-9 rounded-full transition-colors",
-                  expanded ? "bg-accent" : "bg-border-strong",
-                )}
-              />
-            </button>
-
-            {/* The scorebug never truncates: lib/desk.js keeps it short enough to fit. */}
-            <div className="flex h-[44px] items-center gap-2 px-3.5">
-              {data?.seat ? (
-                <Link
-                  href={data.bug.href}
-                  aria-label={data.bug.label}
-                  className="flex min-w-0 flex-1 items-center gap-2 self-stretch whitespace-nowrap font-mono figure text-meta font-medium text-ink transition-colors hover:text-accent-text"
-                >
-                  <TeamAvatar
-                    name={data.seat.label}
-                    avatarId={data.seat.avatarId}
-                    teamLogoUrl={data.seat.teamLogoUrl}
-                    size="xs"
-                    className="shrink-0 rounded-full"
-                  />
-                  <span className="min-w-0 flex-1">
-                    {data.bug.parts.map((part, i) => (
-                      <Fragment key={i}>
-                        {i > 0 && (
-                          <span aria-hidden="true" className="mx-1 text-faint">
-                            ·
-                          </span>
-                        )}
-                        {part}
-                      </Fragment>
-                    ))}
-                  </span>
-                  <ChevronRight size={13} aria-hidden="true" className="shrink-0 text-faint" />
-                </Link>
-              ) : data ? (
-                <Link
-                  href="/teams"
-                  className="flex min-w-0 flex-1 items-center justify-between gap-1 self-stretch text-meta font-semibold text-accent-text transition-colors hover:text-ink"
-                >
-                  <span className="text-faint">No team picked yet</span>
-                  <span className="inline-flex items-center gap-1">
-                    Pick your team
-                    <ChevronRight size={13} aria-hidden="true" className="shrink-0" />
-                  </span>
-                </Link>
-              ) : (
-                <span className="flex-1 text-meta text-faint">Parquet</span>
-              )}
-            </div>
-
-            <div className="grid h-[53px] grid-cols-5 border-t border-border">
-              {primarySurfaces().map((s) => {
-                const Icon = iconForSurface(s.href);
-                const active = activeTab === s.tab;
-                return (
+            <div className="bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_var(--color-border)]">
+              {/* The scorebug never truncates: lib/desk.js keeps it short enough to fit. */}
+              <div className="flex h-[var(--statusbar-h)] items-center gap-2 border-b border-border px-4">
+                {data?.seat ? (
                   <Link
-                    key={s.href}
-                    href={s.href}
-                    aria-current={pathname === s.href ? "page" : active ? "true" : undefined}
-                    className={cn(
-                      "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 transition-colors",
-                      active ? "tab-glow text-accent-text" : "text-muted hover:text-ink",
-                    )}
+                    href={data.bug.href}
+                    aria-label={data.bug.label}
+                    className="flex min-w-0 flex-1 items-center gap-2 self-stretch whitespace-nowrap figure text-meta font-semibold text-ink transition-colors hover:text-accent-text"
                   >
-                    <Icon size={18} aria-hidden="true" className="shrink-0" />
-                    <span className="max-w-full whitespace-nowrap text-micro font-semibold leading-none">
-                      {s.short}
+                    <TeamAvatar
+                      name={data.seat.label}
+                      avatarId={data.seat.avatarId}
+                      teamLogoUrl={data.seat.teamLogoUrl}
+                      size="xs"
+                      className="size-5 shrink-0 rounded-full"
+                    />
+                    <span className="min-w-0 flex-1">
+                      {data.bug.parts.map((part, i) => (
+                        <Fragment key={i}>
+                          {i > 0 && (
+                            <span aria-hidden="true" className="mx-1.5 text-faint">
+                              ·
+                            </span>
+                          )}
+                          <span className={i === 0 ? "text-secondary" : undefined}>{part}</span>
+                        </Fragment>
+                      ))}
+                    </span>
+                    <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-faint" />
+                  </Link>
+                ) : data ? (
+                  <Link
+                    href="/teams"
+                    className="flex min-w-0 flex-1 items-center justify-between gap-1 self-stretch text-meta font-semibold text-accent-text transition-colors hover:text-ink"
+                  >
+                    <span className="text-secondary">No team picked yet</span>
+                    <span className="inline-flex items-center gap-1">
+                      Pick your team
+                      <ChevronRight size={14} aria-hidden="true" className="shrink-0" />
                     </span>
                   </Link>
-                );
-              })}
-              <button
-                type="button"
-                aria-expanded={expanded}
-                aria-controls={drawerId}
-                onClick={() => setExpanded(!expanded)}
-                className={cn(
-                  "flex min-w-0 flex-col items-center justify-center gap-0.5 px-0.5 transition-colors",
-                  menuActive ? "tab-glow text-accent-text" : "text-muted hover:text-ink",
-                )}
-              >
-                {expanded ? (
-                  <ChevronDown size={18} aria-hidden="true" className="shrink-0" />
                 ) : (
-                  <Menu size={18} aria-hidden="true" className="shrink-0" />
+                  <span className="flex-1 text-meta text-secondary">Parquet</span>
                 )}
-                <span className="max-w-full text-micro font-semibold leading-none">
-                  {expanded ? "Close" : "Menu"}
-                </span>
-              </button>
+              </div>
+
+              <div className="grid h-[var(--tabbar-h)] grid-cols-5">
+                {primarySurfaces().map((s) => {
+                  const active = activeTab === s.tab;
+                  return (
+                    <TabItem
+                      key={s.href}
+                      href={s.href}
+                      label={s.short}
+                      Icon={iconForSurface(s.href)}
+                      active={active}
+                      current={pathname === s.href ? "page" : active ? "true" : undefined}
+                    />
+                  );
+                })}
+                <TabItem
+                    button
+                    buttonRef={menuRef}
+                    label={expanded ? "Close" : "Menu"}
+                    Icon={expanded ? X : Menu}
+                    active={menuActive}
+                    expanded={expanded}
+                    controls={drawerId}
+                    onClick={() => setExpanded(!expanded)}
+                  />
+              </div>
             </div>
           </nav>
         </div>
