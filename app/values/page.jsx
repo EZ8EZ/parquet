@@ -202,7 +202,7 @@ function Figure({ label, value, sub }) {
       <dd className="line-clamp-1 figure text-lede leading-snug font-semibold text-ink">
         {value}
       </dd>
-      {sub && <dd className="line-clamp-1 text-meta text-muted">{sub}</dd>}
+      {sub && <dd className="text-meta leading-snug text-muted">{sub}</dd>}
     </div>
   );
 }

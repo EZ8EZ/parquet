@@ -222,7 +222,7 @@ export function ValueAssetRow({
             <span className="flex flex-wrap items-center gap-x-1.5 gap-y-0.5">
               <span
                 className={cn(
-                  "min-w-0 break-words font-semibold leading-tight text-ink",
+                  "min-w-0 font-semibold leading-tight text-ink [overflow-wrap:normal] [word-break:normal]",
                   hero === "lead" ? "text-[15px]" : "text-[13px]",
                 )}
               >
@@ -280,6 +280,16 @@ export function ValueAssetRow({
               */}
               {meta ? ` · ${meta}` : ""}
             </span>
+            {hero === "lead" && (
+              <span className="mt-1.5 flex items-baseline gap-2">
+                <span className="figure text-display font-semibold leading-none text-ink">
+                  {fmtValue(value)}
+                </span>
+                {tier && (
+                  <span className="text-meta leading-tight text-secondary">{tier}</span>
+                )}
+              </span>
+            )}
             {share != null && (
               <span
                 className={cn(
@@ -312,23 +322,15 @@ export function ValueAssetRow({
               />
             </span>
           )}
-          <span
-            className={cn(
-              "shrink-0 text-right",
-              hero === "lead" ? "w-[6.5rem]" : "w-[4.5rem]",
-            )}
-          >
+          {hero !== "lead" && (
+          <span className="w-[4.5rem] shrink-0 text-right">
             {/* On the lead row the value is TYPOGRAPHY, not a table cell - the one
                 number this whole page ranks by, set at display size (the same jolt
                 logic as the masthead's own 25->30px raise). */}
             <span
               className={cn(
                 "block figure font-semibold text-ink",
-                hero === "lead"
-                  ? "text-display leading-none"
-                  : hero
-                    ? "text-lede leading-none"
-                    : "text-[13px] leading-tight",
+                hero ? "text-lede leading-none" : "text-[13px] leading-tight",
               )}
             >
               {fmtValue(value)}
@@ -346,6 +348,7 @@ export function ValueAssetRow({
               </span>
             )}
           </span>
+          )}
           <ChevronDown
             size={14}
             aria-hidden="true"
