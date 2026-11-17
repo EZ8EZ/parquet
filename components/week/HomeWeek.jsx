@@ -26,7 +26,7 @@ export async function HomeWeek({ h, rosterId, replay = null }) {
           <RefreshControl asOf={desk.generatedAt} live={bh.live} updating={bh.updating} disabled={!!replay || isFixtureDesk(desk)} />
         </div>
       )}
-      {desk && <LockDeskBoard rosterId={rosterId} desk={desk} mode="compact" fullHref={fullHref} />}
+      {desk && <LockDeskBoard rosterId={rosterId} desk={desk} mode="compact" fullHref={fullHref} replay={replay} />}
       <InjuredStarters injured={week.injured} />
       <DeadlineStrip deadlines={week.deadlines} window={week.window} />
     </>

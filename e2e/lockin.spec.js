@@ -17,7 +17,24 @@ test.describe("lock-or-hold board", () => {
     await expect(board).toHaveAttribute("data-status", "in_season");
     await expect(page.getByText("Sample week, invented players")).toBeVisible();
     await expect(board.locator('ol[aria-label="Your starting slots this week"] > li')).toHaveCount(7);
-    await expect(page.getByRole("tab", { name: /Decide now/ })).toHaveAttribute("aria-selected", "true");
+    // Tonight opens first: the next listed start as a deadline, with a ticking countdown
+    await expect(page.getByRole("tab", { name: /Tonight/ })).toHaveAttribute("aria-selected", "true");
+    const tonight = page.locator("[data-tonight]").first();
+    await expect(tonight).toHaveAttribute("data-tonight", "open");
+    const next = tonight.locator("[data-tonight-next]");
+    await expect(next).toContainText(/Before \d{1,2}:\d{2} [AP]M/);
+    await expect(next.getByRole("timer")).toHaveText(/^in \d/);
+    await expect(next).toContainText("Starting then");
+    // tapping a starter opens his player sheet
+    await next.getByRole("button", { name: /^Eli Brandt.*Show details/ }).click();
+    await expect(page.locator("dialog[open]")).toContainText("Eli Brandt");
+    await page.keyboard.press("Escape");
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+    await expect(tonight.getByRole("list", { name: "Later deadlines tonight" }).locator("li")).not.toHaveCount(0);
+    await tonight.getByText("How tonight's order is worked out").click();
+    await expect(tonight).toContainText("+0.88");
+    await expect(tonight).toContainText("listed start time");
+    await page.getByRole("tab", { name: /Decide/ }).click();
     const holden = board.locator("#lk-lk02");
     await expect(holden).toContainText("31.5");
     await expect(holden).toContainText("Expected if held");
@@ -59,7 +76,9 @@ test.describe("lock-or-hold board", () => {
     await expect(hero).toHaveCount(1);
     await expect(hero).toContainText("On the table");
     await expect(hero).toContainText("Expected if held");
-    await expect(hero).toBeInViewport();
+    // the next deadline tonight sits above the decisions, inside the first screen
+    await expect(board.locator("[data-tonight-next]")).toBeInViewport();
+    await expect(board.getByRole("link", { name: /more deadlines? tonight/ })).toHaveAttribute("href", "/lockin");
     await expect(board.getByRole("link", { name: /All players and nights/ })).toHaveAttribute("href", "/lockin");
     await board.locator('ol[aria-label="Your starting slots this week"] button').first().click();
     await expect(page.locator("dialog[open]")).toBeVisible();

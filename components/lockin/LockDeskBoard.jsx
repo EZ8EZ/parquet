@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AlertTriangle, CalendarDays, ChevronRight } from "lucide-react";
 import { Disclosure, EmptyState, List, ListRow, SectionHeader, StatTile, Tabs } from "@/components/ui";
-import { loadLockDesk } from "@/lib/lockin/source";
+import { isFixtureDesk, loadLockDesk } from "@/lib/lockin/source";
 import { compactLive, firstUp, gapLines, groupCards, playerSubtitle, resultLine, shortDate, stateBody, weekGrid } from "@/lib/lockin/view";
 import { DeckTrigger, PlayerDeck } from "./PlayerDeck";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
@@ -12,6 +12,8 @@ import { DecisionHero } from "./DecisionHero";
 import { PlayerRow } from "./PlayerRow";
 import { WeekGrid } from "./WeekGrid";
 import { MethodNote } from "./MethodNote";
+import { TonightSection } from "./TonightSection";
+import { tonightView } from "@/lib/lockin/tonightView";
 
 function Gaps({ desk }) {
   const lines = gapLines(desk);
@@ -123,6 +125,14 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
   const heroes = groups.live.filter((c) => c.stopping);
   const hazardOnly = groups.live.filter((c) => !c.stopping);
 
+  // Tonight: listed starts as deadlines (lib/lockin/tonightView.js). The countdown runs
+  // from the board's own moment for the fixture and recorded replays.
+  const tv = tonightView(desk);
+  const tonightGames = tv?.status === "games";
+  const frozenAt = isFixtureDesk(desk) || replay ? desk.generatedAt : null;
+  const tonight = tv ? <TonightSection desk={desk} compact fullHref={fullHref} frozenAt={frozenAt} /> : null;
+  const tonightFull = tv ? <TonightSection desk={desk} fullHref={fullHref} frozenAt={frozenAt} inTab /> : null;
+
   if (compact) {
     const cl = compactLive(groups.live);
     const rows = [...cl.before, ...cl.after];
@@ -131,6 +141,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
         <section aria-label="Lock-in" {...common}>
           <Gaps desk={desk} />
           <SlotCells slots={desk.slots} />
+          {tonight}
           {cl.featured ? (
             <>
               <SectionHeader title={groups.live.length > 1 ? `Decide now · ${groups.live.length}` : "Decide now"} />
@@ -139,7 +150,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
                 {(cl.featured.stopping ? rows : groups.live).length > 0 && <List>{(cl.featured.stopping ? rows : groups.live).map((c) => <PlayerRow key={c.playerId} card={c} />)}</List>}
               </div>
             </>
-          ) : (
+          ) : tonightGames ? null : (
             <FirstUp fu={fu} tappable moreHref={fullHref} />
           )}
           <Link href={fullHref} className="mt-3 flex min-h-11 items-center justify-between rounded-card bg-surface px-4 text-note font-semibold text-accent-text">
@@ -191,8 +202,10 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
         <Tabs
           className="mt-4"
           label="Lock-in views"
+          defaultId={tv?.next ? "tonight" : "decide"}
           items={[
-            { id: "decide", label: "Decide now", count: groups.live.length, content: decide },
+            ...(tv ? [{ id: "tonight", label: "Tonight", count: tv.toDecide || undefined, content: <div className="pt-1">{tonightFull}</div> }] : []),
+            { id: "decide", label: tv ? "Decide" : "Decide now", count: groups.live.length, content: decide },
             { id: "nights", label: "Nights", content: nights },
             { id: "players", label: "Players", count: desk.cards.length, content: everyone },
           ]}
