@@ -185,7 +185,7 @@ function NodeRow({ node, v }) {
   const id = main ? (main.kind === "swap" ? main.laterId : main.playerId) : node.starting[0];
   const summary = node.actions.length
     ? node.actions.map((a) => (a.kind === "swap" ? `swap ${nameOf(v, a.laterId)} in for ${nameOf(v, a.earlyId)} if under ${fmt(a.threshold)}` : a.kind === "start" ? `start ${nameOf(v, a.playerId)} in ${a.slotLabel}` : `lock or hold ${nameOf(v, a.playerId)}`)).join("; ")
-    : `${node.starting.length} of your players start`;
+    : `${node.starting.map((pid) => nameOf(v, pid)).join(", ")} ${node.starting.length === 1 ? "starts" : "start"}`;
   const face = (
     <span className="flex min-h-14 items-center gap-3 px-4 py-2.5">
       <span className="flex -space-x-2" aria-hidden="true">
@@ -246,7 +246,9 @@ export function TonightSection({ desk, compact = false, fullHref = "/lockin", fr
       </section>
     );
   }
-  const uncertain = Object.values(v.players).some((p) => p.listing?.assumed === "listed_uncertain");
+  // the caveat shows only when a player on tonight's open track is listed GTD or DTD
+  const onTrack = [v.next, ...v.later].filter(Boolean).flatMap((n) => [...n.starting, ...n.actions.flatMap((a) => [a.playerId, a.earlyId, a.laterId])]);
+  const uncertain = onTrack.some((id) => id && v.players[id]?.listing?.assumed === "listed_uncertain");
   return (
     <section aria-labelledby="tonight-title" data-tonight={v.next ? "open" : "passed"}>
       {heading}
