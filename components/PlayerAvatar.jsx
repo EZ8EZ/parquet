@@ -163,6 +163,7 @@ export function PlayerAvatar({
   size = "md",
   className,
   teamBadge,
+  decorative = false,
 }) {
   const [failed, setFailed] = useState(false);
   const px = SIZES[size];
@@ -190,7 +191,9 @@ export function PlayerAvatar({
       // eslint-disable-next-line @next/next/no-img-element
       <img
         src={`https://sleepercdn.com/content/nba/players/thumb/${playerId}.jpg`}
-        alt={name}
+        // Empty when the name is printed beside the face (`decorative`), so a screen
+        // reader does not hear it twice.
+        alt={decorative ? "" : name}
         width={px}
         height={px}
         decoding="async"

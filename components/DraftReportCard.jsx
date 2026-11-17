@@ -4,7 +4,7 @@ import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { Card, Chip, Disclosure, ListRow, StatTile } from "@/components/ui";
 import { ordinal, rosterName } from "@/lib/derive/describe";
 import { fmtValue } from "@/lib/ui";
-import { boardHref } from "@/app/drafts/parts";
+import { boardHref } from "@/app/(app)/drafts/parts";
 /** Player display fields for a standout pick, preferring the live player universe. */
 function playerMeta(h, p) {
   const player = h.players.get(p.playerId);

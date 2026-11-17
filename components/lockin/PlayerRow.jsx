@@ -2,6 +2,7 @@ import { AlertTriangle } from "lucide-react";
 import { Chip, ListRow } from "@/components/ui";
 import { SLOT_STATES, fmt, gamesLeftText, leanView } from "@/lib/lockin/view";
 import { slotKeyOf } from "./Decision";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { StateIcon } from "./StateIcon";
 import { DeckTrigger } from "./PlayerDeck";
 
@@ -19,6 +20,7 @@ export function PlayerRow({ card }) {
           as="span"
           chevron
           leading={card.slotLabel ?? "BN"}
+          avatar={<PlayerAvatar name={card.name} team={card.team} playerId={card.playerId} size="sm" decorative />}
           title={card.name}
           badge={
             <>
@@ -29,7 +31,7 @@ export function PlayerRow({ card }) {
               )}
               {v && (
                 <Chip tone={v.nearlyEven ? "neutral" : "accent"} size="sm">
-                  Leans {v.value}
+                  {v.conditional ? "If not already locked, model leans" : "Model leans"} {v.value} · {v.confidence}
                 </Chip>
               )}
             </>

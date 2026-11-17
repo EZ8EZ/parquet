@@ -35,6 +35,7 @@ export function PlayerDeck({ panels, initialOpen = null, children }) {
         open={isOpen && !!p}
         onOpenChange={setOpen}
         title={p?.title}
+        leading={p?.leading}
         subtitle={p?.subtitle}
         footer={
           p && panels.length > 1 ? (

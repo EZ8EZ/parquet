@@ -45,8 +45,8 @@ with its backtest record (+9.4 points per team-week, 95% interval +5.5 to +14.7,
 active team-weeks). The objections below are answered as follows: out of season the
 engine returns a status and a one-line message, not a board of zeros; every undocumented
 endpoint is Zod-validated and a failed or mismatched response is a named gap, never a
-bare `catch {}`; and lineups are snapshotted hourly (D129). No page reads it yet; the
-lock-or-hold cards are on another branch. The original entry follows unchanged.
+bare `catch {}`; and lineups are snapshotted every 10 minutes (D129). Home and `/lockin`
+read it: the lock-or-hold cards, charts and player sheet shipped. The original entry follows unchanged.
 
 **What it was.** `/lab/startline`, an in-season lineup surface: a seven-day nightly
 board showing who plays when with back-to-backs marked, a pick-one-player ten-game log

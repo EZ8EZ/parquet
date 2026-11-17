@@ -546,7 +546,7 @@ export default async function RosterPage() {
             isMe
           />
         }
-        kicker={a.teamName ? a.ownerName : "Your team"}
+        kicker={a.teamName && a.teamName !== a.ownerName ? `Your team · ${a.ownerName}` : "Your team"}
         title={a.teamName ?? a.ownerName}
         aside={<OpenInSleeper href={sleeperTeamUrl(h.currentLeague.leagueId, rosterId)} label="Sleeper" />}
         below={

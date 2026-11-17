@@ -23,7 +23,7 @@ test.describe("lock-or-hold board", () => {
     await expect(holden).toContainText("Expected if held");
     await expect(holden).toContainText("Later game beats it");
     await expect(holden).toContainText("If not already locked");
-    await expect(holden).toContainText(/Leans (lock|hold) · (marginal|moderate|clear)/);
+    await expect(holden).toContainText(/Model leans (lock|hold) · (marginal|moderate|clear)/);
     await holden.getByRole("button", { name: /charts, record and method/ }).click();
     const sheet = page.locator("dialog[open]");
     await expect(sheet.getByRole("heading", { name: "Bryce Holden" })).toBeVisible();
@@ -36,6 +36,12 @@ test.describe("lock-or-hold board", () => {
     await expect(sheet.getByRole("heading", { level: 2 })).not.toHaveText("Bryce Holden");
     await page.keyboard.press("Escape");
     await expect(page.locator("dialog[open]")).toHaveCount(0);
+    // the back button closes an open sheet and stays on the page
+    await holden.getByRole("button", { name: /charts, record and method/ }).click();
+    await expect(page.locator("dialog[open]")).toBeVisible();
+    await page.goBack();
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+    await expect(page).toHaveURL(/\/lockin$/);
     await page.getByRole("tab", { name: "Nights" }).click();
     await expect(page.getByRole("table", { name: /games this week/ })).toBeVisible();
     await page.locator("#lockin-method summary").click();

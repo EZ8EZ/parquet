@@ -124,7 +124,7 @@ test("an anchor link for a player who is not on the team says so instead of misl
   // team's chart "does not place" a player who was never on the team - kept off the
   // screen only by which branch the page happened to test first. The label is the
   // assertion now (refusalSentence leads with the human label, not the raw code -
-  // VISION.md kill-list #4; the code still lives on the refusal object).
+  // the code still lives on the refusal object).
   await expect(page.getByText(/No record to read/)).toBeVisible();
   await expect(
     page.getByText(/does not have this player on this team/),

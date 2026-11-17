@@ -26,7 +26,8 @@
 import { useState } from "react";
 import { cn } from "@/lib/ui";
 const SIZES = { xs: 14, sm: 18, md: 24, lg: 32 };
-export function TeamLogo({ team, size = "sm", className }) {
+/** `decorative`: the team code is printed beside the crest, so alt is empty. */
+export function TeamLogo({ team, size = "sm", className, decorative = false }) {
   const [failed, setFailed] = useState(false);
   if (!team || failed) return null;
   const px = SIZES[size];
@@ -35,10 +36,11 @@ export function TeamLogo({ team, size = "sm", className }) {
     // eslint-disable-next-line @next/next/no-img-element
     <img
       src={src}
-      alt={`${team} logo`}
+      alt={decorative ? "" : `${team} logo`}
       width={px}
       height={px}
       decoding="async"
+      loading="lazy"
       onError={() => setFailed(true)}
       className={cn("shrink-0 object-contain", className)}
       style={{ width: px, height: px }}

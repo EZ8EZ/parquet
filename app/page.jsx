@@ -7,9 +7,9 @@ import { loadDigest } from "@/lib/digest";
 import { currentFormByRoster } from "@/lib/roster";
 import { ordinal } from "@/lib/derive/describe";
 import { actionQueue } from "@/lib/actions";
-import { weekContext } from "@/lib/week/load";
+import { loadSlotPreview, weekContext } from "@/lib/week/load";
 import { replayAllowed } from "@/lib/lockin/source";
-import { Chip, List, ListRow, PageHeader, SkeletonCard } from "@/components/ui";
+import { Chip, List, ListRow, PageHeader } from "@/components/ui";
 import { DigestBeacon } from "@/components/DigestBeacon";
 import { ActionQueue } from "@/components/ActionQueue";
 import { RosterCrunchPanel } from "@/components/RosterCrunchPanel";
@@ -24,7 +24,12 @@ export default async function ThisWeekPage({ searchParams }) {
   const h = await getLeagueHistory();
   const rosterId = h.me.rosterId;
   const ctx = weekContext(h);
-  const [principals, forms, digest] = await Promise.all([getPrincipals(h), currentFormByRoster(h), loadDigest(h)]);
+  const [principals, forms, digest, preview] = await Promise.all([
+    getPrincipals(h),
+    currentFormByRoster(h),
+    loadDigest(h),
+    ctx.offseason || rosterId == null || replay ? null : loadSlotPreview(h, rosterId),
+  ]);
   const form = forms.get(rosterId);
   const actions = actionQueue(h, rosterId, principals);
   const teamName = h.me.teamName ?? h.me.displayName;
@@ -71,7 +76,7 @@ export default async function ThisWeekPage({ searchParams }) {
           </List>
         </>
       ) : rosterId != null ? (
-        <Suspense fallback={<Suspense fallback={<SkeletonCard />}><SlotPreview h={h} rosterId={rosterId} /></Suspense>}>
+        <Suspense fallback={<SlotPreview preview={preview} />}>
           <HomeWeek h={h} rosterId={rosterId} replay={replay} />
         </Suspense>
       ) : null}

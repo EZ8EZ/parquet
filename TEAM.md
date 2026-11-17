@@ -43,10 +43,11 @@ Branch: `claude/parquet-redesign-3b7kcp`. Owner reviews and merges.
   packages (D124); replacement-line cuts and one tier ladder (D125); two copy fixes (D126).
 - **Merged, data layer:** one Sleeper client with timeouts and a cache table, visible
   gaps (D127); Prisma off the read path, `proxy.js`, /league bundle, dead code (D128);
-  hourly lineup snapshots to a `data` branch (D129).
-- **Merged, engine:** `lib/lockin/` (D130-D133). No page reads it yet.
-- **Not merged:** four-tab nav (This Week, Team, Trade, League), rebuilt Home, lock-or-hold
-  cards and charts. README and SHELVED S1 say so.
+  lineup snapshots to a `data` branch, now every 10 minutes (D129).
+- **Merged, engine:** `lib/lockin/` (D130-D133), with its study in `scripts/lockin/`.
+- **Merged, product:** four-tab nav (This Week, Team, Trade, League), Home's week board
+  and `/lockin` (decision cards with the model's lean, the player sheet and charts,
+  refresh and live auto-refresh), and the dark design system on every page.
 
 ## Open threads
 

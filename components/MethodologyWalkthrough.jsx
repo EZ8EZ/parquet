@@ -4,7 +4,7 @@ import { CHART_ACCENT, CHART_GRID, CHART_MARK } from "@/lib/chart-colors";
 import { cn } from "@/lib/ui";
 /**
  * THE VALUE MODEL, DRAWN ONCE - a pinned pipeline chart over a stepped walkthrough
- * (VISION.md M9, the Pudding grammar: the number in the prose is the mark in the
+ * (the Pudding grammar: the number in the prose is the mark in the
  * chart).
  *
  * The chart stays `position: sticky` at the top of the viewport while the reader

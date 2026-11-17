@@ -19,7 +19,8 @@ export default async function TeamsPage({ searchParams }) {
   // deploy owner's roster when no lens cookie exists, so trusting it here would put a
   // checkmark next to EZ8's team on a stranger's very first visit - the exact
   // "one specific person's identity leaking" this page's own note below warns about.
-  const hasLens = (await readLensRosterId()) != null;
+  const lens = await readLensRosterId();
+  const hasLens = lens != null && h.rostersById.has(lens);
   const ranked = leagueValueRanking(h);
   // `r.record` is the live roster snapshot, which is 0-0 for the whole league outside
   // the season window (see DECISIONS.md D29). `currentFormByRoster` walks back to the

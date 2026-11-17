@@ -12,12 +12,30 @@ this league's own data.
 By owner decision on 2026-11-16, the spine of the app is **this week's decisions in
 lock-in mode**: bank a score now or hold the slot for a later game. The decision ledger,
 the revealed-vs-stated strategy read and the trade and valuation surfaces stay, but are
-no longer the centre. The engine for the weekly decision is in `lib/lockin/`. It is
-merged and tested; no page reads it yet.
+no longer the centre.
 
-<!-- PLACEHOLDER (unmerged work): the four-tab navigation (This Week, Team, Trade,
-League), the rebuilt Home and the lock-or-hold cards and charts are on other branches.
-Describe them here once they merge. Until then the pages are those listed in lib/nav.js. -->
+## What a manager sees
+
+Four tabs at the bottom (This Week, Team, Trade, League) and a Menu, over a status bar
+that reads like "Wk 5 · 3/7 scored · 2 to decide", or "first game tonight" before the
+week's first game. One dark design system throughout (`DESIGN.md`, `/design`).
+
+- **Home (This Week)**: the seven slots with each one's banked score and lock state
+  (locked, unknown until his next game, reset to 0, final score stands, empty), then the
+  most urgent decision as a card: the score on the table and the expected value if held
+  side by side, the chance a later game beats it if he plays, and the model's lean with
+  its confidence. Below it, other live decisions, who plays first, injured starters,
+  league deadlines and up to three to-dos.
+- **Lock or hold** (`/lockin`): the same slots, then Decide now, Nights (who plays which
+  night) and Players tabs.
+- **The player sheet**: tap a slot, card or row to open one player's numbers and charts
+  (last 15 games, next-game outcomes, his week, minutes, and past games against the next
+  opponent, marked as history), with previous and next to compare players without
+  closing it. "The lean's record" and "How these numbers are made" sit one tap away.
+- **Refresh**: one tap re-reads only what can have changed (this week's matchups, the
+  NBA state, the schedule, and the game logs of players whose games have tipped), at
+  most once per team per 20 seconds. While one of your games is in progress and the tab
+  is visible, the board refreshes itself every 2 minutes.
 
 An earlier owner decision still holds (2026-08-19, D91): no AI and no subjective
 component. Every number is a statistical call from the league's own data.
@@ -96,6 +114,7 @@ if that port is taken. `pnpm e2e` runs every spec. Environment variables, all op
 | `AUTH_SECRET` | unset | Unset is single-user mode. Set, ledger writes need a signed seat; `pnpm claim-links <origin>` prints one link per manager |
 | `NEXT_PUBLIC_USE_PLAYER_PHOTOS` | on | `false` turns Sleeper headshots off. A fork's Vercel deploy defaults to off (`lib/photos.js`) |
 | `PARQUET_DEBUG_TIMINGS` | unset | `1` logs load times of the two heaviest loaders |
+| `LOCKIN_REPLAY_DIR` | unset | Development only: `?at=<id>` replays a recorded set of Sleeper responses from this directory. Ignored in production builds |
 
 ## Deploy (Vercel)
 
@@ -112,8 +131,8 @@ run, 2026-11-16).
 ### Lineup snapshots and the `data` branch
 
 Sleeper keeps neither lock state nor mid-week lineup changes. To measure them later,
-`.github/workflows/snapshot-lineups.yml` runs `scripts/snapshot-lineups.js` hourly at
-minute 17. It copies the week's matchups to
+`.github/workflows/snapshot-lineups.yml` runs `scripts/snapshot-lineups.js` every 10
+minutes (it started hourly; GitHub dropped most hourly runs). It copies the week's matchups to
 `snapshots/lineups/{season}/week-{NN}/{timestamp}.json` on an orphan `data` branch and
 commits only when the payload changed. The `data` branch carries a `vercel.json` that
 disables deployments, its commits say `[skip ci]`, and CI runs only on pull requests and
@@ -135,8 +154,8 @@ To try it locally without writing into the repository:
 `app/` pages, `components/` UI, `lib/` logic as pure functions: `lib/providers/`
 (Sleeper, CSV or fixture data into one model), `lib/lockin/` (the weekly engine),
 `lib/valuation/` (asset values; every weight in `config.js`), `lib/gameplan/` and
-`lib/trade*/` (plan and trade tools). `scripts/` holds offline fits, ingest, seed and the
-snapshot job. Stack: Next.js 16, React 19, Tailwind 4, Zod 4, Prisma 7 (Postgres,
+`lib/trade*/` (plan and trade tools). `scripts/` holds offline fits, ingest, seed, the
+snapshot job and the lock-in study (`scripts/lockin/`, with its own README). Stack: Next.js 16, React 19, Tailwind 4, Zod 4, Prisma 7 (Postgres,
 optional), Vitest 4, Playwright.
 
 ## Docs

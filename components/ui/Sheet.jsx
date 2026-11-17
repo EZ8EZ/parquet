@@ -49,16 +49,37 @@ export function Sheet({
   const close = () => ref.current?.close();
 
   // The <dialog> follows the state; showModal only exists after mount.
+  // The browser's back button closes an open sheet instead of leaving the page: opening
+  // pushes one history entry (same URL, so deep links like ?open= keep working), back
+  // pops it and closes the sheet, and closing any other way pops it again.
+  const pushed = useRef(false);
   useEffect(() => {
     const d = ref.current;
     if (!d) return;
     if (isOpen && !d.open) {
       setOpened(true);
       d.showModal();
+      if (!pushed.current) {
+        window.history.pushState({ ...window.history.state, parquetSheet: titleId }, "");
+        pushed.current = true;
+      }
     } else if (!isOpen && d.open) {
       d.close();
     }
-  }, [isOpen]);
+    if (!isOpen && pushed.current) {
+      pushed.current = false;
+      if (window.history.state?.parquetSheet === titleId) window.history.back();
+    }
+  }, [isOpen, titleId]);
+  useEffect(() => {
+    const onPop = () => {
+      if (!pushed.current || window.history.state?.parquetSheet === titleId) return;
+      pushed.current = false;
+      ref.current?.close();
+    };
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, [titleId]);
 
   return (
     <>

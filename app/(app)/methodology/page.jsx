@@ -317,7 +317,7 @@ export default async function MethodologyPage() {
     { label: "1st two seasons out", d: pickDuration(2) },
   ];
   /*
-   * THE PINNED WALKTHROUGH (VISION.md M9): one real asset's price, drawn once and
+   * THE PINNED WALKTHROUGH: one real asset's price, drawn once and
    * carried through six steps as the reader scrolls, instead of the formula printed
    * as a sentence with no picture attached. `pickWalkthroughExample` and
    * `baseCurveSamples` are pure functions of the SAME `valued`/`h.players` maps every
