@@ -127,7 +127,7 @@ function Starting({ node, v }) {
         ))}
       </span>
       <span>
-        {node.starting.length} of your players start: {node.starting.map((id) => nameOf(v, id).split(" ").slice(-1)[0]).join(", ")}
+        Starting then: {node.starting.map((id) => nameOf(v, id)).join(", ")}
       </span>
     </span>
   );
@@ -205,13 +205,21 @@ function HowItWorks({ record }) {
 const RECORD = { gain: 0.88, n: 240, lo: 0.44, hi: 1.41 };
 
 /** Tonight's listed starts as deadlines: the next one in full, the rest as a track. */
-export function TonightSection({ desk, compact = false, fullHref = "/lockin", frozenAt = null }) {
+export function TonightSection({ desk, compact = false, fullHref = "/lockin", frozenAt = null, inTab = false }) {
   const v = tonightView(desk);
+  // Inside /lockin's Tonight tab the tab is the title; the heading stays for screen readers.
+  const heading = inTab ? (
+    <h2 id="tonight-title" className="sr-only">
+      Tonight
+    </h2>
+  ) : (
+    <SectionHeader id="tonight-title" title="Tonight" />
+  );
   if (!v) return null;
   if (v.status === "no_games") {
     return (
       <section aria-labelledby="tonight-title" data-tonight="no_games">
-        <SectionHeader id="tonight-title" title="Tonight" />
+        {heading}
         <p className="rounded-card bg-surface px-4 py-3 text-body text-muted">
           No games for your players tonight{v.nextDay ? `. Next game day: ${v.nextDay.day}.` : "."}
         </p>
@@ -221,7 +229,7 @@ export function TonightSection({ desk, compact = false, fullHref = "/lockin", fr
   const uncertain = Object.values(v.players).some((p) => p.listing?.assumed === "listed_uncertain");
   return (
     <section aria-labelledby="tonight-title" data-tonight={v.next ? "open" : "passed"}>
-      <SectionHeader id="tonight-title" title="Tonight" />
+      {heading}
       {v.notes.length > 0 && (
         <div role="status" className="mb-2 flex gap-2 rounded-control bg-surface-2 px-3 py-2 text-note text-ink">
           <Info size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-info" />

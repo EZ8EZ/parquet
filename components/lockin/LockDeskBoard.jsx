@@ -131,7 +131,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
   const tonightGames = tv?.status === "games";
   const frozenAt = isFixtureDesk(desk) || replay ? desk.generatedAt : null;
   const tonight = tv ? <TonightSection desk={desk} compact fullHref={fullHref} frozenAt={frozenAt} /> : null;
-  const tonightFull = tv ? <TonightSection desk={desk} fullHref={fullHref} frozenAt={frozenAt} /> : null;
+  const tonightFull = tv ? <TonightSection desk={desk} fullHref={fullHref} frozenAt={frozenAt} inTab /> : null;
 
   if (compact) {
     const cl = compactLive(groups.live);
@@ -205,7 +205,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
           defaultId={tv?.next ? "tonight" : "decide"}
           items={[
             ...(tv ? [{ id: "tonight", label: "Tonight", count: tv.toDecide || undefined, content: <div className="pt-1">{tonightFull}</div> }] : []),
-            { id: "decide", label: "Decide now", count: groups.live.length, content: decide },
+            { id: "decide", label: tv ? "Decide" : "Decide now", count: groups.live.length, content: decide },
             { id: "nights", label: "Nights", content: nights },
             { id: "players", label: "Players", count: desk.cards.length, content: everyone },
           ]}
