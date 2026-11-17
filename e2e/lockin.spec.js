@@ -24,7 +24,12 @@ test.describe("lock-or-hold board", () => {
     const next = tonight.locator("[data-tonight-next]");
     await expect(next).toContainText(/Before \d{1,2}:\d{2} [AP]M/);
     await expect(next.getByRole("timer")).toHaveText(/^in \d/);
-    await expect(next).toContainText("Starting then: Eli Brandt");
+    await expect(next).toContainText("Starting then");
+    // tapping a starter opens his player sheet
+    await next.getByRole("button", { name: /^Eli Brandt.*Show details/ }).click();
+    await expect(page.locator("dialog[open]")).toContainText("Eli Brandt");
+    await page.keyboard.press("Escape");
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
     await expect(tonight.getByRole("list", { name: "Later deadlines tonight" }).locator("li")).not.toHaveCount(0);
     await tonight.getByText("How tonight's order is worked out").click();
     await expect(tonight).toContainText("+0.88");

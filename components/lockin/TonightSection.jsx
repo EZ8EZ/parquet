@@ -23,6 +23,20 @@ function Listing({ p }) {
 
 const nameOf = (v, id) => v.players[id]?.name ?? `Player ${id}`;
 
+/** Under or over the swap line, labelled as a model estimate with the inputs it used. */
+function Estimate({ a }) {
+  const i = a.belowInputs;
+  const inputs =
+    i.final != null
+      ? `his final ${fmt(i.final)} against the line ${fmt(i.threshold)}`
+      : `projected final ${fmt(i.projectedFinal)}${i.band ? ` (range ${fmt(i.band[0])} to ${fmt(i.band[1])})` : ""} against ${fmt(i.threshold)}${i.lineNow ? ", the line for this point in his game" : ""}`;
+  return (
+    <p className="mt-1 text-meta text-secondary">
+      Model estimate: <span className="font-semibold text-ink">{a.below ? "under" : "over"} the swap line</span>. Inputs: {inputs}.
+    </p>
+  );
+}
+
 /** Threshold and the starter's points so far on one scale; facts only, no projection. */
 function SwapBar({ a, v }) {
   const early = v.players[a.earlyId];
@@ -49,15 +63,10 @@ function SwapBar({ a, v }) {
           )}
         </span>
         <span>
-          swap line <span className="figure font-semibold text-accent-text">{fmt(a.threshold)}</span>
+          swap line <span className="figure font-semibold text-accent-text">{fmt(a.threshold)}</span> at the deadline
         </span>
       </p>
-      {a.below != null && a.belowInputs && (
-        <p className="mt-1 text-meta text-secondary">
-          Model estimate: <span className="font-semibold text-ink">{a.below ? "under" : "over"} the swap line</span>{" "}
-          {a.belowInputs.final != null ? `(final ${fmt(a.belowInputs.final)} vs ${fmt(a.belowInputs.threshold)})` : `(projected final ${fmt(a.belowInputs.projectedFinal)} vs ${fmt(a.belowInputs.threshold)} at this point)`}
-        </p>
-      )}
+      {a.below != null && a.belowInputs && <Estimate a={a} />}
     </div>
   );
 }
@@ -119,17 +128,28 @@ function Action({ a, v, node }) {
 
 function Starting({ node, v }) {
   if (!node.starting.length) return null;
+  // Each starter is a tap target for his player sheet.
   return (
-    <span className="flex flex-wrap items-center gap-x-2 gap-y-1 text-meta text-secondary">
-      <span className="flex -space-x-2" aria-hidden="true">
-        {node.starting.slice(0, 5).map((id) => (
-          <Face key={id} id={id} v={v} />
-        ))}
-      </span>
-      <span>
-        Starting then: {node.starting.map((id) => nameOf(v, id)).join(", ")}
-      </span>
-    </span>
+    <div>
+      <p className="text-meta text-secondary">Starting then</p>
+      <ul className="mt-1 flex flex-wrap gap-1.5">
+        {node.starting.map((id) => {
+          const p = v.players[id];
+          return (
+            <li key={id}>
+              <DeckTrigger playerId={id} label={`${nameOf(v, id)}${p?.slotLabel ? ` in ${p.slotLabel}` : ""}. Show details`} className="rounded-full">
+                <span className="flex min-h-11 items-center gap-2 rounded-full bg-elevated py-1 pl-1 pr-3 text-note text-ink">
+                  <Face id={id} v={v} />
+                  <span className="font-semibold">{nameOf(v, id)}</span>
+                  {p?.slotLabel && <span className="text-meta text-secondary">{p.slotLabel}</span>}
+                  <Listing p={p} />
+                </span>
+              </DeckTrigger>
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 
@@ -265,7 +285,7 @@ export function TonightSection({ desk, compact = false, fullHref = "/lockin", fr
           <ul className="space-y-1">
             {v.passed.map((n) => (
               <li key={n.key}>
-                {n.atText}: {n.starting.map((id) => nameOf(v, id)).join(", ") || n.actions.length + " decisions"}
+                <Deadline at={n.at} fallback={n.atText} capitalize />: {n.starting.map((id) => nameOf(v, id)).join(", ") || n.actions.length + " decisions"}
               </li>
             ))}
           </ul>
