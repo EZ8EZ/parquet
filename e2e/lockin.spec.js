@@ -85,6 +85,102 @@ test.describe("lock-or-hold board", () => {
     expectNoConsoleErrors(guard);
   });
 
+  test("Home leads with the matchup: win chance, both slot strips and the next deadline in the first screen", async ({ page }) => {
+    const guard = watchConsole(page);
+    await primeLens(page);
+    await page.goto("/");
+    const board = page.locator('[data-lockin-board="compact"]');
+    const matchup = board.locator("[data-matchup]");
+    await expect(matchup).toHaveAttribute("data-matchup", "win");
+    await expect(matchup.locator("[data-win-prob]")).toHaveText(/^\d{1,3}%$/);
+    await expect(matchup).toContainText("to win");
+    await expect(matchup).toContainText("banked");
+    await expect(matchup).toContainText("Rough model estimate if you follow its calls");
+    await expect(matchup).toContainText("narrower than reality");
+    await expect(matchup.getByRole("figure", { name: /Projected final totals/ })).toBeVisible();
+    // first screen: week line, win chance, both strips, the next deadline
+    await expect(page.getByText(/Week 4 · \d+ locked/)).toBeInViewport();
+    await expect(matchup.locator("[data-win-prob]")).toBeInViewport();
+    await expect(board.locator('ol[aria-label="Your starting slots this week"]')).toBeInViewport();
+    const oppTrigger = matchup.getByRole("button", { name: /Synthetic Sixers: .*Show details/ });
+    await expect(oppTrigger).toBeInViewport();
+    await expect(board.locator("[data-tonight-next]")).toBeInViewport();
+    // what moves the win chance: three options and all of the model's calls
+    const whatIf = board.locator('[data-whatif="compact"]');
+    await expect(whatIf.locator("[data-whatif-plan]")).toContainText(/Rough win chance if you follow the model's calls: \d+%/);
+    await expect(whatIf.locator("[data-whatif-row]")).toHaveCount(3);
+    // the featured decision leads with the model's call and the win comparison
+    const hero = board.locator("article");
+    await expect(hero.locator("[data-model-call]")).toContainText(/Lock now|Wait|Hold/);
+    await expect(hero).toContainText("Expected if held");
+    await expect(hero.locator("[data-win-compare]")).toContainText(/Win chance: lock \d+% · hold \d+%/);
+    await expect(hero.locator("[data-profile]")).toContainText(/Boom \d+%/);
+    await expect(hero.locator("[data-profile]")).toContainText(/last \d+ games/);
+    await expect(hero.locator("[data-availability]")).toContainText(/n=\d+/);
+    await expect(board.getByRole("link", { name: /Your lock history/ })).toHaveAttribute("href", "/lockin#lock-history");
+    // the opponent sheet: slots, habits, assumptions
+    await oppTrigger.click();
+    const sheet = page.locator("dialog[open]");
+    await expect(sheet.getByRole("heading", { name: "Synthetic Sixers" })).toBeVisible();
+    await expect(sheet.getByText("Their slots")).toBeVisible();
+    await expect(sheet.getByText(/players? still to play/)).toBeVisible();
+    await expect(sheet.getByText("How they play")).toBeVisible();
+    await expect(sheet.getByText(/^Playing like/)).toBeVisible();
+    await sheet.getByText("What the win chance assumes").click();
+    await expect(sheet).toContainText(/treated as locked \d+% of the time, the rate seen in past weeks/);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+    // a what-if row opens that player's sheet
+    await whatIf.locator("[data-whatif-row]").first().getByRole("button").click();
+    await expect(page.locator("dialog[open]")).toContainText("Boom or bust");
+    await page.keyboard.press("Escape");
+    expectNoConsoleErrors(guard);
+  });
+
+  test("/lockin: every option in the Win % tab, the lock history, and boom/bust in the player sheet", async ({ page }) => {
+    const guard = watchConsole(page);
+    await primeLens(page);
+    await page.goto("/lockin?tab=options");
+    const board = page.locator('[data-lockin-board="full"]');
+    await expect(board.locator("[data-matchup]")).toHaveAttribute("data-matchup", "win");
+    await expect(page.getByRole("tab", { name: /Win %/ })).toHaveAttribute("aria-selected", "true");
+    const rows = board.locator('[data-whatif="full"] [data-whatif-row]');
+    expect(await rows.count()).toBeGreaterThan(3);
+    // rows within simulation noise sort last and say so
+    const kinds = await rows.evaluateAll((els) => els.map((e) => e.getAttribute("data-whatif-row")));
+    expect(kinds.indexOf("noise")).toBeGreaterThan(0);
+    expect(kinds.slice(kinds.indexOf("noise")).every((k) => k === "noise")).toBe(true);
+    await expect(board.locator('[data-whatif-row="noise"]').first()).toContainText("no real difference");
+    const history = board.locator("[data-lock-history]");
+    await expect(history.getByRole("heading", { name: "Your lock history" })).toBeVisible();
+    await expect(history).toContainText("points a week left on the table");
+    await expect(history).toContainText(/n=\d+ weeks?/);
+    await expect(history).toContainText("Locked before a bigger game");
+    await expect(history).toContainText("Held past a bigger score");
+    await expect(history).toContainText("How you play");
+    await expect(history).not.toContainText(/mistake|too early|too long|should/i);
+    await page.getByRole("tab", { name: /Decide/ }).click();
+    const holden = board.locator("#lk-lk02");
+    // win chances sit beside the lean (which rests on points) as information
+    await expect(holden.locator("[data-win-compare]")).toContainText(/Win chance: lock \d+% · hold \d+%/);
+    await expect(holden.locator("[data-win-compare]")).not.toContainText("model leans");
+    await holden.getByRole("button", { name: /charts, record and method/ }).click();
+    const sheet = page.locator("dialog[open]");
+    await expect(sheet.getByRole("heading", { name: "Boom or bust" })).toBeVisible();
+    await expect(sheet.locator("[data-profile]")).toContainText(/Boom \d+% · [\d.]+\+ pts/);
+    await expect(sheet.locator("[data-profile]")).toContainText(/Bust \d+% · under [\d.]+/);
+    await expect(sheet.locator("[data-availability]")).toContainText(/\d+%/);
+    expectNoConsoleErrors(guard);
+  });
+
+  test("no accessibility violations with the opponent sheet open", async ({ page }) => {
+    await primeLens(page);
+    await page.goto("/");
+    await page.locator("[data-matchup]").getByRole("button", { name: /^Synthetic Sixers: .*Show details/ }).click();
+    await expect(page.locator("dialog[open]")).toBeVisible();
+    expect(axeList(await new AxeBuilder({ page }).analyze())).toEqual([]);
+  });
+
   test("a roster with no matchup gets an explicit state", async ({ page }) => {
     await primeLens(page, 2);
     await page.goto("/lockin");
@@ -97,6 +193,10 @@ test.describe("lock-or-hold board", () => {
     await expect(page.locator("dialog[open]")).toBeVisible();
     expect(axeList(await new AxeBuilder({ page }).analyze())).toEqual([]);
     await page.keyboard.press("Escape");
+    // Closing pops the history entry the sheet pushed (components/ui/Sheet.jsx), and
+    // history.back() is asynchronous: wait for it to land, or the next goto races it.
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+    await page.waitForFunction(() => !window.history.state?.parquetSheet);
     await page.goto("/");
     expect(axeList(await new AxeBuilder({ page }).analyze())).toEqual([]);
   });

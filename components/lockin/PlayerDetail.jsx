@@ -7,6 +7,9 @@ import { NextGameChart } from "./NextGameChart";
 import { MinutesChart } from "./MinutesChart";
 import { OpponentHistory } from "./OpponentHistory";
 import { WeekGrid } from "./WeekGrid";
+import { ModelCall, WinFigures } from "./WinCall";
+import { ProfileBar } from "./ProfileBar";
+import { AvailabilityDots } from "./AvailabilityDots";
 
 function Block({ title, sub, children }) {
   return (
@@ -50,7 +53,7 @@ function Record({ record, methodHref }) {
 }
 
 /** Everything about one player, for the sheet: the decision, then the five charts. */
-export function PlayerPanel({ card, today, record, methodHref, calibration = null }) {
+export function PlayerPanel({ card, today, record, methodHref, calibration = null, winProb = null }) {
   const strip = stripChart(card);
   const dist = distChart(card);
   const mins = minutesChart(card);
@@ -60,11 +63,13 @@ export function PlayerPanel({ card, today, record, methodHref, calibration = nul
     <div>
       <div className="space-y-3">
         <Hazards card={card} />
+        <ModelCall card={card} />
         <DecisionFigures card={card} />
         <WhenLine card={card} />
         {card.lean.value !== "none" ? (
           <div className="space-y-1">
             <LeanChip lean={card.lean} />
+            <WinFigures card={card} winProb={winProb} showReason={false} />
             <p className="text-note text-muted">{card.lean.reason}.</p>
           </div>
         ) : (
@@ -74,6 +79,12 @@ export function PlayerPanel({ card, today, record, methodHref, calibration = nul
         {card.stopping && calibration && <p className="text-meta text-secondary">&ldquo;Later game beats it&rdquo; tends to run high: in 2026 games it {calibration}.</p>}
         {card.lean.value !== "none" && <Record record={record} methodHref={methodHref} />}
       </div>
+      <Block title="Boom or bust">
+        <div className="space-y-3">
+          <ProfileBar profile={card.profile} x={card.stopping?.x ?? null} />
+          <AvailabilityDots card={card} />
+        </div>
+      </Block>
       <Block title="Last 15 games" sub={strip.ok ? "tap a game" : null}>
         {strip.ok ? <LastFifteenStrip g={strip} name={card.name} /> : <Missing text={strip.missing} />}
       </Block>

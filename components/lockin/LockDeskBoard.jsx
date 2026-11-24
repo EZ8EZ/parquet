@@ -7,7 +7,12 @@ import { DeckTrigger, PlayerDeck } from "./PlayerDeck";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { Opp } from "./Opp";
 import { PlayerPanel } from "./PlayerDetail";
-import { SlotCells } from "./SlotCells";
+import { SlotCells, SlotLegend } from "./SlotCells";
+import { Matchup, NoOpponent } from "./Matchup";
+import { WhatIf } from "./WhatIf";
+import { LockHistory, LockHistoryLink } from "./LockHistory";
+import { matchupView } from "@/lib/lockin/matchupView";
+import { slotStateKey } from "@/lib/lockin/view";
 import { DecisionHero } from "./DecisionHero";
 import { PlayerRow } from "./PlayerRow";
 import { WeekGrid } from "./WeekGrid";
@@ -87,7 +92,7 @@ function panelsFor(desk, methodHref) {
       title: c.name,
       leading: <PlayerAvatar name={c.name} team={c.team} playerId={c.playerId} size="md" decorative />,
       subtitle: playerSubtitle(c),
-      content: <PlayerPanel card={c} today={desk.today} record={desk.leanRecord} methodHref={methodHref} calibration={desk.model?.calibration?.pLaterBeatsIfPlays} />,
+      content: <PlayerPanel card={c} today={desk.today} record={desk.leanRecord} methodHref={methodHref} calibration={desk.model?.calibration?.pLaterBeatsIfPlays} winProb={desk.winProb ?? null} />,
     }));
 }
 
@@ -97,7 +102,7 @@ function panelsFor(desk, methodHref) {
  * "full" is /lockin: slots, three figures, then Decide now / Nights / Players tabs.
  * Every player opens in one sheet with previous / next.
  */
-export async function LockDeskBoard({ rosterId, mode = "full", players = null, open = null, replay = null, fullHref = "/lockin", desk: given = null, methodOpen = false }) {
+export async function LockDeskBoard({ rosterId, mode = "full", players = null, open = null, replay = null, fullHref = "/lockin", desk: given = null, methodOpen = false, me = null, them = null, tab = null }) {
   const desk = given ?? (await loadLockDesk({ rosterId, players, replay }));
   const compact = mode === "compact";
   const methodHref = `${fullHref}${fullHref.includes("?") ? "&" : "?"}method=open#lockin-method`;
@@ -124,6 +129,20 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
   const fu = firstUp(desk);
   const heroes = groups.live.filter((c) => c.stopping);
   const hazardOnly = groups.live.filter((c) => !c.stopping);
+  const winProb = desk.winProb ?? null;
+
+  // Head-to-head: the matchup (win chance, both ranges, both slot strips) replaces the
+  // bare slot cells when there is an opponent; without one, one quiet line and the slots.
+  const mv = matchupView(desk, { me, them });
+  const slotsBlock =
+    mv && mv.state !== "none" ? (
+      <Matchup v={mv} desk={desk} mySlots={<SlotCells slots={desk.slots} legend={false} />} legend={<SlotLegend keys={[...desk.slots.map(slotStateKey), ...mv.oppSlots.map((s) => s.key)]} className="" />} />
+    ) : (
+      <>
+        {mv?.state === "none" && <NoOpponent />}
+        <SlotCells slots={desk.slots} />
+      </>
+    );
 
   // Tonight: listed starts as deadlines (lib/lockin/tonightView.js). The countdown runs
   // from the board's own moment for the fixture and recorded replays.
@@ -135,26 +154,34 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
 
   if (compact) {
     const cl = compactLive(groups.live);
-    const rows = [...cl.before, ...cl.after];
+    // Home keeps hazard rows (a listed-out or last-game warning); other live decisions
+    // are counted on the link to /lockin, where each has its card.
+    const rows = [...cl.before, ...cl.after].filter((c) => c.hazards.length > 0);
+    const moreLive = cl.featured?.stopping ? cl.before.length + cl.after.length - rows.length : 0;
     return (
       <PlayerDeck panels={panels} initialOpen={open}>
         <section aria-label="Lock-in" {...common}>
           <Gaps desk={desk} />
-          <SlotCells slots={desk.slots} />
+          {slotsBlock}
           {tonight}
+          <WhatIf desk={desk} compact moreHref={`${fullHref}${fullHref.includes("?") ? "&" : "?"}tab=options`} />
           {cl.featured ? (
             <>
               <SectionHeader title={groups.live.length > 1 ? `Decide now · ${groups.live.length}` : "Decide now"} />
               <div className="space-y-2">
-                {cl.featured.stopping ? <DecisionHero card={cl.featured} /> : null}
+                {cl.featured.stopping ? <DecisionHero card={cl.featured} winProb={winProb} compact /> : null}
                 {(cl.featured.stopping ? rows : groups.live).length > 0 && <List>{(cl.featured.stopping ? rows : groups.live).map((c) => <PlayerRow key={c.playerId} card={c} />)}</List>}
               </div>
             </>
           ) : tonightGames ? null : (
             <FirstUp fu={fu} tappable moreHref={fullHref} />
           )}
+          <LockHistoryLink history={desk.history} href={`${fullHref.split("?")[0]}#lock-history`} />
           <Link href={fullHref} className="mt-3 flex min-h-11 items-center justify-between rounded-card bg-surface px-4 text-note font-semibold text-accent-text">
-            All players and nights
+            <span>
+              All players and nights
+              {moreLive > 0 && <span className="font-normal text-muted"> · {moreLive} more {moreLive === 1 ? "decision" : "decisions"}</span>}
+            </span>
             <ChevronRight size={18} aria-hidden="true" />
           </Link>
         </section>
@@ -167,7 +194,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
       <h2 className="sr-only">Decide now</h2>
       {hazardOnly.length > 0 && <List>{hazardOnly.map((c) => <PlayerRow key={c.playerId} card={c} />)}</List>}
       {heroes.map((c) => (
-        <DecisionHero key={c.playerId} card={c} />
+        <DecisionHero key={c.playerId} card={c} winProb={winProb} />
       ))}
       {!groups.live.length && (fu ? <FirstUp fu={fu} tappable className="mt-2" /> : <EmptyState icon={<CalendarDays size={28} aria-hidden="true" />} title="Nothing to decide">No score is waiting on a lock-or-hold call.</EmptyState>)}
     </div>
@@ -191,7 +218,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
     <PlayerDeck panels={panels} initialOpen={open}>
       <section aria-label="Lock-in" {...common}>
         <Gaps desk={desk} />
-        <SlotCells slots={desk.slots} />
+        {slotsBlock}
         {summary && (
           <div className="mt-3 grid grid-cols-3 gap-2">
             <StatTile size="sm" label="Open slots" value={summary.openMin === summary.openMax ? summary.openMax : `${summary.openMin}-${summary.openMax}`} sub={summary.openMin === summary.openMax ? null : `${summary.openMax - summary.openMin} unknown`} />
@@ -202,14 +229,16 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
         <Tabs
           className="mt-4"
           label="Lock-in views"
-          defaultId={tv?.next ? "tonight" : "decide"}
+          defaultId={tab === "options" && desk.whatIf ? "options" : tv?.next ? "tonight" : "decide"}
           items={[
             ...(tv ? [{ id: "tonight", label: "Tonight", count: tv.toDecide || undefined, content: <div className="pt-1">{tonightFull}</div> }] : []),
             { id: "decide", label: tv ? "Decide" : "Decide now", count: groups.live.length, content: decide },
+            ...(desk.whatIf ? [{ id: "options", label: "Win %", content: <div className="pt-1"><WhatIf desk={desk} /></div> }] : []),
             { id: "nights", label: "Nights", content: nights },
-            { id: "players", label: "Players", count: desk.cards.length, content: everyone },
+            { id: "players", label: "Players", count: desk.whatIf ? undefined : desk.cards.length, content: everyone },
           ]}
         />
+        <LockHistory history={desk.history} season={desk.season} />
         <MethodNote model={desk.model} record={desk.leanRecord} open={methodOpen} />
       </section>
     </PlayerDeck>

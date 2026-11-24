@@ -36,3 +36,23 @@ steps 1 and 4 first.
 
 These files are the record of the study and are excluded from `pnpm lint`
 (eslint.config.mjs) and from vitest's coverage.
+
+## Opponent, win probability and manager profiles (`opponent_*.mjs`)
+
+The offline work behind `lib/lockin/managerProfiles.js`, `lib/lockin/recalibrate.js`,
+`PLAY_MODEL` in `lib/lockin/availability.js`, `priorSeasonWeight` in `lib/lockin/model.js`
+and `WIN_LEAN` in `lib/lockin/matchup.js`. They read and write under `LOCKIN_CACHE_DIR`
+(default `scripts/lockin/cache/`); Sleeper responses go to `opponent_responses/` inside it.
+
+| Step | Command | Produces |
+|---|---|---|
+| 1 | `node scripts/lockin/opponent_fetch_data.mjs` | `chain.json` (the league chain: lock-in, `game_mode` 1, in every season 2022-2026), matchups, rosters, users, schedules, scores feeds, and 2024-2026 logs for every rostered player (about 1,000 requests the first time) |
+| 2 | `node scripts/lockin/opponent_fetch_old.mjs` | 2022 and 2023 logs for players in those seasons' matchups (about 600 requests) |
+| 3 | `node scripts/lockin/opponent_profiles.mjs` | `profiles.json`, `profiles.txt`: league and per-manager profiles (1,358 team-weeks), half-life and credibility chosen out of sample, and the held-out test of manager vs league profile |
+| 4 | `node scripts/lockin/opponent_write_profiles.mjs` | rewrites `lib/lockin/managerProfiles.js` from `profiles.json` |
+| 5 | `node scripts/lockin/opponent_measures.mjs` | `measures.txt`, `recal.json`: player-spread calibration by tercile, "beats it" on real lock situations with the 2023-2025 / 2026 recalibration, and the prior-season weight test |
+| 6 | `node scripts/lockin/opponent_avail.mjs` | `avail.txt`, `avail_coef.json`: the play-probability model, fit on 2025, tested on 2026 |
+| 7 | `node scripts/lockin/opponent_backtest_wp.mjs` | `backtest_wp.txt`: points vs win-probability vs wait-to-deadline policies on the 240 active team-weeks. Needs steps 1 and 4 of the study above (it reads the study cache through `data.mjs`). `CALIB=1` writes the P(win) calibration (`calib_wp.txt`) instead; `WIDEN=a,b` widens my and the opponent's totals; `GAP=x` acts on the win-probability lean only above that gap |
+
+`opponent_data2.mjs` loads all five seasons through `lib/lockin/normalize.js`;
+`opponent_calib_report.mjs` holds the calibration tables for step 7.

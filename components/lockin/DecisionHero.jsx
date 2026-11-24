@@ -1,12 +1,32 @@
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import { Card, Chip } from "@/components/ui";
-import { playerSubtitle } from "@/lib/lockin/view";
+import { decisionNumbers, fmt, playerSubtitle } from "@/lib/lockin/view";
 import { DecisionFigures, Hazards, LeanChip, WhenLine } from "./Decision";
 import { DeckTrigger } from "./PlayerDeck";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
+import { ModelCall, WinFigures } from "./WinCall";
+import { ProfileBar } from "./ProfileBar";
+import { AvailabilityDots } from "./AvailabilityDots";
 
-/** The live decision: who, the figures side by side, the lean, and the player's sheet one tap away. */
-export function DecisionHero({ card }) {
+/** The points figures in one line, for Home. */
+function PointsLine({ card }) {
+  const n = decisionNumbers(card);
+  if (!n) return null;
+  return (
+    <p className="text-note text-muted">
+      On the table <span className="figure text-lede font-bold text-ink">{fmt(n.x)}</span> · Expected if held <span className="figure text-lede font-bold text-ink">{fmt(n.held)}</span>
+      {n.listedOut ? " (listed out next game)" : ""}
+    </p>
+  );
+}
+
+/**
+ * The live decision: who, the model's call, the points figures and the lean (which
+ * rests on points), win chance if locked and if held as information beside it, the
+ * boom/bust profile and his chance to play, and the player's sheet one tap away.
+ * `compact` (Home) prints the points figures as one line.
+ */
+export function DecisionHero({ card, winProb = null, compact = false }) {
   return (
     <Card pad="sm" as="article" id={`lk-${card.playerId}`} className="scroll-mt-20 space-y-3">
       <div className="flex items-center gap-3">
@@ -22,9 +42,14 @@ export function DecisionHero({ card }) {
         </div>
       </div>
       <Hazards card={card} />
-      <DecisionFigures card={card} />
-      <LeanChip lean={card.lean} />
-      <WhenLine card={card} />
+      <ModelCall card={card} />
+      {compact ? <PointsLine card={card} /> : <DecisionFigures card={card} />}
+      {/* on Home the model's call above already says "if not already locked" */}
+      <LeanChip lean={card.lean} hideConditional={compact && !!card.decision?.action} />
+      <WinFigures card={card} winProb={winProb} />
+      {card.profile && <ProfileBar profile={card.profile} x={card.stopping?.x ?? null} compact={compact} />}
+      <AvailabilityDots card={card} />
+      {!(compact && card.decision?.action) && <WhenLine card={card} />}
       <DeckTrigger playerId={card.playerId} label={`${card.name}: charts, record and method. Show details`} className="-mx-3 -mb-3 rounded-b-card border-t border-border">
         <span className="flex min-h-12 items-center justify-between px-3 text-note font-semibold text-accent-text">
           Charts, record and method

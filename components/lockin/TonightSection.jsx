@@ -271,9 +271,9 @@ export function TonightSection({ desk, compact = false, fullHref = "/lockin", fr
       {uncertain && <p className="mt-1.5 text-meta text-secondary">For players listed GTD or DTD, expected values assume he plays: the play rate for listed players is not measured yet.</p>}
       {v.later.length > 0 &&
         (compact ? (
-          <Link href={fullHref} className="mt-2 flex min-h-11 items-center justify-between rounded-card bg-surface px-4 text-note font-semibold text-accent-text">
+          <Link href={fullHref} className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text">
             {v.later.length} more {v.later.length === 1 ? "deadline" : "deadlines"} tonight
-            <ChevronRight size={18} aria-hidden="true" />
+            <ChevronRight size={16} aria-hidden="true" />
           </Link>
         ) : (
           <List className="mt-2" aria-label="Later deadlines tonight">

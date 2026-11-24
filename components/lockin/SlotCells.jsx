@@ -6,7 +6,7 @@ import { DeckTrigger } from "./PlayerDeck";
 const SETTLED = new Set(["locked", "final"]);
 
 /** The seven slots as seven tappable cells: label, banked score, state shape. Tap opens the player. */
-export function SlotCells({ slots }) {
+export function SlotCells({ slots, legend = true }) {
   const keys = slots.map(slotStateKey);
   return (
     <div>
@@ -39,13 +39,20 @@ export function SlotCells({ slots }) {
           );
         })}
       </ol>
-      <ul aria-hidden="true" className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-meta text-secondary">
-        {[...new Set(keys)].map((k) => (
-          <li key={k} className="flex items-center gap-1">
-            <StateIcon state={k} /> {SLOT_STATES[k].label}
-          </li>
-        ))}
-      </ul>
+      {legend && <SlotLegend keys={keys} />}
     </div>
+  );
+}
+
+/** The state shapes in use, once (shared by your slots and the opponent's strip). */
+export function SlotLegend({ keys, className = "mt-2" }) {
+  return (
+    <ul aria-hidden="true" className={cn("flex flex-wrap gap-x-3 gap-y-1 text-meta text-secondary", className)}>
+      {[...new Set(keys)].map((k) => (
+        <li key={k} className="flex items-center gap-1">
+          <StateIcon state={k} /> {SLOT_STATES[k].label}
+        </li>
+      ))}
+    </ul>
   );
 }
