@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Chip, PageHeader } from "@/components/ui";
 import { LockDeskBoard } from "@/components/lockin/LockDeskBoard";
 import { RefreshControl } from "@/components/lockin/RefreshControl";
+import { winPctOf } from "@/lib/lockin/view";
 import { getLeagueHistory } from "@/lib/history";
 import { isFixtureDesk, loadLockDesk, replayAllowed } from "@/lib/lockin/source";
 import { boardHeader } from "@/lib/lockin/view";
@@ -39,7 +40,7 @@ export default async function LockInPage({ searchParams }) {
       <PageHeader
         kicker={hd.kicker}
         title="Lock or hold"
-        aside={<RefreshControl asOf={desk.generatedAt} live={hd.live} updating={hd.updating} disabled={!!replay || isFixtureDesk(desk)} />}
+        aside={<RefreshControl asOf={desk.generatedAt} asOfText={hd.asOf} winPct={winPctOf(desk)} live={hd.live} updating={hd.updating} disabled={!!replay || isFixtureDesk(desk)} />}
         below={isFixtureDesk(desk) ? <Chip className="mt-2">Sample week, invented players</Chip> : null}
       />
       <LockDeskBoard

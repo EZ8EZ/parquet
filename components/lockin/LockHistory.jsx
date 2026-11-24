@@ -7,8 +7,8 @@ import { historyView } from "@/lib/lockin/matchupView";
 import { Habits } from "./Habits";
 
 /**
- * "Your lock history": points per week left on the table against each player's best
- * game that week, split into scores locked before a bigger game and scores held past
+ * "Your lock history": points a week between what you banked and the best game
+ * available to each player that week, split into scores locked before a bigger game and scores held past
  * a bigger one, with n weeks; then how you play, the same facts shown for an
  * opponent. Describes past weeks; never grades them (D6).
  */
@@ -24,9 +24,9 @@ export function LockHistory({ history, season }) {
         <div className="rounded-card bg-surface p-3">
           <p className="flex items-baseline gap-2">
             <span className="figure text-display font-bold text-ink">{fmt(v.perWeek)}</span>
-            <span className="text-note text-muted">points a week left on the table</span>
+            <span className="text-note text-muted">points a week</span>
           </p>
-          <p className="text-meta text-secondary">{v.nText}, against each player&apos;s best game that week</p>
+          <p className="text-meta text-secondary">Between what you banked and each player&apos;s best game that week · {v.nText}</p>
           {v.earlyPct != null && v.latePct != null && (
             <div className="mt-3 flex h-2.5 overflow-hidden rounded-full bg-elevated" aria-hidden="true">
               <span style={{ width: `${v.earlyPct}%`, background: CHART_MARK }} />
@@ -54,7 +54,7 @@ export function LockHistory({ history, season }) {
             </div>
           </dl>
           {v.weeks.length > 0 && (
-            <ul className="mt-3 space-y-1.5" aria-label="Points left on the table by week">
+            <ul className="mt-3 space-y-1.5" aria-label="Points between banked and best game, by week">
               {v.weeks.map((w) => (
                 <li key={w.label} className="grid grid-cols-[4.5rem_1fr_auto] items-center gap-2 text-meta">
                   <span className="text-secondary">{w.label}</span>
@@ -93,7 +93,7 @@ export function LockHistoryLink({ history, href = "/lockin#lock-history" }) {
   return (
     <Link href={href} className="mt-2 flex min-h-11 items-center justify-between gap-2 text-note text-muted">
       <span>
-        Your lock history: <span className="figure font-semibold text-ink">{fmt(v.perWeek)}</span> pts a week left on the table, {v.nText}
+        Lock history: <span className="figure font-semibold text-ink">{fmt(v.perWeek)}</span> pts a week between banked and the best game, {v.nText}
       </span>
       <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-accent-text" />
     </Link>

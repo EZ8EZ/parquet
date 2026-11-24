@@ -52,6 +52,10 @@
   --color-warn-wash: #3a331e;
   --color-warn-edge: #715b20;
 
+  /* The opponent in charts and tiles: info blue, quieter (fills only, never text). */
+  --color-them: #4f78b3;
+  --color-them-wash: #1c2738;
+
   /* TCI heat ramp (CoherenceFragilityQuadrant only). Lightness carries order. */
   --tci-1: #d9483f;
   --tci-2: #e08a2c;
@@ -76,10 +80,12 @@
   --text-body--line-height: 20px;
   --text-lede: 17px;
   --text-lede--line-height: 22px;
+  --text-score: 24px;
+  --text-score--line-height: 28px;
   --text-display: 28px;
   --text-display--line-height: 32px;
-  --text-hero: 44px;
-  --text-hero--line-height: 46px;
+  --text-hero: 48px;
+  --text-hero--line-height: 48px;
 
   /* Radii. Use rounded-card / rounded-control / rounded-full in new code. */
   --radius-sm: 10px;
@@ -97,6 +103,15 @@
   --header-h: 48px;
   --statusbar-h: 40px;
   --tabbar-h: 58px;
+}
+
+/* On This Week's board the scoreboard is the page, so the status-bar scorebug steps
+ * aside (Desk.jsx). Server-rendered marker, so there is no flash. */
+:root:has([data-scoreboard]) {
+  --statusbar-h: 0px;
+}
+:root:has([data-scoreboard]) .desk-statusbar {
+  display: none;
 }
 
 :root {

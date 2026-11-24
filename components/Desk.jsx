@@ -21,11 +21,12 @@ import { cn } from "@/lib/ui";
 import { iconForSurface } from "./nav-icons";
 import { TeamAvatar } from "./TeamAvatar";
 import { SearchPanel } from "./SearchPanel";
+import { Countdown } from "./lockin/TonightClock";
 
 export const APP_CONTENT_ID = "app-content";
 const DESK_SEARCH_PARAM = "find";
 
-function TabItem({ href, label, Icon, active, current, onClick, button, buttonRef, expanded, controls }) {
+function TabItem({ href, label, Icon, active, current, onClick, button, buttonRef, expanded, controls, badge = null }) {
   const cls = cn(
     "flex min-w-0 flex-col items-center justify-center gap-1 transition-colors",
     active ? "text-ink" : "text-secondary hover:text-ink",
@@ -35,13 +36,17 @@ function TabItem({ href, label, Icon, active, current, onClick, button, buttonRe
       <span
         aria-hidden="true"
         className={cn(
-          "flex h-7 w-12 items-center justify-center rounded-full transition-colors",
+          "relative flex h-7 w-12 items-center justify-center rounded-full transition-colors",
           active && "bg-accent-wash text-accent-text",
         )}
       >
         <Icon size={20} strokeWidth={active ? 2.25 : 1.75} />
+        {badge ? <span className="absolute -top-1.5 right-0.5 flex h-4 min-w-4 items-center justify-center rounded-full bg-accent px-1 figure text-micro font-bold leading-none text-accent-ink">{badge}</span> : null}
       </span>
-      <span className="max-w-full whitespace-nowrap text-micro font-semibold">{label}</span>
+      <span className="max-w-full whitespace-nowrap text-micro font-semibold">
+        {label}
+        {badge ? <span className="sr-only">, {badge} {badge === 1 ? "call" : "calls"} open</span> : null}
+      </span>
     </>
   );
   if (button) {
@@ -239,7 +244,7 @@ export function Desk({ data }) {
 
             <div className="bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_var(--color-border)]">
               {/* The scorebug never truncates: lib/desk.js keeps it short enough to fit. */}
-              <div className="flex h-[var(--statusbar-h)] items-center gap-2 border-b border-border px-4">
+              <div className="desk-statusbar flex h-[var(--statusbar-h)] items-center gap-2 border-b border-border px-4">
                 {data?.seat ? (
                   <Link
                     href={data.bug.href}
@@ -261,10 +266,16 @@ export function Desk({ data }) {
                               ·
                             </span>
                           )}
-                          <span className={i === 0 ? "text-secondary" : undefined}>{part}</span>
+                          <span className={i === 0 && !data.bug.next ? "text-secondary" : undefined}>{part}</span>
                         </Fragment>
                       ))}
                     </span>
+                    {data.bug.next?.text && (
+                      <span aria-hidden="true" className="flex shrink-0 items-center gap-1.5">
+                        <span className="text-secondary">{data.bug.next.text}</span>
+                        <Countdown at={data.bug.next.at} pill compact />
+                      </span>
+                    )}
                     <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-faint" />
                   </Link>
                 ) : data ? (
@@ -294,6 +305,7 @@ export function Desk({ data }) {
                       Icon={iconForSurface(s.href)}
                       active={active}
                       current={pathname === s.href ? "page" : active ? "true" : undefined}
+                      badge={s.tab === "week" && data?.bug?.toDecide > 0 ? data.bug.toDecide : null}
                     />
                   );
                 })}

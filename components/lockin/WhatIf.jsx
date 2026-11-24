@@ -6,6 +6,7 @@ import { DIVERGING } from "@/lib/chart-colors";
 import { whatIfView } from "@/lib/lockin/matchupView";
 import { DeckTrigger } from "./PlayerDeck";
 import { LocalWhen } from "./LocalWhen";
+import { displayTz } from "@/lib/lockin/time";
 
 /** Signed bar from the baseline (the centre rule); the printed figure carries the value. */
 function DeltaBar({ bar }) {
@@ -17,7 +18,7 @@ function DeltaBar({ bar }) {
   );
 }
 
-function Row({ r, faces }) {
+function Row({ r, faces, tz }) {
   const face = (id) => {
     const c = faces.get(id);
     return c ? <PlayerAvatar key={id} name={c.name} team={c.team} playerId={id} size="sm" decorative /> : null;
@@ -31,7 +32,7 @@ function Row({ r, faces }) {
       <span className="min-w-0 flex-1">
         <span className="block text-note font-semibold text-ink">
           {r.text}
-          {r.deadlineFallback && <LocalWhen at={r.deadline} fallback={r.deadlineFallback} prefix=" before " />}
+          {r.deadlineFallback && <LocalWhen at={r.deadline} tz={tz} fallback={r.deadlineFallback} prefix=" before " />}
         </span>
         {r.above && (
           <Chip size="sm" tone="info" icon={ArrowUpRight} className="mt-1">
@@ -70,6 +71,7 @@ export function WhatIf({ desk, compact = false, moreHref = "/lockin" }) {
   const v = whatIfView(desk, compact ? { limit: 3, distinct: true } : {});
   if (!v || !v.rows.length) return null;
   const faces = new Map((desk.cards || []).map((c) => [c.playerId, c]));
+  const tz = displayTz(desk);
   return (
     <section aria-labelledby="whatif-title" data-whatif={compact ? "compact" : "full"}>
       <SectionHeader id="whatif-title" title="What moves your win chance" className={compact ? "mt-5" : "mt-2"} />
@@ -79,7 +81,7 @@ export function WhatIf({ desk, compact = false, moreHref = "/lockin" }) {
       <List>
         {v.rows.map((r) => (
           <li key={r.id} data-whatif-row={r.noise ? "noise" : r.above ? "above" : "real"}>
-            <Row r={r} faces={faces} />
+            <Row r={r} faces={faces} tz={tz} />
           </li>
         ))}
         {compact && v.more > 0 && (

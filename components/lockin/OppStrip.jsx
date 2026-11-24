@@ -1,24 +1,29 @@
+import { Check, Lock, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/ui";
 import { fmt } from "@/lib/lockin/view";
-import { StateIcon } from "./StateIcon";
 
 /**
- * The opponent's seven slots as a compact strip mirroring yours: label, banked score
- * and the same state shapes. Not interactive itself; it sits inside the opponent
- * sheet's trigger, so it is spans only.
+ * The opponent's seven slots, one quiet row under yours in the same column grid: the
+ * score with the same in-tile state glyphs (lock, check, reset), blue when locked, a
+ * dot before his game, a dash for an empty slot. Spans only: it sits inside the
+ * opponent sheet's trigger, which carries the spoken summary.
  */
 export function OppStrip({ slots }) {
   return (
     <span className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${slots.length || 7}, minmax(0, 1fr))` }}>
       {slots.map((s) => (
-        <span key={s.index} className={cn("flex h-11 min-w-0 flex-col items-center justify-center gap-0.5 rounded-control", s.key === "locked" || s.key === "final" ? "bg-surface-2" : "bg-bg")}>
-          <span className="text-micro font-semibold text-secondary">{s.label}</span>
-          <span className="flex items-center gap-0.5">
-            <span className={s.key === "locked" ? "text-info" : "text-muted"}>
-              <StateIcon state={s.key} className="size-3" />
-            </span>
-            <span className={cn("figure text-micro font-bold leading-none", s.banked ? "text-ink" : "text-muted")}>{s.banked == null ? "-" : fmt(s.banked)}</span>
-          </span>
+        <span
+          key={s.index}
+          data-slot-state={s.key}
+          className={cn(
+            "flex h-7 min-w-0 items-center justify-center gap-px rounded-control figure text-meta font-semibold",
+            s.key === "locked" ? "bg-them-wash text-info" : s.key === "final" ? "bg-elevated text-ink" : s.key === "empty" ? "border border-dashed border-border-strong text-faint" : "text-muted",
+          )}
+        >
+          {s.key === "locked" && <Lock size={10} strokeWidth={2.5} aria-hidden="true" className="shrink-0" />}
+          {s.key === "final" && <Check size={10} strokeWidth={3} aria-hidden="true" className="shrink-0" />}
+          {s.key === "reset" && <RotateCcw size={10} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-faint" />}
+          {s.key === "yet" ? "·" : s.key === "empty" ? "—" : s.banked == null ? "—" : fmt(s.banked)}
         </span>
       ))}
     </span>

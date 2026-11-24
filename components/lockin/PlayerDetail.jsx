@@ -8,6 +8,7 @@ import { MinutesChart } from "./MinutesChart";
 import { OpponentHistory } from "./OpponentHistory";
 import { WeekGrid } from "./WeekGrid";
 import { ModelCall, WinFigures } from "./WinCall";
+import { BEAT_NOTE, roughen } from "@/lib/lockin/matchupView";
 import { ProfileBar } from "./ProfileBar";
 import { AvailabilityDots } from "./AvailabilityDots";
 
@@ -53,7 +54,7 @@ function Record({ record, methodHref }) {
 }
 
 /** Everything about one player, for the sheet: the decision, then the five charts. */
-export function PlayerPanel({ card, today, record, methodHref, calibration = null, winProb = null }) {
+export function PlayerPanel({ card, today, record, methodHref, winProb = null }) {
   const strip = stripChart(card);
   const dist = distChart(card);
   const mins = minutesChart(card);
@@ -70,13 +71,13 @@ export function PlayerPanel({ card, today, record, methodHref, calibration = nul
           <div className="space-y-1">
             <LeanChip lean={card.lean} />
             <WinFigures card={card} winProb={winProb} showReason={false} />
-            <p className="text-note text-muted">{card.lean.reason}.</p>
+            <p className="text-note text-muted">{roughen(card.lean.reason)}.</p>
           </div>
         ) : (
           <p className="text-note text-muted">{card.decision.kind === "lineup" ? card.decision.text : card.lean.reason}</p>
         )}
         {fc && <p className="text-meta text-secondary">Forecast {basisText(fc)}.</p>}
-        {card.stopping && calibration && <p className="text-meta text-secondary">&ldquo;Later game beats it&rdquo; tends to run high: in 2026 games it {calibration}.</p>}
+        {card.stopping && <p className="text-meta text-secondary">{BEAT_NOTE}</p>}
         {card.lean.value !== "none" && <Record record={record} methodHref={methodHref} />}
       </div>
       <Block title="Boom or bust">

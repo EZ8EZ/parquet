@@ -1,19 +1,12 @@
-"use client";
-import { useEffect, useState } from "react";
-import { whenText } from "@/lib/lockin/matchupView";
+import { DEFAULT_TZ, dayClockText, stripZone } from "@/lib/lockin/time";
 
 /**
- * "Sat 7:30 PM EST" in the viewer's own time zone. The server renders Eastern
- * (`fallback`); after hydration it switches to local time with the zone, the same as
- * the Tonight section's deadlines.
+ * "Sat 7:30 PM" in the board's display zone (desk.displayTz; lib/lockin/time.js). The
+ * zone is named once, in the board's top bar, so no suffix here. Server-rendered: the
+ * same text on every device, no hydration swap.
  */
-export function LocalWhen({ at, fallback, prefix = "", className }) {
-  const [text, setText] = useState(fallback);
-  useEffect(() => {
-    const local = whenText(at, undefined);
-    // eslint-disable-next-line react-hooks/set-state-in-effect -- local zone is only known in the browser
-    if (local) setText(local);
-  }, [at]);
+export function LocalWhen({ at, tz = DEFAULT_TZ, fallback = null, prefix = "", className }) {
+  const text = dayClockText(at, tz) ?? stripZone(fallback);
   if (!text) return null;
   return (
     <span className={className}>

@@ -7,12 +7,12 @@ import { DeckTrigger, PlayerDeck } from "./PlayerDeck";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { Opp } from "./Opp";
 import { PlayerPanel } from "./PlayerDetail";
-import { SlotCells, SlotLegend } from "./SlotCells";
+import { SlotCells } from "./SlotCells";
 import { Matchup, NoOpponent } from "./Matchup";
 import { WhatIf } from "./WhatIf";
 import { LockHistory, LockHistoryLink } from "./LockHistory";
 import { matchupView } from "@/lib/lockin/matchupView";
-import { slotStateKey } from "@/lib/lockin/view";
+import { slotTiles } from "@/lib/lockin/view";
 import { DecisionHero } from "./DecisionHero";
 import { PlayerRow } from "./PlayerRow";
 import { WeekGrid } from "./WeekGrid";
@@ -92,7 +92,7 @@ function panelsFor(desk, methodHref) {
       title: c.name,
       leading: <PlayerAvatar name={c.name} team={c.team} playerId={c.playerId} size="md" decorative />,
       subtitle: playerSubtitle(c),
-      content: <PlayerPanel card={c} today={desk.today} record={desk.leanRecord} methodHref={methodHref} calibration={desk.model?.calibration?.pLaterBeatsIfPlays} winProb={desk.winProb ?? null} />,
+      content: <PlayerPanel card={c} today={desk.today} record={desk.leanRecord} methodHref={methodHref} winProb={desk.winProb ?? null} />,
     }));
 }
 
@@ -136,11 +136,11 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
   const mv = matchupView(desk, { me, them });
   const slotsBlock =
     mv && mv.state !== "none" ? (
-      <Matchup v={mv} desk={desk} mySlots={<SlotCells slots={desk.slots} legend={false} />} legend={<SlotLegend keys={[...desk.slots.map(slotStateKey), ...mv.oppSlots.map((s) => s.key)]} className="" />} />
+      <Matchup v={mv} desk={desk} mySlots={<SlotCells tiles={slotTiles(desk)} />} />
     ) : (
       <>
         {mv?.state === "none" && <NoOpponent />}
-        <SlotCells slots={desk.slots} />
+        <SlotCells tiles={slotTiles(desk)} />
       </>
     );
 
