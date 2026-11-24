@@ -17,7 +17,7 @@ export function ProfileBar({ profile, x = null, compact = false }) {
     <div data-profile>
       <p className="flex flex-wrap items-baseline justify-between gap-x-3 text-meta text-secondary">
         <span>
-          8 in 10 games <span className="figure font-semibold text-ink">{v.rangeText}</span>, median <span className="figure font-semibold text-ink">{fmt(v.p50)}</span>
+          Next game, 8 in 10: <span className="figure font-semibold text-ink">{v.rangeText}</span>, median <span className="figure font-semibold text-ink">{fmt(v.p50)}</span>
         </span>
         {v.x != null && (
           <span>
@@ -34,13 +34,13 @@ export function ProfileBar({ profile, x = null, compact = false }) {
         {v.boom && (
           <Chip size="sm" tone="positive" icon={TrendingUp}>
             {v.boom.text}
-            {v.boom.threshold ? ` · ${v.boom.threshold}` : ""}
+            {v.boom.threshold && !compact ? ` · ${v.boom.threshold}` : ""}
           </Chip>
         )}
         {v.bust && (
           <Chip size="sm" tone="negative" icon={TrendingDown}>
             {v.bust.text}
-            {v.bust.threshold ? ` · ${v.bust.threshold}` : ""}
+            {v.bust.threshold && !compact ? ` · ${v.bust.threshold}` : ""}
           </Chip>
         )}
         <span className="text-meta text-secondary">{v.nText}</span>

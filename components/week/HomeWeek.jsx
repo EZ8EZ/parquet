@@ -2,6 +2,7 @@ import { LockDeskBoard } from "@/components/lockin/LockDeskBoard";
 import { RefreshControl } from "@/components/lockin/RefreshControl";
 import { isFixtureDesk } from "@/lib/lockin/source";
 import { boardHeader } from "@/lib/lockin/view";
+import { teamIdentity } from "@/lib/lockin/matchupView";
 import { loadWeek } from "@/lib/week/load";
 import { DeadlineStrip } from "./DeadlineStrip";
 import { InjuredStarters } from "./InjuredStarters";
@@ -26,7 +27,7 @@ export async function HomeWeek({ h, rosterId, replay = null }) {
           <RefreshControl asOf={desk.generatedAt} live={bh.live} updating={bh.updating} disabled={!!replay || isFixtureDesk(desk)} />
         </div>
       )}
-      {desk && <LockDeskBoard rosterId={rosterId} desk={desk} mode="compact" fullHref={fullHref} replay={replay} />}
+      {desk && <LockDeskBoard rosterId={rosterId} desk={desk} mode="compact" fullHref={fullHref} replay={replay} me={teamIdentity(h, rosterId)} them={desk.opponent ? teamIdentity(h, desk.opponent.rosterId) : null} />}
       <InjuredStarters injured={week.injured} />
       <DeadlineStrip deadlines={week.deadlines} window={week.window} />
     </>

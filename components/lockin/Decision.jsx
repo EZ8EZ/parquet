@@ -10,12 +10,12 @@ export function slotKeyOf(card) {
 }
 
 /** The lean as a status chip; a marginal lean is neutral (quieter), and a conditional one says so. */
-export function LeanChip({ lean }) {
+export function LeanChip({ lean, hideConditional = false }) {
   const v = leanView(lean);
   if (!v) return null;
   return (
     <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-      {v.conditional && <span className="text-meta text-secondary">If not already locked</span>}
+      {v.conditional && !hideConditional && <span className="text-meta text-secondary">If not already locked</span>}
       <Chip tone={v.nearlyEven ? "neutral" : "accent"} icon={v.value === "lock" ? Lock : Hourglass}>
         Model leans {v.value} · {v.confidence}
       </Chip>
