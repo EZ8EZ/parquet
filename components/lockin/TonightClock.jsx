@@ -24,7 +24,7 @@ const PILL = "inline-flex h-6 shrink-0 items-center whitespace-nowrap rounded-fu
  * Countdown to a listed start, ticking client-side once a second; no polling.
  * `frozenAt` (fixture and replays) runs the clock from that moment instead of now.
  */
-export function Countdown({ at, frozenAt = null, className, pill = false }) {
+export function Countdown({ at, frozenAt = null, className, pill = false, compact = false }) {
   const deadline = at ? Date.parse(at) : NaN;
   const [now, setNow] = useState(null);
   useEffect(() => {
@@ -41,7 +41,7 @@ export function Countdown({ at, frozenAt = null, className, pill = false }) {
   const soon = left && deadline - now < SOON_MS;
   return (
     <span className={cn(pill && PILL, pill && (soon ? "bg-warn-wash text-warn" : "bg-elevated text-muted"), className)} role="timer" aria-live="off" data-soon={pill ? String(!!soon) : undefined}>
-      {left ? `in ${left}` : "passed"}
+      {left ? `in ${compact ? left.replace(/ h /, "h ").replace(/ min( \d+ s)?$/, "m").replace(/ s$/, "s") : left}` : "passed"}
     </span>
   );
 }
