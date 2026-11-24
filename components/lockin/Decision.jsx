@@ -106,7 +106,9 @@ export function WhenLine({ card }) {
       ) : (
         gamesLeftText(card)
       )}
-      {card.decision.kind === "lock_or_hold" && card.decision.deadlineText ? `. Decide ${card.decision.deadlineText}.` : "."}
+      {/* One deadline per player: with the engine's own deadline (shown by the model's
+          call above), the older "Decide before his next game" sentence is left out. */}
+      {card.decision.kind === "lock_or_hold" && card.decision.deadlineText && !(card.decision.deadline && card.decision.action) ? `. Decide ${card.decision.deadlineText}.` : "."}
     </p>
   );
 }

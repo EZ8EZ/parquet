@@ -81,7 +81,8 @@ export default async function ThisWeekPage({ searchParams }) {
         </Suspense>
       ) : null}
 
-      <ActionQueue items={actions} compact className="mt-4" />
+      {/* In season, To do and the deadline list live on the Team tab (/roster). */}
+      {ctx.offseason && <ActionQueue items={actions} compact className="mt-4" />}
       <DigestBeacon metrics={digest.nextMetrics} />
 
       <nav aria-label="Also this week" className="mt-4 flex flex-wrap gap-x-5">

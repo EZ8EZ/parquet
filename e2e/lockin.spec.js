@@ -193,6 +193,10 @@ test.describe("lock-or-hold board", () => {
     await expect(page.locator("dialog[open]")).toBeVisible();
     expect(axeList(await new AxeBuilder({ page }).analyze())).toEqual([]);
     await page.keyboard.press("Escape");
+    // Closing pops the history entry the sheet pushed (components/ui/Sheet.jsx), and
+    // history.back() is asynchronous: wait for it to land, or the next goto races it.
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+    await page.waitForFunction(() => !window.history.state?.parquetSheet);
     await page.goto("/");
     expect(axeList(await new AxeBuilder({ page }).analyze())).toEqual([]);
   });

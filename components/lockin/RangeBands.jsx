@@ -22,7 +22,7 @@ export function RangeBands({ scale, rows }) {
     );
   }
   return (
-    <figure className="m-0" aria-label="Projected final totals: range with the most likely total marked">
+    <figure className="m-0 pb-3" aria-label="Projected final totals: range with the most likely total marked">
       <ul className="space-y-2.5">
         {rows.map((r, i) => {
           const g = scale.rows[i];
@@ -57,18 +57,27 @@ export function RangeBands({ scale, rows }) {
                   </>
                 )}
               </div>
-              {g && r.note && <p className="mt-0.5 text-micro text-secondary">{r.note}</p>}
             </li>
           );
         })}
       </ul>
-      <div className="relative mt-1 h-4 text-micro text-faint" aria-hidden="true">
+      {/* The scale sits directly under the bands, on a rule with tick marks, so its
+          labels cannot be read as belonging to the slot strip below. */}
+      <div className="relative mt-1.5 h-5 border-t border-border-strong text-micro text-faint" aria-hidden="true">
         {scale.ticks.map((t) => (
-          <span key={t.v} className="figure absolute -translate-x-1/2" style={{ left: `${t.pct}%` }}>
-            {Math.round(t.v)}
+          <span key={t.v} className="absolute top-0 flex -translate-x-1/2 flex-col items-center" style={{ left: `${t.pct}%` }}>
+            <span className="h-1 w-px bg-border-strong" />
+            <span className="figure leading-none">{Math.round(t.v)}</span>
           </span>
         ))}
       </div>
+      {rows.map((r, i) =>
+        scale.rows[i] && r.note ? (
+          <p key={`note-${i}`} className="mt-1 text-micro text-secondary">
+            {r.note}
+          </p>
+        ) : null,
+      )}
     </figure>
   );
 }
