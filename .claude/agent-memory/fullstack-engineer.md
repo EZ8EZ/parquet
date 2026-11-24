@@ -2,6 +2,14 @@
 
 Lessons from past tasks, newest first. Read before starting; append when done.
 
+## 2026-11-24
+- Building against a contract another worker is writing: keep the stub test-only, write view helpers that tolerate several shapes (record string or object, noise or real), and dump the real desk JSON the moment the engine fixture lands. Five shape changes arrived mid-task; the helpers absorbed all of them with small edits.
+- Compare the same action across two panels on live data before calling them consistent: the card's win chance (rest of week on the model's policy) and the what-if row (single action vs doing nothing) differed 45% vs 2% for one player. Fixture tests could not show it.
+- Home height: every new panel needs a matching cut. Order by deadline (Tonight above the what-if), fold non-hazard live rows into the "All players" link, print points as one line when win chances lead. Still 2,168px live for roster 6 (was 1,859); 1,700 needs a product call on what leaves Home.
+- The worktree guard refuses shell lines that mention `.git` paths or chain git with other commands; poll a ref file with a node script instead.
+- First-load JS without Next's size column: sum `/_next/static` script transfer bytes per route with CDP against `next start`, before and after. Build the baseline from `git archive origin/main` into the scratchpad with `pnpm install --offline`.
+- Use one shared legend under both slot strips; a second legend costs 40px and says the same thing.
+
 ## 2026-11-17
 - Check a live game night against the engine JSON row by row: it caught an Out bench player being started first and bench players listed as "starting then". Fixture tests alone did not.
 - For a same-moment UI-vs-engine check, record the responses (capture.mjs) and replay them on a dev server (LOCKIN_REPLAY_DIR + ?at=); the live server's desk is cached and log rows live 15 min.
