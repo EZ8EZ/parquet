@@ -5,7 +5,7 @@ import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { fmt } from "@/lib/lockin/view";
 import { swapScale, tonightView } from "@/lib/lockin/tonightView";
 import { DeckTrigger } from "./PlayerDeck";
-import { Countdown, Deadline } from "./TonightClock";
+import { Countdown, DECIDE_BUFFER_MIN, Deadline } from "./TonightClock";
 import { displayTz, stripZone } from "@/lib/lockin/time";
 
 function Face({ id, v, size = "sm" }) {
@@ -111,7 +111,7 @@ function Action({ a, v, node }) {
                 <Listing p={v.players[a.laterId]} />
               </span>
               <span className="block text-meta text-secondary">
-                <Deadline tz={v.tz} at={node.at} fallback={node.atText} /> if {nameOf(v, a.earlyId)}&apos;s projected final is under the swap line
+                <Deadline tz={v.tz} nowMs={v.nowMs} at={node.at} fallback={node.atText} /> if {nameOf(v, a.earlyId)}&apos;s projected final is under the swap line
               </span>
             </span>
           </span>
@@ -159,9 +159,9 @@ function Hero({ node, v, frozenAt }) {
     <Card pad="sm" className="space-y-2" data-tonight-next>
       <div className="flex flex-wrap items-baseline justify-between gap-x-3">
         <p className="text-lede font-bold text-ink">
-          <Deadline tz={v.tz} at={node.at} fallback={node.atText} capitalize />
+          <Deadline tz={v.tz} nowMs={v.nowMs} at={node.at} fallback={node.atText} capitalize />
         </p>
-        {node.at && <Countdown at={node.at} frozenAt={frozenAt} pill />}
+        {node.at && <Countdown at={node.at} frozenAt={frozenAt} pill bufferMin={DECIDE_BUFFER_MIN} />}
       </div>
       <Starting node={node} v={v} />
       {node.actions.length > 0 ? (
@@ -192,7 +192,7 @@ function NodeRow({ node, v }) {
       </span>
       <span className="min-w-0 flex-1">
         <span className="block text-body font-semibold text-ink">
-          <Deadline tz={v.tz} at={node.at} fallback={node.atText} capitalize />
+          <Deadline tz={v.tz} nowMs={v.nowMs} at={node.at} fallback={node.atText} capitalize />
         </span>
         <span className="block text-meta text-secondary">{summary[0].toUpperCase() + summary.slice(1)}</span>
       </span>
@@ -224,7 +224,7 @@ const RECORD = { gain: 0.88, n: 240, lo: 0.44, hi: 1.41 };
 /** Tonight's listed starts as deadlines: the next one in full, the rest as a track. */
 export function TonightSection({ desk, compact = false, fullHref = "/lockin", frozenAt = null, inTab = false }) {
   const tv = tonightView(desk);
-  const v = tv ? { ...tv, tz: displayTz(desk) } : null;
+  const v = tv ? { ...tv, tz: displayTz(desk), nowMs: frozenAt ? Date.parse(frozenAt) : Date.parse(desk.generatedAt) } : null;
   // Inside /lockin's Tonight tab the tab is the title; the heading stays for screen readers.
   const heading = inTab ? (
     <h2 id="tonight-title" className="sr-only">
@@ -297,7 +297,7 @@ export function TonightSection({ desk, compact = false, fullHref = "/lockin", fr
           <ul className="space-y-1">
             {v.passed.map((n) => (
               <li key={n.key}>
-                <Deadline tz={v.tz} at={n.at} fallback={n.atText} capitalize />: {n.starting.map((id) => nameOf(v, id)).join(", ") || n.actions.length + " decisions"}
+                <Deadline tz={v.tz} nowMs={v.nowMs} at={n.at} fallback={n.atText} capitalize />: {n.starting.map((id) => nameOf(v, id)).join(", ") || n.actions.length + " decisions"}
               </li>
             ))}
           </ul>

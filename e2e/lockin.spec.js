@@ -22,7 +22,8 @@ test.describe("lock-or-hold board", () => {
     const tonight = page.locator("[data-tonight]").first();
     await expect(tonight).toHaveAttribute("data-tonight", "open");
     const next = tonight.locator("[data-tonight-next]");
-    await expect(next).toContainText(/Before \d{1,2}:\d{2} [AP]M/);
+    // the move is asked for DECIDE_BUFFER_MIN before the listed tip, which stays visible
+    await expect(next).toContainText(/(By \d{1,2}:\d{2} [AP]M · tips|Decide now · tips) \d{1,2}:\d{2}/);
     await expect(next.getByRole("timer")).toHaveText(/^in \d/);
     await expect(next).toContainText("Starting then");
     // tapping a starter opens his player sheet
@@ -84,7 +85,7 @@ test.describe("lock-or-hold board", () => {
     await expect(first.locator("[data-win-compare]")).toContainText(/if lock\s*\d+%/);
     // a wait headline names the call at the deadline, never a bare chip
     for (const row of await calls.locator('li[data-call="wait"]').all()) {
-      await expect(row).toContainText(/Wait until .+, then (lock|hold)/);
+      await expect(row).toContainText(/(Wait until .+, then (lock|hold) · (locks|tips) at \d{1,2}:\d{2}|Decide now)/);
       await expect(row).toContainText(/At the deadline: model leans/);
     }
     await expect(board.getByRole("link", { name: /Lock history/ })).toHaveAttribute("href", "/lockin#lock-history");

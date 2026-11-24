@@ -6,7 +6,7 @@ import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { cn } from "@/lib/ui";
 import { fmt } from "@/lib/lockin/view";
 import { BEAT_NOTE, assumptionLines } from "@/lib/lockin/matchupView";
-import { clockText } from "@/lib/lockin/time";
+import { DECIDE_BUFFER_MIN, decideBy } from "@/lib/lockin/time";
 import { OpponentBody } from "./Matchup";
 import { OppStrip } from "./OppStrip";
 import { Countdown } from "./TonightClock";
@@ -50,7 +50,7 @@ function Side({ team, banked, sub, right = false, isMe = false }) {
  * The scoreboard footer: Tonight in one line when it has nothing to move (the full
  * Tonight section shows instead when it does).
  */
-export function TonightFoot({ line, tz, frozenAt = null, href = "/lockin?tab=tonight" }) {
+export function TonightFoot({ line, tz, frozenAt = null, nowMs = null, href = "/lockin?tab=tonight" }) {
   if (!line) return null;
   if (line.noGames) {
     return (
@@ -61,19 +61,22 @@ export function TonightFoot({ line, tz, frozenAt = null, href = "/lockin?tab=ton
       </Link>
     );
   }
-  const at = clockText(line.at, tz) ?? line.atText;
+  const db = line.at ? decideBy(line.at, tz, { nowMs }) : null;
+  const when = db ? (db.passed ? `decide now · tips ${db.tipText}` : `by ${db.byClock} · tips ${db.tipText}`) : line.atText;
   return (
     <Link
       href={href}
-      aria-label={`Tonight: first tip ${at ?? "time unknown"}, ${line.count} ${line.count === 1 ? "player" : "players"}, all in slots. Open Tonight`}
+      aria-label={`Tonight: ${db ? `set by ${db.byClock}, first tip ${db.tipText}` : "first tip time unknown"}, ${line.count} ${line.count === 1 ? "player" : "players"}, all in slots. Open Tonight`}
       className="-mx-3.5 -mb-3.5 mt-3 flex min-h-[52px] items-center gap-2.5 border-t border-border px-3.5 py-2"
       data-tonight="set"
     >
       <Clock size={18} aria-hidden="true" className="shrink-0 text-warn" />
       <span className="min-w-0 flex-1">
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-          <span className="text-note font-semibold text-ink">Tonight {at}</span>
-          {line.at && <Countdown at={line.at} frozenAt={frozenAt} pill />}
+          <span className={cn("text-note font-semibold", db?.passed ? "text-warn" : "text-ink")}>
+            Tonight <span className="font-normal text-secondary">·</span> {when}
+          </span>
+          {line.at && <Countdown at={line.at} frozenAt={frozenAt} pill bufferMin={DECIDE_BUFFER_MIN} />}
         </span>
         <span className="mt-0.5 block text-meta text-muted">
           {line.count} {line.count === 1 ? "player" : "players"}, all in slots
