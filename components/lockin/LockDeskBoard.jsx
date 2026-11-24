@@ -1,8 +1,7 @@
-import Link from "next/link";
-import { AlertTriangle, CalendarDays, ChevronRight } from "lucide-react";
+import { AlertTriangle, CalendarDays } from "lucide-react";
 import { Disclosure, EmptyState, List, ListRow, SectionHeader, StatTile, Tabs } from "@/components/ui";
 import { isFixtureDesk, loadLockDesk } from "@/lib/lockin/source";
-import { compactLive, firstUp, gapLines, groupCards, playerSubtitle, resultLine, shortDate, stateBody, weekGrid } from "@/lib/lockin/view";
+import { firstUp, fmt, gapLines, groupCards, playerSubtitle, resultLine, shortDate, stateBody, weekGrid } from "@/lib/lockin/view";
 import { DeckTrigger, PlayerDeck } from "./PlayerDeck";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { Opp } from "./Opp";
@@ -10,7 +9,7 @@ import { PlayerPanel } from "./PlayerDetail";
 import { SlotCells } from "./SlotCells";
 import { Matchup, NoOpponent } from "./Matchup";
 import { WhatIf } from "./WhatIf";
-import { LockHistory, LockHistoryLink } from "./LockHistory";
+import { LockHistory } from "./LockHistory";
 import { matchupView } from "@/lib/lockin/matchupView";
 import { slotTiles } from "@/lib/lockin/view";
 import { DecisionHero } from "./DecisionHero";
@@ -19,6 +18,10 @@ import { WeekGrid } from "./WeekGrid";
 import { MethodNote } from "./MethodNote";
 import { TonightSection } from "./TonightSection";
 import { tonightView } from "@/lib/lockin/tonightView";
+import { callRows, historyView, tonightLine } from "@/lib/lockin/matchupView";
+import { displayTz } from "@/lib/lockin/time";
+import { Scoreboard, TonightFoot } from "./Scoreboard";
+import { CallList } from "./CallList";
 
 function Gaps({ desk }) {
   const lines = gapLines(desk);
@@ -102,7 +105,7 @@ function panelsFor(desk, methodHref) {
  * "full" is /lockin: slots, three figures, then Decide now / Nights / Players tabs.
  * Every player opens in one sheet with previous / next.
  */
-export async function LockDeskBoard({ rosterId, mode = "full", players = null, open = null, replay = null, fullHref = "/lockin", desk: given = null, methodOpen = false, me = null, them = null, tab = null }) {
+export async function LockDeskBoard({ rosterId, mode = "full", players = null, open = null, replay = null, fullHref = "/lockin", desk: given = null, methodOpen = false, me = null, them = null, tab = null, record = null }) {
   const desk = given ?? (await loadLockDesk({ rosterId, players, replay }));
   const compact = mode === "compact";
   const methodHref = `${fullHref}${fullHref.includes("?") ? "&" : "?"}method=open#lockin-method`;
@@ -153,37 +156,48 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
   const tonightFull = tv ? <TonightSection desk={desk} fullHref={fullHref} frozenAt={frozenAt} inTab /> : null;
 
   if (compact) {
-    const cl = compactLive(groups.live);
-    // Home keeps hazard rows (a listed-out or last-game warning); other live decisions
-    // are counted on the link to /lockin, where each has its card.
-    const rows = [...cl.before, ...cl.after].filter((c) => c.hazards.length > 0);
-    const moreLive = cl.featured?.stopping ? cl.before.length + cl.after.length - rows.length : 0;
+    // Home (direction A): the scoreboard with Tonight in its footer, then Your calls.
+    const rows = callRows(desk);
+    const tz = displayTz(desk);
+    const line = tonightLine(desk);
+    const sep = fullHref.includes("?") ? "&" : "?";
+    const foot = line ? <TonightFoot line={line} tz={tz} frozenAt={frozenAt} href={`${fullHref}${sep}tab=tonight`} /> : null;
+    const tiles = <SlotCells tiles={slotTiles(desk)} />;
+    const hv = historyView(desk.history);
+    const anyConditional = rows.some((r) => r.conditional);
     return (
       <PlayerDeck panels={panels} initialOpen={open}>
         <section aria-label="Lock-in" {...common}>
           <Gaps desk={desk} />
-          {slotsBlock}
-          {tonight}
-          <WhatIf desk={desk} compact moreHref={`${fullHref}${fullHref.includes("?") ? "&" : "?"}tab=options`} />
-          {cl.featured ? (
-            <>
-              <SectionHeader title={groups.live.length > 1 ? `Decide now · ${groups.live.length}` : "Decide now"} />
-              <div className="space-y-2">
-                {cl.featured.stopping ? <DecisionHero card={cl.featured} winProb={winProb} compact /> : null}
-                {(cl.featured.stopping ? rows : groups.live).length > 0 && <List>{(cl.featured.stopping ? rows : groups.live).map((c) => <PlayerRow key={c.playerId} card={c} />)}</List>}
-              </div>
-            </>
-          ) : tonightGames ? null : (
-            <FirstUp fu={fu} tappable moreHref={fullHref} />
+          {mv && mv.state !== "none" ? (
+            <Scoreboard v={mv} desk={desk} slots={tiles} record={record} footer={foot} />
+          ) : (
+            <div className="rounded-card bg-surface p-3.5">
+              {mv?.state === "none" && <NoOpponent />}
+              {tiles}
+              {foot}
+            </div>
           )}
-          <LockHistoryLink history={desk.history} href={`${fullHref.split("?")[0]}#lock-history`} />
-          <Link href={fullHref} className="mt-3 flex min-h-11 items-center justify-between rounded-card bg-surface px-4 text-note font-semibold text-accent-text">
-            <span>
-              All players and nights
-              {moreLive > 0 && <span className="font-normal text-muted"> · {moreLive} more {moreLive === 1 ? "decision" : "decisions"}</span>}
-            </span>
-            <ChevronRight size={18} aria-hidden="true" />
-          </Link>
+          {!line && tonight}
+          {rows.length > 0 ? (
+            <section aria-labelledby="calls-title">
+              <SectionHeader id="calls-title" title={`Your calls · ${rows.length}`} className="mt-5" href={desk.whatIf ? `${fullHref}${sep}tab=options` : null} cta={desk.whatIf ? "Win % table" : null} />
+              <p className="-mt-1 mb-2.5 text-meta text-secondary">Leans rest on expected points{anyConditional ? " · if not already locked" : ""}</p>
+              <CallList rows={rows} />
+            </section>
+          ) : tonightGames ? null : (
+            <FirstUp fu={fu} tappable moreHref={fullHref} className="mt-5" />
+          )}
+          <List className="mt-3">
+            {hv?.ok && (
+              <li>
+                <ListRow href={`${fullHref.split("?")[0]}#lock-history`} title="Lock history" meta={`${fmt(hv.perWeek)} pts a week between banked and the best game · ${hv.nText}`} chevron />
+              </li>
+            )}
+            <li>
+              <ListRow href={fullHref} title="Every night and player" meta={desk.slotPressure?.summary ? `${desk.slotPressure.summary.playersStillToPlay} players still to play, ${desk.slotPressure.summary.gamesRemaining} games left` : null} chevron />
+            </li>
+          </List>
         </section>
       </PlayerDeck>
     );

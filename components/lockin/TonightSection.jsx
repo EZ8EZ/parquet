@@ -6,7 +6,7 @@ import { fmt } from "@/lib/lockin/view";
 import { swapScale, tonightView } from "@/lib/lockin/tonightView";
 import { DeckTrigger } from "./PlayerDeck";
 import { Countdown, Deadline } from "./TonightClock";
-import { displayTz } from "@/lib/lockin/time";
+import { displayTz, stripZone } from "@/lib/lockin/time";
 
 function Face({ id, v, size = "sm" }) {
   const p = v.players[id];
@@ -199,7 +199,7 @@ function NodeRow({ node, v }) {
       {id && <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-faint" />}
     </span>
   );
-  return <li>{id ? <DeckTrigger playerId={id} label={`${node.atText}: ${summary}. Show details`}>{face}</DeckTrigger> : face}</li>;
+  return <li>{id ? <DeckTrigger playerId={id} label={`${stripZone(node.atText)}: ${summary}. Show details`}>{face}</DeckTrigger> : face}</li>;
 }
 
 function HowItWorks({ record }) {
@@ -267,12 +267,24 @@ export function TonightSection({ desk, compact = false, fullHref = "/lockin", fr
         <p className="rounded-card bg-surface px-4 py-3 text-body text-muted">Every decision point tonight has passed.</p>
       )}
       {uncertain && <p className="mt-1.5 text-meta text-secondary">For players listed GTD or DTD, expected values assume he plays: the play rate for listed players is not measured yet.</p>}
+      {/* Home: a later deadline with a move to make shows as a row; the rest are one link */}
+      {compact && v.later.some((n) => n.actions.length) && (
+        <List className="mt-2" aria-label="Later moves tonight">
+          {v.later
+            .filter((n) => n.actions.length)
+            .map((n) => (
+              <NodeRow key={n.key} node={n} v={v} />
+            ))}
+        </List>
+      )}
       {v.later.length > 0 &&
         (compact ? (
-          <Link href={fullHref} className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text">
-            {v.later.length} more {v.later.length === 1 ? "deadline" : "deadlines"} tonight
-            <ChevronRight size={16} aria-hidden="true" />
-          </Link>
+          v.later.some((n) => !n.actions.length) && (
+            <Link href={fullHref} className="mt-1 inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text">
+              {v.later.filter((n) => !n.actions.length).length} more {v.later.filter((n) => !n.actions.length).length === 1 ? "deadline" : "deadlines"} tonight
+              <ChevronRight size={16} aria-hidden="true" />
+            </Link>
+          )
         ) : (
           <List className="mt-2" aria-label="Later deadlines tonight">
             {v.later.map((n) => (

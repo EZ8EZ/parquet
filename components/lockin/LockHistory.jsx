@@ -1,5 +1,3 @@
-import Link from "next/link";
-import { ChevronRight } from "lucide-react";
 import { Disclosure, SectionHeader } from "@/components/ui";
 import { CHART_FIELD, CHART_MARK } from "@/lib/chart-colors";
 import { fmt } from "@/lib/lockin/view";
@@ -83,19 +81,5 @@ export function LockHistory({ history, season }) {
         <Habits profile={history.profile} season={season} self emptyText="Too few past weeks to describe your habits yet." />
       </div>
     </section>
-  );
-}
-
-/** One line for Home linking to the history on /lockin. */
-export function LockHistoryLink({ history, href = "/lockin#lock-history" }) {
-  const v = historyView(history);
-  if (!v?.ok) return null;
-  return (
-    <Link href={href} className="mt-2 flex min-h-11 items-center justify-between gap-2 text-note text-muted">
-      <span>
-        Lock history: <span className="figure font-semibold text-ink">{fmt(v.perWeek)}</span> pts a week between banked and the best game, {v.nText}
-      </span>
-      <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-accent-text" />
-    </Link>
   );
 }

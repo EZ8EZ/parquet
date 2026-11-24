@@ -35,9 +35,10 @@ export default async function ThisWeekPage({ searchParams }) {
   const teamName = h.me.teamName ?? h.me.displayName;
   const season = h.currentLeague.season;
 
+  const inWeek = !ctx.offseason && rosterId != null;
   return (
     <div>
-      <PageHeader
+      {!inWeek && <PageHeader
         kicker={teamName}
         title={ctx.offseason ? `${season} offseason` : "This week"}
         aside={
@@ -60,7 +61,7 @@ export default async function ThisWeekPage({ searchParams }) {
             </Chip>
           ) : null
         }
-      />
+      />}
 
       {ctx.offseason ? (
         <>
@@ -77,7 +78,7 @@ export default async function ThisWeekPage({ searchParams }) {
         </>
       ) : rosterId != null ? (
         <Suspense fallback={<SlotPreview preview={preview} />}>
-          <HomeWeek h={h} rosterId={rosterId} replay={replay} />
+          <HomeWeek h={h} rosterId={rosterId} replay={replay} record={form ? `${form.wins}-${form.losses}` : null} />
         </Suspense>
       ) : null}
 
