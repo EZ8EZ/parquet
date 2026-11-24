@@ -40,7 +40,8 @@ test.describe("lock-or-hold board", () => {
     await expect(holden).toContainText("Expected if held");
     await expect(holden).toContainText("Later game beats it");
     await expect(holden).toContainText("If not already locked");
-    await expect(holden).toContainText(/Model leans (lock|hold) · (marginal|moderate|clear)/);
+    // a wait's lean is the call at the deadline
+    await expect(holden).toContainText(/(At the deadline: m|M)odel leans (lock|hold) · (marginal|moderate|clear)/);
     await holden.getByRole("button", { name: /charts, record and method/ }).click();
     const sheet = page.locator("dialog[open]");
     await expect(sheet.getByRole("heading", { name: "Bryce Holden" })).toBeVisible();
@@ -78,7 +79,7 @@ test.describe("lock-or-hold board", () => {
     await expect(calls.locator("li")).not.toHaveCount(0);
     const first = calls.locator("li").first();
     await expect(first).toContainText("on the table");
-    await expect(first).toContainText(/Model leans (lock|hold) · (marginal|moderate|clear)/);
+    await expect(first).toContainText(/(At the deadline: m|M)odel leans (lock|hold) · (marginal|moderate|clear)/);
     await expect(first.locator("[data-win-compare]")).toContainText(/Rough win chance/);
     await expect(first.locator("[data-win-compare]")).toContainText(/if lock\s*\d+%/);
     // a wait headline names the call at the deadline, never a bare chip
