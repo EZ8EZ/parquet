@@ -140,6 +140,41 @@ test.describe("lock-or-hold board", () => {
     expectNoConsoleErrors(guard);
   });
 
+  test("what-if: assume a slot, see the bar and the changed rough win chance, keep it to the lock board, reset", async ({ page }) => {
+    const guard = watchConsole(page);
+    await primeLens(page);
+    await page.goto("/");
+    const board = page.locator('[data-lockin-board="compact"]');
+    const before = await board.locator("[data-win-prob]").innerText();
+    await expect(board.locator("[data-whatif-bar]")).toHaveCount(0);
+    // their PG (locked by inference): treat it as playing on
+    await board.getByRole("button", { name: /^Their PG .*What if$/ }).click();
+    const sheet = page.locator("dialog[open] [data-assume-sheet]");
+    await expect(sheet.getByRole("button", { name: "Treat as playing on" })).toBeVisible();
+    await sheet.getByRole("button", { name: "Treat as playing on" }).click();
+    await page.waitForURL(/assume=t0O/, { waitUntil: "commit" });
+    const bar = board.locator("[data-whatif-bar]");
+    await expect(bar).toContainText("1 assumed");
+    await expect(bar).toContainText(/Rough win chance \d+% → \d+% with your assumptions/);
+    await expect(bar).toContainText("The app had this slot as locked; you're treating it as playing on");
+    await expect(board.locator("[data-win-prob]")).not.toHaveText(before);
+    // the assumed tile is marked as an assumption, never with the lock glyph
+    await expect(board.locator('[data-assumed="open"]')).toHaveCount(1);
+    // your own unknown slot does not offer "playing on", and says why
+    await board.getByRole("button", { name: /^SG .*What if$/ }).click();
+    await expect(page.locator("dialog[open] [data-assume-sheet]")).toContainText("Playing on changes nothing here");
+    await expect(page.locator("dialog[open] [data-assume-sheet]").getByRole("button", { name: "Treat as playing on" })).toHaveCount(0);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+    // links to the lock board keep it
+    await expect(board.getByRole("link", { name: /Every night and player/ })).toHaveAttribute("href", /assume=t0O/);
+    await bar.getByRole("button", { name: "Reset" }).click();
+    await page.waitForURL((u) => !u.search.includes("assume"), { waitUntil: "commit" });
+    await expect(board.locator("[data-whatif-bar]")).toHaveCount(0);
+    await expect(board.locator("[data-win-prob]")).toHaveText(before);
+    expectNoConsoleErrors(guard);
+  });
+
   test("/lockin: every option in the Win % tab, the lock history, and boom/bust in the player sheet", async ({ page }) => {
     const guard = watchConsole(page);
     await primeLens(page);

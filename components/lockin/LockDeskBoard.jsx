@@ -21,6 +21,7 @@ import { tonightView } from "@/lib/lockin/tonightView";
 import { callRows, historyView, tonightLine } from "@/lib/lockin/matchupView";
 import { displayTz } from "@/lib/lockin/time";
 import { Scoreboard, TonightFoot } from "./Scoreboard";
+import { withChoices } from "@/lib/lockin/assumeView";
 import { CallList } from "./CallList";
 
 function Gaps({ desk }) {
@@ -152,7 +153,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
     const line = tonightLine(desk);
     const sep = fullHref.includes("?") ? "&" : "?";
     const foot = line ? <TonightFoot line={line} tz={tz} frozenAt={frozenAt} nowMs={frozenAt ? Date.parse(frozenAt) : Date.parse(desk.generatedAt)} href={`${fullHref}${sep}tab=tonight`} /> : null;
-    const tiles = <SlotCells tiles={slotTiles(desk)} />;
+    const tiles = <SlotCells tiles={withChoices(slotTiles(desk), desk, "mine")} />;
     const hv = historyView(desk.history);
     const anyConditional = rows.some((r) => r.conditional);
     return (
@@ -225,11 +226,11 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
   const start = ids.includes(wanted) && (wanted !== "tonight" || tv) && (wanted !== "options" || desk.whatIf) ? wanted : tv?.next ? "tonight" : "calls";
   const board =
     mv && mv.state !== "none" ? (
-      <Scoreboard v={mv} desk={desk} slots={<SlotCells tiles={slotTiles(desk)} />} />
+      <Scoreboard v={mv} desk={desk} slots={<SlotCells tiles={withChoices(slotTiles(desk), desk, "mine")} />} />
     ) : (
       <div className="rounded-card bg-surface p-3.5">
         {mv?.state === "none" && <NoOpponent />}
-        <SlotCells tiles={slotTiles(desk)} />
+        <SlotCells tiles={withChoices(slotTiles(desk), desk, "mine")} />
       </div>
     );
 

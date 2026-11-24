@@ -77,6 +77,11 @@ function PageButton({ panel, dir, onGo }) {
   );
 }
 
+/** The deck's opener, for client components that open a player from elsewhere (null outside a deck). */
+export function useDeck() {
+  return useContext(Deck);
+}
+
 /** Opens one player's panel in the deck. Children are its visible face. */
 export function DeckTrigger({ playerId, label, className, children }) {
   const open = useContext(Deck);
