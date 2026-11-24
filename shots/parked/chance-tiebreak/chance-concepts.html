@@ -1,0 +1,92 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=1240"><title>Leave it to chance: concepts</title><link rel="stylesheet" href="base.css">
+<style>
+body{background:#000}
+.wrap{width:1240px;margin:0 auto;padding:20px;background:var(--bg)}
+h1{font-size:20px;font-weight:800;margin-bottom:4px} h2{font-size:15px;font-weight:700;margin:22px 0 4px}
+.row3{display:grid;grid-template-columns:repeat(3,390px);gap:15px;margin-top:8px}
+.frame{background:var(--surface);border-radius:16px;padding:12px 14px}
+.cap{font-size:11px;color:var(--secondary);margin-top:6px}
+.court{position:relative;height:132px;border-radius:12px;background:#1a1610;overflow:hidden}
+.court .floor{position:absolute;inset:0;background:repeating-linear-gradient(90deg,#211b12 0 26px,#1d1810 26px 52px)}
+.court .mid{position:absolute;left:50%;top:0;bottom:0;width:2px;background:#5a4a30;transform:translateX(-50%)}
+.court .circle{position:absolute;left:50%;top:66px;width:84px;height:84px;border:2px solid #5a4a30;border-radius:999px;transform:translate(-50%,-50%)}
+.side{position:absolute;top:8px;font-size:12px;font-weight:800;letter-spacing:.02em;padding:2px 8px;border-radius:999px}
+.side.l{left:10px} .side.r{right:10px}
+.side.lock{background:var(--accent-wash);color:var(--accent-text);box-shadow:inset 0 0 0 1px var(--accent-edge)}
+.side.hold{background:var(--surface-2);color:var(--ink);box-shadow:inset 0 0 0 1px var(--border-strong)}
+.side.win{outline:2px solid currentColor;outline-offset:2px}
+.glow-l{position:absolute;inset:0 50% 0 0;background:linear-gradient(90deg,rgba(139,125,255,.35),transparent)}
+.glow-r{position:absolute;inset:0 0 0 50%;background:linear-gradient(270deg,rgba(243,245,248,.18),transparent)}
+.ball{position:absolute;width:18px;height:18px;border-radius:999px;background:radial-gradient(circle at 35% 35%,#f59a3c,#c25e14);box-shadow:inset 0 0 0 1px #7a3a0a}
+.ball:after{content:"";position:absolute;inset:0;border-radius:999px;background:linear-gradient(90deg,transparent 47%,#6b330a 47% 53%,transparent 53%),linear-gradient(0deg,transparent 47%,#6b330a 47% 53%,transparent 53%)}
+.shadow{position:absolute;width:20px;height:5px;border-radius:999px;background:rgba(0,0,0,.45);transform:translateX(-50%)}
+svg.fig{position:absolute;bottom:6px}
+.result{display:flex;align-items:center;justify-content:space-between;margin-top:10px;font-size:13px}
+.ctl{display:inline-flex;align-items:center;gap:6px;height:44px;padding:0 14px;border-radius:999px;background:var(--surface-2);font-size:13px;font-weight:600;color:var(--ink)}
+.rim{position:absolute}
+.clock{position:absolute;top:8px;left:50%;transform:translateX(-50%);font-weight:800;font-size:13px;color:#ff8080;background:#2a1414;border-radius:6px;padding:1px 6px;font-variant-numeric:tabular-nums}
+.note{font-size:12px;color:var(--muted);max-width:1180px;line-height:18px}
+.pick{display:inline-block;margin-left:8px;font-size:11px;font-weight:700;color:var(--bg);background:var(--positive);border-radius:999px;padding:1px 8px;vertical-align:2px}
+</style></head><body><div class="wrap">
+<h1>Too close to call? Leave it to chance: three concepts</h1>
+<p class="note">Shown only on a call the engine marks too close (win chances inside the noise floor) or a marginal lean, never on a clear call, a listed-out player or "Lock now". Opt-in control under the row, 44px. The result is decided first (crypto.getRandomValues, 50/50), the motion only reveals it (about 1.5 s; instant text under reduced motion), it is announced politely, labelled as chance, never touches the model's chip, stores nothing, and a re-roll is counted on screen.</p>
+
+<h2>A. Jump ball <span class="pick">recommended</span></h2>
+<p class="note">Two jumpers labelled Lock and Hold; the ball goes up at centre court and is tipped to one side. Symmetric (neither outcome reads as a miss), readable in one glance at 390px, sports-native.</p>
+<div class="row3">
+  <div class="frame"><div class="court"><div class="floor"></div><div class="mid"></div><div class="circle"></div>
+    <span class="side l lock">LOCK</span><span class="side r hold">HOLD</span>
+    <svg class="fig" style="left:118px" width="40" height="86" viewBox="0 0 40 86"><circle cx="20" cy="12" r="9" fill="#8b7dff"/><rect x="11" y="24" width="18" height="34" rx="8" fill="#8b7dff"/><rect x="13" y="56" width="6" height="28" rx="3" fill="#6f63d8"/><rect x="21" y="56" width="6" height="28" rx="3" fill="#6f63d8"/><rect x="26" y="26" width="5" height="22" rx="2.5" fill="#8b7dff"/></svg>
+    <svg class="fig" style="left:204px" width="40" height="86" viewBox="0 0 40 86"><circle cx="20" cy="12" r="9" fill="#c3c9d3"/><rect x="11" y="24" width="18" height="34" rx="8" fill="#c3c9d3"/><rect x="13" y="56" width="6" height="28" rx="3" fill="#9aa2ae"/><rect x="21" y="56" width="6" height="28" rx="3" fill="#9aa2ae"/><rect x="9" y="26" width="5" height="22" rx="2.5" fill="#c3c9d3"/></svg>
+    <div class="ball" style="left:172px;top:60px"></div><div class="shadow" style="left:181px;top:122px"></div></div>
+    <div class="result"><span class="muted">Ball up…</span><span class="faint t-micro">0.0 s</span></div><div class="cap">Frame 1: set at centre court.</div></div>
+  <div class="frame"><div class="court"><div class="floor"></div><div class="mid"></div><div class="circle"></div>
+    <span class="side l lock">LOCK</span><span class="side r hold">HOLD</span>
+    <svg class="fig" style="left:128px" width="40" height="96" viewBox="0 0 40 96"><circle cx="20" cy="22" r="9" fill="#8b7dff"/><rect x="11" y="34" width="18" height="34" rx="8" fill="#8b7dff"/><rect x="13" y="66" width="6" height="22" rx="3" fill="#6f63d8"/><rect x="21" y="66" width="6" height="22" rx="3" fill="#6f63d8"/><rect x="26" y="0" width="5" height="34" rx="2.5" fill="#8b7dff" transform="rotate(18 28 34)"/></svg>
+    <svg class="fig" style="left:194px" width="40" height="96" viewBox="0 0 40 96"><circle cx="20" cy="22" r="9" fill="#c3c9d3"/><rect x="11" y="34" width="18" height="34" rx="8" fill="#c3c9d3"/><rect x="13" y="66" width="6" height="22" rx="3" fill="#9aa2ae"/><rect x="21" y="66" width="6" height="22" rx="3" fill="#9aa2ae"/><rect x="9" y="0" width="5" height="34" rx="2.5" fill="#c3c9d3" transform="rotate(-18 11 34)"/></svg>
+    <div class="ball" style="left:172px;top:8px;transform:scale(1.25)"></div><div class="shadow" style="left:181px;top:122px;opacity:.4"></div></div>
+    <div class="result"><span class="muted">At the top…</span><span class="faint t-micro">0.6 s</span></div><div class="cap">Frame 2: both jump; the ball hangs at the apex.</div></div>
+  <div class="frame"><div class="court"><div class="floor"></div><div class="glow-l"></div><div class="mid"></div><div class="circle"></div>
+    <span class="side l lock win">LOCK</span><span class="side r hold">HOLD</span>
+    <svg class="fig" style="left:118px" width="40" height="86" viewBox="0 0 40 86"><circle cx="20" cy="12" r="9" fill="#8b7dff"/><rect x="11" y="24" width="18" height="34" rx="8" fill="#8b7dff"/><rect x="13" y="56" width="6" height="28" rx="3" fill="#6f63d8"/><rect x="21" y="56" width="6" height="28" rx="3" fill="#6f63d8"/><rect x="26" y="4" width="5" height="26" rx="2.5" fill="#8b7dff" transform="rotate(-30 28 30)"/></svg>
+    <svg class="fig" style="left:204px" width="40" height="86" viewBox="0 0 40 86"><circle cx="20" cy="12" r="9" fill="#c3c9d3"/><rect x="11" y="24" width="18" height="34" rx="8" fill="#c3c9d3"/><rect x="13" y="56" width="6" height="28" rx="3" fill="#9aa2ae"/><rect x="21" y="56" width="6" height="28" rx="3" fill="#9aa2ae"/><rect x="9" y="26" width="5" height="22" rx="2.5" fill="#c3c9d3"/></svg>
+    <div class="ball" style="left:40px;top:96px"></div><div class="shadow" style="left:49px;top:118px"></div></div>
+    <div class="result"><span><b>The tip went to Lock.</b> <span class="muted">Chance, not the model.</span></span></div>
+    <div class="row between" style="margin-top:8px"><span class="t-micro sec">Tipped 1× · nothing saved</span><span class="ctl">↻ Tip it again</span></div>
+    <div class="cap">Frame 3 (1.5 s): tipped to a side; that side lights up; the line says it is chance.</div></div>
+</div>
+
+<h2>B. Buzzer-beater</h2>
+<p class="note">Shot clock at 0.0, a heave at the rim: make = lock, miss = hold. Instantly dramatic, but a miss reads as failure, so "hold" carries a loss frame; that conflicts with the no-verdict house rule.</p>
+<div class="row3">
+  <div class="frame"><div class="court" style="background:#14161b"><div class="clock">0.4</div>
+    <svg class="rim" style="right:24px;top:30px" width="70" height="70" viewBox="0 0 70 70"><rect x="52" y="0" width="6" height="56" fill="#3a414c"/><rect x="6" y="20" width="48" height="4" fill="#ff8a3d"/><path d="M10 24 L18 46 L42 46 L50 24" fill="none" stroke="#c3c9d3" stroke-width="1.5" stroke-dasharray="3 3"/></svg>
+    <div class="ball" style="left:40px;top:96px"></div><span class="side l lock" style="top:auto;bottom:8px">MAKE = LOCK</span><span class="side r hold" style="top:auto;bottom:8px">MISS = HOLD</span></div>
+    <div class="cap">Frame 1: the clock runs out as he lets it go.</div></div>
+  <div class="frame"><div class="court" style="background:#14161b"><div class="clock">0.0</div>
+    <svg class="rim" style="right:24px;top:30px" width="70" height="70" viewBox="0 0 70 70"><rect x="52" y="0" width="6" height="56" fill="#3a414c"/><rect x="6" y="20" width="48" height="4" fill="#ff8a3d"/><path d="M10 24 L18 46 L42 46 L50 24" fill="none" stroke="#c3c9d3" stroke-width="1.5" stroke-dasharray="3 3"/></svg>
+    <svg style="position:absolute;left:46px;top:10px" width="260" height="100"><path d="M4 92 Q120 -40 250 40" fill="none" stroke="#a2aab7" stroke-dasharray="3 5"/></svg>
+    <div class="ball" style="left:190px;top:10px"></div></div>
+    <div class="cap">Frame 2: the arc; the horn.</div></div>
+  <div class="frame"><div class="court" style="background:#14161b"><div class="clock">0.0</div>
+    <svg class="rim" style="right:24px;top:30px" width="70" height="70" viewBox="0 0 70 70"><rect x="52" y="0" width="6" height="56" fill="#3a414c"/><rect x="6" y="20" width="48" height="4" fill="#ff8a3d"/><path d="M10 24 L18 46 L42 46 L50 24" fill="none" stroke="#c3c9d3" stroke-width="1.5" stroke-dasharray="3 3"/></svg>
+    <div class="ball" style="right:52px;top:62px"></div></div>
+    <div class="result"><span><b>Bang: lock.</b> <span class="muted">Chance, not the model.</span></span></div>
+    <div class="cap">Frame 3: through the net (or off the rim for hold).</div></div>
+</div>
+
+<h2>C. Rim roll</h2>
+<p class="note">Seen from above, the ball rolls around the rim and drops off one side, Lock or Hold. Symmetric and suspenseful, but a top-down rim is harder to read in one glance and the suspense wants 2.5 s, longer than the brief.</p>
+<div class="row3">
+  <div class="frame"><div class="court" style="background:#14161b">
+    <svg style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)" width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="40" fill="none" stroke="#ff8a3d" stroke-width="5"/><path d="M60 14 V106" stroke="#3a414c" stroke-dasharray="3 3"/><text x="14" y="64" fill="#a99fff" font-size="11" font-weight="800">LOCK</text><text x="80" y="64" fill="#f3f5f8" font-size="11" font-weight="800">HOLD</text></svg>
+    <div class="ball" style="left:186px;top:20px"></div></div><div class="cap">Frame 1: on the front of the rim.</div></div>
+  <div class="frame"><div class="court" style="background:#14161b">
+    <svg style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)" width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="40" fill="none" stroke="#ff8a3d" stroke-width="5"/><path d="M60 14 V106" stroke="#3a414c" stroke-dasharray="3 3"/><text x="14" y="64" fill="#a99fff" font-size="11" font-weight="800">LOCK</text><text x="80" y="64" fill="#f3f5f8" font-size="11" font-weight="800">HOLD</text></svg>
+    <div class="ball" style="left:226px;top:58px"></div></div><div class="cap">Frame 2: around and around.</div></div>
+  <div class="frame"><div class="court" style="background:#14161b"><div class="glow-l"></div>
+    <svg style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%)" width="120" height="120" viewBox="0 0 120 120"><circle cx="60" cy="60" r="40" fill="none" stroke="#ff8a3d" stroke-width="5"/><path d="M60 14 V106" stroke="#3a414c" stroke-dasharray="3 3"/><text x="14" y="64" fill="#a99fff" font-size="11" font-weight="800">LOCK</text><text x="80" y="64" fill="#f3f5f8" font-size="11" font-weight="800">HOLD</text></svg>
+    <div class="ball" style="left:110px;top:100px"></div></div>
+    <div class="result"><span><b>It fell to Lock.</b> <span class="muted">Chance, not the model.</span></span></div><div class="cap">Frame 3: drops off the Lock side.</div></div>
+</div>
+</div></body></html>
