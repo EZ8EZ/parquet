@@ -1,5 +1,6 @@
 import { LockDeskBoard } from "@/components/lockin/LockDeskBoard";
 import { RefreshControl } from "@/components/lockin/RefreshControl";
+import { winPctOf } from "@/lib/lockin/view";
 import { isFixtureDesk } from "@/lib/lockin/source";
 import { boardHeader } from "@/lib/lockin/view";
 import { teamIdentity } from "@/lib/lockin/matchupView";
@@ -39,7 +40,7 @@ export async function HomeWeek({ h, rosterId, replay = null }) {
           <p className="min-w-0 pt-1 figure text-note text-secondary">
             {hd ? [bh.week, `${hd.locked} locked`, `${hd.open} open`, `${hd.points} pts`].filter(Boolean).join(" · ") : bh?.kicker}
           </p>
-          <RefreshControl asOf={desk.generatedAt} live={bh.live} updating={bh.updating} disabled={!!replay || isFixtureDesk(desk)} />
+          <RefreshControl asOf={desk.generatedAt} asOfText={bh.asOf} winPct={winPctOf(desk)} live={bh.live} updating={bh.updating} disabled={!!replay || isFixtureDesk(desk)} />
         </div>
       )}
       {desk && <LockDeskBoard rosterId={rosterId} desk={desk} mode="compact" fullHref={fullHref} replay={replay} me={teamIdentity(h, rosterId)} them={desk.opponent ? teamIdentity(h, desk.opponent.rosterId) : null} />}
