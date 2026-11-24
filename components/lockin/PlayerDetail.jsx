@@ -7,7 +7,7 @@ import { NextGameChart } from "./NextGameChart";
 import { MinutesChart } from "./MinutesChart";
 import { OpponentHistory } from "./OpponentHistory";
 import { WeekGrid } from "./WeekGrid";
-import { ModelCall, WinFigures } from "./WinCall";
+import { ModelCall, WinFigures, leanPrefix } from "./WinCall";
 import { BEAT_NOTE, roughen } from "@/lib/lockin/matchupView";
 import { ProfileBar } from "./ProfileBar";
 import { AvailabilityDots } from "./AvailabilityDots";
@@ -69,7 +69,7 @@ export function PlayerPanel({ card, today, record, methodHref, winProb = null })
         <WhenLine card={card} />
         {card.lean.value !== "none" ? (
           <div className="space-y-1">
-            <LeanChip lean={card.lean} />
+            <LeanChip lean={card.lean} prefix={leanPrefix(card)} />
             <WinFigures card={card} winProb={winProb} showReason={false} />
             <p className="text-note text-muted">{roughen(card.lean.reason)}.</p>
           </div>

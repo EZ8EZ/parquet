@@ -27,9 +27,13 @@ export function WinFigures({ card, winProb, showReason = true }) {
 
 const ICON = { lock_now: Lock, wait: Hourglass, hold: Hourglass };
 
+/** The lean chip's prefix under the model's call: a wait's lean is the call at the deadline. */
+export const leanPrefix = (card) => (card?.decision?.action === "wait" ? "At the deadline:" : null);
+
 /**
- * The model's call: "Lock now", "Wait until Fri 7:30 PM EST" (with why that time), or
- * "Hold"; for a wait, the conditions that would change it, as the engine words them.
+ * The model's call: "Lock now", "Wait until Fri 7:30 PM, then lock" (with why that
+ * time), or "Hold"; for a wait, the conditions that would change it. Under a wait the
+ * lean chip reads as the call at the deadline (leanPrefix).
  */
 export function ModelCall({ card, tz = DEFAULT_TZ }) {
   const v = actionView(card, tz);
@@ -48,6 +52,7 @@ export function ModelCall({ card, tz = DEFAULT_TZ }) {
               <LocalWhen at={v.whenIso} tz={tz} fallback={v.whenFallback} />
             </>
           )}
+          {v.action === "wait" && `, then ${card.lean?.value === "hold" ? "hold" : "lock"}`}
         </span>
       </p>
       {v.reason && <p className="mt-0.5 text-note text-muted">Deadline: {v.reason}.</p>}
@@ -56,7 +61,7 @@ export function ModelCall({ card, tz = DEFAULT_TZ }) {
           {v.triggers.map((t) => (
             <li key={t.text} className="flex gap-1.5 text-note text-ink">
               <CornerDownRight size={15} aria-hidden="true" className="mt-0.5 shrink-0 text-secondary" />
-              <span>{t.text}</span>
+              <span>{t.text.replace(/your opponent's/gi, "their")}</span>
             </li>
           ))}
         </ul>

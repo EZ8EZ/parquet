@@ -19,7 +19,7 @@ function Block({ title, children }) {
 }
 
 /** Everything about this week's opponent, for the sheet. */
-function OpponentBody({ v, desk }) {
+export function OpponentBody({ v, desk }) {
   const them = v.them;
   const toPlay = stillToPlayText(them);
   const intent = intentLine(desk.opponent?.intent);

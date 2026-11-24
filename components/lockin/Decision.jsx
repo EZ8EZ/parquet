@@ -16,14 +16,14 @@ export function slotKeyOf(card) {
  * dense rows. A conditional lean says "If not already locked" unless the caller says it once
  * for the whole list.
  */
-export function LeanChip({ lean, hideConditional = false, short = false, size = "md" }) {
+export function LeanChip({ lean, hideConditional = false, short = false, size = "md", prefix = null }) {
   const v = leanView(lean);
   if (!v) return null;
   return (
     <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1" data-lean={v.value}>
       {v.conditional && !hideConditional && <span className="text-meta text-secondary">If not already locked</span>}
       <Chip tone={v.value === "lock" ? "accent" : "outline"} icon={v.value === "lock" ? Lock : Hourglass} size={size}>
-        {short ? "Model:" : "Model leans"} {v.value} <span className="font-medium opacity-90">· {v.confidence}</span>
+        {prefix ? `${prefix} model leans` : short ? "Model:" : "Model leans"} {v.value} <span className="font-medium opacity-90">· {v.confidence}</span>
       </Chip>
     </span>
   );
