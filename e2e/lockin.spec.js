@@ -46,9 +46,12 @@ test.describe("lock-or-hold board", () => {
     await holden.getByRole("button", { name: /charts, record and method/ }).click();
     const sheet = page.locator("dialog[open]");
     await expect(sheet.getByRole("heading", { name: "Bryce Holden" })).toBeVisible();
-    await expect(sheet.getByText("Last 15 games")).toBeVisible();
+    // the sheet is four short tabs: Call first, then Form, Week, History
     await expect(sheet.getByText(/Filled dots beat 31\.5/)).toBeVisible();
+    await sheet.getByRole("tab", { name: "History" }).click();
     await expect(sheet.getByText("History only")).toBeVisible();
+    await sheet.getByRole("tab", { name: "Form" }).click();
+    await expect(sheet.getByText("Last 15 games")).toBeVisible();
     await sheet.getByRole("button", { name: /Overtime game/ }).first().click();
     await expect(sheet.locator("[aria-live=polite]")).toContainText("Overtime game");
     await sheet.getByRole("button", { name: /^Next: / }).click();

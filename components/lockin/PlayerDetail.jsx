@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Disclosure } from "@/components/ui";
+import { Disclosure, Tabs } from "@/components/ui";
 import { basisText, distChart, minutesChart, opponentView, playerWeekGrid, stripChart } from "@/lib/lockin/view";
 import { DecisionFigures, Hazards, LeanChip, WhenLine } from "./Decision";
 import { LastFifteenStrip } from "./LastFifteenStrip";
@@ -53,16 +53,21 @@ function Record({ record, methodHref }) {
   );
 }
 
-/** Everything about one player, for the sheet: the decision, then the five charts. */
+/**
+ * Everything about one player, for the sheet, in four short tabs instead of one long
+ * scroll: Call (the decision, his next game against the score on the table, boom or
+ * bust, chance to play, the lean's record), Form (last 15 games, minutes), Week (his
+ * games this week), History (past games against this opponent, history only).
+ */
 export function PlayerPanel({ card, today, record, methodHref, winProb = null, tz, nowMs }) {
   const strip = stripChart(card);
   const dist = distChart(card);
   const mins = minutesChart(card);
   const opp = opponentView(card);
   const fc = card.forecast;
-  return (
+  const call = (
     <div>
-      <div className="space-y-3">
+      <div className="space-y-3 pt-3">
         <Hazards card={card} />
         <ModelCall card={card} tz={tz} today={today} nowMs={nowMs} />
         <DecisionFigures card={card} />
@@ -76,31 +81,48 @@ export function PlayerPanel({ card, today, record, methodHref, winProb = null, t
         ) : (
           <p className="text-note text-muted">{card.decision.kind === "lineup" ? card.decision.text : card.lean.reason}</p>
         )}
-        {fc && <p className="text-meta text-secondary">Forecast {basisText(fc)}.</p>}
-        {card.stopping && <p className="text-meta text-secondary">{BEAT_NOTE}</p>}
-        {card.lean.value !== "none" && <Record record={record} methodHref={methodHref} />}
       </div>
+      <Block title="Next game" sub={dist.ok ? `${dist.n} equally likely outcomes` : null}>
+        {dist.ok ? <NextGameChart g={dist} /> : <Missing text={dist.missing} />}
+      </Block>
       <Block title="Boom or bust">
         <div className="space-y-3">
           <ProfileBar profile={card.profile} x={card.stopping?.x ?? null} />
           <AvailabilityDots card={card} />
         </div>
       </Block>
+      <div className="space-y-1 pt-4">
+        {fc && <p className="text-meta text-secondary">Forecast {basisText(fc)}.</p>}
+        {card.stopping && <p className="text-meta text-secondary">{BEAT_NOTE}</p>}
+        {card.lean.value !== "none" && <Record record={record} methodHref={methodHref} />}
+      </div>
+    </div>
+  );
+  const form = (
+    <div>
       <Block title="Last 15 games" sub={strip.ok ? "tap a game" : null}>
         {strip.ok ? <LastFifteenStrip g={strip} name={card.name} /> : <Missing text={strip.missing} />}
-      </Block>
-      <Block title="Next game" sub={dist.ok ? `${dist.n} equally likely outcomes` : null}>
-        {dist.ok ? <NextGameChart g={dist} /> : <Missing text={dist.missing} />}
-      </Block>
-      <Block title="His week">
-        {card.weekGames.length ? <WeekGrid grid={playerWeekGrid(card, today)} caption={`${card.name}'s games this week`} single /> : <Missing text="No games found for his team this week." />}
       </Block>
       <Block title="Minutes" sub={mins.ok ? `last ${mins.points.length}` : null}>
         {mins.ok ? <MinutesChart g={mins} /> : <Missing text={mins.missing} />}
       </Block>
-      <div className="pt-5">
-        <OpponentHistory v={opp} />
-      </div>
     </div>
+  );
+  const week = (
+    <Block title="His week">
+      {card.weekGames.length ? <WeekGrid grid={playerWeekGrid(card, today)} caption={`${card.name}'s games this week`} single /> : <Missing text="No games found for his team this week." />}
+    </Block>
+  );
+  return (
+    <Tabs
+      label={`${card.name}: sections`}
+      variant="segmented"
+      items={[
+        { id: "call", label: "Call", content: call },
+        { id: "form", label: "Form", content: form },
+        { id: "week", label: "Week", content: week },
+        { id: "history", label: "History", content: <div className="pt-4"><OpponentHistory v={opp} /></div> },
+      ]}
+    />
   );
 }
