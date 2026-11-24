@@ -10,12 +10,12 @@ import { Habits } from "./Habits";
  * a bigger one, with n weeks; then how you play, the same facts shown for an
  * opponent. Describes past weeks; never grades them (D6).
  */
-export function LockHistory({ history, season }) {
+export function LockHistory({ history, season, inTab = false }) {
   const v = historyView(history);
   if (!v) return null;
   return (
     <section aria-labelledby="lock-history-title" id="lock-history" className="scroll-mt-20" data-lock-history>
-      <SectionHeader id="lock-history-title" title="Your lock history" />
+      <SectionHeader id="lock-history-title" title="Your lock history" className={inTab ? "mt-2" : undefined} />
       {!v.ok ? (
         <p className="text-note text-muted">{v.missing}</p>
       ) : (

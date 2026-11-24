@@ -1,6 +1,5 @@
 import { Check, Lock, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/ui";
-import { SLOT_STATES } from "@/lib/lockin/view";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { StateIcon } from "./StateIcon";
 import { DeckTrigger } from "./PlayerDeck";
@@ -67,18 +66,5 @@ export function SlotCells({ tiles, className }) {
         );
       })}
     </ol>
-  );
-}
-
-/** Kept for the opponent sheet and Nights: the state shapes in use, once. */
-export function SlotLegend({ keys, className = "mt-2" }) {
-  return (
-    <ul aria-hidden="true" className={cn("flex flex-wrap gap-x-3 gap-y-1 text-meta text-secondary", className)}>
-      {[...new Set(keys)].map((k) => (
-        <li key={k} className="flex items-center gap-1">
-          <StateIcon state={k} /> {SLOT_STATES[k].label}
-        </li>
-      ))}
-    </ul>
   );
 }

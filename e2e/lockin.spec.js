@@ -35,12 +35,12 @@ test.describe("lock-or-hold board", () => {
     await tonight.getByText("How tonight's order is worked out").click();
     await expect(tonight).toContainText("+0.88");
     await expect(tonight).toContainText("listed start time");
-    await page.getByRole("tab", { name: /Decide/ }).click();
+    await page.getByRole("tab", { name: /Calls/ }).click();
     const holden = board.locator("#lk-lk02");
     await expect(holden).toContainText("31.5");
     await expect(holden).toContainText("Expected if held");
     await expect(holden).toContainText("Later game beats it");
-    await expect(holden).toContainText("If not already locked");
+    await expect(holden).toContainText(/if not already locked/i);
     // a wait's lean is the call at the deadline
     await expect(holden).toContainText(/(At the deadline: m|M)odel leans (lock|hold) · (marginal|moderate|clear)/);
     await holden.getByRole("button", { name: /charts, record and method/ }).click();
@@ -61,7 +61,7 @@ test.describe("lock-or-hold board", () => {
     await page.goBack();
     await expect(page.locator("dialog[open]")).toHaveCount(0);
     await expect(page).toHaveURL(/\/lockin$/);
-    await page.getByRole("tab", { name: "Nights" }).click();
+    await page.getByRole("tab", { name: "Week" }).click();
     await expect(page.getByRole("table", { name: /games this week/ })).toBeVisible();
     await page.locator("#lockin-method summary").click();
     await expect(page.locator("#lockin-method")).toContainText("+9.4");
@@ -88,7 +88,7 @@ test.describe("lock-or-hold board", () => {
       await expect(row).toContainText(/(Wait until .+, then (lock|hold) · (locks|tips) at \d{1,2}:\d{2}|Decide now)/);
       await expect(row).toContainText(/At the deadline: model leans/);
     }
-    await expect(board.getByRole("link", { name: /Lock history/ })).toHaveAttribute("href", "/lockin#lock-history");
+    await expect(board.getByRole("link", { name: /Lock history/ })).toHaveAttribute("href", "/lockin?tab=history");
     await expect(board.getByRole("link", { name: /Every night and player/ })).toHaveAttribute("href", "/lockin");
     await first.getByRole("button").first().click();
     await expect(page.locator("dialog[open]")).toContainText("Boom or bust");
@@ -147,13 +147,15 @@ test.describe("lock-or-hold board", () => {
     const board = page.locator('[data-lockin-board="full"]');
     await expect(board.locator("[data-matchup]")).toHaveAttribute("data-matchup", "win");
     await expect(page.getByRole("tab", { name: /Win %/ })).toHaveAttribute("aria-selected", "true");
-    const rows = board.locator('[data-whatif="full"] [data-whatif-row]');
-    expect(await rows.count()).toBeGreaterThan(3);
-    // rows within simulation noise sort last and say so
-    const kinds = await rows.evaluateAll((els) => els.map((e) => e.getAttribute("data-whatif-row")));
-    expect(kinds.indexOf("noise")).toBeGreaterThan(0);
-    expect(kinds.slice(kinds.indexOf("noise")).every((k) => k === "noise")).toBe(true);
-    await expect(board.locator('[data-whatif-row="noise"]').first()).toContainText("no real difference");
+    const table = board.locator('[data-whatif="full"]');
+    // one row per call, three cells each; exactly one cell per row is the model's call
+    const rows = table.locator("tbody tr");
+    expect(await rows.count()).toBeGreaterThan(0);
+    for (const row of await rows.all()) await expect(row.locator('[data-whatif-row="plan"]')).toHaveCount(1);
+    await expect(table.locator('[data-whatif-row="noise"]').first()).toContainText("≈ same");
+    await expect(table).toContainText("Rough win chance by call");
+    await expect(table.getByText("How far to trust these")).toBeVisible();
+    await page.getByRole("tab", { name: /History/ }).click();
     const history = board.locator("[data-lock-history]");
     await expect(history.getByRole("heading", { name: "Your lock history" })).toBeVisible();
     await expect(history).toContainText("points a week");
@@ -163,10 +165,11 @@ test.describe("lock-or-hold board", () => {
     await expect(history).toContainText("Held past a bigger score");
     await expect(history).toContainText("How you play");
     await expect(history).not.toContainText(/mistake|too early|too long|should/i);
-    await page.getByRole("tab", { name: /Decide/ }).click();
+    await page.getByRole("tab", { name: /Calls/ }).click();
     const holden = board.locator("#lk-lk02");
     // win chances sit beside the lean (which rests on points) as information
-    await expect(holden.locator("[data-win-compare]")).toContainText(/Rough win chance: if lock \d+% · if hold \d+%/);
+    await expect(holden.locator("[data-win-compare]")).toContainText("Rough win chance");
+    await expect(holden.locator("[data-win-compare]")).toContainText(/if lock\s*\d+%/);
     await expect(holden.locator("[data-win-compare]")).not.toContainText("model leans");
     await holden.getByRole("button", { name: /charts, record and method/ }).click();
     const sheet = page.locator("dialog[open]");

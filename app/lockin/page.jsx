@@ -2,10 +2,9 @@ import Link from "next/link";
 import { Chip, PageHeader } from "@/components/ui";
 import { LockDeskBoard } from "@/components/lockin/LockDeskBoard";
 import { RefreshControl } from "@/components/lockin/RefreshControl";
-import { winPctOf } from "@/lib/lockin/view";
 import { getLeagueHistory } from "@/lib/history";
 import { isFixtureDesk, loadLockDesk, replayAllowed } from "@/lib/lockin/source";
-import { boardHeader } from "@/lib/lockin/view";
+import { boardHeader, winPctOf } from "@/lib/lockin/view";
 import { teamIdentity } from "@/lib/lockin/matchupView";
 
 export const dynamic = "force-dynamic";
@@ -37,12 +36,21 @@ export default async function LockInPage({ searchParams }) {
   const fullHref = replay ? `/lockin?at=${encodeURIComponent(replay)}` : "/lockin";
   return (
     <>
-      <PageHeader
-        kicker={hd.kicker}
-        title="Lock or hold"
-        aside={<RefreshControl asOf={desk.generatedAt} asOfText={hd.asOf} winPct={winPctOf(desk)} live={hd.live} updating={hd.updating} disabled={!!replay || isFixtureDesk(desk)} />}
-        below={isFixtureDesk(desk) ? <Chip className="mt-2">Sample week, invented players</Chip> : null}
-      />
+      {/* the same one-line bar as Home: the page as the heading, the week beside it, refresh with the zone */}
+      <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lede font-bold text-ink">
+            Lock or hold
+            {hd.kicker && <span className="ml-2 text-note font-normal text-secondary">{hd.kicker}</span>}
+          </h1>
+          {isFixtureDesk(desk) && (
+            <Chip size="sm" className="mt-1">
+              Sample week, invented players
+            </Chip>
+          )}
+        </div>
+        <RefreshControl asOf={desk.generatedAt} asOfText={hd.asOf} winPct={winPctOf(desk)} live={hd.live} updating={hd.updating} disabled={!!replay || isFixtureDesk(desk)} />
+      </div>
       <LockDeskBoard
         rosterId={rosterId}
         desk={desk}
