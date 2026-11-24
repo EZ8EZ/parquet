@@ -235,7 +235,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
             { id: "decide", label: tv ? "Decide" : "Decide now", count: groups.live.length, content: decide },
             ...(desk.whatIf ? [{ id: "options", label: "Win %", content: <div className="pt-1"><WhatIf desk={desk} /></div> }] : []),
             { id: "nights", label: "Nights", content: nights },
-            { id: "players", label: "Players", count: desk.cards.length, content: everyone },
+            { id: "players", label: "Players", count: desk.whatIf ? undefined : desk.cards.length, content: everyone },
           ]}
         />
         <LockHistory history={desk.history} season={desk.season} />

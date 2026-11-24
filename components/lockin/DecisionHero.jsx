@@ -49,7 +49,7 @@ export function DecisionHero({ card, winProb = null, compact = false }) {
       {compact && head ? <PointsLine card={card} /> : <DecisionFigures card={card} />}
       <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
         {/* the model's call above already says "if not already locked" */}
-        <LeanChip lean={card.lean} hideConditional={!!card.decision?.action} />
+        <LeanChip lean={card.lean} hideConditional={compact && !!card.decision?.action} />
         <WinGain card={card} winProb={winProb} />
       </span>
       {card.profile && <ProfileBar profile={card.profile} x={card.stopping?.x ?? null} compact={compact} />}
