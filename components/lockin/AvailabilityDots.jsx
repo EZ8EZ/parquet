@@ -23,11 +23,11 @@ export function AvailabilityDots({ card }) {
       <span className="sr-only">Chance he plays: </span>
       {v.games.map((g) => (
         <span key={g.date} className="inline-flex items-center gap-1">
-          <Ring dash={g.dash} />
+          {g.listed ? null : <Ring dash={g.dash} />}
           {g.day} <span className="figure font-semibold text-ink">{g.pct}</span>
         </span>
       ))}
-      {v.games.length > 1 && (
+      {v.games.length > 1 && v.allPct && (
         <span>
           plays all <span className="figure font-semibold text-ink">{v.allPct}</span>
         </span>

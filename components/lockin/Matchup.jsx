@@ -35,7 +35,7 @@ function OpponentBody({ v, desk }) {
         <div className="rounded-control bg-surface-2 p-3">
           <p className="text-meta text-secondary">Projected final</p>
           <p className="mt-1 figure text-display font-bold text-ink">{them.range ? Math.round(them.range.mean) : "unknown"}</p>
-          <p className="text-meta text-muted">{them.range ? `8 in 10: ${rangeText(them.range)}` : "range unknown"}</p>
+          <p className="text-meta text-muted">{them.range ? `range ${rangeText(them.range)}, narrower than reality` : "range unknown"}</p>
         </div>
       </div>
       <p className="mt-3 text-note text-muted">{toPlay.line}.</p>
@@ -72,6 +72,7 @@ function OpponentBody({ v, desk }) {
           <p className="mb-3 text-note text-muted">Too little this season to read how they are playing it.</p>
         )}
         <Habits profile={desk.opponent?.profile} season={desk.season} emptyText="Too few past weeks to describe their habits yet." />
+        <p className="mt-1 text-meta text-secondary">These describe past weeks only; the win chance uses league-wide habits, not theirs.</p>
       </Block>
 
       {lines.length > 0 && (
@@ -115,8 +116,7 @@ export function Matchup({ v, desk, mySlots, legend = null }) {
               Win chance unknown
             </p>
           )}
-          <p className="mt-1 text-meta text-secondary">{v.winPct ? `Model estimate if you follow its calls, vs ${them.name}` : "The model could not work it out; the points view is shown."}</p>
-          {v.winPct && <p className="text-meta text-secondary">Win chances are model estimates; how well they match results is still being checked.</p>}
+          <p className="mt-1 text-meta text-secondary">{v.winPct ? `Rough model estimate if you follow its calls, vs ${them.name}` : "The model could not work it out; the points view is shown."}</p>
         </div>
         <div className="flex shrink-0 items-center pt-1">
           <TeamAvatar name={v.me.name} avatarId={v.me.avatarId} teamLogoUrl={v.me.teamLogoUrl} size="sm" isMe />
@@ -128,7 +128,8 @@ export function Matchup({ v, desk, mySlots, legend = null }) {
         scale={v.scale}
         rows={[
           { name: v.me.name, range: v.me.range, banked: v.me.banked, you: true },
-          { name: them.name, range: them.range, banked: them.banked, you: false },
+          // engine finding: their range holds about half of outcomes, not 8 in 10
+          { name: them.name, range: them.range, banked: them.banked, you: false, note: "Their range is narrower than reality: about half of outcomes land inside it." },
         ]}
       />
       {mySlots}

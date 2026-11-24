@@ -95,7 +95,8 @@ test.describe("lock-or-hold board", () => {
     await expect(matchup.locator("[data-win-prob]")).toHaveText(/^\d{1,3}%$/);
     await expect(matchup).toContainText("to win");
     await expect(matchup).toContainText("banked");
-    await expect(matchup).toContainText("how well they match results is still being checked");
+    await expect(matchup).toContainText("Rough model estimate if you follow its calls");
+    await expect(matchup).toContainText("narrower than reality");
     await expect(matchup.getByRole("figure", { name: /Projected final totals/ })).toBeVisible();
     // first screen: week line, win chance, both strips, the next deadline
     await expect(page.getByText(/Week 4 · \d+ locked/)).toBeInViewport();
@@ -106,7 +107,7 @@ test.describe("lock-or-hold board", () => {
     await expect(board.locator("[data-tonight-next]")).toBeInViewport();
     // what moves the win chance: three options and all of the model's calls
     const whatIf = board.locator('[data-whatif="compact"]');
-    await expect(whatIf.locator("[data-whatif-plan]")).toContainText(/Your win chance: \d+% if you follow the model's calls/);
+    await expect(whatIf.locator("[data-whatif-plan]")).toContainText(/Rough win chance if you follow the model's calls: \d+%/);
     await expect(whatIf.locator("[data-whatif-row]")).toHaveCount(3);
     // the featured decision leads with the model's call and the win comparison
     const hero = board.locator("article");

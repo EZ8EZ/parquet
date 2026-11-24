@@ -22,7 +22,7 @@ export function RangeBands({ scale, rows }) {
     );
   }
   return (
-    <figure className="m-0" aria-label="Projected final totals, 8 in 10 range with the most likely total marked">
+    <figure className="m-0" aria-label="Projected final totals: range with the most likely total marked">
       <ul className="space-y-2.5">
         {rows.map((r, i) => {
           const g = scale.rows[i];
@@ -57,6 +57,7 @@ export function RangeBands({ scale, rows }) {
                   </>
                 )}
               </div>
+              {g && r.note && <p className="mt-0.5 text-micro text-secondary">{r.note}</p>}
             </li>
           );
         })}

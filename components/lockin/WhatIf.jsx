@@ -74,7 +74,7 @@ export function WhatIf({ desk, compact = false, moreHref = "/lockin" }) {
     <section aria-labelledby="whatif-title" data-whatif={compact ? "compact" : "full"}>
       <SectionHeader id="whatif-title" title="What moves your win chance" className={compact ? "mt-5" : "mt-2"} />
       <p className="mb-2 text-note text-muted" data-whatif-plan>
-        Your win chance: <span className="figure font-bold text-ink">{v.followPct}</span> if you follow the model&apos;s calls. Doing something else:
+        Rough win chance if you follow the model&apos;s calls: <span className="figure font-bold text-ink">{v.followPct}</span>. Doing something else:
       </p>
       <List>
         {v.rows.map((r) => (
