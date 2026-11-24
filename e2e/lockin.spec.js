@@ -105,7 +105,7 @@ test.describe("lock-or-hold board", () => {
     await expect(board.locator("[data-tonight-next]")).toBeInViewport();
     // what moves the win chance: three options and all of the model's calls
     const whatIf = board.locator('[data-whatif="compact"]');
-    await expect(whatIf.locator("[data-whatif-plan]")).toContainText(/All of the model's calls: \d+%/);
+    await expect(whatIf.locator("[data-whatif-plan]")).toContainText(/Your win chance: \d+% if you follow the model's calls/);
     await expect(whatIf.locator("[data-whatif-row]")).toHaveCount(3);
     // the featured decision leads with the model's call and the win comparison
     const hero = board.locator("article");

@@ -1,6 +1,6 @@
 import Link from "next/link";
-import { ChevronRight } from "lucide-react";
-import { Disclosure, List, SectionHeader } from "@/components/ui";
+import { ArrowUpRight, ChevronRight } from "lucide-react";
+import { Chip, Disclosure, List, SectionHeader } from "@/components/ui";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { DIVERGING } from "@/lib/chart-colors";
 import { whatIfView } from "@/lib/lockin/matchupView";
@@ -23,7 +23,7 @@ function Row({ r, faces }) {
     return c ? <PlayerAvatar key={id} name={c.name} team={c.team} playerId={id} size="sm" decorative /> : null;
   };
   const body = (
-    <span className="flex items-center gap-3 px-3 py-2.5">
+    <span className={`flex items-center gap-3 px-3 py-2.5 ${r.above ? "bg-surface-2" : ""}`}>
       <span className="flex shrink-0 -space-x-3">
         {face(r.playerId)}
         {r.forPlayerId ? face(r.forPlayerId) : null}
@@ -33,6 +33,11 @@ function Row({ r, faces }) {
           {r.text}
           {r.deadlineFallback && <LocalWhen at={r.deadline} fallback={r.deadlineFallback} prefix=" before " />}
         </span>
+        {r.above && (
+          <Chip size="sm" tone="info" icon={ArrowUpRight} className="mt-1">
+            Higher than the model&apos;s plan
+          </Chip>
+        )}
         {!r.noise && <DeltaBar bar={r.bar} />}
       </span>
       <span className="shrink-0 text-right">
@@ -55,26 +60,25 @@ function Row({ r, faces }) {
 }
 
 /**
- * "What moves your win chance": each possible decision with the win chance after it
- * and the change from doing nothing more, real differences first, then the ones within
- * simulation noise. compact (Home): each player's best option, top three, plus all of
- * the model's calls together. Tapping a row opens the player's sheet.
+ * "What moves your win chance": the win chance if you follow the model's calls, then
+ * what each deviation from that plan does to it (the win chance after it and the signed
+ * change). A row that beats the plan is marked in words and tone; changes within the
+ * simulation's noise read "no real difference" and sort last. compact (Home): each
+ * player's first row, top three. Tapping a row opens the player's sheet.
  */
 export function WhatIf({ desk, compact = false, moreHref = "/lockin" }) {
   const v = whatIfView(desk, compact ? { limit: 3, distinct: true } : {});
-  if (!v || (!v.rows.length && !v.plan)) return null;
+  if (!v || !v.rows.length) return null;
   const faces = new Map((desk.cards || []).map((c) => [c.playerId, c]));
   return (
     <section aria-labelledby="whatif-title" data-whatif={compact ? "compact" : "full"}>
       <SectionHeader id="whatif-title" title="What moves your win chance" className={compact ? "mt-5" : "mt-2"} />
-      {v.plan && (
-        <p className="mb-2 text-note text-muted" data-whatif-plan>
-          All of the model&apos;s calls: <span className="figure font-bold text-ink">{v.plan.winPct}</span> · doing nothing more: <span className="figure font-bold text-ink">{v.basePct}</span>
-        </p>
-      )}
+      <p className="mb-2 text-note text-muted" data-whatif-plan>
+        Your win chance: <span className="figure font-bold text-ink">{v.followPct}</span> if you follow the model&apos;s calls. Doing something else:
+      </p>
       <List>
         {v.rows.map((r) => (
-          <li key={r.id} data-whatif-row={r.noise ? "noise" : "real"}>
+          <li key={r.id} data-whatif-row={r.noise ? "noise" : r.above ? "above" : "real"}>
             <Row r={r} faces={faces} />
           </li>
         ))}
@@ -89,11 +93,9 @@ export function WhatIf({ desk, compact = false, moreHref = "/lockin" }) {
       </List>
       {!compact && (
         <Disclosure summary="How these are worked out" className="mt-1">
-          <p>
-            Each row is the chance to win this matchup if you take that one action and leave everything else as it is, against doing nothing more ({v.basePct}).
-            {v.baseText ? ` Doing nothing more: ${v.baseText.charAt(0).toLowerCase()}${v.baseText.slice(1)}.` : ""}
-          </p>
+          <p>Each row is the chance to win this matchup if you take that one action and follow the model&apos;s calls for everything else, against following them all ({v.basePct}). The bar runs from that line.</p>
           {v.noiseText && <p className="mt-1">{v.noiseText}</p>}
+          {v.doNothingPct && <p className="mt-1">If you made no further move this week: {v.doNothingPct}.</p>}
         </Disclosure>
       )}
     </section>
