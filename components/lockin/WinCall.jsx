@@ -1,7 +1,7 @@
 import { CornerDownRight, Hourglass, Lock } from "lucide-react";
 import { actionView, winCompare } from "@/lib/lockin/matchupView";
-import { LocalWhen } from "./LocalWhen";
 import { DEFAULT_TZ } from "@/lib/lockin/time";
+import { cn } from "@/lib/ui";
 
 /**
  * Rough win chance if he is locked and if he is held: "Rough win chance: if lock 28% ·
@@ -35,25 +35,16 @@ export const leanPrefix = (card) => (card?.decision?.action === "wait" ? "At the
  * time), or "Hold"; for a wait, the conditions that would change it. Under a wait the
  * lean chip reads as the call at the deadline (leanPrefix).
  */
-export function ModelCall({ card, tz = DEFAULT_TZ }) {
-  const v = actionView(card, tz);
+export function ModelCall({ card, tz = DEFAULT_TZ, today = null, nowMs = null }) {
+  const v = actionView(card, tz, { today, nowMs });
   if (!v) return null;
   const Icon = ICON[v.action];
   return (
     <div data-model-call={v.action}>
       <p className="text-meta text-secondary">{card.lean?.conditional ? "The model's call, if not already locked" : "The model's call"}</p>
-      <p className="mt-0.5 flex items-center gap-1.5 text-lede font-bold text-ink">
-        <Icon size={18} aria-hidden="true" className="shrink-0 text-accent-text" />
-        <span>
-          {v.title}
-          {v.whenIso && (
-            <>
-              {" "}
-              <LocalWhen at={v.whenIso} tz={tz} fallback={v.whenFallback} />
-            </>
-          )}
-          {v.action === "wait" && `, then ${card.lean?.value === "hold" ? "hold" : "lock"}`}
-        </span>
+      <p className={cn("mt-0.5 flex items-center gap-1.5 text-lede font-bold", v.urgent ? "text-warn" : "text-ink")}>
+        <Icon size={18} aria-hidden="true" className={cn("shrink-0", v.urgent ? "text-warn" : "text-accent-text")} />
+        <span>{v.headline}</span>
       </p>
       {v.reason && <p className="mt-0.5 text-note text-muted">Deadline: {v.reason}.</p>}
       {v.triggers.length > 0 && (

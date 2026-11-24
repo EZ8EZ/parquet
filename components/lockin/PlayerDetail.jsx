@@ -54,7 +54,7 @@ function Record({ record, methodHref }) {
 }
 
 /** Everything about one player, for the sheet: the decision, then the five charts. */
-export function PlayerPanel({ card, today, record, methodHref, winProb = null }) {
+export function PlayerPanel({ card, today, record, methodHref, winProb = null, tz, nowMs }) {
   const strip = stripChart(card);
   const dist = distChart(card);
   const mins = minutesChart(card);
@@ -64,7 +64,7 @@ export function PlayerPanel({ card, today, record, methodHref, winProb = null })
     <div>
       <div className="space-y-3">
         <Hazards card={card} />
-        <ModelCall card={card} />
+        <ModelCall card={card} tz={tz} today={today} nowMs={nowMs} />
         <DecisionFigures card={card} />
         <WhenLine card={card} />
         {card.lean.value !== "none" ? (

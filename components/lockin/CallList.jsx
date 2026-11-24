@@ -56,7 +56,7 @@ function CallBody({ r }) {
           </span>
           <span className="mt-0.5 block text-meta text-secondary">
             {r.slotLabel ? `${r.slotLabel} · ` : ""}
-            <span className="font-semibold text-ink">{r.title}</span>
+            <span className={cn("font-semibold", r.urgent ? "text-warn" : "text-ink")}>{r.title}</span>
           </span>
         </span>
         <span className="shrink-0 text-right">

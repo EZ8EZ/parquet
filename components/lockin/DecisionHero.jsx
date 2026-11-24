@@ -26,7 +26,7 @@ function PointsLine({ card }) {
  * boom/bust profile and his chance to play, and the player's sheet one tap away.
  * `compact` (Home) prints the points figures as one line.
  */
-export function DecisionHero({ card, winProb = null, compact = false }) {
+export function DecisionHero({ card, winProb = null, compact = false, tz, today = null, nowMs }) {
   return (
     <Card pad="sm" as="article" id={`lk-${card.playerId}`} className="scroll-mt-20 space-y-3">
       <div className="flex items-center gap-3">
@@ -42,7 +42,7 @@ export function DecisionHero({ card, winProb = null, compact = false }) {
         </div>
       </div>
       <Hazards card={card} />
-      <ModelCall card={card} />
+      <ModelCall card={card} tz={tz} today={today} nowMs={nowMs} />
       {compact ? <PointsLine card={card} /> : <DecisionFigures card={card} />}
       {/* on Home the model's call above already says "if not already locked" */}
       <LeanChip lean={card.lean} hideConditional={compact && !!card.decision?.action} prefix={leanPrefix(card)} />

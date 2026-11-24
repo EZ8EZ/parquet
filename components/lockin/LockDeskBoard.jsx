@@ -95,7 +95,7 @@ function panelsFor(desk, methodHref) {
       title: c.name,
       leading: <PlayerAvatar name={c.name} team={c.team} playerId={c.playerId} size="md" decorative />,
       subtitle: playerSubtitle(c),
-      content: <PlayerPanel card={c} today={desk.today} record={desk.leanRecord} methodHref={methodHref} winProb={desk.winProb ?? null} />,
+      content: <PlayerPanel card={c} today={desk.today} record={desk.leanRecord} methodHref={methodHref} winProb={desk.winProb ?? null} tz={displayTz(desk)} nowMs={Date.parse(desk.generatedAt)} />,
     }));
 }
 
@@ -161,7 +161,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
     const tz = displayTz(desk);
     const line = tonightLine(desk);
     const sep = fullHref.includes("?") ? "&" : "?";
-    const foot = line ? <TonightFoot line={line} tz={tz} frozenAt={frozenAt} href={`${fullHref}${sep}tab=tonight`} /> : null;
+    const foot = line ? <TonightFoot line={line} tz={tz} frozenAt={frozenAt} nowMs={frozenAt ? Date.parse(frozenAt) : Date.parse(desk.generatedAt)} href={`${fullHref}${sep}tab=tonight`} /> : null;
     const tiles = <SlotCells tiles={slotTiles(desk)} />;
     const hv = historyView(desk.history);
     const anyConditional = rows.some((r) => r.conditional);
@@ -208,7 +208,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
       <h2 className="sr-only">Decide now</h2>
       {hazardOnly.length > 0 && <List>{hazardOnly.map((c) => <PlayerRow key={c.playerId} card={c} />)}</List>}
       {heroes.map((c) => (
-        <DecisionHero key={c.playerId} card={c} winProb={winProb} />
+        <DecisionHero key={c.playerId} card={c} winProb={winProb} tz={displayTz(desk)} today={desk.today} nowMs={Date.parse(desk.generatedAt)} />
       ))}
       {!groups.live.length && (fu ? <FirstUp fu={fu} tappable className="mt-2" /> : <EmptyState icon={<CalendarDays size={28} aria-hidden="true" />} title="Nothing to decide">No score is waiting on a lock-or-hold call.</EmptyState>)}
     </div>
