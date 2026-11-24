@@ -9,6 +9,7 @@ import { ordinal } from "@/lib/derive/describe";
 import { actionQueue } from "@/lib/actions";
 import { loadSlotPreview, weekContext } from "@/lib/week/load";
 import { replayAllowed } from "@/lib/lockin/source";
+import { parseAssume } from "@/lib/lockin/assume";
 import { Chip, List, ListRow, PageHeader } from "@/components/ui";
 import { DigestBeacon } from "@/components/DigestBeacon";
 import { ActionQueue } from "@/components/ActionQueue";
@@ -19,7 +20,10 @@ import { SlotPreview } from "@/components/week/SlotPreview";
 export const dynamic = "force-dynamic";
 
 export default async function ThisWeekPage({ searchParams }) {
-  const at = (await searchParams)?.at;
+  const sp = await searchParams;
+  const at = sp?.at;
+  // the viewer's what-if lock states (?assume=m3L,t5O): URL only, never stored
+  const assume = parseAssume(sp?.assume).list;
   const replay = replayAllowed() && typeof at === "string" ? at : null;
   const h = await getLeagueHistory();
   const rosterId = h.me.rosterId;
@@ -78,7 +82,7 @@ export default async function ThisWeekPage({ searchParams }) {
         </>
       ) : rosterId != null ? (
         <Suspense fallback={<SlotPreview preview={preview} />}>
-          <HomeWeek h={h} rosterId={rosterId} replay={replay} record={form ? `${form.wins}-${form.losses}` : null} />
+          <HomeWeek h={h} rosterId={rosterId} replay={replay} assume={assume} record={form ? `${form.wins}-${form.losses}` : null} />
         </Suspense>
       ) : null}
 

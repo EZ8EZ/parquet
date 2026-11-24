@@ -6,6 +6,8 @@ import { getLeagueHistory } from "@/lib/history";
 import { isFixtureDesk, loadLockDesk, replayAllowed } from "@/lib/lockin/source";
 import { boardHeader, winPctOf } from "@/lib/lockin/view";
 import { teamIdentity } from "@/lib/lockin/matchupView";
+import { parseAssume } from "@/lib/lockin/assume";
+import { keepAssume } from "@/lib/lockin/assumeView";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Lock or hold" };
@@ -31,9 +33,11 @@ export default async function LockInPage({ searchParams }) {
     );
   }
   const replay = replayAllowed() ? one(sp.at) : null;
-  const desk = await loadLockDesk({ rosterId, replay, players: h.players });
+  // the viewer's what-if lock states (?assume=m3L,t5O): URL only, never stored
+  const assume = parseAssume(sp.assume).list;
+  const desk = await loadLockDesk({ rosterId, replay, players: h.players, assume });
   const hd = boardHeader(desk);
-  const fullHref = replay ? `/lockin?at=${encodeURIComponent(replay)}` : "/lockin";
+  const fullHref = keepAssume(replay ? `/lockin?at=${encodeURIComponent(replay)}` : "/lockin", desk.assumptions ? assume : []);
   return (
     <>
       {/* the same one-line bar as Home: the page as the heading, the week beside it, refresh with the zone */}

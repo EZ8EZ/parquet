@@ -7,6 +7,7 @@ import { isFixtureDesk } from "@/lib/lockin/source";
 import { boardHeader, winPctOf } from "@/lib/lockin/view";
 import { teamIdentity } from "@/lib/lockin/matchupView";
 import { loadWeek } from "@/lib/week/load";
+import { keepAssume } from "@/lib/lockin/assumeView";
 import { soonDeadline } from "@/lib/week";
 import { InjuredStarters } from "./InjuredStarters";
 
@@ -28,11 +29,12 @@ function SoonDeadline({ d }) {
  * refresh button carrying the as-of time and the board's zone), the scoreboard with
  * Tonight in its footer, then Your calls. Streams in behind SlotPreview (app/page.jsx).
  */
-export async function HomeWeek({ h, rosterId, replay = null, record = null }) {
-  const week = await loadWeek(h, rosterId, { replay });
+export async function HomeWeek({ h, rosterId, replay = null, record = null, assume = [] }) {
+  const week = await loadWeek(h, rosterId, { replay, assume });
   const desk = week.desk;
   const bh = desk ? boardHeader(desk) : null;
-  const fullHref = replay ? `/lockin?at=${encodeURIComponent(replay)}` : "/lockin";
+  // links to the lock board keep the viewer's what-if assumptions while they are set
+  const fullHref = keepAssume(replay ? `/lockin?at=${encodeURIComponent(replay)}` : "/lockin", desk?.assumptions ? assume : []);
   return (
     <>
       <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
