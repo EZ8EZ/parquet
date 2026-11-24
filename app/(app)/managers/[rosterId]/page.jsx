@@ -359,8 +359,8 @@ export default async function ManagerDetailPage({ params }) {
         {d.read}
       </Disclosure>
 
-      <SectionHeader title="How to approach them" />
-      <List aria-label="How to approach them">
+      <SectionHeader title="From their trade record" />
+      <List aria-label="From their trade record">
         {d.approachTips.map((t, i) => (
           <li key={i} className="flex items-start gap-3 px-4 py-3">
             <Lightbulb size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-accent-text" />
