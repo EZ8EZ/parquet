@@ -23,6 +23,28 @@ import {
   Tabs,
 } from "@/components/ui";
 import { Onward } from "@/components/Onward";
+import { LeanChip } from "@/components/lockin/Decision";
+import { SlotCells } from "@/components/lockin/SlotCells";
+import { OppStrip } from "@/components/lockin/OppStrip";
+
+const DEMO_TILES = [
+  { index: 0, label: "PG", key: "unknown", text: "33.0", call: true, spoken: "PG 33.0, score on the table, your lock-or-hold call is open" },
+  { index: 1, label: "SG", key: "yet", text: "7p", spoken: "SG, has not played, plays at 7:00 PM" },
+  { index: 2, label: "SF", key: "locked", text: "40.0", spoken: "SF 40.0, locked" },
+  { index: 3, label: "PF", key: "final", text: "21.0", spoken: "PF 21.0, final score stands" },
+  { index: 4, label: "C", key: "reset", text: "0.0", spoken: "C 0.0, reset to 0" },
+  { index: 5, label: "UTIL", key: "unknown", text: "35.0", call: true, flag: "out", spoken: "UTIL 35.0, listed Out, your lock-or-hold call is open" },
+  { index: 6, label: "UTIL", key: "empty", text: "—", spoken: "UTIL, empty" },
+];
+const DEMO_OPP = [
+  { index: 0, key: "unknown", banked: 25.5 },
+  { index: 1, key: "yet", banked: null },
+  { index: 2, key: "locked", banked: 45 },
+  { index: 3, key: "final", banked: 19.5 },
+  { index: 4, key: "reset", banked: 0 },
+  { index: 5, key: "unknown", banked: 29 },
+  { index: 6, key: "empty", banked: null },
+];
 
 export const metadata = { title: "Design system - Parquet" };
 
@@ -36,10 +58,12 @@ const SWATCHES = [
   ["negative", "bg-negative"],
   ["info", "bg-info"],
   ["warn", "bg-warn"],
+  ["them", "bg-them"],
 ];
 
 const TYPE = [
-  ["hero 44", "text-hero font-bold", "26,641"],
+  ["hero 48", "text-hero font-extrabold", "27%"],
+  ["score 24", "text-score font-bold", "33.0"],
   ["display 28", "text-display font-bold", "Page title"],
   ["lede 17", "text-lede font-semibold", "Section title"],
   ["body 14", "text-body", "Body copy and row titles"],
@@ -120,6 +144,21 @@ export default function DesignPage() {
         <Chip tone="warn" icon={AlertTriangle}>Questionable</Chip>
         <Chip tone="info" icon={Info}>Field</Chip>
         <Chip tone="accent" size="sm">small</Chip>
+        <Chip tone="outline">Outline</Chip>
+      </div>
+
+      <SectionHeader title="Lock-in: the model's lean" />
+      <div className="flex flex-wrap gap-2">
+        <LeanChip lean={{ value: "lock", confidence: "clear" }} />
+        <LeanChip lean={{ value: "hold", confidence: "marginal" }} />
+        <LeanChip lean={{ value: "lock", confidence: "moderate", conditional: true }} />
+        <LeanChip lean={{ value: "lock", confidence: "clear" }} short size="sm" />
+      </div>
+
+      <SectionHeader title="Lock-in: slot tiles" />
+      <SlotCells tiles={DEMO_TILES} />
+      <div className="mt-2">
+        <OppStrip slots={DEMO_OPP} />
       </div>
 
       <SectionHeader title="List rows" href="/design" cta="See all" />

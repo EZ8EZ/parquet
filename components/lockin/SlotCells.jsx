@@ -1,50 +1,76 @@
+import { Check, Lock, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/ui";
-import { SLOT_STATES, fmt, slotStateKey } from "@/lib/lockin/view";
+import { SLOT_STATES } from "@/lib/lockin/view";
+import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { StateIcon } from "./StateIcon";
 import { DeckTrigger } from "./PlayerDeck";
 
-const SETTLED = new Set(["locked", "final"]);
+const FACE = {
+  locked: "bg-accent-wash text-accent-text",
+  final: "bg-elevated text-ink",
+  yet: "bg-transparent text-muted ring-1 ring-inset ring-border-strong",
+  empty: "bg-transparent text-faint border border-dashed border-border-strong",
+};
 
-/** The seven slots as seven tappable cells: label, banked score, state shape. Tap opens the player. */
-export function SlotCells({ slots, legend = true }) {
-  const keys = slots.map(slotStateKey);
+/** The glyph that says the state in the tile itself (no legend needed). */
+function Glyph({ k }) {
+  if (k === "locked") return <Lock size={11} strokeWidth={2.5} aria-hidden="true" className="shrink-0" />;
+  if (k === "final") return <Check size={11} strokeWidth={3} aria-hidden="true" className="shrink-0" />;
+  if (k === "reset") return <RotateCcw size={11} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-faint" />;
+  if (k === "live" || k === "unresolved") return <StateIcon state={k} className="size-[11px]" />;
+  return null;
+}
+
+/**
+ * The seven slots as tiles (slotTiles(desk)): label above, the player's face, then the
+ * score, or the tip time ("7p") / day when he has not played. State is in the tile: a
+ * violet wash and lock when locked, a check when the score stands, a reset glyph, a
+ * hairline outline before his game. A violet underline marks a slot whose lock-or-hold
+ * call is open. Tap opens the player.
+ */
+export function SlotCells({ tiles, className }) {
   return (
-    <div>
-      <ol aria-label="Your starting slots this week" className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${slots.length || 7}, minmax(0, 1fr))` }}>
-        {slots.map((s, i) => {
-          const key = keys[i];
-          const face = (
-            <span className={cn("flex h-[72px] min-w-0 flex-col items-center justify-between rounded-control py-1.5", SETTLED.has(key) ? "bg-surface-2" : "bg-surface")}>
-              <span className="text-meta font-semibold text-secondary">{s.label}</span>
-              <span className={cn("figure font-bold leading-none", s.banked ? "text-body text-ink" : "text-meta text-muted")}>{s.banked == null ? "-" : fmt(s.banked)}</span>
-              <span className={key === "locked" ? "text-accent-text" : "text-muted"}>
-                <StateIcon state={key} />
-              </span>
+    <ol aria-label="Your starting slots this week" className={cn("grid gap-1.5", className)} style={{ gridTemplateColumns: `repeat(${tiles.length || 7}, minmax(0, 1fr))` }}>
+      {tiles.map((t) => {
+        const face = (
+          <span className="flex flex-col items-center gap-1">
+            <span aria-hidden="true" className="text-micro font-semibold text-secondary">
+              {t.label}
             </span>
-          );
-          // Starts with the visible text ("PG 31.0") so speech input can target it (WCAG 2.5.3).
-          const spoken = `${s.label} ${s.banked == null ? "-" : fmt(s.banked)}: ${s.name ?? "empty"}, ${SLOT_STATES[key].long}`;
-          return (
-            <li key={s.index} className="min-w-0">
-              {s.playerId ? (
-                <DeckTrigger playerId={s.playerId} label={`${spoken}. Show details`} className="rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
-                  {face}
-                </DeckTrigger>
-              ) : (
-                <span role="img" aria-label={spoken}>
-                  {face}
+            <span data-slot-state={t.key} className={cn("relative flex h-[58px] w-full min-w-0 flex-col items-center justify-center gap-1 rounded-control", FACE[t.key] ?? "bg-surface-2 text-ink")}>
+              {t.flag && (
+                <span aria-hidden="true" className={cn("absolute right-0.5 top-0.5 rounded px-[3px] text-[10px] font-extrabold leading-[13px]", t.flag === "out" ? "bg-negative-wash text-negative" : "bg-warn-wash text-warn")}>
+                  {t.flag === "out" ? "O" : "Q"}
                 </span>
               )}
-            </li>
-          );
-        })}
-      </ol>
-      {legend && <SlotLegend keys={keys} />}
-    </div>
+              {t.playerId ? <PlayerAvatar name={t.name ?? t.playerId} team={t.team} playerId={t.playerId} size="xs" decorative className={t.key === "yet" ? "opacity-60" : undefined} /> : <span aria-hidden="true" className="size-6" />}
+              <span aria-hidden="true" className={cn("flex items-center gap-px figure font-bold leading-none", t.key === "yet" ? "text-micro" : "text-note", t.key === "reset" && "text-faint")}>
+                <Glyph k={t.key} />
+                {t.text}
+              </span>
+              {t.call && <span aria-hidden="true" className="absolute inset-x-2.5 bottom-0 h-[3px] rounded-t-full bg-accent" />}
+            </span>
+          </span>
+        );
+        return (
+          <li key={t.index} className="min-w-0" data-slot-call={t.call ? "" : undefined}>
+            {t.playerId ? (
+              <DeckTrigger playerId={t.playerId} label={`${t.spoken}. Show details`} className="block w-full rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent">
+                {face}
+              </DeckTrigger>
+            ) : (
+              <span role="img" aria-label={t.spoken} className="block">
+                {face}
+              </span>
+            )}
+          </li>
+        );
+      })}
+    </ol>
   );
 }
 
-/** The state shapes in use, once (shared by your slots and the opponent's strip). */
+/** Kept for the opponent sheet and Nights: the state shapes in use, once. */
 export function SlotLegend({ keys, className = "mt-2" }) {
   return (
     <ul aria-hidden="true" className={cn("flex flex-wrap gap-x-3 gap-y-1 text-meta text-secondary", className)}>

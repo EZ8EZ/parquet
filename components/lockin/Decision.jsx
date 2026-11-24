@@ -9,15 +9,21 @@ export function slotKeyOf(card) {
   return slotStateKey({ playerId: card.playerId, lockState: card.lockState.state, lockStateReason: card.lockState.reason });
 }
 
-/** The lean as a status chip; a marginal lean is neutral (quieter), and a conditional one says so. */
-export function LeanChip({ lean, hideConditional = false }) {
+/**
+ * The model's lean as a chip, always named as the model's: lock is violet with a lock
+ * (an action that is yours to take), hold is a neutral outline with an hourglass. The
+ * confidence is the second word, never a colour. `short` ("Model: lock · clear") is for
+ * dense rows. A conditional lean says "If not already locked" unless the caller says it once
+ * for the whole list.
+ */
+export function LeanChip({ lean, hideConditional = false, short = false, size = "md" }) {
   const v = leanView(lean);
   if (!v) return null;
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1" data-lean={v.value}>
       {v.conditional && !hideConditional && <span className="text-meta text-secondary">If not already locked</span>}
-      <Chip tone={v.nearlyEven ? "neutral" : "accent"} icon={v.value === "lock" ? Lock : Hourglass}>
-        Model leans {v.value} · {v.confidence}
+      <Chip tone={v.value === "lock" ? "accent" : "outline"} icon={v.value === "lock" ? Lock : Hourglass} size={size}>
+        {short ? "Model:" : "Model leans"} {v.value} <span className="font-medium opacity-90">· {v.confidence}</span>
       </Chip>
     </span>
   );

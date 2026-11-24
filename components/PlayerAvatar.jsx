@@ -144,7 +144,7 @@ function initials(name) {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
-const SIZES = { sm: 32, md: 40, lg: 56 };
+const SIZES = { xs: 24, sm: 32, md: 40, lg: 56 };
 /**
  * Re-exported from `lib/photos.js` (a plain, server-safe module) rather than
  * defined here: this file is `"use client"`, and Next.js refuses to call ANY
@@ -232,7 +232,7 @@ export function PlayerAvatar({
   // inside it. `overflow-visible` is the point of the wrapper existing at all - the
   // crest pokes past the disc's own edge on purpose, so it reads as a badge and not
   // as a second, smaller face crammed inside the first.
-  const BADGE_SIZE = { sm: "xs", md: "xs", lg: "sm" };
+  const BADGE_SIZE = { xs: "xs", sm: "xs", md: "xs", lg: "sm" };
   return (
     <span
       className={cn("relative inline-block shrink-0", className)}
