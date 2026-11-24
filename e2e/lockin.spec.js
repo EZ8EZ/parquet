@@ -95,6 +95,7 @@ test.describe("lock-or-hold board", () => {
     await expect(matchup.locator("[data-win-prob]")).toHaveText(/^\d{1,3}%$/);
     await expect(matchup).toContainText("to win");
     await expect(matchup).toContainText("banked");
+    await expect(matchup).toContainText("how well they match results is still being checked");
     await expect(matchup.getByRole("figure", { name: /Projected final totals/ })).toBeVisible();
     // first screen: week line, win chance, both strips, the next deadline
     await expect(page.getByText(/Week 4 · \d+ locked/)).toBeInViewport();
@@ -110,8 +111,8 @@ test.describe("lock-or-hold board", () => {
     // the featured decision leads with the model's call and the win comparison
     const hero = board.locator("article");
     await expect(hero.locator("[data-model-call]")).toContainText(/Lock now|Wait|Hold/);
-    await expect(hero.locator("[data-win-compare]")).toContainText(/Lock: \d+% to win · Hold: \d+%/);
-    await expect(hero).toContainText(/pts? of win chance/);
+    await expect(hero).toContainText("Expected if held");
+    await expect(hero.locator("[data-win-compare]")).toContainText(/Win chance: lock \d+% · hold \d+%/);
     await expect(hero.locator("[data-profile]")).toContainText(/Boom \d+%/);
     await expect(hero.locator("[data-profile]")).toContainText(/last \d+ games/);
     await expect(hero.locator("[data-availability]")).toContainText(/n=\d+/);
@@ -159,8 +160,9 @@ test.describe("lock-or-hold board", () => {
     await expect(history).not.toContainText(/mistake|too early|too long|should/i);
     await page.getByRole("tab", { name: /Decide/ }).click();
     const holden = board.locator("#lk-lk02");
-    await expect(holden.locator("[data-win-compare]")).toContainText(/If you lock/);
-    await expect(holden.locator("[data-win-compare]")).toContainText("model leans");
+    // win chances sit beside the lean (which rests on points) as information
+    await expect(holden.locator("[data-win-compare]")).toContainText(/Win chance: lock \d+% · hold \d+%/);
+    await expect(holden.locator("[data-win-compare]")).not.toContainText("model leans");
     await holden.getByRole("button", { name: /charts, record and method/ }).click();
     const sheet = page.locator("dialog[open]");
     await expect(sheet.getByRole("heading", { name: "Boom or bust" })).toBeVisible();

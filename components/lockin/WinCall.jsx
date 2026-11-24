@@ -3,56 +3,22 @@ import { actionView, winCompare } from "@/lib/lockin/matchupView";
 import { LocalWhen } from "./LocalWhen";
 
 /**
- * Lock vs hold in win chance, side by side: "Lock 76% to win · Hold 71%". The side the
- * model leans to is marked with a word ("model leans"), not colour alone.
+ * Win chance if he is locked and if he is held: "Win chance: lock 28% · hold 19%".
+ * Information beside the lean, which rests on points (lean.leanBasis): neither side is
+ * marked as the model's. When the two disagree, the engine's reason follows.
  */
-export function WinFigures({ card, winProb, compact = false }) {
+export function WinFigures({ card, winProb, showReason = true }) {
   const w = winCompare(card, winProb);
   if (!w) return null;
-  if (compact) {
-    const fig = (key, label, value) => (
-      <span className={w.leaned === key ? "text-ink" : "text-muted"}>
-        {label} <span className={`figure font-bold ${w.leaned === key ? "text-ink" : "text-muted"}`}>{value}</span>
-        {key === "lock" ? " to win" : ""}
-      </span>
-    );
-    return (
-      <div data-win-compare>
-        <p className="text-lede">
-          {fig("lock", "Lock:", w.lockPct)} <span className="text-secondary">·</span> {fig("hold", "Hold:", w.holdPct)}
-        </p>
-        {w.disagree && <p className="mt-1 text-note text-ink">{w.disagree}</p>}
-      </div>
-    );
-  }
-  const side = (key, label, value) => (
-    <div className={`min-w-0 rounded-control p-3 ${w.leaned === key ? "bg-accent-wash" : "bg-surface-2"}`}>
-      <p className="text-meta font-medium text-secondary">
-        {label}
-        {w.leaned === key && <span className="text-accent-text"> · model leans</span>}
-      </p>
-      <p className="mt-1 flex items-baseline gap-1.5">
-        <span className="figure text-display font-bold tracking-tight text-ink">{value}</span>
-        <span className="text-meta text-muted">to win</span>
-      </p>
-    </div>
-  );
   return (
     <div data-win-compare>
-      <div className="grid grid-cols-2 gap-2">
-        {side("lock", "If you lock", w.lockPct)}
-        {side("hold", "If you hold", w.holdPct)}
-      </div>
-      {w.disagree && <p className="mt-2 text-note text-ink">{w.disagree}</p>}
+      <p className="text-note text-muted">
+        Win chance: lock <span className="figure text-body font-bold text-ink">{w.lockPct}</span> <span className="text-secondary">·</span> hold{" "}
+        <span className="figure text-body font-bold text-ink">{w.holdPct}</span>
+      </p>
+      {showReason && w.disagree && <p className="mt-1 text-note text-ink">{w.disagree}</p>}
     </div>
   );
-}
-
-/** "+5 pts of win chance", for beside the lean chip. */
-export function WinGain({ card, winProb }) {
-  const w = winCompare(card, winProb);
-  if (!w) return null;
-  return <span className="figure text-meta font-semibold text-muted">{w.gainText}</span>;
 }
 
 const ICON = { lock_now: Lock, wait: Hourglass, hold: Hourglass };

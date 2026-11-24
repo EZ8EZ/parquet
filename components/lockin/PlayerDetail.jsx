@@ -7,7 +7,7 @@ import { NextGameChart } from "./NextGameChart";
 import { MinutesChart } from "./MinutesChart";
 import { OpponentHistory } from "./OpponentHistory";
 import { WeekGrid } from "./WeekGrid";
-import { ModelCall, WinFigures, WinGain } from "./WinCall";
+import { ModelCall, WinFigures } from "./WinCall";
 import { ProfileBar } from "./ProfileBar";
 import { AvailabilityDots } from "./AvailabilityDots";
 
@@ -64,15 +64,12 @@ export function PlayerPanel({ card, today, record, methodHref, calibration = nul
       <div className="space-y-3">
         <Hazards card={card} />
         <ModelCall card={card} />
-        <WinFigures card={card} winProb={winProb} />
         <DecisionFigures card={card} />
         <WhenLine card={card} />
         {card.lean.value !== "none" ? (
           <div className="space-y-1">
-            <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-              <LeanChip lean={card.lean} />
-              <WinGain card={card} winProb={winProb} />
-            </span>
+            <LeanChip lean={card.lean} />
+            <WinFigures card={card} winProb={winProb} showReason={false} />
             <p className="text-note text-muted">{card.lean.reason}.</p>
           </div>
         ) : (

@@ -1,34 +1,32 @@
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import { Card, Chip } from "@/components/ui";
 import { decisionNumbers, fmt, playerSubtitle } from "@/lib/lockin/view";
-import { winCompare } from "@/lib/lockin/matchupView";
 import { DecisionFigures, Hazards, LeanChip, WhenLine } from "./Decision";
 import { DeckTrigger } from "./PlayerDeck";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { ModelCall, WinFigures, WinGain } from "./WinCall";
+import { ModelCall, WinFigures } from "./WinCall";
 import { ProfileBar } from "./ProfileBar";
 import { AvailabilityDots } from "./AvailabilityDots";
 
-/** The points figures in one line, for Home when the win chances lead the card. */
+/** The points figures in one line, for Home. */
 function PointsLine({ card }) {
   const n = decisionNumbers(card);
   if (!n) return null;
   return (
     <p className="text-note text-muted">
-      On the table <span className="figure font-bold text-ink">{fmt(n.x)}</span> · Expected if held <span className="figure font-bold text-ink">{fmt(n.held)}</span>
+      On the table <span className="figure text-lede font-bold text-ink">{fmt(n.x)}</span> · Expected if held <span className="figure text-lede font-bold text-ink">{fmt(n.held)}</span>
       {n.listedOut ? " (listed out next game)" : ""}
     </p>
   );
 }
 
 /**
- * The live decision: who, the model's call, lock vs hold in win chance, the points
- * figures, the lean, the boom/bust profile and his chance to play, and the player's
- * sheet one tap away. `compact` (Home) prints the points figures as one line when the
- * win chances are there.
+ * The live decision: who, the model's call, the points figures and the lean (which
+ * rests on points), win chance if locked and if held as information beside it, the
+ * boom/bust profile and his chance to play, and the player's sheet one tap away.
+ * `compact` (Home) prints the points figures as one line.
  */
 export function DecisionHero({ card, winProb = null, compact = false }) {
-  const head = !!winCompare(card, winProb);
   return (
     <Card pad="sm" as="article" id={`lk-${card.playerId}`} className="scroll-mt-20 space-y-3">
       <div className="flex items-center gap-3">
@@ -45,13 +43,10 @@ export function DecisionHero({ card, winProb = null, compact = false }) {
       </div>
       <Hazards card={card} />
       <ModelCall card={card} />
-      <WinFigures card={card} winProb={winProb} compact={compact} />
-      {compact && head ? <PointsLine card={card} /> : <DecisionFigures card={card} />}
-      <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
-        {/* the model's call above already says "if not already locked" */}
-        <LeanChip lean={card.lean} hideConditional={compact && !!card.decision?.action} />
-        <WinGain card={card} winProb={winProb} />
-      </span>
+      {compact ? <PointsLine card={card} /> : <DecisionFigures card={card} />}
+      {/* on Home the model's call above already says "if not already locked" */}
+      <LeanChip lean={card.lean} hideConditional={compact && !!card.decision?.action} />
+      <WinFigures card={card} winProb={winProb} />
       {card.profile && <ProfileBar profile={card.profile} x={card.stopping?.x ?? null} compact={compact} />}
       <AvailabilityDots card={card} />
       {!(compact && card.decision?.action) && <WhenLine card={card} />}

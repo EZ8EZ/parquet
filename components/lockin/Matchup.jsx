@@ -116,6 +116,7 @@ export function Matchup({ v, desk, mySlots, legend = null }) {
             </p>
           )}
           <p className="mt-1 text-meta text-secondary">{v.winPct ? `Model estimate if you follow its calls, vs ${them.name}` : "The model could not work it out; the points view is shown."}</p>
+          {v.winPct && <p className="text-meta text-secondary">Win chances are model estimates; how well they match results is still being checked.</p>}
         </div>
         <div className="flex shrink-0 items-center pt-1">
           <TeamAvatar name={v.me.name} avatarId={v.me.avatarId} teamLogoUrl={v.me.teamLogoUrl} size="sm" isMe />
