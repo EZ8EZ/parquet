@@ -4,7 +4,7 @@ import { decisionNumbers, fmt, playerSubtitle } from "@/lib/lockin/view";
 import { DecisionFigures, Hazards, LeanChip, WhenLine } from "./Decision";
 import { DeckTrigger } from "./PlayerDeck";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
-import { ModelCall, WinFigures } from "./WinCall";
+import { ModelCall, WinFigures, leanPrefix } from "./WinCall";
 import { ProfileBar } from "./ProfileBar";
 import { AvailabilityDots } from "./AvailabilityDots";
 
@@ -45,7 +45,7 @@ export function DecisionHero({ card, winProb = null, compact = false }) {
       <ModelCall card={card} />
       {compact ? <PointsLine card={card} /> : <DecisionFigures card={card} />}
       {/* on Home the model's call above already says "if not already locked" */}
-      <LeanChip lean={card.lean} hideConditional={compact && !!card.decision?.action} />
+      <LeanChip lean={card.lean} hideConditional={compact && !!card.decision?.action} prefix={leanPrefix(card)} />
       <WinFigures card={card} winProb={winProb} />
       {card.profile && <ProfileBar profile={card.profile} x={card.stopping?.x ?? null} compact={compact} />}
       <AvailabilityDots card={card} />
