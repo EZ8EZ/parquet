@@ -113,11 +113,11 @@ test.describe("lock-or-hold board", () => {
     const hero = board.locator("article");
     await expect(hero.locator("[data-model-call]")).toContainText(/Lock now|Wait|Hold/);
     await expect(hero).toContainText("Expected if held");
-    await expect(hero.locator("[data-win-compare]")).toContainText(/Win chance: lock \d+% · hold \d+%/);
+    await expect(hero.locator("[data-win-compare]")).toContainText(/Rough win chance: if lock \d+% · if hold \d+%/);
     await expect(hero.locator("[data-profile]")).toContainText(/Boom \d+%/);
     await expect(hero.locator("[data-profile]")).toContainText(/last \d+ games/);
     await expect(hero.locator("[data-availability]")).toContainText(/n=\d+/);
-    await expect(board.getByRole("link", { name: /Your lock history/ })).toHaveAttribute("href", "/lockin#lock-history");
+    await expect(board.getByRole("link", { name: /Lock history/ })).toHaveAttribute("href", "/lockin#lock-history");
     // the opponent sheet: slots, habits, assumptions
     await oppTrigger.click();
     const sheet = page.locator("dialog[open]");
@@ -153,7 +153,8 @@ test.describe("lock-or-hold board", () => {
     await expect(board.locator('[data-whatif-row="noise"]').first()).toContainText("no real difference");
     const history = board.locator("[data-lock-history]");
     await expect(history.getByRole("heading", { name: "Your lock history" })).toBeVisible();
-    await expect(history).toContainText("points a week left on the table");
+    await expect(history).toContainText("points a week");
+    await expect(history).toContainText("Between what you banked and each player");
     await expect(history).toContainText(/n=\d+ weeks?/);
     await expect(history).toContainText("Locked before a bigger game");
     await expect(history).toContainText("Held past a bigger score");
@@ -162,7 +163,7 @@ test.describe("lock-or-hold board", () => {
     await page.getByRole("tab", { name: /Decide/ }).click();
     const holden = board.locator("#lk-lk02");
     // win chances sit beside the lean (which rests on points) as information
-    await expect(holden.locator("[data-win-compare]")).toContainText(/Win chance: lock \d+% · hold \d+%/);
+    await expect(holden.locator("[data-win-compare]")).toContainText(/Rough win chance: if lock \d+% · if hold \d+%/);
     await expect(holden.locator("[data-win-compare]")).not.toContainText("model leans");
     await holden.getByRole("button", { name: /charts, record and method/ }).click();
     const sheet = page.locator("dialog[open]");

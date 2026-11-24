@@ -1,20 +1,24 @@
 import { CornerDownRight, Hourglass, Lock } from "lucide-react";
 import { actionView, winCompare } from "@/lib/lockin/matchupView";
 import { LocalWhen } from "./LocalWhen";
+import { DEFAULT_TZ } from "@/lib/lockin/time";
 
 /**
- * Win chance if he is locked and if he is held: "Win chance: lock 28% · hold 19%".
- * Information beside the lean, which rests on points (lean.leanBasis): neither side is
- * marked as the model's. When the two disagree, the engine's reason follows.
+ * Rough win chance if he is locked and if he is held: "Rough win chance: if lock 28% ·
+ * if hold 19%". Information beside the lean, which rests on points (lean.leanBasis):
+ * neither side is marked as the model's. Inside the engine's noise and calibration floor
+ * (lean.winProbDiffReal false) the pair is greyed and says it is too close to call. When
+ * the lean and win chance disagree, the engine's reason follows.
  */
 export function WinFigures({ card, winProb, showReason = true }) {
   const w = winCompare(card, winProb);
   if (!w) return null;
+  const fig = w.real ? "figure text-body font-bold text-ink" : "figure text-body font-semibold text-secondary";
   return (
-    <div data-win-compare>
+    <div data-win-compare data-win-real={String(w.real)}>
       <p className="text-note text-muted">
-        Win chance: lock <span className="figure text-body font-bold text-ink">{w.lockPct}</span> <span className="text-secondary">·</span> hold{" "}
-        <span className="figure text-body font-bold text-ink">{w.holdPct}</span>
+        Rough win chance: if lock <span className={fig}>{w.lockPct}</span> <span className="text-secondary">·</span> if hold <span className={fig}>{w.holdPct}</span>
+        {!w.real && <span className="text-secondary"> · too close to call</span>}
       </p>
       {showReason && w.disagree && <p className="mt-1 text-note text-ink">{w.disagree}</p>}
     </div>
@@ -27,8 +31,8 @@ const ICON = { lock_now: Lock, wait: Hourglass, hold: Hourglass };
  * The model's call: "Lock now", "Wait until Fri 7:30 PM EST" (with why that time), or
  * "Hold"; for a wait, the conditions that would change it, as the engine words them.
  */
-export function ModelCall({ card }) {
-  const v = actionView(card);
+export function ModelCall({ card, tz = DEFAULT_TZ }) {
+  const v = actionView(card, tz);
   if (!v) return null;
   const Icon = ICON[v.action];
   return (
@@ -41,7 +45,7 @@ export function ModelCall({ card }) {
           {v.whenIso && (
             <>
               {" "}
-              <LocalWhen at={v.whenIso} fallback={v.whenFallback} />
+              <LocalWhen at={v.whenIso} tz={tz} fallback={v.whenFallback} />
             </>
           )}
         </span>
