@@ -371,6 +371,7 @@ export default async function ManagerDetailPage({ params }) {
 
       <Tabs
         className="mt-6"
+        variant="segmented"
         label="Dossier sections"
         items={[
           { id: "trades", label: "Trades", content: tradesTab },
