@@ -202,6 +202,11 @@ test.describe("lock-or-hold board", () => {
     await expect(page.locator("dialog[open]")).toHaveCount(0);
     await page.waitForFunction(() => !window.history.state?.parquetSheet);
     await page.goto("/");
+    // QA round 4: axe ran before Home had settled (page-has-heading-one failed 3/5 runs while
+    // the server HTML has the h1). Wait for Home's URL and its h1 before scanning.
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await page.waitForLoadState("networkidle");
     expect(axeList(await new AxeBuilder({ page }).analyze())).toEqual([]);
   });
 });
