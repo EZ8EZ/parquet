@@ -8428,3 +8428,16 @@ score is the better of locking it now and holding. Projections only: the move is
 **Rejected for now.** A what-if token that subs a bench player in and re-runs the win chance: the engine's
 swap path (swapInto) exists, but every swap is another full simulation per slot and bench player; the list
 answers "who is better here" without it.
+
+## D144. THIS WEEK IS THE LOCK PAGE; A STARTER WHO HAS NOT PLAYED NEVER SHOWS 0.0
+
+**Why.** Home and the lock page said the same thing in two layouts (the owner, 2026-11-25), and a starter
+whose week has not begun read as a 0.0 or a bare glyph: "5p" in his tile, "·" in the opponent's row, "0.0 In
+his slot" in his sheet, "0.0" in the opponent sheet.
+**What.** In season, `/` redirects to `/lockin` (the ?assume= in the URL goes along; replays and the offseason
+keep Home), so everyone sees one page: the scoreboard, then Tonight, Calls, Players, Win %, Week, History.
+Home's two links ("What moved in the league", "Your dossier") and its digest beacon move to the bottom of the
+lock page, the links only with full access. A starter who has not played shows his tip time in his tile
+("5 PM", "7:30 PM") or the day of his next game, a clock in the opponent's row, and "—" in both sheets; the
+sheet header drops the positions when they repeat the slot ("PG · MIA", not "PG · MIA · PG"). Six e2e tests
+written against Home's compact board now check the lock page.

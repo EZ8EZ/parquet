@@ -52,7 +52,7 @@ export function OpponentBody({ v, desk }) {
                     <StateIcon state={s.key} /> {s.stateLong}
                   </span>
                 }
-                value={s.banked == null ? "-" : fmt(s.banked)}
+                value={s.banked == null || s.key === "yet" ? "—" : fmt(s.banked)}
               />
             </li>
           ))}
