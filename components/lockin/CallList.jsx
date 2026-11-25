@@ -67,7 +67,7 @@ function CallBody({ r }) {
           )}
         </span>
         {r.kind === "start" ? (
-          <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-micro font-semibold text-muted">Bench move</span>
+          <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-micro font-semibold text-muted">{r.returns ? "Back in his slot" : "Bench move"}</span>
         ) : (
           <span className="shrink-0 text-right">
             <span className="block figure text-score font-bold text-ink">{r.xText}</span>
@@ -92,6 +92,7 @@ function CallBody({ r }) {
           <LeanChip lean={r.lean} hideConditional prefix={r.leanPrefix} />
         </span>
       )}
+      {r.leanWhy && <span className="mt-1.5 block text-meta text-muted" data-lean-why>{r.leanWhy}</span>}
       {r.triggers.length > 0 && (
         <span className="mt-2 block space-y-1">
           {r.triggers.map((t) => (

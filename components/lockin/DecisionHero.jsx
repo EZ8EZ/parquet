@@ -1,6 +1,6 @@
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import { Card, Chip } from "@/components/ui";
-import { heldNote } from "@/lib/lockin/matchupView";
+import { heldNote, roughen } from "@/lib/lockin/matchupView";
 import { decisionNumbers, fmt, playerSubtitle } from "@/lib/lockin/view";
 import { DecisionFigures, Hazards, LeanChip, WhenLine } from "./Decision";
 import { DeckTrigger } from "./PlayerDeck";
@@ -47,6 +47,8 @@ export function DecisionHero({ card, winProb = null, compact = false, tz, today 
       {compact ? <PointsLine card={card} /> : <DecisionFigures card={card} />}
       {/* on Home the model's call above already says "if not already locked" */}
       <LeanChip lean={card.lean} hideConditional={compact && !!card.decision?.action} prefix={leanPrefix(card)} />
+      {/* when the points basis and win chance disagree the chip reads marginal; say why on the card */}
+      {card.lean?.basisDisagrees && card.lean.reason && <p className="text-note text-muted" data-lean-why>{roughen(card.lean.reason).replace(/\.?$/, ".")}</p>}
       <WinFigures card={card} winProb={winProb} />
       {card.profile && <ProfileBar profile={card.profile} x={card.stopping?.x ?? null} compact={compact} />}
       <AvailabilityDots card={card} />
