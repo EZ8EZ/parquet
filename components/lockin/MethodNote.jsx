@@ -1,4 +1,5 @@
 import { Disclosure } from "@/components/ui";
+import { MATCHUP } from "@/lib/lockin/matchup";
 
 const pp = (x) => `${Math.round(x * 1000) / 10}%`;
 
@@ -34,7 +35,7 @@ export function MethodNote({ model, record, open = false }) {
         </div>
         <div>
           <p className="font-semibold text-ink">Win chance</p>
-          <Eq>{"P(win) = P(T_you > T_opp) + ½·P(T_you = T_opp),  N = 2,000 seeded draws"}</Eq>
+          <Eq>{`P(win) = P(T_you > T_opp) + ½·P(T_you = T_opp),  N = ${MATCHUP.sims.toLocaleString("en-US")} seeded draws`}</Eq>
           <p className="mt-1">Each unlocked slot is a chain: keep x iff x ≥ C, C = E[slot&apos;s continuation] (his later games or the bench player assigned). The opponent locks with share w = 0.293 after every game (n=16,047), plus −1.55 per open slot. Brier 0.122 (n=1,442 decision points): rough in the middle.</p>
         </div>
         <div>
