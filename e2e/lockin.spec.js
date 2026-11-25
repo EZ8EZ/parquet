@@ -209,7 +209,8 @@ test.describe("lock-or-hold board", () => {
     const bar = page.locator("[data-whatif-bar]");
     await expect(bar).toContainText(/locked at 0\.0 \(typed\)/);
     await expect(page.locator('[data-slot-state][data-assumed="locked"]').first()).toContainText("0.0");
-    await expect(bar.locator("[data-whatif-change]")).toContainText(new RegExp(`${before.replace(/\s+/g, "").replace("%", "")}%`));
+    // the bar starts from the win chance the page showed before the assumption
+    await expect(bar.locator("[data-whatif-change]")).toContainText(before.replace(/\s+/g, ""));
     // a bad score is refused in the tile sheet, a good one applies
     await page.goto("/lockin?tab=calls");
     const rivals = page.locator("[data-rivals]").first();
