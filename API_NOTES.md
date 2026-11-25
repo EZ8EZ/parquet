@@ -275,6 +275,8 @@ filled slots (2025 weeks 1-23, 2026 weeks 1-3) and one live week-4 snapshot:
   `starters_points` differs from the latest completed game and matches an earlier one
   (`lib/lockin/lockState.js`). In the week-4 snapshot: 34 certainly locked, 50 ambiguous
   until the next tip, 10 reset, 4 mid-game (n=98 starters).
+  Re-checked 2026-11-25: still no lock field. Locks seen in the Sleeper app can be recorded by
+  hand (`scripts/lockin/mark-locks.mjs`, D139).
 - Weeks run Monday to Sunday by the schedule's `week` (0 of 2,298 banked games outside
   their week). League playoffs are weeks 21-23.
 
