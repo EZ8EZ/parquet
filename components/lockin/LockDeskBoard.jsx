@@ -203,14 +203,24 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
     );
   }
 
+  // bench moves the hero's win chance assumes (whatIf.plan "then_start") sit with the calls
+  const allRows = callRows(desk);
+  const starts = allRows.filter((r) => r.kind === "start");
+  const heroById = new Map(heroes.map((c) => [c.playerId, c]));
+  const ordered = allRows.filter((r) => r.kind === "start" || heroById.has(r.playerId));
   const decide = (
     <div className="space-y-3 pt-3">
       <h2 className="sr-only">Calls to make</h2>
       {hazardOnly.length > 0 && <List>{hazardOnly.map((c) => <PlayerRow key={c.playerId} card={c} />)}</List>}
-      {heroes.map((c) => (
-        <DecisionHero key={c.playerId} card={c} winProb={winProb} tz={displayTz(desk)} today={desk.today} nowMs={Date.parse(desk.generatedAt)} />
-      ))}
-      {!groups.live.length && (fu ? <FirstUp fu={fu} tappable className="mt-2" /> : <EmptyState icon={<CalendarDays size={28} aria-hidden="true" />} title="Nothing to decide">No score is waiting on a lock-or-hold call.</EmptyState>)}
+      {/* the decisions and the bench moves the plan assumes, in decide-by order */}
+      {ordered.map((r) =>
+        r.kind === "start" ? (
+          <CallList key={`start-${r.playerId}`} rows={[r]} />
+        ) : (
+          <DecisionHero key={r.playerId} card={heroById.get(r.playerId)} winProb={winProb} tz={displayTz(desk)} today={desk.today} nowMs={Date.parse(desk.generatedAt)} />
+        ),
+      )}
+      {!groups.live.length && !starts.length && (fu ? <FirstUp fu={fu} tappable className="mt-2" /> : <EmptyState icon={<CalendarDays size={28} aria-hidden="true" />} title="Nothing to decide">No score is waiting on a lock-or-hold call.</EmptyState>)}
     </div>
   );
   const nights = (
@@ -247,7 +257,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
           items={[
             ...(tv ? [{ id: "tonight", label: "Tonight", count: tv.toDecide || undefined, content: <div className="pt-1">{tonightFull}</div> }] : []),
             // "Decide now" is the in-buffer call label, so the tab is named for what it holds
-            { id: "decide", label: "Calls to make", count: groups.live.length, content: decide },
+            { id: "decide", label: "Calls to make", count: groups.live.length + starts.length, content: decide },
             ...(desk.whatIf ? [{ id: "options", label: "Win %", content: <div className="pt-1"><WhatIf desk={desk} /></div> }] : []),
             { id: "nights", label: "Nights", content: nights },
             { id: "players", label: "Players", count: desk.whatIf ? undefined : desk.cards.length, content: everyone },
