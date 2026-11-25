@@ -8278,7 +8278,7 @@ occupied slot may carry one (even one not played yet or live). The simulation us
 both sides at once (model / locked, at the score it holds or a typed one / playing on); each tile's sheet also takes
 a typed score.
 **Past games vs every opponent left.** Cards carry `opponentsAhead` (one entry per game left, up to the last 5
-meetings each) and `seasonAverage`. The player sheet's last tab is "Vs opponents" (a block per game with the average
+meetings each) and `seasonAverage`. The player sheet's Week tab now also shows past games against each team left (a block per game with the average
 against that team beside his season average, and what was unusual about a meeting where the last-15 series has it).
 A new Players tab on the lock board lists every player with his last 10 games as bars, season average and each game
 left with his average against that team. History only, as D133 decided (partial correlation 0.026, n=18,812).
