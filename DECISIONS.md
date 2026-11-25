@@ -8233,6 +8233,11 @@ his held and final scores but not to a score still being made, so his total drop
 (r8 +12 above). Applying the share to live slots as well fixed that switch but moved the tip by 16.6 points
 for r8, because his ordinary pre-tip slots do not carry it either; making all three consistent means applying
 the share after every opponent game, a change to the opponent model that needs its own backtest first. r7's
--5.7 is partly Cade Cunningham, who had not played when the game was marked final, so his slot reads as open.
+-5.7 comes from Cade Cunningham: he had 0 seconds played when the game was marked final, so the play model
+counted a confirmed DNP and his later-game value fell from 24.2 to 12.5 (a real change of information, not
+the state switch). For the opponent-model backtest: the lock share is applied regardless of score, but it
+only changes the result below C, and managers rarely lock low scores, so 0.293 likely overstates it exactly
+where it bites; and a final score that stands on the opponent's side now carries the share and the shift, a
+state D132 did not measure.
 **Rejected.** A holder walking only his own later games (the bench continuation vanished at the final
 buzzer); treating a final score that stands as fixed when a bench player could still be subbed in.
