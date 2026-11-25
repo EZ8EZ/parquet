@@ -5,3 +5,8 @@ allowBuilds:
   prisma: true
   sharp: true
   unrs-resolver: true
+
+# Supply-chain policy: never resolve a package version published in the last 24 hours (minutes).
+# pnpm 11 (what CI's pnpm/action-setup installs) enforces this by default when it verifies the
+# lockfile; saying it here makes a local pnpm 10 resolve under the same rule.
+minimumReleaseAge: 1440

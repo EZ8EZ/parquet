@@ -8429,7 +8429,20 @@ score is the better of locking it now and holding. Projections only: the move is
 swap path (swapInto) exists, but every swap is another full simulation per slot and bench player; the list
 answers "who is better here" without it.
 
-## D144. ACCESSIBLE NAMES CONTAIN WHAT IS ON SCREEN (WCAG 2.5.3) - axe-core 4.14
+## D144. THIS WEEK IS THE LOCK PAGE; A STARTER WHO HAS NOT PLAYED NEVER SHOWS 0.0
+
+**Why.** Home and the lock page said the same thing in two layouts (the owner, 2026-11-25), and a starter
+whose week has not begun read as a 0.0 or a bare glyph: "5p" in his tile, "·" in the opponent's row, "0.0 In
+his slot" in his sheet, "0.0" in the opponent sheet.
+**What.** In season, `/` redirects to `/lockin` (the ?assume= in the URL goes along; replays and the offseason
+keep Home), so everyone sees one page: the scoreboard, then Tonight, Calls, Players, Win %, Week, History.
+Home's two links ("What moved in the league", "Your dossier") and its digest beacon move to the bottom of the
+lock page, the links only with full access. A starter who has not played shows his tip time in his tile
+("5 PM", "7:30 PM") or the day of his next game, a clock in the opponent's row, and "—" in both sheets; the
+sheet header drops the positions when they repeat the slot ("PG · MIA", not "PG · MIA · PG"). Six e2e tests
+written against Home's compact board now check the lock page.
+
+## D145. ACCESSIBLE NAMES CONTAIN WHAT IS ON SCREEN (WCAG 2.5.3) - axe-core 4.14
 
 **Why.** axe-core 4.14 turned `label-content-name-mismatch` (WCAG 2.5.3 Label in Name) on by default, and
 with it the e2e scans failed on most routes, so `@axe-core/playwright` had been held at 4.13. The rule was
@@ -8444,8 +8457,8 @@ Locked for certain"), and the trailing "Show details" / "What if" is the trigger
 the rest from `slotTiles()`'s new `aside`. The status-bar scorebug's name is what it prints and its spoken
 sentence (`bug.label`) is its `aria-describedby`. Avatars beside a printed name are decorative (aria-hidden
 monograms, `decorative` photos), so a photo's alt does not repeat the name. Countdown pills inside a link are
-aria-hidden: a name that changes every second is noise. `@axe-core/playwright` is on 4.14.1 with the full
-ruleset; nothing is disabled. Pixels are unchanged on every route checked.
+aria-hidden: a name that changes every second is noise. `@axe-core/playwright` is on ~4.14.1 (tilde, as #84 held
+~4.13.0 for this change) with the full ruleset; nothing is disabled. Pixels are unchanged on every route checked.
 **Rejected.** Disabling the rule or pinning 4.13 (hides a real failure). Prefixing each aria-label with the
 visible text (the monogram and the row's other text still break the match, and the label drifts from the
 face). Rendering monograms as CSS content to keep them out of axe's view (passes the scanner, fixes nothing).

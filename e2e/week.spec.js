@@ -15,8 +15,9 @@ test("This Week renders the engine fixture week and carries no lifetime stats", 
   await expectStableChrome(page);
   await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
   await expect(page.getByRole("list", { name: "Your starting slots this week" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /^Your calls/ })).toBeVisible();
-  await expect(page.locator("[data-lockin-board=compact]")).toHaveAttribute("data-status", "in_season");
+  await expect(page).toHaveURL(/\/lockin$/);
+  await expect(page.getByRole("tab", { name: /^Calls/ })).toBeVisible();
+  await expect(page.locator("[data-lockin-board=full]")).toHaveAttribute("data-status", "in_season");
   await expect(page.getByText("How you deal, in three numbers")).toHaveCount(0);
   await expect(page.getByText(/decisions? to capture/)).toHaveCount(0);
   expectNoConsoleErrors(guard);

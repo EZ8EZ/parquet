@@ -77,7 +77,7 @@ export function DecisionFigures({ card }) {
   if (!n) {
     return (
       <div className="grid grid-cols-2 gap-2">
-        <Tile label={card.role === "bench" ? "Bench" : "In his slot"} value={card.banked == null ? "-" : fmt(card.banked)} sub={state} />
+        <Tile label={card.role === "bench" ? "Bench" : "In his slot"} value={card.banked == null || key === "yet" ? "—" : fmt(card.banked)} sub={state} />
         <Tile label="Games left" value={card.gamesLeft} sub={card.nextGame ? <>next {card.nextGame.day} <Opp team={card.nextGame.opponent} away={card.nextGame.away} /></> : "none this week"} />
       </div>
     );

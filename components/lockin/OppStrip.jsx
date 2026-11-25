@@ -1,4 +1,4 @@
-import { Check, Lock, PencilLine, RotateCcw } from "lucide-react";
+import { Check, Clock, Lock, PencilLine, RotateCcw } from "lucide-react";
 import { cn } from "@/lib/ui";
 import { fmt } from "@/lib/lockin/view";
 import { AssumeTile } from "./AssumeTile";
@@ -23,8 +23,9 @@ function Face({ s, label = false }) {
       {!s.assumed && s.key === "locked" && <Lock size={10} strokeWidth={2.5} aria-hidden="true" className="shrink-0" />}
       {s.key === "final" && <Check size={10} strokeWidth={3} aria-hidden="true" className="shrink-0" />}
       {s.key === "reset" && <RotateCcw size={10} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-faint" />}
+      {s.key === "yet" && !s.assumed && <Clock size={11} strokeWidth={2.5} aria-hidden="true" className="shrink-0" />}
       {label && <span className="sr-only">Their {s.label} </span>}
-      {s.assumedScore != null ? fmt(s.assumedScore) : s.key === "yet" ? "·" : s.key === "empty" ? "—" : s.banked == null ? "—" : fmt(s.banked)}
+      {s.assumedScore != null ? fmt(s.assumedScore) : s.key === "yet" ? null : s.key === "empty" ? "—" : s.banked == null ? "—" : fmt(s.banked)}
       {label && (
         <span className="sr-only">
           : {s.name ?? "empty"}, {s.assumed ? `you assumed ${s.assumed === "locked" ? "locked" : "playing on"}` : s.stateLong ?? s.key}
