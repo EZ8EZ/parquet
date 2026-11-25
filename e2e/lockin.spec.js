@@ -68,7 +68,7 @@ test.describe("lock-or-hold board", () => {
     await page.getByRole("tab", { name: "Week" }).click();
     await expect(page.getByRole("table", { name: /games this week/ })).toBeVisible();
     await page.locator("#lockin-method summary").click();
-    await expect(page.locator("#lockin-method")).toContainText("+9.4");
+    await expect(page.locator("#lockin-method")).toContainText("+0.7 pts/team-week");
     expectNoConsoleErrors(guard);
   });
 
@@ -168,7 +168,9 @@ test.describe("lock-or-hold board", () => {
     await expect(bar).toContainText("1 assumed");
     await expect(bar).toContainText(/Rough win chance \d+% → \d+% with your assumptions/);
     await expect(bar).toContainText("The app had this slot as locked; you're treating it as playing on");
-    await expect(board.locator("[data-win-prob]")).not.toHaveText(before);
+    // their 45.0 clears what the slot is worth after it, so playing on keeps it and the win
+    // chance holds (D142: no per-slot shift to move it); the bar still reports both figures
+    await expect(board.locator("[data-win-prob]")).toHaveText(before);
     // the assumed tile is marked as an assumption, never with the lock glyph
     await expect(board.locator('[data-assumed="open"]')).toHaveCount(1);
     // your own unknown slot does not offer "playing on", and says why

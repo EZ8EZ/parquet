@@ -50,6 +50,7 @@ import { ProductionEvidence } from "@/components/ProductionEvidence";
 import { ProductionMovers } from "@/components/ProductionMovers";
 import { MethodologyWalkthrough } from "@/components/MethodologyWalkthrough";
 import { LEAN_RECORD, MODEL_INFO } from "@/lib/lockin";
+import { signedPts } from "@/lib/lockin/view";
 export const dynamic = "force-dynamic";
 /**
  * NAVIGABLE, NOT SHORT. This is the one legitimately long-form page, so it is built to
@@ -1633,11 +1634,11 @@ export default async function MethodologyPage() {
         <>
           <p className="text-meta font-medium text-secondary">The lean in a backtest</p>
           <p className="mt-1 figure text-display font-bold text-ink">
-            +{LEAN_RECORD.gainPerTeamWeek.toFixed(1)}
+            {signedPts(LEAN_RECORD.gainPerTeamWeek)}
             <span className="ml-1.5 text-note font-medium text-secondary">pts per team-week</span>
           </p>
           <p className="mt-1 text-note text-secondary">
-            95% interval {LEAN_RECORD.interval95[0].toFixed(1)} to {LEAN_RECORD.interval95[1].toFixed(1)}, n={LEAN_RECORD.n} active team-weeks
+            95% interval {signedPts(LEAN_RECORD.interval95[0])} to {signedPts(LEAN_RECORD.interval95[1])}, n={LEAN_RECORD.n} active team-weeks. {LEAN_RECORD.verdict}
           </p>
         </>
       }>
@@ -1670,14 +1671,14 @@ export default async function MethodologyPage() {
             Lock, hold or none. It weighs your whole lineup (open slots, who is
             holding, who still plays tonight and later), not one player alone. It is the
             model&apos;s lean, not a verdict. In a backtest against what managers
-            actually banked it gained{" "}
+            actually banked it came out at{" "}
             <span className="figure text-ink">
-              +{LEAN_RECORD.gainPerTeamWeek.toFixed(1)}
+              {signedPts(LEAN_RECORD.gainPerTeamWeek)}
             </span>{" "}
-            points per team-week (95% interval {LEAN_RECORD.interval95[0].toFixed(1)} to{" "}
-            {LEAN_RECORD.interval95[1].toFixed(1)}, n={LEAN_RECORD.n} active team-weeks,{" "}
-            {LEAN_RECORD.sample}). {LEAN_RECORD.availabilityCaveat}{" "}
-            {LEAN_RECORD.rotationCaveat}
+            points per team-week (95% interval {signedPts(LEAN_RECORD.interval95[0])} to{" "}
+            {signedPts(LEAN_RECORD.interval95[1])}, n={LEAN_RECORD.n} active team-weeks,{" "}
+            {LEAN_RECORD.sample}). {LEAN_RECORD.verdict} {LEAN_RECORD.availabilityCaveat}{" "}
+            {LEAN_RECORD.rotationCaveat} {LEAN_RECORD.previous}
           </li>
         </ul>
         <p className="mt-3 text-body leading-relaxed text-muted">

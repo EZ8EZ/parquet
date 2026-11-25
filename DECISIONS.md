@@ -8386,3 +8386,32 @@ Every kept token is still checked against the live board (validAssume), so a mar
 it deletes the access, team and what-if cookies (a claimed seat stays) and opens /teams directly, because a
 redirect from a server action renders its target without passing the proxy, so "/" would open on the default
 team instead of the front door.
+
+## D142. RE-READ 2024-2025, A BACKTEST THAT DOES NOT SEE THE FUTURE - the lean's +9.4 does not hold; the opponent loses his -1.55
+
+**Data.** scripts/lockin/refetch_consensus.mjs re-read every 2024 and 2025 matchup week twice past Sleeper's
+CDN cache (?_=) on 2026-11-25. All 46 weeks' two reads agreed (cache/unreliable_weeks.json is empty). 2024
+matched the cached copy exactly; 2025 differed in 311 of about 320 roster-weeks, in both cached copies (the
+study's and the opponent study's). The re-read 2025 behaves like every other season (lock rate 7% far below
+the bar, 70-75% well above it, against 16% and about 33% in the old copy; D140), so the old 2025 copy is taken
+as a version Sleeper no longer serves and the re-read replaces it. Every figure fitted on the old copy is
+suspect: LEAN_RECORD, the opponent's -1.55 a slot, the 0.293 share, D137's calibration.
+**Backtest.** opponent_backtest_wp.mjs replayed "my" lineup-aware policy with every later game's
+played/DNP known, against policy.js's contract (tonight known, later games unknown). It now passes only what
+a manager knew on the night (KNOWFUTURE=1 restores the old replay). That explained only part of the my-side
+bias: predicted minus realized total -6.4 -> -5.5.
+**Lean's record (changed on screen).** Lineup-aware policy minus what managers banked, re-read data, no
+look-ahead: +0.7 points per team-week, 95% interval -2.6 to +4.6, n=271 active team-weeks, 28 clusters
+(with look-ahead +1.9, -1.5 to +6.0). The published +9.4 (5.5 to 14.7, n=240) is withdrawn; the record now
+says "no measurable gain" wherever it is shown (method note, player sheet, /methodology, README).
+**Opponent shift (changed).** On the re-read data (n=1,469 decision points, 267 team-weeks) dropping the
+-1.55 a slot (OPP_SHIFT = 0): P(win) Brier 0.1393 -> 0.1286 (paired -0.0107, 95% -0.0175 to -0.0037), the
+opponent's total CRPS 14.58 -> 12.74 (-1.83, 95% -2.29 to -1.37), his bias -11.9 -> -5.4, the same size as my
+side's -5.5. 2026 alone (n=161, 14 clusters) leans the other way on P(win), +0.0159 (-0.0033 to +0.0358),
+while his CRPS still improves (-0.88, -2.0 to +0.3) and his bias goes -7.0 -> -0.6; the 2026 P(win) is pulled by
+my side's -7.6 there. Watch it as 2026 weeks accrue.
+**Not adopted.** +1.5 a slot on both sides (each side's bias to about 0, both CRPS better, my side -0.58,
+95% -0.98 to -0.26) leaves P(win) unchanged overall (+0.0014, -0.0011 to +0.0041) and worse in 2026.
+**Effect.** Fixture: opponent 192.7 -> 198.0, win 0.477 -> 0.358. Roster 6 live (2026-11-25): 50.2% -> 42.8%.
+**Next.** Refit the opponent's unknown-lock share and empty-slot rate on the re-read data
+(opponent_profiles.mjs); the remaining shared -5.5 bias is the nightly re-pick a static fill misses.

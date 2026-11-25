@@ -20,6 +20,8 @@ const SLOTS = ["PG", "SG", "SF", "PF", "C", "UTIL", "UTIL"];
 const SIMS = 600;
 const UNKNOWN_LOCKED = process.env.ULOCK != null ? Number(process.env.ULOCK) : 0.293; // ULOCK: test another opponent unknown-lock share (D136)
 const SHIFT = process.env.SHIFT != null ? Number(process.env.SHIFT) : -1.55;
+// MYSHIFT: points per undecided slot on my side too (the nightly re-pick a static fill misses, D142)
+const MYSHIFT = Number(process.env.MYSHIFT || 0);
 // LOCKMODEL=1: the opponent locks by the league's measured propensity (D140) instead of share + rule
 const LP = process.env.LOCKMODEL ? await import("./lock_propensity_model.mjs") : null;
 const EPS = 0.011;
@@ -83,7 +85,10 @@ function lineupAware(pws, mode, ctx) {
   const slots = SLOTS.map((l) => ({ label: l, locked: null }));
   const st = new Map(pws.map((p) => [p.pid, { x: null, inSlot: false, done: false }]));
   const byId = new Map(pws.map((p) => [p.pid, p]));
-  const view = (p) => ({ id: p.pid, positions: fpos(p.pid), games: p.games.map((g) => ({ date: g.date, plays: g.played })), ...st.get(p.pid) });
+  // what the manager knows on night d (policy.js contract): past games and tonight's played/DNP,
+  // later games unknown. KNOWFUTURE=1 restores the old replay, which knew every later DNP and so
+  // banked more than any forecast could (the 6-point my-side bias, D142).
+  const view = (p, d) => ({ id: p.pid, positions: fpos(p.pid), games: p.games.map((g) => ({ date: g.date, plays: process.env.KNOWFUTURE || g.date <= d ? g.played : null })), ...st.get(p.pid) });
   const gIdx = (p, d) => p.games.findIndex((g) => g.date === d);
   const playsOn = (v, d) => { const g = v.games.find((x) => x.date === d); return !!(g && g.plays); };
   let total = 0;
@@ -93,7 +98,7 @@ function lineupAware(pws, mode, ctx) {
     if (!open.length) break;
     const openLabels = open.map((x) => x.label);
     const cand = pws.filter((p) => !st.get(p.pid).done);
-    const res = Pol.assignTonight({ openLabels, cand: cand.map(view), d, modelAt, playsOn });
+    const res = Pol.assignTonight({ openLabels, cand: cand.map((p) => view(p, d)), d, modelAt, playsOn });
     for (const id of res.displaced) Object.assign(st.get(id), { inSlot: false, x: null });
     for (const p of cand) { const s = st.get(p.pid); const i = gIdx(p, d); if (s.inSlot && s.x !== null && i >= 0 && !p.games[i].played) s.x = 0; }
     for (const id of res.tonight.keys()) { const p = byId.get(id); Object.assign(st.get(id), { x: p.games[gIdx(p, d)].fp, inSlot: true }); }
@@ -105,8 +110,8 @@ function lineupAware(pws, mode, ctx) {
       const riders = pws.filter((p) => { const s = st.get(p.pid); return s.inSlot && s.x !== null && !s.done; }).map((p) => p.pid);
       deciders = riders.filter((id) => { const p = byId.get(id); const k = nextIdx(p); return k < 0 || p.games[k].date === dn; });
     }
-    const holders = deciders.map((id) => { const v = view(byId.get(id)); const k = nextIdx(byId.get(id)); v.holdW = Pol.holderHoldValue(v, k < 0 ? v.games.length : k, modelAt); return v; });
-    const others = cand.filter((p) => !deciders.includes(p.pid) && !st.get(p.pid).done && !(st.get(p.pid).inSlot && st.get(p.pid).x !== null)).map(view);
+    const holders = deciders.map((id) => { const v = view(byId.get(id), d); const k = nextIdx(byId.get(id)); v.holdW = Pol.holderHoldValue(v, k < 0 ? v.games.length : k, modelAt); return v; });
+    const others = cand.filter((p) => !deciders.includes(p.pid) && !st.get(p.pid).done && !(st.get(p.pid).inSlot && st.get(p.pid).x !== null)).map((p) => view(p, d));
     const ch = Pol.chooseLocks({ openLabels, holders, others, dn, modelAt });
     let locks = new Set(ch.perHolder.filter((h) => h.locks).map((h) => h.id));
     if (mode === "winprob" && ch.perHolder.length) {
@@ -156,7 +161,7 @@ function lineupAware(pws, mode, ctx) {
       const labels = slots.filter((x) => !x.locked).map((x) => x.label).slice(0, Math.max(0, openN));
       const A = maxWeightAssign(labels.map((l) => pool.map((p, j) => (Pol.eligible(fpos(p.pid), l) ? wts[j] : -Infinity))));
       const fill = A.assign.filter((j) => j >= 0).map((j) => simP(pool[j].pid, after(pool[j]), null)).filter(Boolean);
-      const mine = W.simulateTotals({ fixed: fixedNow + standing, riders, slots: fill }, { sims: SIMS, seed: 5 });
+      const mine = W.simulateTotals({ fixed: fixedNow + standing, riders, slots: fill, shift: MYSHIFT }, { sims: SIMS, seed: 5 });
       ctx.calib.push({ s: ctx.s, nightsLeft: nights.length - 1 - ni, mine, theirs });
     }
     for (const id of locks) {
@@ -191,7 +196,7 @@ for (const s of ["2025", "2026"]) for (let w = 1; w <= (s === "2026" ? 3 : 23); 
   const ctx = { opp, s, w, decisions, calib: process.env.CALIB ? [] : null };
   const pointsTotal = lineupAware(pws, "points", ctx);
   if (ctx.calib) for (const c of ctx.calib) calibAll.push({ ...c, myFinal: pointsTotal, oppFinal: opp.points, key: `${s}|${w}|${m.roster_id}`, cluster: `${s}|${m.roster_id}` });
-  rows.push({ s, w, roster: m.roster_id, actual: m.points, oppActual: opp.points, points: pointsTotal, winprob: process.env.CALIB ? pointsTotal : lineupAware(pws, "winprob", ctx), wait: process.env.CALIB ? pointsTotal : lineupAware(pws, "wait", ctx) });
+  rows.push({ s, w, roster: m.roster_id, actual: m.points, oppActual: opp.points, points: pointsTotal, winprob: process.env.CALIB || process.env.POINTS_ONLY ? pointsTotal : lineupAware(pws, "winprob", ctx), wait: process.env.CALIB || process.env.POINTS_ONLY ? pointsTotal : lineupAware(pws, "wait", ctx) });
 }
 fs.writeFileSync(path.join(OUT, "backtest_wp_rows.json"), JSON.stringify(rows));
 // the opponent's predicted total on its own: mean, CRPS (lower is better) and the 10-90 range hit
@@ -203,7 +208,7 @@ function oppScore(t, y) {
 }
 if (process.env.CALIB) {
   const { calibrationReport } = await import(path.join(OUT, "opponent_calib_report.mjs"));
-  if (process.env.CALIB_DUMP) fs.writeFileSync(process.env.CALIB_DUMP, JSON.stringify(calibAll.map((c) => ({ key: c.key, cluster: c.cluster, s: c.s, nightsLeft: c.nightsLeft, p: W.pWin(c.mine, c.theirs), y: c.myFinal > c.oppFinal ? 1 : c.myFinal === c.oppFinal ? 0.5 : 0, ...oppScore(c.theirs, c.oppFinal), myMean: c.mine.reduce((t, v) => t + v, 0) / c.mine.length, myFinal: c.myFinal }))));
+  if (process.env.CALIB_DUMP) fs.writeFileSync(process.env.CALIB_DUMP, JSON.stringify(calibAll.map((c) => ({ key: c.key, cluster: c.cluster, s: c.s, nightsLeft: c.nightsLeft, p: W.pWin(c.mine, c.theirs), y: c.myFinal > c.oppFinal ? 1 : c.myFinal === c.oppFinal ? 0.5 : 0, ...oppScore(c.theirs, c.oppFinal), myCrps: oppScore(c.mine, c.myFinal).oppCrps, myIn: oppScore(c.mine, c.myFinal).oppIn, myMean: c.mine.reduce((t, v) => t + v, 0) / c.mine.length, myFinal: c.myFinal }))));
   calibrationReport(calibAll, W, OUT);
   process.exit(0);
 }
