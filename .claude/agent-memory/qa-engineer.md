@@ -10,6 +10,9 @@ Lessons from past tasks, newest first. Read before starting; append when done.
 - The candidate moved twice mid-task; keep a per-candidate folder (cand, cand2, cand3) and re-run only gates + engine + the flows the merge touched.
 - Playwright: `dialog[open]` can match a non-sheet dialog; take `.last()` and filter tile buttons by aria-label prefix. Full-page shots of sheets are cut by the fixed bottom nav; read the .txt dump next to each PNG.
 - The Win % tab id is `?tab=options` (not `win`).
+- Round 4 (same day, baa983b): verify each old finding with its original repro first (curl + a tiny Playwright script), then re-run gates. A vitest timeout during parallel pnpm installs was CPU contention; rerun the file alone and the suite alone before calling anything.
+- When a candidate adds a field to the desk (gamesLeft), make the equality script drop that key explicitly in the JSON replacer; a sed on the regex silently did nothing the first time.
+- Page-level validation (loadLockDesk validAssume) is separate from the engine: test URL tokens through the real server, not only buildWeekDesk.
 
 ## 2026-10-01
 - Sweep script lives in the scratchpad of the session that wrote it; re-create: list app/ routes, curl each with -b parquet_roster=6/14/3, grep visible text for Application error|NaN|undefined|Infinity|[object Object]|CAPS_ENUMS.
