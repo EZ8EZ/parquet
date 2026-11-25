@@ -2,6 +2,7 @@ import { AlertTriangle, Hourglass, Lock } from "lucide-react";
 import { Chip } from "@/components/ui";
 import { SLOT_STATES, decisionNumbers, fmt, gamesLeftText, leanView, pct, remainingGames, slotStateKey } from "@/lib/lockin/view";
 import { Opp } from "./Opp";
+import { DEFAULT_TZ, decideBy } from "@/lib/lockin/time";
 import { StateIcon } from "./StateIcon";
 
 export function slotKeyOf(card) {
@@ -95,8 +96,11 @@ export function DecisionFigures({ card }) {
 }
 
 /** "1 game left: Sun vs SAC · decide before his next game tonight." */
-export function WhenLine({ card }) {
+export function WhenLine({ card, tipAt = null, tz = DEFAULT_TZ, nowMs = null }) {
   const left = remainingGames(card);
+  // the move is asked for by the decide-by time (DECIDE_BUFFER_MIN before the tip), tip kept visible
+  const db = tipAt ? decideBy(tipAt, tz, { nowMs }) : null;
+  const decide = db ? (db.passed ? `Decide now (tips ${db.tipText})` : `Decide by ${db.byText} (tips ${db.tipText})`) : null;
   return (
     <p className="text-note text-muted">
       {left.length ? (
@@ -114,7 +118,7 @@ export function WhenLine({ card }) {
       )}
       {/* One deadline per player: with the engine's own deadline (shown by the model's
           call above), the older "Decide before his next game" sentence is left out. */}
-      {card.decision.kind === "lock_or_hold" && card.decision.deadlineText && !(card.decision.deadline && card.decision.action) ? `. Decide ${card.decision.deadlineText}.` : "."}
+      {card.decision.kind === "lock_or_hold" && card.decision.deadlineText && !(card.decision.deadline && card.decision.action) ? (decide ? `. ${decide}.` : `. Decide ${card.decision.deadlineText}.`) : "."}
     </p>
   );
 }

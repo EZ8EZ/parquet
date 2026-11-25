@@ -85,6 +85,7 @@ function BetweenWeeks({ desk }) {
 }
 
 function panelsFor(desk, methodHref) {
+  const tips = new Map((desk.tonight?.players || []).filter((p) => p.tip).map((p) => [p.playerId, p.tip]));
   const byId = new Map(desk.cards.map((c) => [c.playerId, c]));
   const order = desk.slotPressure?.rowOrder ?? desk.cards.map((c) => c.playerId);
   const slotFirst = [...desk.slots.map((s) => s.playerId).filter(Boolean), ...order];
@@ -96,7 +97,7 @@ function panelsFor(desk, methodHref) {
       title: c.name,
       leading: <PlayerAvatar name={c.name} team={c.team} playerId={c.playerId} size="md" decorative />,
       subtitle: playerSubtitle(c),
-      content: <PlayerPanel card={c} today={desk.today} record={desk.leanRecord} methodHref={methodHref} winProb={desk.winProb ?? null} tz={displayTz(desk)} nowMs={Date.parse(desk.generatedAt)} />,
+      content: <PlayerPanel card={c} today={desk.today} record={desk.leanRecord} methodHref={methodHref} winProb={desk.winProb ?? null} tz={displayTz(desk)} nowMs={Date.parse(desk.generatedAt)} tipAt={tips.get(c.playerId) ?? null} />,
     }));
 }
 

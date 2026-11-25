@@ -9,6 +9,7 @@ import { OpponentHistory } from "./OpponentHistory";
 import { WeekGrid } from "./WeekGrid";
 import { ModelCall, WinFigures, leanPrefix } from "./WinCall";
 import { BEAT_NOTE, roughen } from "@/lib/lockin/matchupView";
+import { decideBy } from "@/lib/lockin/time";
 import { ProfileBar } from "./ProfileBar";
 import { AvailabilityDots } from "./AvailabilityDots";
 
@@ -59,7 +60,9 @@ function Record({ record, methodHref }) {
  * bust, chance to play, the lean's record), Form (last 15 games, minutes), Week (his
  * games this week), History (past games against this opponent, history only).
  */
-export function PlayerPanel({ card, today, record, methodHref, winProb = null, tz, nowMs }) {
+export function PlayerPanel({ card, today, record, methodHref, winProb = null, tz, nowMs, tipAt = null }) {
+  const db = tipAt ? decideBy(tipAt, tz, { nowMs }) : null;
+  const byLine = db ? (db.passed ? ` · decide now (tips ${db.tipText})` : ` · by ${db.byText} (tips ${db.tipText})`) : "";
   const strip = stripChart(card);
   const dist = distChart(card);
   const mins = minutesChart(card);
@@ -71,7 +74,7 @@ export function PlayerPanel({ card, today, record, methodHref, winProb = null, t
         <Hazards card={card} />
         <ModelCall card={card} tz={tz} today={today} nowMs={nowMs} />
         <DecisionFigures card={card} />
-        <WhenLine card={card} />
+        <WhenLine card={card} tipAt={tipAt} tz={tz} nowMs={nowMs} />
         {card.lean.value !== "none" ? (
           <div className="space-y-1">
             <LeanChip lean={card.lean} prefix={leanPrefix(card)} />
@@ -79,7 +82,7 @@ export function PlayerPanel({ card, today, record, methodHref, winProb = null, t
             <p className="text-note text-muted">{roughen(card.lean.reason)}.</p>
           </div>
         ) : (
-          <p className="text-note text-muted">{card.decision.kind === "lineup" ? card.decision.text : card.lean.reason}</p>
+          <p className="text-note text-muted">{card.decision.kind === "lineup" ? `${card.decision.text}${byLine}` : card.lean.reason}</p>
         )}
       </div>
       <Block title="Next game" sub={dist.ok ? `${dist.n} equally likely outcomes` : null}>

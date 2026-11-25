@@ -42,10 +42,8 @@ export default async function LockInPage({ searchParams }) {
       {/* the same one-line bar as Home: the page as the heading, the week beside it, refresh with the zone */}
       <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
         <div className="min-w-0">
-          <h1 className="text-lede font-bold text-ink">
-            Lock or hold
-            {hd.kicker && <span className="ml-2 text-note font-normal text-secondary">{hd.kicker}</span>}
-          </h1>
+          <h1 className="text-lede font-bold text-ink">Lock or hold</h1>
+          {hd.kicker && <p className="text-meta text-secondary">{hd.kicker}</p>}
           {isFixtureDesk(desk) && (
             <Chip size="sm" className="mt-1">
               Sample week, invented players
