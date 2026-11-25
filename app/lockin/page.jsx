@@ -6,7 +6,6 @@ import { getLeagueHistory } from "@/lib/history";
 import { isFixtureDesk, loadLockDesk, replayAllowed } from "@/lib/lockin/source";
 import { boardHeader, winPctOf } from "@/lib/lockin/view";
 import { teamIdentity } from "@/lib/lockin/matchupView";
-import { parseAssume } from "@/lib/lockin/assume";
 import { keepAssume } from "@/lib/lockin/assumeView";
 
 export const dynamic = "force-dynamic";
@@ -34,10 +33,10 @@ export default async function LockInPage({ searchParams }) {
   }
   const replay = replayAllowed() ? one(sp.at) : null;
   // the viewer's what-if lock states (?assume=m3L,t5O): URL only, never stored
-  const assume = parseAssume(sp.assume).list;
-  const desk = await loadLockDesk({ rosterId, replay, players: h.players, assume });
+  const assumeParam = typeof sp?.assume === "string" ? sp.assume : Array.isArray(sp?.assume) ? sp.assume.join(",") : null;
+  const desk = await loadLockDesk({ rosterId, replay, players: h.players, assumeParam });
   const hd = boardHeader(desk);
-  const fullHref = keepAssume(replay ? `/lockin?at=${encodeURIComponent(replay)}` : "/lockin", desk.assumptions ? assume : []);
+  const fullHref = keepAssume(replay ? `/lockin?at=${encodeURIComponent(replay)}` : "/lockin", desk.assumptions?.list ?? []);
   return (
     <>
       {/* the same one-line bar as Home: the page as the heading, the week beside it, refresh with the zone */}
