@@ -87,7 +87,7 @@
  * with the row's actual content. Themed surface means it re-colours with the theme
  * for free instead of being three hard-coded near-blacks.
  */
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/ui";
 import { TeamLogo } from "@/components/TeamLogo";
 /**
@@ -144,7 +144,7 @@ function initials(name) {
   if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
   return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
 }
-const SIZES = { sm: 32, md: 40, lg: 56 };
+const SIZES = { xs: 24, sm: 32, md: 40, lg: 56 };
 /**
  * Re-exported from `lib/photos.js` (a plain, server-safe module) rather than
  * defined here: this file is `"use client"`, and Next.js refuses to call ANY
@@ -166,6 +166,13 @@ export function PlayerAvatar({
   decorative = false,
 }) {
   const [failed, setFailed] = useState(false);
+  const img = useRef(null);
+  // An above-the-fold photo can fail before hydration, when React is not yet listening
+  // for its error event; catch that case on mount so the monogram still shows.
+  useEffect(() => {
+    const el = img.current;
+    if (el && el.complete && el.naturalWidth === 0) setFailed(true);
+  }, [playerId]);
   const px = SIZES[size];
   const edge = edgeFor(team ?? null, name);
   // The disc is a themed surface, never a team colour. The team is a 2px stripe at the
@@ -190,6 +197,7 @@ export function PlayerAvatar({
       // Falls back to the monogram on load error (missing photo, not a licensing gate).
       // eslint-disable-next-line @next/next/no-img-element
       <img
+        ref={img}
         src={`https://sleepercdn.com/content/nba/players/thumb/${playerId}.jpg`}
         // Empty when the name is printed beside the face (`decorative`), so a screen
         // reader does not hear it twice.
@@ -232,7 +240,7 @@ export function PlayerAvatar({
   // inside it. `overflow-visible` is the point of the wrapper existing at all - the
   // crest pokes past the disc's own edge on purpose, so it reads as a badge and not
   // as a second, smaller face crammed inside the first.
-  const BADGE_SIZE = { sm: "xs", md: "xs", lg: "sm" };
+  const BADGE_SIZE = { xs: "xs", sm: "xs", md: "xs", lg: "sm" };
   return (
     <span
       className={cn("relative inline-block shrink-0", className)}

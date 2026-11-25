@@ -4,6 +4,7 @@ One row per task. Tokens are the subagent totals the harness reported at complet
 
 | date | agent | model | task | tokens | wall time | outcome |
 |---|---|---|---|---|---|---|
+| 2026-11-25 | qa-engineer | opus | QA gate for the next release (what-if assumptions, lock board tabs, player sheet tabs, dossier copy) across 3 candidate revisions (a544aba, 1daba39, d27d8ca) | not reported to agent | ~2 h | SHIP on d27d8ca (1 MAJOR + minors), then targeted re-check of baa983b: all 8 findings fixed, SHIP; gates green (1765 tests, lint, build, e2e 86/86 on rerun); engine no-assumption output identical to release on 40 desk comparisons. Two candidate switches cost roughly a third of the time. |
 | 2026-10-01 | postdoc-market-analyst | sonnet | Market anchor study Q1-Q5 + red-team follow-ups | 306,470 | ~18 min | Changed the shipped design (blend w=0.45, age exponent 0.63). High value. |
 | 2026-10-01 | phd-value-curve | opus | Value-vs-rank curve on surplus over replacement | 104,622 | 3.5 min | Shipped as D117. High value. |
 | 2026-10-01 | phd-pick-curve | opus | Rookie pick curve, bootstrap by class | 109,769 | 3.3 min | Shipped (refit by lead on model scale). |
@@ -26,6 +27,7 @@ One row per task. Tokens are the subagent totals the harness reported at complet
 | 2026-10-01 | fullstack-engineer | opus | Crunch: taxi deadline + IR relief | 100,882 | 1.8 min | Merged. |
 | 2026-10-01 | fullstack-engineer | opus | Trade evaluator measured consolidation read | 93,088 | 1.6 min | Merged. |
 | 2026-10-01 | postdoc-rookie-scout | sonnet | NBA draft + college dataset, rookie prior study | 253,189 | 33 min | Shipped as D118. College stats measured to add nothing; NBA pick strongest signal. |
+| 2026-11-24 | fullstack-engineer | opus | Head-to-head lock-in UI: matchup, win chance, opponent sheet, what-if, boom/bust, availability, model call, lock history (lockin-opponent-ui) | not reported to agent | ~1.5 h | On branch for review; test, lint, build, 85/85 e2e green on the fixture. Contract moved five times mid-task; flagged a card vs what-if mismatch the engine is fixing. |
 | 2026-11-17 | fullstack-engineer | opus | Tonight UI for the play-first engine (tonight-ui branch, 8 commits) | not reported to agent | ~2 h incl. one context reset | On branch for PR; test, lint, build, 82/82 e2e green. Caught an engine bug live (Out player started first). |
 | 2026-11-16 | docs-recorder | opus | Docs realignment: README rewrite, D119-D133 + index, methodology production/lock-in, API_NOTES, SHELVED S1, QUESTIONS 10, TEAM handoff, .env.example, TS-era refs | not reported to agent | ~1.5 h | Committed on worktree branch for review; gates green. |
 

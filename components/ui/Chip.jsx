@@ -8,6 +8,7 @@ export const CHIP_TONES = {
   negative: "bg-negative-wash text-negative border-negative-edge",
   info: "bg-info-wash text-info border-info-edge",
   warn: "bg-warn-wash text-warn border-warn-edge",
+  outline: "bg-surface-2 text-ink border-border-strong",
 };
 
 /**

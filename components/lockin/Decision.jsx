@@ -2,6 +2,7 @@ import { AlertTriangle, Hourglass, Lock } from "lucide-react";
 import { Chip } from "@/components/ui";
 import { SLOT_STATES, decisionNumbers, fmt, gamesLeftText, leanView, pct, remainingGames, slotStateKey } from "@/lib/lockin/view";
 import { Opp } from "./Opp";
+import { heldNote } from "@/lib/lockin/matchupView";
 import { StateIcon } from "./StateIcon";
 
 export function slotKeyOf(card) {
@@ -9,15 +10,21 @@ export function slotKeyOf(card) {
   return slotStateKey({ playerId: card.playerId, lockState: card.lockState.state, lockStateReason: card.lockState.reason });
 }
 
-/** The lean as a status chip; a marginal lean is neutral (quieter), and a conditional one says so. */
-export function LeanChip({ lean }) {
+/**
+ * The model's lean as a chip, always named as the model's: lock is violet with a lock
+ * (an action that is yours to take), hold is a neutral outline with an hourglass. The
+ * confidence is the second word, never a colour. `short` ("Model: lock · clear") is for
+ * dense rows. A conditional lean says "If not already locked" unless the caller says it once
+ * for the whole list.
+ */
+export function LeanChip({ lean, hideConditional = false, short = false, size = "md", prefix = null }) {
   const v = leanView(lean);
   if (!v) return null;
   return (
-    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
-      {v.conditional && <span className="text-meta text-secondary">If not already locked</span>}
-      <Chip tone={v.nearlyEven ? "neutral" : "accent"} icon={v.value === "lock" ? Lock : Hourglass}>
-        Model leans {v.value} · {v.confidence}
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1" data-lean={v.value}>
+      {v.conditional && !hideConditional && <span className="text-meta text-secondary">If not already locked</span>}
+      <Chip tone={v.value === "lock" ? "accent" : "outline"} icon={v.value === "lock" ? Lock : Hourglass} size={size}>
+        {prefix ? `${prefix} model leans` : short ? "Model:" : "Model leans"} {v.value} <span className="font-medium opacity-90">· {v.confidence}</span>
       </Chip>
     </span>
   );
@@ -78,7 +85,7 @@ export function DecisionFigures({ card }) {
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
         <Tile label="On the table" value={fmt(n.x)} sub={state} />
-        <Tile label="Expected if held" value={fmt(n.held)} sub={n.listedOut ? "listed out next game" : `${n.k} ${n.k === 1 ? "game" : "games"} left`} />
+        <Tile label="Expected if held" value={fmt(n.held)} sub={heldNote(card) ? `(${heldNote(card)})` : n.listedOut ? "listed out next game" : `${n.k} ${n.k === 1 ? "game" : "games"} left`} />
       </div>
       <div className="grid grid-cols-2 gap-3 px-1">
         <Pair label="Later game beats it" value={pct(n.pIfPlays)} sub="if he plays" />
@@ -106,7 +113,9 @@ export function WhenLine({ card }) {
       ) : (
         gamesLeftText(card)
       )}
-      {card.decision.kind === "lock_or_hold" && card.decision.deadlineText ? `. Decide ${card.decision.deadlineText}.` : "."}
+      {/* One deadline per player: with the engine's own deadline (shown by the model's
+          call above), the older "Decide before his next game" sentence is left out. */}
+      {card.decision.kind === "lock_or_hold" && card.decision.deadlineText && !(card.decision.deadline && card.decision.action) ? `. Decide ${card.decision.deadlineText}.` : "."}
     </p>
   );
 }

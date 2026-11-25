@@ -8178,3 +8178,81 @@ usual starter missing from the five was a DNP in 78.5% of 1,171 cases, so the co
 "did not play".
 **Rejected.** Any opponent term in the model; per-player teammate lifts. The average teammate lift is a
 candidate to re-test in the backtest before it ships.
+
+## D134. THE PLAN IS TONIGHT'S SHOWN LINEUP, THEN THE POLICY - live games without a box score use the forecast; history counts only weeks read consistently
+**Decision.** (1) "If you follow the model's calls" (winProb.now, whatIf.plan) means: tonight, each open slot
+plays the player Tonight shows in it (lib/lockin/sequence.js lineup_at_start, starts included); after tonight,
+the per-slot policy (reservation rule, open slots filled by the best available player). A slot banks tonight's
+score when it reaches the value of its continuation (startChain). A player in tonight's lineup keeps his later
+games in his own slot only, so nobody can bank in one slot and continue in another; a swap or start never
+offers a player's later games that another slot already holds (lib/lockin/matchup.js teamSimInput,
+applyStarts, swapInto). (2) A game in progress counts at the in-game projection (ingame.js) when his log has
+tonight's row; at a tip the schedule says in_game before the row exists (logs are cached 120 s), and then
+tonight counts at his full-game pre-game forecast, the mean raised to the points already showing (the slot's
+banked score), with his later games and the lock rule kept (liveTonight). Only with no model at all does a
+game count at its current score; winProb.assumptions counts each path per side. (3) Lock history leaves out
+weeks read in more than one version, and weeks whose confirming read failed. A cold process reads each past
+week twice (once past the cache); versions not read for 6 hours are forgotten so a corrected week can return
+(lib/lockin/consensus.js, CONSENSUS_TTL_MS). history.excludedWeeks / unconfirmedWeeks carry the counts and
+historyView says them; with no week left, the figure is null.
+**Evidence.** QA round 3 replays: with tonight's log rows removed, r7 0.495 -> 0.001 before (2) and 0.539
+after; r12 0.931 -> 0.670 before, 0.938 after; r6 0.486 -> 0.191 before, 0.473 after. Roster 6 on the 2026-11-24
+recording: the plan was blind to Suggs, who plays tonight (53.5% with or without him); with (1), 52.6% vs
+51.0%. Reviewer's two-slot case: 68.9 vs 87.4 points by slot order before pinning, equal (within 0.3) after.
+Sleeper returned roster 6 week 5 as 108.5 and 212.5; both versions match real games of the players, so a single
+read cannot tell which is right.
+**Residual limit.** Two reads that agree look consistent even if another process sees a different version, so
+the history figure can still differ between processes; closing that needs more reads per week or a store shared
+across processes. The two reads are not simultaneous (the first may come from a cache up to a day old), so a
+week left out may be a genuine stat correction rather than a Sleeper inconsistency; the copy says "read in more
+than one version" for that reason. Pinning means a tonight player continues only in his tonight slot, so a better
+after-tonight placement for him is not considered and the plan total can be slightly low.
+**Rejected.** Counting a live game at its current score (dropped his later games); a week-long plan that ignores
+tonight's displayed lineup; changing the hero copy instead of the simulation; trusting a single read of a past
+week.
+
+## D135. EVERY UNLOCKED SLOT IS A CHAIN - a live game, a held score and a final score that stands all yield to the slot's continuation
+**Decision.** Under the plan (lib/lockin/matchup.js teamSimInput), a slot whose score is not locked is one chain,
+whatever state it is in: its first part is tonight's game (a start or the lineup Tonight shows), the game in
+progress (in-game projection, or the pre-game forecast without a box score), or the score already banked (a
+held score, or a final score that stands, with no spread); the slot keeps that score when it reaches C, the
+value of the slot's continuation, and otherwise plays the continuation the policy assigns: his own later games
+or a bench player (players in tonight's lineup and holders pinned to their own slot, so nobody counts twice). A
+subbed-out score is lost (owner rule 1). The lock / hold / wait options and the card win chances use the same
+chain: lock keeps the score, hold lets it go and the slot plays its continuation, wait is the chain decided at
+the deadline. With a tonight lineup, starts are inside the continuations and are not applied again. The
+points-based lean is unchanged (it reads the card's stopping values, not these). 'Do nothing' is unchanged.
+**Evidence.** Reviewer synthetic (holder L, bench B at 40 a game x2): live near the end 44.2; after the final
+buzzer 30.0 (x=30) and 26.0 (x=20) before this decision, 44.2 / 44.2 / 45.0 after. QA tip8 01:18 capture,
+BOS@WAS tip vs the same capture with the game set back to pre_game, rosters 7/8/10/12: -0.9 / +1.4 / -0.1 /
+-0.1 points of win chance. DET@ORL marked final vs the same game still in progress at its end (projection =
+points so far, no spread), so that only the state changes: r7 -25.6 -> -5.7, r10 -7.3 -> 0.0, r12 +0.7 -> +1.2,
+r8 +10.7 -> +12.0.
+**Residual limit.** The opponent's unknown-lock share (league value 0.293, n=16,047 situations; D132) applies to
+his held and final scores but not to a score still being made, so his total drops when one of his games ends
+(r8 +12 above). Applying the share to live slots as well fixed that switch but moved the tip by 16.6 points
+for r8, because his ordinary pre-tip slots do not carry it either; making all three consistent means applying
+the share after every opponent game, a change to the opponent model that needs its own backtest first. r7's
+-5.7 comes from Cade Cunningham: he had 0 seconds played when the game was marked final, so the play model
+counted a confirmed DNP and his later-game value fell from 24.2 to 12.5 (a real change of information, not
+the state switch). For the opponent-model backtest: the lock share is applied regardless of score, but it
+only changes the result below C, and managers rarely lock low scores, so 0.293 likely overstates it exactly
+where it bites; and a final score that stands on the opponent's side now carries the share and the shift, a
+state D132 did not measure.
+**Disclosure.** Every substitution a number assumes is named on screen (review4): whatIf.plan.actions lists a
+'then_start' for each slot whose continuation is another player ("Then start Kel'el Ware at PF from Wed 8:00 PM
+ET", with the condition on tonight's score when there is one); that bench player's card carries the same call
+(decision.text, decision.planStart) instead of "Move into a slot or leave on the bench"; the hold option names
+him; and the holder card's "expected if held" is the value of the hold branch the win chance uses (the slot's
+continuation, 19.0 for Graves on the 2026-11-24 recording, his own games 13.5 kept as expectedIfHeldOwn), so
+the two figures on the card agree. Pinning a holder to his slot also means that when Tonight gives his slot to an
+earlier-tip player and his score is let go, his own later games are not offered to another slot.
+**Rejected.** A holder walking only his own later games (the bench continuation vanished at the final
+buzzer); treating a final score that stands as fixed when a bench player could still be subbed in; a plan
+figure that counts moves no call names.
+**Follow-up (next engine task).** The lineup-aware points lean (D131) still values a holder's own games as if
+he plays every game, while every figure on screen now uses his per-game play chances; where they disagree
+(5 cards on the 2026-11-24 recording, 5 at tip8 01:18) the card says why, shows the lean as marginal and sets
+lean.basisDisagrees, but the call itself is unchanged. Next: give the D131 lean the same per-game play chances
+and re-run the 240 team-week backtest; with the opponent lock-share backtest above, that is the next engine
+task.

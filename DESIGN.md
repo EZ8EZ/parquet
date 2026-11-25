@@ -32,12 +32,14 @@ colour-coded chips, rounded cards. Closest reference: Sleeper. Reference pages:
 | `accent` / `accent-text` / `accent-ink` | `#8b7dff` / `#a99fff` / `#0b0d10` | brand fill / brand text (7.7:1) / text on fill (6.0:1) |
 | `accent-wash` / `accent-edge` / `accent-strong` / `accent-dim` | `#282841` `#444077` `#7a6bf0` `#7166d8` | your row / its edge / hover fill / quiet line (3.9:1) |
 | `positive` `negative` `info` `warn` | `#4ade9e` `#ff8080` `#7cb5fb` `#fbc94a` | status; each also has `-wash` and `-edge`. Text on own wash: 7.6 / 5.9 / 6.4 / 8.1 |
+| `them` / `them-wash` | `#4f78b3` / `#1c2738` | the opponent in charts and tiles (fills only, never text) |
 | `poster`, `tci-1..4` | unchanged roles | title cards; TCI ramp (quadrant only) |
 
 **Type** (Inter, self-hosted variable, `app/fonts/`; tabular numerals on `body`, `figure`
 adds slashed zero): `micro` 11 (tab labels, ticks only), `meta` 12 (labels, captions),
 `note` 13 (secondary lines, disclosures), `body` 14 (copy, row titles), `lede` 17
-(section titles), `display` 28 (page title, stat values), `hero` 44 (one per screen).
+(section titles), `score` 24 (a row's figure: the score on the table), `display` 28 (page
+title, stat values), `hero` 48 (one per screen; the win chance takes weight 800).
 Never below 11px. Weight carries hierarchy: 700 for figures and titles, 600 for row
 titles and labels that act, 400-500 otherwise. No uppercase tracked labels.
 
@@ -127,6 +129,31 @@ A screen's default state carries at most: a title, one subtitle line, labels and
 and one caption line per chart or list. Any sentence longer than one line goes in a
 Disclosure or in the sheet behind the row. Name things as a fan would ("Points for",
 "Value rank"); keep house rules: no grades or verdicts (D6), "unknown" over a guess (D19).
+
+## Lock-in language (This Week and the lock board)
+
+- **One time zone.** Every clock time is printed in the board's `desk.displayTz` (Eastern by
+  default) with no suffix: "Decide by Wed 7:30 PM", "before 7:00 PM". The zone is named once,
+  on the refresh button ("4:55 PM ET"). Helpers: `lib/lockin/time.js`. Never format a time
+  with the device zone or with `timeZoneName`.
+- **The model's lean** is always named as the model's: `LeanChip` "Model leans lock · clear"
+  (violet, lock icon) or "Model leans hold · marginal" (neutral outline, hourglass); `short`
+  "Model: lock · clear" in dense rows. Confidence is the second word, never a colour. A
+  conditional lean says "If not already locked" once per list or card.
+- **Win chances** are information beside the lean: "Win chance if lock / if hold", labelled
+  rough, neutral grey bars, never styled as the pick.
+- **Slot tiles** carry their state (`slotTiles`, `SlotCells`): tip time or day before a game
+  ("7p", "Wed"), never "0.0"; violet wash + lock when locked; check when the score stands;
+  reset glyph; dashed when empty; a violet underline when a lock-or-hold call is open; "O"/"Q"
+  flag for Out / doubtful listings (also in the spoken label). The opponent's row repeats the
+  states quietly (blue when locked). No legend on the board.
+- **Countdown pill** (`Countdown pill`): neutral, amber under three hours, always with the words.
+- **Status bar** is the scorebug: score, rough win chance, open calls, next deadline with its
+  countdown; it always opens This Week, and steps aside on This Week's scoreboard
+  (`[data-scoreboard]` sets `--statusbar-h: 0`). The This Week tab carries a badge with the
+  open-call count (spoken too).
+- **Refresh** is one round button with the as-of time; after a manual refresh a short note
+  says what changed ("Updated 5:12 PM ET · win chance 27% → 31%"), announced politely.
 
 ## Charts
 

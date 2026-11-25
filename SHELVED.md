@@ -677,6 +677,45 @@ four-tile tally is reviving the bug.
 
 ---
 
+## S13. "Too close to call? Leave it to chance" - the jump-ball tiebreak
+
+Parked 2026-11-24 by owner decision before it shipped, on branch `design-a` (chunk 3 of
+the direction-A redesign). Nothing renders or imports it.
+
+**What it was.** An opt-in control under a close call on Home and the lock board: "Too
+close to call? Leave it to chance". Concept A, a jump ball: two jumpers labelled Lock
+and Hold, equal weight at rest (same grey until the result, so nothing pre-tilts it), the
+ball goes up at centre court and is tipped to one side, which lights up: "The tip went to
+Lock. Chance, not the model." Rules it was built to:
+- Offered only on rows where `callRows(desk)` sets `chance` (win chances inside the
+  engine's noise floor, `lean.winProbDiffReal === false`, or a marginal lean); never on a
+  clear call, a listed-out player, "Lock now" or a row with no decision. The `chance`
+  flag stays in `lib/lockin/matchupView.js` (data only, tested).
+- Fair: the side is drawn first with `crypto.getRandomValues` (one byte, even/odd,
+  exactly 50/50); the 1.5 s motion only reveals it.
+- Reduced motion shows the result as text at once; the result is announced in a polite
+  `aria-live` region; keyboard operable; 44px targets.
+- Re-rolls are visible ("Tip it again", "Tipped 2×"), so it stays obviously chance.
+- Records nothing (no storage, no effect on any number), never changes or restyles the
+  model's lean; a refresh clears it.
+
+Rejected alongside it: **B, buzzer-beater** (make = lock, miss = hold) because a miss
+reads as failure, putting a loss frame on "hold" against the no-verdict rule (D6);
+**C, rim roll** (top-down, falls off one side) because it is harder to read at a glance
+at 390px and its suspense wants about 2.5 s, past the brief.
+
+**Why it went.** Owner: hold the research and the work and focus on shipping everything
+else first.
+
+**What would bring it back.** The owner asks for it. Revival is mechanical: move
+`shots/parked/chance-tiebreak/ChanceTip.jsx` to `components/lockin/`, append
+`shots/parked/chance-tiebreak/chance.css` to `app/interaction.css`, and render
+`<ChanceTip name=... />` under rows whose `callRows` entry has `chance: true` (CallList's
+`extra` slot; the lock board's call card). Concept frames:
+`shots/parked/chance-tiebreak/chance-concepts.png` (source `chance-concepts.html`).
+
+---
+
 ## Considered, and deliberately not shelved
 
 Recorded here because a near-miss is worth remembering too — the argument was made, and

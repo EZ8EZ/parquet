@@ -47,6 +47,11 @@ import { TabIndex } from "@/components/TabIndex";
 import { getPrincipals } from "@/lib/principals";
 import { diagnose } from "@/lib/gameplan";
 import { directionSummary } from "@/lib/team";
+import { actionQueue } from "@/lib/actions";
+import { deadlinesAhead } from "@/lib/week";
+import { weekContext } from "@/lib/week/load";
+import { ActionQueue } from "@/components/ActionQueue";
+import { DeadlineStrip } from "@/components/week/DeadlineStrip";
 /**
  * TEAM. The first screen answers "where does my team stand?": total value and its
  * rank, then the plan's direction with its three inputs. Players, picks and the
@@ -186,6 +191,11 @@ export default async function RosterPage() {
     console.error(`[roster] direction unavailable: ${err instanceof Error ? err.message : String(err)}`);
   }
   const direction = directionSummary({ dx, analysis: a, form });
+  // In season, To do and the league deadlines live here (moved off Home, which is the
+  // game-night screen). The offseason keeps them where they were: To do on Home.
+  const season = weekContext(h);
+  const todo = season.offseason ? [] : actionQueue(h, rosterId, principals);
+  const deadlines = season.offseason || h.currentLeague?.status === "complete" ? [] : deadlinesAhead(h.currentLeague?.settings, season.week);
   /*
    * PICK AGENCY. The join nobody had made: a pick's outcome is decided by whoever's
    * season orders the draft it sits in, which the corpus has always known as the
@@ -565,6 +575,13 @@ export default async function RosterPage() {
           </div>
         }
       />
+
+      {(todo.length > 0 || deadlines.length > 0) && (
+        <div className="mb-4" data-team-week>
+          <ActionQueue items={todo} compact />
+          <DeadlineStrip deadlines={deadlines} window={null} />
+        </div>
+      )}
 
       <Card className="mb-3">
         <div className="flex items-end justify-between gap-3">

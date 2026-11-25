@@ -2,9 +2,11 @@ import Link from "next/link";
 import { Chip, PageHeader } from "@/components/ui";
 import { LockDeskBoard } from "@/components/lockin/LockDeskBoard";
 import { RefreshControl } from "@/components/lockin/RefreshControl";
+import { winPctOf } from "@/lib/lockin/view";
 import { getLeagueHistory } from "@/lib/history";
 import { isFixtureDesk, loadLockDesk, replayAllowed } from "@/lib/lockin/source";
 import { boardHeader } from "@/lib/lockin/view";
+import { teamIdentity } from "@/lib/lockin/matchupView";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Lock or hold" };
@@ -38,10 +40,21 @@ export default async function LockInPage({ searchParams }) {
       <PageHeader
         kicker={hd.kicker}
         title="Lock or hold"
-        aside={<RefreshControl asOf={desk.generatedAt} live={hd.live} updating={hd.updating} disabled={!!replay || isFixtureDesk(desk)} />}
+        aside={<RefreshControl asOf={desk.generatedAt} asOfText={hd.asOf} winPct={winPctOf(desk)} live={hd.live} updating={hd.updating} disabled={!!replay || isFixtureDesk(desk)} />}
         below={isFixtureDesk(desk) ? <Chip className="mt-2">Sample week, invented players</Chip> : null}
       />
-      <LockDeskBoard rosterId={rosterId} desk={desk} mode="full" open={one(sp.open)} fullHref={fullHref} replay={replay} methodOpen={one(sp.method) === "open"} />
+      <LockDeskBoard
+        rosterId={rosterId}
+        desk={desk}
+        mode="full"
+        open={one(sp.open)}
+        tab={one(sp.tab)}
+        fullHref={fullHref}
+        replay={replay}
+        methodOpen={one(sp.method) === "open"}
+        me={teamIdentity(h, rosterId)}
+        them={desk.opponent ? teamIdentity(h, desk.opponent.rosterId) : null}
+      />
     </>
   );
 }

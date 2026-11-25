@@ -22,7 +22,8 @@ test.describe("lock-or-hold board", () => {
     const tonight = page.locator("[data-tonight]").first();
     await expect(tonight).toHaveAttribute("data-tonight", "open");
     const next = tonight.locator("[data-tonight-next]");
-    await expect(next).toContainText(/Before \d{1,2}:\d{2} [AP]M/);
+    // the move is asked for DECIDE_BUFFER_MIN before the listed tip, which stays visible
+    await expect(next).toContainText(/(By \d{1,2}:\d{2} [AP]M · tips|Decide now · tips) \d{1,2}:\d{2}/);
     await expect(next.getByRole("timer")).toHaveText(/^in \d/);
     await expect(next).toContainText("Starting then");
     // tapping a starter opens his player sheet
@@ -34,13 +35,15 @@ test.describe("lock-or-hold board", () => {
     await tonight.getByText("How tonight's order is worked out").click();
     await expect(tonight).toContainText("+0.88");
     await expect(tonight).toContainText("listed start time");
-    await page.getByRole("tab", { name: /Decide/ }).click();
+    await page.getByRole("tab", { name: /Calls to make/ }).click();
+    await expect(board.locator('li[data-call="then_start"]').first()).toContainText(/Then start Ike Novak at C/);
     const holden = board.locator("#lk-lk02");
     await expect(holden).toContainText("31.5");
     await expect(holden).toContainText("Expected if held");
     await expect(holden).toContainText("Later game beats it");
     await expect(holden).toContainText("If not already locked");
-    await expect(holden).toContainText(/Model leans (lock|hold) · (marginal|moderate|clear)/);
+    // a wait's lean is the call at the deadline
+    await expect(holden).toContainText(/(At the deadline: m|M)odel leans (lock|hold) · (marginal|moderate|clear)/);
     await holden.getByRole("button", { name: /charts, record and method/ }).click();
     const sheet = page.locator("dialog[open]");
     await expect(sheet.getByRole("heading", { name: "Bryce Holden" })).toBeVisible();
@@ -66,23 +69,127 @@ test.describe("lock-or-hold board", () => {
     expectNoConsoleErrors(guard);
   });
 
-  test("Home shows the slots and the most urgent decision with its figures and lean", async ({ page }) => {
+  test("Home (direction A): the scoreboard and every call on the first screens, each with the model's lean and rough win chances", async ({ page }) => {
     const guard = watchConsole(page);
     await primeLens(page);
     await page.goto("/");
     const board = page.locator('[data-lockin-board="compact"]');
     await expect(board.locator('ol[aria-label="Your starting slots this week"] > li')).toHaveCount(7);
-    const hero = board.locator("article");
-    await expect(hero).toHaveCount(1);
-    await expect(hero).toContainText("On the table");
-    await expect(hero).toContainText("Expected if held");
-    // the next deadline tonight sits above the decisions, inside the first screen
-    await expect(board.locator("[data-tonight-next]")).toBeInViewport();
-    await expect(board.getByRole("link", { name: /more deadlines? tonight/ })).toHaveAttribute("href", "/lockin");
-    await expect(board.getByRole("link", { name: /All players and nights/ })).toHaveAttribute("href", "/lockin");
+    // state lives in the tiles: no "0.0" for a player who has not played
+    await expect(board.locator('[data-slot-state="yet"]').first()).not.toContainText("0.0");
+    const calls = board.getByRole("list", { name: "Your calls" });
+    await expect(calls.locator("li")).not.toHaveCount(0);
+    const first = calls.locator("li").first();
+    await expect(first).toContainText("on the table");
+    await expect(first).toContainText(/(At the deadline: m|M)odel leans (lock|hold) · (marginal|moderate|clear)/);
+    await expect(first.locator("[data-win-compare]")).toContainText(/Rough win chance/);
+    await expect(first.locator("[data-win-compare]")).toContainText(/if lock\s*\d+%/);
+    // a wait headline names the call at the deadline, never a bare chip
+    for (const row of await calls.locator('li[data-call="wait"]').all()) {
+      await expect(row).toContainText(/(Wait until .+, then (lock|hold) · (locks|(.+ )?tips) at \d{1,2}:\d{2}|Decide now)/);
+      await expect(row).toContainText(/At the deadline: model leans/);
+    }
+    // the bench move the hero's win chance assumes is a call too, with its decide-by time and condition
+    const move = calls.locator('li[data-call="then_start"]').first();
+    await expect(move).toContainText(/Then start Ike Novak at C from Fri 7:30 PM/);
+    await expect(move).toContainText(/by Fri 7:20 PM · tips 7:30/);
+    await expect(move).toContainText(/If Eli Brandt's score tonight is under 16\.9/);
+    await expect(board.getByRole("heading", { name: new RegExp(`^Your calls · ${await calls.locator("li").count()}$`) })).toBeVisible();
+    await expect(board.getByRole("link", { name: /Lock history/ })).toHaveAttribute("href", "/lockin#lock-history");
+    await expect(board.getByRole("link", { name: /Every night and player/ })).toHaveAttribute("href", "/lockin");
+    await first.getByRole("button").first().click();
+    await expect(page.locator("dialog[open]")).toContainText("Boom or bust");
+    await page.keyboard.press("Escape");
     await board.locator('ol[aria-label="Your starting slots this week"] button').first().click();
     await expect(page.locator("dialog[open]")).toBeVisible();
     expectNoConsoleErrors(guard);
+  });
+
+  test("Home leads with the scoreboard: rough win chance, both rows, Tonight, and the opponent sheet", async ({ page }) => {
+    const guard = watchConsole(page);
+    await primeLens(page);
+    await page.goto("/");
+    const board = page.locator('[data-lockin-board="compact"]');
+    const matchup = board.locator("[data-scoreboard]");
+    await expect(matchup).toHaveAttribute("data-matchup", "win");
+    await expect(matchup.locator("[data-win-prob]")).toHaveText(/^\d{1,3}%$/);
+    await expect(matchup).toContainText("to win");
+    await expect(matchup).toContainText("rough");
+    await expect(matchup).toContainText("banked");
+    await expect(matchup).toContainText("Projected");
+    // first screen: the week heading, the win chance, both rows, Tonight
+    await expect(page.getByRole("heading", { level: 1, name: /Week 4/ })).toBeInViewport();
+    await expect(matchup.locator("[data-win-prob]")).toBeInViewport();
+    await expect(board.locator('ol[aria-label="Your starting slots this week"]')).toBeInViewport();
+    const oppTrigger = matchup.getByRole("button", { name: /Synthetic Sixers: .*Show details/ });
+    await expect(oppTrigger).toBeInViewport();
+    await expect(board.locator("[data-tonight]").first()).toBeVisible();
+    // the scorebug steps aside on the scoreboard page
+    await expect(page.locator(".desk-statusbar")).toBeHidden();
+    // "rough" explains itself
+    await matchup.getByRole("button", { name: /^Rough:/ }).click();
+    await expect(page.locator("dialog[open]")).toContainText("did not win more matchups");
+    await page.keyboard.press("Escape");
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+    // the opponent sheet: slots, habits, assumptions
+    await oppTrigger.click();
+    const sheet = page.locator("dialog[open]");
+    await expect(sheet.getByRole("heading", { name: "Synthetic Sixers" })).toBeVisible();
+    await expect(sheet.getByText("Their slots")).toBeVisible();
+    await expect(sheet.getByText(/players? still to play/)).toBeVisible();
+    await expect(sheet).toContainText("narrower than reality");
+    await expect(sheet.getByText("How they play")).toBeVisible();
+    await expect(sheet.getByText(/^Playing like/)).toBeVisible();
+    await sheet.getByText("What the win chance assumes").click();
+    await expect(sheet).toContainText(/treated as locked \d+% of the time, the rate seen in past weeks/);
+    await page.keyboard.press("Escape");
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+    expectNoConsoleErrors(guard);
+  });
+
+  test("/lockin: every option in the Win % tab, the lock history, and boom/bust in the player sheet", async ({ page }) => {
+    const guard = watchConsole(page);
+    await primeLens(page);
+    await page.goto("/lockin?tab=options");
+    const board = page.locator('[data-lockin-board="full"]');
+    await expect(board.locator("[data-matchup]")).toHaveAttribute("data-matchup", "win");
+    await expect(page.getByRole("tab", { name: /Win %/ })).toHaveAttribute("aria-selected", "true");
+    const rows = board.locator('[data-whatif="full"] [data-whatif-row]');
+    expect(await rows.count()).toBeGreaterThan(3);
+    // rows within simulation noise sort last and say so
+    const kinds = await rows.evaluateAll((els) => els.map((e) => e.getAttribute("data-whatif-row")));
+    expect(kinds.indexOf("noise")).toBeGreaterThan(0);
+    expect(kinds.slice(kinds.indexOf("noise")).every((k) => k === "noise")).toBe(true);
+    await expect(board.locator('[data-whatif-row="noise"]').first()).toContainText("no real difference");
+    const history = board.locator("[data-lock-history]");
+    await expect(history.getByRole("heading", { name: "Your lock history" })).toBeVisible();
+    await expect(history).toContainText("points a week");
+    await expect(history).toContainText("Between what you banked and each player");
+    await expect(history).toContainText(/n=\d+ weeks?/);
+    await expect(history).toContainText("Locked before a bigger game");
+    await expect(history).toContainText("Held past a bigger score");
+    await expect(history).toContainText("How you play");
+    await expect(history).not.toContainText(/mistake|too early|too long|should/i);
+    await page.getByRole("tab", { name: /Calls to make/ }).click();
+    const holden = board.locator("#lk-lk02");
+    // win chances sit beside the lean (which rests on points) as information
+    await expect(holden.locator("[data-win-compare]")).toContainText(/Rough win chance: if lock \d+% · if hold \d+%/);
+    await expect(holden.locator("[data-win-compare]")).not.toContainText("model leans");
+    await holden.getByRole("button", { name: /charts, record and method/ }).click();
+    const sheet = page.locator("dialog[open]");
+    await expect(sheet.getByRole("heading", { name: "Boom or bust" })).toBeVisible();
+    await expect(sheet.locator("[data-profile]")).toContainText(/Boom \d+% · [\d.]+\+ pts/);
+    await expect(sheet.locator("[data-profile]")).toContainText(/Bust \d+% · under [\d.]+/);
+    await expect(sheet.locator("[data-availability]")).toContainText(/\d+%/);
+    expectNoConsoleErrors(guard);
+  });
+
+  test("no accessibility violations with the opponent sheet open", async ({ page }) => {
+    await primeLens(page);
+    await page.goto("/");
+    await page.locator("[data-matchup]").getByRole("button", { name: /^Synthetic Sixers: .*Show details/ }).click();
+    await expect(page.locator("dialog[open]")).toBeVisible();
+    expect(axeList(await new AxeBuilder({ page }).analyze())).toEqual([]);
   });
 
   test("a roster with no matchup gets an explicit state", async ({ page }) => {
@@ -97,7 +204,16 @@ test.describe("lock-or-hold board", () => {
     await expect(page.locator("dialog[open]")).toBeVisible();
     expect(axeList(await new AxeBuilder({ page }).analyze())).toEqual([]);
     await page.keyboard.press("Escape");
+    // Closing pops the history entry the sheet pushed (components/ui/Sheet.jsx), and
+    // history.back() is asynchronous: wait for it to land, or the next goto races it.
+    await expect(page.locator("dialog[open]")).toHaveCount(0);
+    await page.waitForFunction(() => !window.history.state?.parquetSheet);
     await page.goto("/");
+    // QA round 4: axe ran before Home had settled (page-has-heading-one failed 3/5 runs while
+    // the server HTML has the h1). Wait for Home's URL and its h1 before scanning.
+    await expect(page).toHaveURL(/\/$/);
+    await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
+    await page.waitForLoadState("networkidle");
     expect(axeList(await new AxeBuilder({ page }).analyze())).toEqual([]);
   });
 });
