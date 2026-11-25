@@ -12,6 +12,7 @@ Lessons from past tasks, newest first. Read before starting; append when done.
 - The Win % tab id is `?tab=options` (not `win`).
 - Round 4 (same day, baa983b): verify each old finding with its original repro first (curl + a tiny Playwright script), then re-run gates. A vitest timeout during parallel pnpm installs was CPU contention; rerun the file alone and the suite alone before calling anything.
 - When a candidate adds a field to the desk (gamesLeft), make the equality script drop that key explicitly in the JSON replacer; a sed on the regex silently did nothing the first time.
+- Round 5 (e3f2de0, PR #74): to check "rows 1:1 with the plan", compare whatIf.plan.actions (kind then_start + lock/hold) with callRows on a fresh recording, then scrape the tab count and headlines from the live page within a minute of recording.
 - Page-level validation (loadLockDesk validAssume) is separate from the engine: test URL tokens through the real server, not only buildWeekDesk.
 
 ## 2026-10-01

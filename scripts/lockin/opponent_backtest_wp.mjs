@@ -18,7 +18,7 @@ const t0 = Date.now();
 const D = loadStudyData();
 const SLOTS = ["PG", "SG", "SF", "PF", "C", "UTIL", "UTIL"];
 const SIMS = 600;
-const UNKNOWN_LOCKED = 0.293;
+const UNKNOWN_LOCKED = process.env.ULOCK != null ? Number(process.env.ULOCK) : 0.293; // ULOCK: test another opponent unknown-lock share (D136)
 const SHIFT = -1.55;
 const EPS = 0.011;
 const fpos = (pid) => D.players[pid]?.fantasy_positions || [];
