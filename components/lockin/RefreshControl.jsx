@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter, useSearchParams } from "next/navigation";
+import { assumeHref } from "@/lib/lockin/assumeView";
 import { Check, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/ui";
 import { refreshLockDesk } from "@/lib/lockin/refresh";
@@ -20,6 +21,8 @@ const CATCH_UP_MS = 8_000;
  */
 export function RefreshControl({ asOf, asOfText = "", winPct = null, live = false, updating = false, disabled = false }) {
   const router = useRouter();
+  const pathname = usePathname();
+  const search = useSearchParams();
   const [pending, start] = useTransition();
   const [note, setNote] = useState(null);
   const [done, setDone] = useState(null);
@@ -47,7 +50,9 @@ export function RefreshControl({ asOf, asOfText = "", winPct = null, live = fals
       if (r.ok) {
         setNote(null);
         if (!auto) manual.current = { asOf, winPct };
-        router.refresh();
+        // a manual refresh also clears any what-if assumptions (?assume=)
+        if (!auto && search?.has("assume")) router.replace(assumeHref(pathname, search.toString(), []), { scroll: false });
+        else router.refresh();
       } else if (!auto) {
         setNote(r.reason === "rate_limited" ? `Just refreshed; again in ${Math.ceil(r.retryInMs / 1000)} s` : "Refresh failed; showing the last load");
       }

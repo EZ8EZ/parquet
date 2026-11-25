@@ -7,8 +7,8 @@ import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { Opp } from "./Opp";
 import { PlayerPanel } from "./PlayerDetail";
 import { SlotCells } from "./SlotCells";
-import { Matchup, NoOpponent } from "./Matchup";
-import { WhatIf } from "./WhatIf";
+import { NoOpponent } from "./Matchup";
+import { WinTable } from "./WinTable";
 import { LockHistory } from "./LockHistory";
 import { matchupView } from "@/lib/lockin/matchupView";
 import { slotTiles } from "@/lib/lockin/view";
@@ -21,6 +21,7 @@ import { tonightView } from "@/lib/lockin/tonightView";
 import { callRows, historyView, tonightLine } from "@/lib/lockin/matchupView";
 import { displayTz } from "@/lib/lockin/time";
 import { Scoreboard, TonightFoot } from "./Scoreboard";
+import { withChoices } from "@/lib/lockin/assumeView";
 import { CallList } from "./CallList";
 
 function Gaps({ desk }) {
@@ -84,6 +85,7 @@ function BetweenWeeks({ desk }) {
 }
 
 function panelsFor(desk, methodHref) {
+  const tips = new Map((desk.tonight?.players || []).filter((p) => p.tip).map((p) => [p.playerId, p.tip]));
   const byId = new Map(desk.cards.map((c) => [c.playerId, c]));
   const order = desk.slotPressure?.rowOrder ?? desk.cards.map((c) => c.playerId);
   const slotFirst = [...desk.slots.map((s) => s.playerId).filter(Boolean), ...order];
@@ -95,7 +97,7 @@ function panelsFor(desk, methodHref) {
       title: c.name,
       leading: <PlayerAvatar name={c.name} team={c.team} playerId={c.playerId} size="md" decorative />,
       subtitle: playerSubtitle(c),
-      content: <PlayerPanel card={c} today={desk.today} record={desk.leanRecord} methodHref={methodHref} winProb={desk.winProb ?? null} tz={displayTz(desk)} nowMs={Date.parse(desk.generatedAt)} />,
+      content: <PlayerPanel card={c} today={desk.today} record={desk.leanRecord} methodHref={methodHref} winProb={desk.winProb ?? null} tz={displayTz(desk)} nowMs={Date.parse(desk.generatedAt)} tipAt={tips.get(c.playerId) ?? null} />,
     }));
 }
 
@@ -134,18 +136,8 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
   const hazardOnly = groups.live.filter((c) => !c.stopping);
   const winProb = desk.winProb ?? null;
 
-  // Head-to-head: the matchup (win chance, both ranges, both slot strips) replaces the
-  // bare slot cells when there is an opponent; without one, one quiet line and the slots.
+  // Head-to-head: the scoreboard when there is an opponent; without one, one quiet line and the slots.
   const mv = matchupView(desk, { me, them });
-  const slotsBlock =
-    mv && mv.state !== "none" ? (
-      <Matchup v={mv} desk={desk} mySlots={<SlotCells tiles={slotTiles(desk)} />} />
-    ) : (
-      <>
-        {mv?.state === "none" && <NoOpponent />}
-        <SlotCells tiles={slotTiles(desk)} />
-      </>
-    );
 
   // Tonight: listed starts as deadlines (lib/lockin/tonightView.js). The countdown runs
   // from the board's own moment for the fixture and recorded replays.
@@ -162,7 +154,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
     const line = tonightLine(desk);
     const sep = fullHref.includes("?") ? "&" : "?";
     const foot = line ? <TonightFoot line={line} tz={tz} frozenAt={frozenAt} nowMs={frozenAt ? Date.parse(frozenAt) : Date.parse(desk.generatedAt)} href={`${fullHref}${sep}tab=tonight`} /> : null;
-    const tiles = <SlotCells tiles={slotTiles(desk)} />;
+    const tiles = <SlotCells tiles={withChoices(slotTiles(desk), desk, "mine")} />;
     const hv = historyView(desk.history);
     const anyConditional = rows.some((r) => r.conditional);
     return (
@@ -191,7 +183,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
           <List className="mt-3">
             {hv?.ok && (
               <li>
-                <ListRow href={`${fullHref.split("?")[0]}#lock-history`} title="Lock history" meta={`${fmt(hv.perWeek)} pts a week between banked and the best game · ${hv.nText}`} chevron />
+                <ListRow href={`${fullHref}${sep}tab=history`} title="Lock history" meta={`${fmt(hv.perWeek)} pts a week between banked and the best game · ${hv.nText}`} chevron />
               </li>
             )}
             <li>
@@ -203,67 +195,72 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
     );
   }
 
-  // bench moves the hero's win chance assumes (whatIf.plan "then_start") sit with the calls
+  // The lock board: the same scoreboard as Home (no Tonight footer: Tonight is a tab),
+  // then Tonight · Calls · Win % · Week · History. Calls holds the decisions and the bench
+  // moves the hero's win chance assumes (whatIf.plan "then_start"), in decide-by order.
   const allRows = callRows(desk);
+  const rowsById = new Map(allRows.filter((r) => r.kind !== "start").map((r) => [r.playerId, r]));
   const starts = allRows.filter((r) => r.kind === "start");
   const heroById = new Map(heroes.map((c) => [c.playerId, c]));
   const ordered = allRows.filter((r) => r.kind === "start" || heroById.has(r.playerId));
-  const decide = (
+  const calls = (
     <div className="space-y-3 pt-3">
       <h2 className="sr-only">Calls to make</h2>
       {hazardOnly.length > 0 && <List>{hazardOnly.map((c) => <PlayerRow key={c.playerId} card={c} />)}</List>}
-      {/* the decisions and the bench moves the plan assumes, in decide-by order */}
       {ordered.map((r) =>
         r.kind === "start" ? (
           <CallList key={`start-${r.playerId}`} rows={[r]} />
         ) : (
-          <DecisionHero key={r.playerId} card={heroById.get(r.playerId)} winProb={winProb} tz={displayTz(desk)} today={desk.today} nowMs={Date.parse(desk.generatedAt)} />
+          <DecisionHero key={r.playerId} card={heroById.get(r.playerId)} row={rowsById.get(r.playerId)} winProb={winProb} />
         ),
       )}
       {!groups.live.length && !starts.length && (fu ? <FirstUp fu={fu} tappable className="mt-2" /> : <EmptyState icon={<CalendarDays size={28} aria-hidden="true" />} title="Nothing to decide">No score is waiting on a lock-or-hold call.</EmptyState>)}
     </div>
   );
-  const nights = (
+  const week = (
     <div className="pt-3">
-      <h2 className="sr-only">Nights</h2>
-      {summary && <p className="mb-2 text-note text-muted">{summary.text}.</p>}
+      <h2 className="sr-only">Week</h2>
+      {summary && (
+        <div className="mb-3 grid grid-cols-3 gap-2">
+          <StatTile size="sm" label="Open slots" value={summary.openMin === summary.openMax ? summary.openMax : `${summary.openMin}-${summary.openMax}`} sub={summary.openMin === summary.openMax ? null : `${summary.openMax - summary.openMin} unknown`} />
+          <StatTile size="sm" label="To play" value={summary.playersStillToPlay} sub="players" />
+          <StatTile size="sm" label="Games left" value={summary.gamesRemaining} />
+        </div>
+      )}
       <WeekGrid grid={weekGrid(desk)} caption="Every player's games this week" triggers />
-    </div>
-  );
-  const everyone = (
-    <div className="pt-3">
-      <h2 className="sr-only">Players</h2>
-      <List>{[...groups.live, ...groups.lineup, ...groups.quiet].map((c) => <PlayerRow key={c.playerId} card={c} />)}</List>
       {desk.excluded.length > 0 && <p className="mt-2 text-meta text-secondary">Not counted: {desk.excluded.map((e) => `${e.name} (${e.reason === "taxi" ? "taxi" : "IR"})`).join(", ")}.</p>}
     </div>
   );
+  const ids = ["tonight", "calls", "options", "week", "history"];
+  const wanted = tab === "decide" ? "calls" : tab === "nights" ? "week" : tab;
+  const start = ids.includes(wanted) && (wanted !== "tonight" || tv) && (wanted !== "options" || desk.whatIf) ? wanted : tv?.next ? "tonight" : "calls";
+  const board =
+    mv && mv.state !== "none" ? (
+      <Scoreboard v={mv} desk={desk} slots={<SlotCells tiles={withChoices(slotTiles(desk), desk, "mine")} />} />
+    ) : (
+      <div className="rounded-card bg-surface p-3.5">
+        {mv?.state === "none" && <NoOpponent />}
+        <SlotCells tiles={withChoices(slotTiles(desk), desk, "mine")} />
+      </div>
+    );
 
   return (
     <PlayerDeck panels={panels} initialOpen={open}>
       <section aria-label="Lock-in" {...common}>
         <Gaps desk={desk} />
-        {slotsBlock}
-        {summary && (
-          <div className="mt-3 grid grid-cols-3 gap-2">
-            <StatTile size="sm" label="Open slots" value={summary.openMin === summary.openMax ? summary.openMax : `${summary.openMin}-${summary.openMax}`} sub={summary.openMin === summary.openMax ? null : `${summary.openMax - summary.openMin} unknown`} />
-            <StatTile size="sm" label="To play" value={summary.playersStillToPlay} sub="players" />
-            <StatTile size="sm" label="Games left" value={summary.gamesRemaining} />
-          </div>
-        )}
+        {board}
         <Tabs
           className="mt-4"
           label="Lock-in views"
-          defaultId={tab === "options" && desk.whatIf ? "options" : tv?.next ? "tonight" : "decide"}
+          defaultId={start}
           items={[
             ...(tv ? [{ id: "tonight", label: "Tonight", count: tv.toDecide || undefined, content: <div className="pt-1">{tonightFull}</div> }] : []),
-            // "Decide now" is the in-buffer call label, so the tab is named for what it holds
-            { id: "decide", label: "Calls to make", count: groups.live.length + starts.length, content: decide },
-            ...(desk.whatIf ? [{ id: "options", label: "Win %", content: <div className="pt-1"><WhatIf desk={desk} /></div> }] : []),
-            { id: "nights", label: "Nights", content: nights },
-            { id: "players", label: "Players", count: desk.whatIf ? undefined : desk.cards.length, content: everyone },
+            { id: "calls", label: "Calls", count: groups.live.length + starts.length, content: calls },
+            ...(desk.whatIf ? [{ id: "options", label: "Win %", content: <WinTable desk={desk} /> }] : []),
+            { id: "week", label: "Week", content: week },
+            { id: "history", label: "History", content: <div className="pt-1"><LockHistory history={desk.history} season={desk.season} inTab /></div> },
           ]}
         />
-        <LockHistory history={desk.history} season={desk.season} />
         <MethodNote model={desk.model} record={desk.leanRecord} open={methodOpen} />
       </section>
     </PlayerDeck>

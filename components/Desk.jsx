@@ -14,7 +14,7 @@
  */
 import { Fragment, Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useSearchParams } from "next/navigation";
 import { ChevronRight, ExternalLink, Menu, X } from "lucide-react";
 import { primarySurfaces, tabOf, utilitySurfaces } from "@/lib/nav";
 import { cn } from "@/lib/ui";
@@ -61,6 +61,19 @@ function TabItem({ href, label, Icon, active, current, onClick, button, buttonRe
       {body}
     </Link>
   );
+}
+
+/**
+ * The This Week tab while a what-if (?assume=) is set on This Week's own pages: the link
+ * keeps it (so leaving /lockin for Home does not drop it) and the badge hides, since its
+ * count comes from the board without assumptions. Inside Suspense (useSearchParams).
+ */
+function WeekTabItem({ pathname, ...props }) {
+  const search = useSearchParams();
+  const assume = search?.get("assume");
+  const onWeek = pathname === "/" || pathname === "/lockin";
+  if (!assume || !onWeek) return <TabItem {...props} />;
+  return <TabItem {...props} href={`/?assume=${assume}`} badge={null} />;
 }
 
 export function Desk({ data }) {
@@ -298,16 +311,20 @@ export function Desk({ data }) {
               <div className="grid h-[var(--tabbar-h)] grid-cols-5">
                 {primarySurfaces().map((s) => {
                   const active = activeTab === s.tab;
-                  return (
-                    <TabItem
-                      key={s.href}
-                      href={s.href}
-                      label={s.short}
-                      Icon={iconForSurface(s.href)}
-                      active={active}
-                      current={pathname === s.href ? "page" : active ? "true" : undefined}
-                      badge={s.tab === "week" && data?.bug?.toDecide > 0 ? data.bug.toDecide : null}
-                    />
+                  const props = {
+                    href: s.href,
+                    label: s.short,
+                    Icon: iconForSurface(s.href),
+                    active,
+                    current: pathname === s.href ? "page" : active ? "true" : undefined,
+                    badge: s.tab === "week" && data?.bug?.toDecide > 0 ? data.bug.toDecide : null,
+                  };
+                  return s.tab === "week" ? (
+                    <Suspense key={s.href} fallback={<TabItem {...props} />}>
+                      <WeekTabItem pathname={pathname} {...props} />
+                    </Suspense>
+                  ) : (
+                    <TabItem key={s.href} {...props} />
                   );
                 })}
                 <TabItem

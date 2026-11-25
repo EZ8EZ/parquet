@@ -265,7 +265,7 @@ export default async function TradeFinderPage({ searchParams }) {
 
       {/* The dossier's own words and both rosters' metrics: the premise the finder
           searched against, one tap away rather than above the packages. */}
-      <Disclosure className="mt-4" summary="How to approach them">
+      <Disclosure className="mt-4" summary="From their trade record">
         <p className="text-ink">{result.dossier.approachTips[0]}</p>
         <p className="mt-2">{result.stanceNote}</p>
         <p className="mt-2">
