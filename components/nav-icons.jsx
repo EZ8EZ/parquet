@@ -27,10 +27,10 @@ import {
   Target,
   Trophy,
   Users,
-  ArrowLeftRight,
-} from "lucide-react";
+  ArrowLeftRight, LockKeyhole } from "lucide-react";
 export const NAV_ICONS = {
   "/": CalendarDays,
+  "/lockin": LockKeyhole,
   "/roster": Users,
   "/plan": Target,
   "/trade": ArrowLeftRight,

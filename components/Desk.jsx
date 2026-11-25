@@ -76,7 +76,14 @@ function WeekTabItem({ pathname, ...props }) {
   return <TabItem {...props} href={`/?assume=${assume}`} badge={null} />;
 }
 
+// focus mode (lib/auth/focus.js): only the start-or-not pages
+const FOCUS_TABS = [
+  { href: "/", short: "This Week", tab: "week" },
+  { href: "/lockin", short: "Lock board", tab: "lockboard" },
+];
+
 export function Desk({ data }) {
+  const focus = !!data?.focus;
   const pathname = usePathname() ?? "/";
   const [openOn, setOpenOn] = useState(null);
   const [closingOn, setClosingOn] = useState(null);
@@ -308,9 +315,9 @@ export function Desk({ data }) {
                 )}
               </div>
 
-              <div className="grid h-[var(--tabbar-h)] grid-cols-5">
-                {primarySurfaces().map((s) => {
-                  const active = activeTab === s.tab;
+              <div className={cn("grid h-[var(--tabbar-h)]", focus ? "grid-cols-2" : "grid-cols-5")}>
+                {(focus ? FOCUS_TABS : primarySurfaces()).map((s) => {
+                  const active = focus ? (s.tab === "lockboard" ? pathname.startsWith("/lockin") : pathname === "/") : activeTab === s.tab;
                   const props = {
                     href: s.href,
                     label: s.short,
@@ -327,7 +334,7 @@ export function Desk({ data }) {
                     <TabItem key={s.href} {...props} />
                   );
                 })}
-                <TabItem
+                {!focus && <TabItem
                     button
                     buttonRef={menuRef}
                     label={expanded ? "Close" : "Menu"}
@@ -336,7 +343,7 @@ export function Desk({ data }) {
                     expanded={expanded}
                     controls={drawerId}
                     onClick={() => setExpanded(!expanded)}
-                  />
+                  />}
               </div>
             </div>
           </nav>

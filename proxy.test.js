@@ -15,27 +15,27 @@ function request(path, cookie) {
   return req;
 }
 describe("the front door", () => {
-  it("REDIRECTS a fresh browser to the picker", () => {
-    const res = proxy(request("/"));
+  it("REDIRECTS a fresh browser to the picker", async () => {
+    const res = await proxy(request("/"));
     expect(res.status).toBe(307);
     expect(new URL(res.headers.get("location")).pathname).toBe("/teams");
   });
-  it("lets a returning reader straight through to Home", () => {
-    const res = proxy(request("/", "3"));
+  it("lets a returning reader straight through to Home", async () => {
+    const res = await proxy(request("/", "3"));
     expect(res.headers.get("location")).toBeNull();
   });
-  it("carries a deep link through the detour so a shared link survives", () => {
-    const res = proxy(request("/web?trade=abc"));
+  it("carries a deep link through the detour so a shared link survives", async () => {
+    const res = await proxy(request("/web?trade=abc"));
     const location = new URL(res.headers.get("location"));
     expect(location.pathname).toBe("/teams");
     expect(location.searchParams.get("next")).toBe("/web?trade=abc");
   });
-  it("does not bounce the picker, the claim link, or the explainer", () => {
+  it("does not bounce the picker, the claim link, or the explainer", async () => {
     for (const path of ["/teams", "/claim", "/claim/invalid", "/about"]) {
-      expect(proxy(request(path)).headers.get("location")).toBeNull();
+      expect((await proxy(request(path))).headers.get("location")).toBeNull();
     }
   });
-  it("excludes API routes and static files from the matcher", () => {
+  it("excludes API routes and static files from the matcher", async () => {
     // A POST bounced to an HTML page is a far more confusing failure than a 401,
     // and an icon has no reader to redirect.
     const matcher = new RegExp(`^${config.matcher[0]}$`);
@@ -50,5 +50,50 @@ describe("the front door", () => {
     for (const path of ["/", "/roster", "/managers/3", "/teams"]) {
       expect(matcher.test(path)).toBe(true);
     }
+  });
+});
+
+describe("focus mode (PARQUET_FULL_ACCESS_PASSWORD)", () => {
+  const withPw = async (fn) => {
+    const prev = process.env.PARQUET_FULL_ACCESS_PASSWORD;
+    process.env.PARQUET_FULL_ACCESS_PASSWORD = "hunter2-test";
+    try {
+      await fn();
+    } finally {
+      if (prev === undefined) delete process.env.PARQUET_FULL_ACCESS_PASSWORD;
+      else process.env.PARQUET_FULL_ACCESS_PASSWORD = prev;
+    }
+  };
+  it("is off without the variable: every page opens as before", async () => {
+    delete process.env.PARQUET_FULL_ACCESS_PASSWORD;
+    const res = await proxy(request("/trade", "3"));
+    expect(res.headers.get("location")).toBeNull();
+  });
+  it("sends a visitor without the cookie from any other page to /unlock, deep link kept", async () => {
+    await withPw(async () => {
+      const res = await proxy(request("/trade/finder?x=1", "3"));
+      const loc = new URL(res.headers.get("location"));
+      expect(loc.pathname).toBe("/unlock");
+      expect(loc.searchParams.get("next")).toBe("/trade/finder?x=1");
+    });
+  });
+  it("leaves the start-or-not pages open", async () => {
+    await withPw(async () => {
+      for (const path of ["/", "/lockin", "/lockin?tab=players", "/teams", "/unlock"]) {
+        const res = await proxy(request(path, "3"));
+        expect(res.headers.get("location"), path).toBeNull();
+      }
+    });
+  });
+  it("lets the right cookie through and refuses a wrong one", async () => {
+    await withPw(async () => {
+      const { accessToken } = await import("./lib/auth/focus.js");
+      const good = request("/roster", "3");
+      good.cookies.set("parquet_full", await accessToken("hunter2-test"));
+      expect((await proxy(good)).headers.get("location")).toBeNull();
+      const bad = request("/roster", "3");
+      bad.cookies.set("parquet_full", await accessToken("wrong"));
+      expect(new URL((await proxy(bad)).headers.get("location")).pathname).toBe("/unlock");
+    });
   });
 });

@@ -15,6 +15,7 @@ import { ActionQueue } from "@/components/ActionQueue";
 import { RosterCrunchPanel } from "@/components/RosterCrunchPanel";
 import { HomeWeek } from "@/components/week/HomeWeek";
 import { SlotPreview } from "@/components/week/SlotPreview";
+import { isFocusLocked } from "@/lib/auth/focusServer";
 
 export const dynamic = "force-dynamic";
 
@@ -25,6 +26,8 @@ export default async function ThisWeekPage({ searchParams }) {
   // against the board in loadLockDesk
   const assumeParam = typeof sp?.assume === "string" ? sp.assume : Array.isArray(sp?.assume) ? sp.assume.join(",") : null;
   const replay = replayAllowed() && typeof at === "string" ? at : null;
+  // focus mode (lib/auth/focus.js): a visitor without the password sees only the lock-in pages
+  const focusLocked = await isFocusLocked();
   const h = await getLeagueHistory();
   const rosterId = h.me.rosterId;
   const ctx = weekContext(h);
@@ -82,7 +85,7 @@ export default async function ThisWeekPage({ searchParams }) {
         </>
       ) : rosterId != null ? (
         <Suspense fallback={<SlotPreview preview={preview} />}>
-          <HomeWeek h={h} rosterId={rosterId} replay={replay} assumeParam={assumeParam} record={form ? `${form.wins}-${form.losses}` : null} />
+          <HomeWeek h={h} rosterId={rosterId} replay={replay} assumeParam={assumeParam} record={form ? `${form.wins}-${form.losses}` : null} focusLocked={focusLocked} />
         </Suspense>
       ) : null}
 
@@ -90,7 +93,7 @@ export default async function ThisWeekPage({ searchParams }) {
       {ctx.offseason && <ActionQueue items={actions} compact className="mt-4" />}
       <DigestBeacon metrics={digest.nextMetrics} />
 
-      <nav aria-label="Also this week" className="mt-4 flex flex-wrap gap-x-5">
+      {!focusLocked && <nav aria-label="Also this week" className="mt-4 flex flex-wrap gap-x-5">
         <Link href="/lab/pulse" className="inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text">
           What moved in the league
           <ChevronRight size={16} aria-hidden="true" />
@@ -101,7 +104,7 @@ export default async function ThisWeekPage({ searchParams }) {
             <ChevronRight size={16} aria-hidden="true" />
           </Link>
         )}
-      </nav>
+      </nav>}
     </div>
   );
 }
