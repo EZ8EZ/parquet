@@ -15,7 +15,7 @@
 import { Fragment, Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronRight, ExternalLink, Menu, X } from "lucide-react";
+import { ChevronRight, ExternalLink, KeyRound, Menu, X } from "lucide-react";
 import { primarySurfaces, tabOf, utilitySurfaces } from "@/lib/nav";
 import { cn } from "@/lib/ui";
 import { iconForSurface } from "./nav-icons";
@@ -310,7 +310,11 @@ export function Desk({ data }) {
                 )}
               </div>
 
-              {/* focus mode (lib/auth/focus.js): the lock page is the only page, so no tabs */}
+              {/* focus mode (lib/auth/focus.js): the lock page, and one locked door to the rest */}
+              {focus && <div className="grid h-[var(--tabbar-h)] grid-cols-2">
+                <TabItem href="/lockin" label="Lock or hold" Icon={iconForSurface("/lockin")} active={pathname.startsWith("/lockin")} current={pathname === "/lockin" ? "page" : undefined} badge={data?.bug?.toDecide > 0 ? data.bug.toDecide : null} />
+                <TabItem href="/unlock?next=%2F" label="More" Icon={KeyRound} active={pathname === "/unlock"} current={pathname === "/unlock" ? "page" : undefined} badge={null} />
+              </div>}
               {!focus && <div className="grid h-[var(--tabbar-h)] grid-cols-5">
                 {primarySurfaces().map((s) => {
                   const active = activeTab === s.tab;

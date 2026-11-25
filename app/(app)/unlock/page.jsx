@@ -24,7 +24,7 @@ export default async function UnlockPage({ searchParams }) {
       {on ? (
         <>
           <p className="text-note text-secondary">
-            This link is set up for one thing: the lock-or-hold helper. Your week and the lock board stay open; the rest needs the password.
+            This link is set up for one thing: the lock-or-hold helper, which stays open. Trades, rosters and league pages need the password.
           </p>
           <form action={unlockAction} className="mt-4 space-y-3 rounded-card bg-surface p-4">
             <input type="hidden" name="next" value={next} />
@@ -42,8 +42,8 @@ export default async function UnlockPage({ searchParams }) {
       ) : (
         <p className="text-note text-secondary">Nothing is locked on this deployment.</p>
       )}
-      <Link href="/" className="mt-4 inline-flex min-h-11 items-center text-note font-semibold text-accent-text">
-        Back to this week
+      <Link href="/lockin" className="mt-4 inline-flex min-h-11 items-center text-note font-semibold text-accent-text">
+        Back to lock or hold
       </Link>
     </div>
   );

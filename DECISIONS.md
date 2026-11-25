@@ -8321,7 +8321,7 @@ league pages) is noise for that and not theirs to browse. **What.** When the dep
 (and its tabs), `/teams`, `/claim` and `/unlock`; every other page redirects to `/unlock?next=...`. The right
 password sets an httpOnly cookie (`parquet_full`, 180 days) holding HMAC-SHA256 of a fixed message under the
 password (Web Crypto, compared in constant time), so changing the password locks everyone out again. In focus
-mode Home redirects to the lock page (the two said the same thing; a what-if `?assume=` is kept) and the bottom tab bar is hidden, so a friend sees one screen; with the password both return. Without the
+mode Home redirects to the lock page (the two said the same thing; a what-if `?assume=` is kept) and the bottom bar shows only "Lock or hold" and "More" (the password page), so a friend sees one screen and one locked door; with the password Home and the full tabs return. Without the
 variable nothing changes. Not gated: `/api/*` (the proxy matcher excludes it, as before) - focus mode hides
 pages, it is not data security. (lib/auth/focus.js, proxy.js, app/(app)/unlock.)
 **Method note.** "How these numbers are made" is now one screen of formulas (forecast, play chance, the
