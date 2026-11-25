@@ -8178,3 +8178,34 @@ usual starter missing from the five was a DNP in 78.5% of 1,171 cases, so the co
 "did not play".
 **Rejected.** Any opponent term in the model; per-player teammate lifts. The average teammate lift is a
 candidate to re-test in the backtest before it ships.
+
+## D134. THE PLAN IS TONIGHT'S SHOWN LINEUP, THEN THE POLICY - live games without a box score use the forecast; history counts only weeks read consistently
+**Decision.** (1) "If you follow the model's calls" (winProb.now, whatIf.plan) means: tonight, each open slot
+plays the player Tonight shows in it (lib/lockin/sequence.js lineup_at_start, starts included); after tonight,
+the per-slot policy (reservation rule, open slots filled by the best available player). A slot banks tonight's
+score when it reaches the value of its continuation (startChain). A player in tonight's lineup keeps his later
+games in his own slot only, so nobody can bank in one slot and continue in another; a swap or start never
+offers a player's later games that another slot already holds (lib/lockin/matchup.js teamSimInput,
+applyStarts, swapInto). (2) A game in progress counts at the in-game projection (ingame.js) when his log has
+tonight's row; at a tip the schedule says in_game before the row exists (logs are cached 120 s), and then
+tonight counts at his full-game pre-game forecast, the mean raised to the points already showing (the slot's
+banked score), with his later games and the lock rule kept (liveTonight). Only with no model at all does a
+game count at its current score; winProb.assumptions counts each path per side. (3) Lock history leaves out
+weeks read in more than one version, and weeks whose confirming read failed. A cold process reads each past
+week twice (once past the cache); versions not read for 6 hours are forgotten so a corrected week can return
+(lib/lockin/consensus.js, CONSENSUS_TTL_MS). history.excludedWeeks / unconfirmedWeeks carry the counts and
+historyView says them; with no week left, the figure is null.
+**Evidence.** QA round 3 replays: with tonight's log rows removed, r7 0.495 -> 0.001 before (2) and 0.539
+after; r12 0.931 -> 0.670 before, 0.938 after; r6 0.486 -> 0.191 before, 0.473 after. Roster 6 on the 2026-11-24
+recording: the plan was blind to Suggs, who plays tonight (53.5% with or without him); with (1), 52.6% vs
+51.0%. Reviewer's two-slot case: 68.9 vs 87.4 points by slot order before pinning, equal (within 0.3) after.
+Sleeper returned roster 6 week 5 as 108.5 and 212.5; both versions match real games of the players, so a single
+read cannot tell which is right.
+**Residual limit.** Two reads that agree look consistent even if another process sees a different version, so
+the history figure can still differ between processes; closing that needs more reads per week or a store shared
+across processes. The two reads are not simultaneous (the first may come from a cache up to a day old), so a
+week left out may be a genuine stat correction rather than a Sleeper inconsistency; the copy says "read in more
+than one version" for that reason.
+**Rejected.** Counting a live game at its current score (dropped his later games); a week-long plan that ignores
+tonight's displayed lineup; changing the hero copy instead of the simulation; trusting a single read of a past
+week.
