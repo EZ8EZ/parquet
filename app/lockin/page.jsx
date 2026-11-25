@@ -1,4 +1,8 @@
 import Link from "next/link";
+import { ChevronRight } from "lucide-react";
+import { DigestBeacon } from "@/components/DigestBeacon";
+import { loadDigest } from "@/lib/digest";
+import { isFocusLocked } from "@/lib/auth/focusServer";
 import { Chip, PageHeader } from "@/components/ui";
 import { LockDeskBoard } from "@/components/lockin/LockDeskBoard";
 import { RefreshControl } from "@/components/lockin/RefreshControl";
@@ -37,7 +41,7 @@ export default async function LockInPage({ searchParams }) {
   // they kept (D141)
   const assumeInUrl = typeof sp?.assume === "string" ? sp.assume : Array.isArray(sp?.assume) ? sp.assume.join(",") : null;
   const assumeParam = assumeInUrl ?? (await savedAssumeFor(rosterId));
-  const desk = await loadLockDesk({ rosterId, replay, players: h.players, assumeParam });
+  const [desk, digest, focusLocked] = await Promise.all([loadLockDesk({ rosterId, replay, players: h.players, assumeParam }), loadDigest(h), isFocusLocked()]);
   const hd = boardHeader(desk);
   const fullHref = keepAssume(replay ? `/lockin?at=${encodeURIComponent(replay)}` : "/lockin", desk.assumptions?.list ?? []);
   return (
@@ -67,6 +71,20 @@ export default async function LockInPage({ searchParams }) {
         me={teamIdentity(h, rosterId)}
         them={desk.opponent ? teamIdentity(h, desk.opponent.rosterId) : null}
       />
+      {/* D144: this page is This Week now; Home's two links come with it (not in focus mode) */}
+      <DigestBeacon metrics={digest.nextMetrics} />
+      {!focusLocked && (
+        <nav aria-label="Also this week" className="mt-4 flex flex-wrap gap-x-5">
+          <Link href="/lab/pulse" className="inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text">
+            What moved in the league
+            <ChevronRight size={16} aria-hidden="true" />
+          </Link>
+          <Link href={`/managers/${rosterId}`} className="inline-flex min-h-11 items-center gap-0.5 text-note font-semibold text-accent-text">
+            Your dossier
+            <ChevronRight size={16} aria-hidden="true" />
+          </Link>
+        </nav>
+      )}
     </>
   );
 }

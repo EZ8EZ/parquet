@@ -72,36 +72,28 @@ test.describe("lock-or-hold board", () => {
     expectNoConsoleErrors(guard);
   });
 
-  test("Home (direction A): the scoreboard and every call on the first screens, each with the model's lean and rough win chances", async ({ page }) => {
+  test("This Week is the lock page (D144): the scoreboard, then every call with the model's lean and rough win chances", async ({ page }) => {
     const guard = watchConsole(page);
     await primeLens(page);
     await page.goto("/");
-    const board = page.locator('[data-lockin-board="compact"]');
+    await expect(page).toHaveURL(/\/lockin$/);
+    const board = page.locator('[data-lockin-board="full"]');
     await expect(board.locator('ol[aria-label="Your starting slots this week"] > li')).toHaveCount(7);
     // state lives in the tiles: no "0.0" for a player who has not played
     await expect(board.locator('[data-slot-state="yet"]').first()).not.toContainText("0.0");
-    const calls = board.getByRole("list", { name: "Your calls" });
-    await expect(calls.locator("li")).not.toHaveCount(0);
-    const first = calls.locator("li").first();
-    await expect(first).toContainText("on the table");
-    await expect(first).toContainText(/(At the deadline: m|M)odel leans (lock|hold) · (marginal|moderate|clear)/);
-    await expect(first.locator("[data-win-compare]")).toContainText(/Rough win chance/);
-    await expect(first.locator("[data-win-compare]")).toContainText(/if lock\s*\d+%/);
-    // a wait headline names the call at the deadline, never a bare chip
-    for (const row of await calls.locator('li[data-call="wait"]').all()) {
-      await expect(row).toContainText(/(Wait until .+, then (lock|hold) · (locks|(.+ )?tips) at \d{1,2}:\d{2}|Decide now)/);
-      await expect(row).toContainText(/At the deadline: model leans/);
-    }
+    await page.getByRole("tab", { name: /^Calls/ }).click();
+    const panel = page.getByRole("tabpanel");
+    // each lock-or-hold call is a card with the model's lean and the rough win chance both ways
+    await expect(panel).toContainText(/(At the deadline: m|M)odel leans (lock|hold) · (marginal|moderate|clear)/);
+    await expect(panel.locator("[data-win-compare]").first()).toContainText(/Rough win chance/);
+    await expect(panel.locator("[data-win-compare]").first()).toContainText(/if lock\s*\d+%/);
     // the bench move the hero's win chance assumes is a call too, with its decide-by time and condition
-    const move = calls.locator('li[data-call="then_start"]').first();
+    const move = panel.locator('li[data-call="then_start"]').first();
     await expect(move).toContainText(/Then start Ike Novak at C from Fri 7:30 PM/);
     await expect(move).toContainText(/by Fri 7:20 PM · tips 7:30/);
     await expect(move).toContainText(/If Eli Brandt's score tonight is under 16\.9/);
-    await expect(board.getByRole("heading", { name: new RegExp(`^Your calls · ${await calls.locator("li").count()}$`) })).toBeVisible();
-    await expect(board.getByRole("link", { name: /Lock history/ })).toHaveAttribute("href", "/lockin?tab=history");
-    await expect(board.getByRole("link", { name: /Your players: form and opponents/ })).toHaveAttribute("href", "/lockin?tab=players");
-    await expect(board.getByRole("link", { name: /^Every night/ })).toHaveAttribute("href", "/lockin?tab=week");
-    await first.getByRole("button").first().click();
+    for (const name of ["Players", "Week", "History"]) await expect(page.getByRole("tab", { name: new RegExp(`^${name}`) })).toBeVisible();
+    await panel.getByRole("button", { name: /charts, record and method/ }).first().click();
     await expect(page.locator("dialog[open]")).toContainText("Boom or bust");
     await page.keyboard.press("Escape");
     await board.locator('ol[aria-label="Your starting slots this week"] button').first().click();
@@ -109,11 +101,11 @@ test.describe("lock-or-hold board", () => {
     expectNoConsoleErrors(guard);
   });
 
-  test("Home leads with the scoreboard: rough win chance, both rows, Tonight, and the opponent sheet", async ({ page }) => {
+  test("This Week leads with the scoreboard: rough win chance, both rows, Tonight, and the opponent sheet", async ({ page }) => {
     const guard = watchConsole(page);
     await primeLens(page);
     await page.goto("/");
-    const board = page.locator('[data-lockin-board="compact"]');
+    const board = page.locator('[data-lockin-board="full"]');
     const matchup = board.locator("[data-scoreboard]");
     await expect(matchup).toHaveAttribute("data-matchup", "win");
     await expect(matchup.locator("[data-win-prob]")).toHaveText(/^\d{1,3}%$/);
@@ -122,7 +114,8 @@ test.describe("lock-or-hold board", () => {
     await expect(matchup).toContainText("banked");
     await expect(matchup).toContainText("Projected");
     // first screen: the week heading, the win chance, both rows, Tonight
-    await expect(page.getByRole("heading", { level: 1, name: /Week 4/ })).toBeInViewport();
+    await expect(page.getByRole("heading", { level: 1, name: "Lock or hold" })).toBeInViewport();
+    await expect(page.getByText(/^Week 4/).first()).toBeInViewport();
     await expect(matchup.locator("[data-win-prob]")).toBeInViewport();
     await expect(board.locator('ol[aria-label="Your starting slots this week"]')).toBeInViewport();
     const oppTrigger = matchup.getByRole("button", { name: /Synthetic Sixers: .*Show details/ });
@@ -155,7 +148,7 @@ test.describe("lock-or-hold board", () => {
     const guard = watchConsole(page);
     await primeLens(page);
     await page.goto("/");
-    const board = page.locator('[data-lockin-board="compact"]');
+    const board = page.locator('[data-lockin-board="full"]');
     const before = await board.locator("[data-win-prob]").innerText();
     await expect(board.locator("[data-whatif-bar]")).toHaveCount(0);
     // their PG (locked by inference): treat it as playing on
@@ -179,8 +172,7 @@ test.describe("lock-or-hold board", () => {
     await expect(page.locator("dialog[open] [data-assume-sheet]").getByRole("button", { name: "Treat as playing on" })).toHaveCount(0);
     await page.keyboard.press("Escape");
     await expect(page.locator("dialog[open]")).toHaveCount(0);
-    // links to the lock board keep it, and from the lock board This Week keeps it, badge hidden
-    await expect(board.getByRole("link", { name: /Your players: form and opponents/ })).toHaveAttribute("href", /assume=t0O/);
+    // from the lock page, the This Week tab keeps it, badge hidden
     await page.goto("/lockin?assume=t0O");
     const weekTab = page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: /^This Week/ });
     await expect(weekTab).toHaveAttribute("href", "/?assume=t0O");
@@ -196,11 +188,11 @@ test.describe("lock-or-hold board", () => {
     expectNoConsoleErrors(guard);
   });
 
-  test("what-if marks stay until changed: a plain visit to Home or the lock board keeps them, Reset forgets them (D141)", async ({ page }) => {
+  test("what-if marks stay until changed: a plain visit to This Week or the lock board keeps them, Reset forgets them (D141)", async ({ page }) => {
     const guard = watchConsole(page);
     await primeLens(page);
     await page.goto("/");
-    const board = page.locator('[data-lockin-board="compact"]');
+    const board = page.locator('[data-lockin-board="full"]');
     await board.getByRole("button", { name: /^Their PG .*What if$/ }).click();
     await page.locator("dialog[open] [data-assume-sheet]").getByRole("button", { name: "Treat as playing on" }).click();
     await page.waitForURL(/assume=t0O/, { waitUntil: "commit" });
@@ -314,9 +306,9 @@ test.describe("lock-or-hold board", () => {
     await expect(page.locator("dialog[open]")).toHaveCount(0);
     await page.waitForFunction(() => !window.history.state?.parquetSheet);
     await page.goto("/");
-    // QA round 4: axe ran before Home had settled (page-has-heading-one failed 3/5 runs while
-    // the server HTML has the h1). Wait for Home's URL and its h1 before scanning.
-    await expect(page).toHaveURL(/\/$/);
+    // QA round 4: axe ran before the page had settled (page-has-heading-one failed 3/5 runs while
+    // the server HTML has the h1). Wait for This Week's URL (the lock page, D144) and its h1.
+    await expect(page).toHaveURL(/\/lockin$/);
     await expect(page.getByRole("heading", { level: 1 })).toBeVisible();
     await page.waitForLoadState("networkidle");
     expect(axeList(await new AxeBuilder({ page }).analyze())).toEqual([]);

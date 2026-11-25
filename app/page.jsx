@@ -1,5 +1,6 @@
 import { Suspense } from "react";
 import Link from "next/link";
+import { redirect } from "next/navigation";
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import { getLeagueHistory } from "@/lib/history";
 import { getPrincipals } from "@/lib/principals";
@@ -31,8 +32,11 @@ export default async function ThisWeekPage({ searchParams }) {
   const focusLocked = await isFocusLocked();
   const h = await getLeagueHistory();
   const rosterId = h.me.rosterId;
-  const assumeParam = assumeInUrl ?? (await savedAssumeFor(rosterId));
   const ctx = weekContext(h);
+  // D144: in season, This Week is the lock-or-hold page (one screen for everyone; the two said
+  // the same thing). The what-if in the URL goes along; the offseason keeps this page.
+  if (!ctx.offseason && rosterId != null && !replay) redirect(assumeInUrl != null ? `/lockin?assume=${encodeURIComponent(assumeInUrl).replace(/%2C/gi, ",")}` : "/lockin");
+  const assumeParam = assumeInUrl ?? (await savedAssumeFor(rosterId));
   const [principals, forms, digest, preview] = await Promise.all([
     getPrincipals(h),
     currentFormByRoster(h),
