@@ -2,6 +2,7 @@ import { AlertTriangle, Hourglass, Lock } from "lucide-react";
 import { Chip } from "@/components/ui";
 import { SLOT_STATES, decisionNumbers, fmt, gamesLeftText, leanView, pct, remainingGames, slotStateKey } from "@/lib/lockin/view";
 import { Opp } from "./Opp";
+import { heldNote } from "@/lib/lockin/matchupView";
 import { StateIcon } from "./StateIcon";
 
 export function slotKeyOf(card) {
@@ -84,7 +85,7 @@ export function DecisionFigures({ card }) {
     <div className="space-y-3">
       <div className="grid grid-cols-2 gap-2">
         <Tile label="On the table" value={fmt(n.x)} sub={state} />
-        <Tile label="Expected if held" value={fmt(n.held)} sub={n.listedOut ? "listed out next game" : `${n.k} ${n.k === 1 ? "game" : "games"} left`} />
+        <Tile label="Expected if held" value={fmt(n.held)} sub={heldNote(card) ? `(${heldNote(card)})` : n.listedOut ? "listed out next game" : `${n.k} ${n.k === 1 ? "game" : "games"} left`} />
       </div>
       <div className="grid grid-cols-2 gap-3 px-1">
         <Pair label="Later game beats it" value={pct(n.pIfPlays)} sub="if he plays" />

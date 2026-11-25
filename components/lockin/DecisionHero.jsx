@@ -1,5 +1,6 @@
 import { AlertTriangle, ChevronRight } from "lucide-react";
 import { Card, Chip } from "@/components/ui";
+import { heldNote } from "@/lib/lockin/matchupView";
 import { decisionNumbers, fmt, playerSubtitle } from "@/lib/lockin/view";
 import { DecisionFigures, Hazards, LeanChip, WhenLine } from "./Decision";
 import { DeckTrigger } from "./PlayerDeck";
@@ -15,7 +16,7 @@ function PointsLine({ card }) {
   return (
     <p className="text-note text-muted">
       On the table <span className="figure text-lede font-bold text-ink">{fmt(n.x)}</span> · Expected if held <span className="figure text-lede font-bold text-ink">{fmt(n.held)}</span>
-      {n.listedOut ? " (listed out next game)" : ""}
+      {heldNote(card) ? ` (${heldNote(card)})` : n.listedOut ? " (listed out next game)" : ""}
     </p>
   );
 }
