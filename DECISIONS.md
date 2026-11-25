@@ -8321,9 +8321,24 @@ league pages) is noise for that and not theirs to browse. **What.** When the dep
 (and its tabs), `/teams`, `/claim` and `/unlock`; every other page redirects to `/unlock?next=...`. The right
 password sets an httpOnly cookie (`parquet_full`, 180 days) holding HMAC-SHA256 of a fixed message under the
 password (Web Crypto, compared in constant time), so changing the password locks everyone out again. In focus
-mode the bottom bar shows This Week and Lock board only, and Home hides its links to other pages. Without the
+mode Home redirects to the lock page (the two said the same thing; a what-if `?assume=` is kept) and the bottom bar shows only "Lock or hold" and "More" (the password page), so a friend sees one screen and one locked door; with the password Home and the full tabs return. Without the
 variable nothing changes. Not gated: `/api/*` (the proxy matcher excludes it, as before) - focus mode hides
 pages, it is not data security. (lib/auth/focus.js, proxy.js, app/(app)/unlock.)
 **Method note.** "How these numbers are made" is now one screen of formulas (forecast, play chance, the
 stopping recursion, the win-chance simulation, the rivals product) with the fitted figures beside them, in
 place of the longer prose.
+
+## D139. LOCKS SEEN IN THE SLEEPER APP, RECORDED BY HAND
+
+**Why.** Sleeper's public API has no lock flag (re-checked 2026-11-25: the matchup payload is still `points,
+players, roster_id, custom_points, matchup_id, starters, starters_points, players_points`). From the data a
+lock is certain only after the player's next tip, so mid-week every banked score is weighed with the league's
+unknown-lock share (0.293). The Sleeper app itself shows the lock icons, so the manager often knows more than
+the API. **What.** `scripts/lockin/mark-locks.mjs --me <roster> <names...>` (`--mine` for your own slots,
+`--list`, `--unmark`) writes `lib/lockin/knownLocks.data.js` with the slot's current banked score;
+`lib/lockin/knownLocks.js` turns a matching entry into a certain lock (reason `reported_locked`, shown as
+"Locked (seen in the Sleeper app, recorded by hand)"). An entry applies only while the banked score still equals
+the recorded one, never over a certain reset, and the viewer's what-if assumptions still override it. Entries
+from earlier weeks are pruned on each write. It reaches the deployed app on commit and push; the refresh button
+cannot learn locks. On the 2026-11-25 capture, recording two opponent scores (39.0 and 29.0) as locked moved
+the win chance from 56.6% to 52.5%.

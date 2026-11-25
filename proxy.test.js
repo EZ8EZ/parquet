@@ -79,10 +79,22 @@ describe("focus mode (PARQUET_FULL_ACCESS_PASSWORD)", () => {
   });
   it("leaves the start-or-not pages open", async () => {
     await withPw(async () => {
-      for (const path of ["/", "/lockin", "/lockin?tab=players", "/teams", "/unlock"]) {
+      for (const path of ["/lockin", "/lockin?tab=players", "/teams", "/unlock"]) {
         const res = await proxy(request(path, "3"));
         expect(res.headers.get("location"), path).toBeNull();
       }
+    });
+  });
+  it("sends a focused visitor from Home to the lock page, what-if kept; you keep Home", async () => {
+    await withPw(async () => {
+      const loc = new URL((await proxy(request("/?assume=t2L", "3"))).headers.get("location"));
+      expect(loc.pathname + loc.search).toBe("/lockin?assume=t2L");
+      // a fresh browser still picks a team first
+      expect(new URL((await proxy(request("/"))).headers.get("location")).pathname).toBe("/teams");
+      const { accessToken } = await import("./lib/auth/focus.js");
+      const me = request("/", "3");
+      me.cookies.set("parquet_full", await accessToken("hunter2-test"));
+      expect((await proxy(me)).headers.get("location")).toBeNull();
     });
   });
   it("lets the right cookie through and refuses a wrong one", async () => {

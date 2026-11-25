@@ -15,7 +15,7 @@
 import { Fragment, Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronRight, ExternalLink, Menu, X } from "lucide-react";
+import { ChevronRight, ExternalLink, KeyRound, Menu, X } from "lucide-react";
 import { primarySurfaces, tabOf, utilitySurfaces } from "@/lib/nav";
 import { cn } from "@/lib/ui";
 import { iconForSurface } from "./nav-icons";
@@ -76,11 +76,6 @@ function WeekTabItem({ pathname, ...props }) {
   return <TabItem {...props} href={`/?assume=${assume}`} badge={null} />;
 }
 
-// focus mode (lib/auth/focus.js): only the start-or-not pages
-const FOCUS_TABS = [
-  { href: "/", short: "This Week", tab: "week" },
-  { href: "/lockin", short: "Lock board", tab: "lockboard" },
-];
 
 export function Desk({ data }) {
   const focus = !!data?.focus;
@@ -315,9 +310,14 @@ export function Desk({ data }) {
                 )}
               </div>
 
-              <div className={cn("grid h-[var(--tabbar-h)]", focus ? "grid-cols-2" : "grid-cols-5")}>
-                {(focus ? FOCUS_TABS : primarySurfaces()).map((s) => {
-                  const active = focus ? (s.tab === "lockboard" ? pathname.startsWith("/lockin") : pathname === "/") : activeTab === s.tab;
+              {/* focus mode (lib/auth/focus.js): the lock page, and one locked door to the rest */}
+              {focus && <div className="grid h-[var(--tabbar-h)] grid-cols-2">
+                <TabItem href="/lockin" label="Lock or hold" Icon={iconForSurface("/lockin")} active={pathname.startsWith("/lockin")} current={pathname === "/lockin" ? "page" : undefined} badge={data?.bug?.toDecide > 0 ? data.bug.toDecide : null} />
+                <TabItem href="/unlock?next=%2F" label="More" Icon={KeyRound} active={pathname === "/unlock"} current={pathname === "/unlock" ? "page" : undefined} badge={null} />
+              </div>}
+              {!focus && <div className="grid h-[var(--tabbar-h)] grid-cols-5">
+                {primarySurfaces().map((s) => {
+                  const active = activeTab === s.tab;
                   const props = {
                     href: s.href,
                     label: s.short,
@@ -334,7 +334,7 @@ export function Desk({ data }) {
                     <TabItem key={s.href} {...props} />
                   );
                 })}
-                {!focus && <TabItem
+                <TabItem
                     button
                     buttonRef={menuRef}
                     label={expanded ? "Close" : "Menu"}
@@ -343,8 +343,8 @@ export function Desk({ data }) {
                     expanded={expanded}
                     controls={drawerId}
                     onClick={() => setExpanded(!expanded)}
-                  />}
-              </div>
+                  />
+              </div>}
             </div>
           </nav>
         </div>
