@@ -30,7 +30,7 @@ export function AssumeTile({ tile, label, children, className, detailsId = null 
   // Closing the sheet pops the history entry it pushed (Sheet.jsx); navigate only after
   // that pop lands, or the back would undo the new ?assume=.
   const choose = (state) => {
-    const next = withAssume(list, tile.side, tile.index, state);
+    const next = withAssume(tile.applied ?? list, tile.side, tile.index, state);
     let done = false;
     const fire = () => {
       if (done) return;
