@@ -21,7 +21,12 @@ export async function proxy(req) {
   const { pathname, search } = req.nextUrl;
   // Focus mode (PARQUET_FULL_ACCESS_PASSWORD set): only the start-or-not pages without the
   // access cookie; everything else asks for the password first.
-  if (!isFocusOpen(pathname) && !(await hasFullAccess(req.cookies.get(FULL_ACCESS_COOKIE)?.value))) {
+  // Home and the lock page say the same thing, so a focused visitor gets the lock page only.
+  const focused = (pathname === "/" || !isFocusOpen(pathname)) && !(await hasFullAccess(req.cookies.get(FULL_ACCESS_COOKIE)?.value));
+  if (focused && pathname === "/" && hasLens) {
+    return NextResponse.redirect(new URL(`/lockin${search || ""}`, req.url));
+  }
+  if (focused && !isFocusOpen(pathname)) {
     return NextResponse.redirect(new URL(unlockTarget(pathname, search), req.url));
   }
   if (!needsEntryPick(pathname, hasLens)) {
