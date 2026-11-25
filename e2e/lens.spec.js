@@ -16,3 +16,11 @@ for (const value of ["999", "abc", "-1"]) {
     });
   }
 }
+
+test("picking a team on a first visit lands on that team's page, not back on the picker", async ({ page }) => {
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/teams/);
+  await page.locator("main").getByRole("button").first().click();
+  await expect(page).not.toHaveURL(/\/teams/, { timeout: 15_000 });
+  expect((await page.context().cookies()).some((c) => c.name === LENS_COOKIE)).toBe(true);
+});

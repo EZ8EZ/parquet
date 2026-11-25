@@ -1,5 +1,4 @@
 "use client";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Check, Loader2 } from "lucide-react";
 import { Chip, Disclosure, List, ListRow } from "@/components/ui";
@@ -13,11 +12,17 @@ import { TeamAvatar } from "@/components/TeamAvatar";
  * recognise their team faster than they type their handle.
  */
 export function TeamPicker({ teams, currentRosterId, username = "", nextHref = "/" }) {
-  const router = useRouter();
   const [pending, setPending] = useState(null);
   const [name, setName] = useState(username);
   const [resolving, setResolving] = useState(false);
   const [error, setError] = useState(null);
+
+  // A full load, not router.push: before a team was picked the router prefetched the
+  // tab links (Home among them) while the proxy still redirected them to this picker,
+  // and push() would replay that cached redirect and leave the visitor here.
+  function go(href) {
+    window.location.assign(href);
+  }
 
   async function choose(rosterId) {
     setPending(rosterId);
@@ -27,8 +32,7 @@ export function TeamPicker({ teams, currentRosterId, username = "", nextHref = "
         headers: { "content-type": "application/json" },
         body: JSON.stringify({ rosterId }),
       });
-      router.push(nextHref);
-      router.refresh();
+      go(nextHref);
     } finally {
       setPending(null);
     }
@@ -50,8 +54,7 @@ export function TeamPicker({ teams, currentRosterId, username = "", nextHref = "
         setError(data.error ?? "Couldn't find that username.");
         return;
       }
-      router.push(nextHref);
-      router.refresh();
+      go(nextHref);
     } catch {
       setError("Something went wrong. Try again.");
     } finally {
