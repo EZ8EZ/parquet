@@ -61,9 +61,11 @@ function opponentTotals(m, s, w, d, seed) {
     const shown = lockedByNow ? banked : latest ? latest.fp : null;
     if (!fut.length) { fixed += shown ?? 0; return; }
     if (latest && shown != null && Math.abs(shown - latest.fp) > EPS) { fixed += shown; return; } // locked, certain
-    if (latest && latest.played) { const p = simP(pid, fut, latest.fp); if (p) riders.push({ ...p, wLocked: UNKNOWN_LOCKED }); return; }
+    // ULOCKALL=1: the share at every later deadline too, not only for the score held now (D137)
+    const every = process.env.ULOCKALL ? { lockShare: UNKNOWN_LOCKED } : {};
+    if (latest && latest.played) { const p = simP(pid, fut, latest.fp); if (p) riders.push({ ...p, wLocked: UNKNOWN_LOCKED, ...every, lockShareFrom: 1 }); return; }
     const p = simP(pid, fut, null);
-    if (p) slots.push(p);
+    if (p) slots.push({ ...p, ...every });
   });
   return W.simulateTotals({ fixed, riders, slots, shift: SHIFT }, { sims: SIMS, seed });
 }

@@ -8284,3 +8284,31 @@ A new Players tab on the lock board lists every player with his last 10 games as
 left with his average against that team. History only, as D133 decided (partial correlation 0.026, n=18,812).
 **Not changed.** No call, lean, plan or win-chance figure changes without assumptions (rivals and the history views
 are display only; the existing tests pin the desk's numbers).
+
+## D137. THE LEAN WEIGHS HIS CHANCE OF PLAYING; THE OPPONENT LOCKS WITH HIS SHARE AFTER EVERY GAME
+Both follow-ups D135 named, each tested on this league's past weeks before it changed anything.
+**Lean (D131) with his chance of playing his next game.** The lineup-aware lean valued holding a score as if he
+plays his next game (r_k unless listed Out). It now weighs playing against sitting with the play model's chance
+for that game (availabilityPerGame): p * r_k + (1 - p) * H_{k-1}(0) (policy.holderHoldValue with the game's `p`).
+Test (scripts/lockin/lean_playchance.mjs): the lineup-aware replay, knowing only who plays on the night being
+decided, two ways. Active team-weeks n=267 (28 team-seasons): +0.17 points per team-week [-1.08, +1.17] for the
+play-chance version over assuming he plays; all team-weeks n=364: +0.74 [-0.52, +1.71]; 156 of 267 totals changed
+(76 higher, 80 lower). No measured cost, and the lean now agrees with the figures on its card: cards whose lean
+contradicted them fell from 5 to 3 on each of two live recordings (2026-11-24 22:21Z, 2026-11-25 01:18Z); calls
+that flipped were marginal holds that became locks (e.g. Trey Murphy III, Miles Bridges, Darius Garland).
+**Opponent's lock share after every game.** The share (0.293, D132) applied only to the opponent's held and final
+scores, so his total dropped when one of his games ended (D135's residual). Test (scripts/lockin/
+opponent_backtest_wp.mjs, CALIB=1; n=1,442 decision points, 267 team-weeks): Brier of the predicted P(win)
+0.1290 with the share on held scores (as before), 0.1328 with no share at all, 0.1223 with the share at every
+one of his deadlines (ULOCKALL); his predicted-minus-actual total +2.4, +3.9 and -0.5; 2026 held out (n=161)
+0.1379, 0.1377 and 0.1350. So the share stays and applies at every deadline (winprob: team.lockShare; a held
+score keeps its own wLocked and the share starts at his next deadline; after tonight's game in a start or live
+chain). With it, his lineup tonight is the one Sleeper shows (an unlocked slot whose occupant plays tonight plays
+tonight in it), then the policy after tonight, as for my side. On the 2026-11-25 01:18Z capture: an opponent's
+game marked final moves r8 by +0.8 points (was +12.0); the 8 PM tip moves no roster by more than 4.6 (r10).
+On the fixture the opponent's projected total falls from 198.1 to 192.7 and the rough win chance moves from
+33.9% to 47.7%.
+**Note on the replay's level.** On today's refetch the replay gives the lineup-aware policy +24.6 points per
+team-week over what managers banked (n=267), not LEAN_RECORD's +9.4 (n=240): Sleeper serves past weeks in more
+than one version (D134), and "what managers banked" moved with it. Paired comparisons, like both above, do not
+depend on it; LEAN_RECORD is left as published until its own study is rerun.
