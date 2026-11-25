@@ -8415,3 +8415,16 @@ my side's -7.6 there. Watch it as 2026 weeks accrue.
 **Effect.** Fixture: opponent 192.7 -> 198.0, win 0.477 -> 0.358. Roster 6 live (2026-11-25): 50.2% -> 42.8%.
 **Next.** Refit the opponent's unknown-lock share and empty-slot rate on the re-read data
 (opponent_profiles.mjs); the remaining shared -5.5 bias is the nightly re-pick a static fill misses.
+
+## D143. WHO ELSE COULD PLAY THIS SLOT - bench players' projected points in the slot sheet
+
+**Why.** A manager deciding whether to keep a slot's occupant wants the bench alternatives in the same place.
+**What.** Tapping one of my slots that is not locked shows, below the what-if choices, every bench player who
+is eligible for the slot and still has a game, with his projected points if he took the slot from now, the gap
+to the occupant, his games left, his listing, and "the plan starts him at X" when the plan already uses him in
+another slot (lib/lockin/slotBench.js, desk.slotBench). Both sides use the value the plan fills slots with
+(freshValue: each game at his chance of playing it, keeping the best by the stopping rule); keeping a held
+score is the better of locking it now and holding. Projections only: the move is made in Sleeper.
+**Rejected for now.** A what-if token that subs a bench player in and re-runs the win chance: the engine's
+swap path (swapInto) exists, but every swap is another full simulation per slot and bench player; the list
+answers "who is better here" without it.

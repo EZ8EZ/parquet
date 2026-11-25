@@ -129,6 +129,7 @@ export function AssumeTile({ tile, label, children, className, detailsId = null 
           )}
         </form>
         {tile.choices.note && <p className="text-meta text-secondary">{tile.choices.note}</p>}
+        {tile.bench && <SlotBenchList bench={tile.bench} label={tile.label} />}
         <p className="text-meta text-secondary">Every number on the page follows the assumption: win chance (rough), projections, the model&apos;s calls. Sleeper does not show lock states, so the app infers them; this lets you say what you know.</p>
         {detailsId && openDeck && (
           <button
@@ -145,6 +146,46 @@ export function AssumeTile({ tile, label, children, className, detailsId = null 
         )}
       </div>
     </Sheet>
+  );
+}
+
+const f1 = (x) => (x == null ? "-" : (Math.round(x * 10) / 10).toFixed(1));
+
+/**
+ * My open slot: the occupant's projected points for the rest of the week next to every
+ * eligible bench player's if he took the slot from now (lib/lockin/slotBench.js). Projections
+ * only; the move itself is made in Sleeper.
+ */
+function SlotBenchList({ bench, label }) {
+  const { occupant, options } = bench;
+  if (!options.length) return null;
+  return (
+    <section className="rounded-card bg-surface-2 p-3" aria-label={`Who else could play ${label}`} data-slot-bench>
+      <h3 className="text-note font-semibold text-ink">Who else could play {label}</h3>
+      {occupant && (
+        <p className="mt-0.5 text-meta text-secondary">
+          Keeping {occupant.name}: <span className="figure font-semibold text-ink">{f1(occupant.expected)}</span> projected
+          {occupant.lockNow != null && occupant.ifHeld != null ? ` (${f1(occupant.lockNow)} if locked now, ${f1(occupant.ifHeld)} if held)` : ""}.
+        </p>
+      )}
+      <ul className="mt-2 space-y-1.5">
+        {options.map((o) => (
+          <li key={o.playerId} className="flex items-baseline justify-between gap-2 text-meta">
+            <span className="min-w-0">
+              <span className="font-semibold text-ink">{o.name}</span>
+              <span className="text-secondary">
+                {" "}· {o.gamesLeft} {o.gamesLeft === 1 ? "game" : "games"} left{o.status ? ` · ${o.status}` : ""}{o.elsewhere ? ` · the plan starts him at ${o.elsewhere}` : ""}
+              </span>
+            </span>
+            <span className="figure shrink-0 font-semibold text-ink">
+              {f1(o.expected)}
+              {o.vsOccupant != null && <span className={cn("ml-1 font-normal", o.vsOccupant > 0 ? "text-accent-text" : "text-secondary")}>({o.vsOccupant > 0 ? "+" : "\u2212"}{f1(Math.abs(o.vsOccupant))})</span>}
+            </span>
+          </li>
+        ))}
+      </ul>
+      <p className="mt-2 text-micro text-muted">Projected points if he took the slot from now, scored the way the plan fills a slot (his chance of playing each game, keeping the best). Starting him gives up the slot&apos;s current score. Make the move in Sleeper.</p>
+    </section>
   );
 }
 
