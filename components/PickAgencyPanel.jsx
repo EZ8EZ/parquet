@@ -107,7 +107,7 @@ export function PickAgencyPanel({ reads, summary, orderLine }) {
             return (
               <li key={g.key}>
                 <Sheet
-                  triggerLabel={`${g.title}, ${counts}. Show details`}
+                  triggerHint="Show details"
                   title={g.title}
                   subtitle={`${counts} · ${fmtValue(g.value)}`}
                   trigger={

@@ -15,7 +15,6 @@ export const dynamic = "force-dynamic";
  * award's definition, the winner and the runners-up. Every figure is a published
  * measurement from lib/superlatives; the copy states what happened (D6).
  */
-const PLACE = ["2nd", "3rd", "4th"];
 
 /**
  * A departed manager's dossier is keyed by owner id; the roster they left now
@@ -71,7 +70,6 @@ function AwardDetail({ award, meRosterId, userOf }) {
               <ListRow
                 href={entrantHref(r)}
                 highlight={rme}
-                aria-label={`${PLACE[i] ?? `${i + 2}th`}: ${r.label}, ${r.stat}`}
                 leading={String(i + 2)}
                 avatar={<TeamAvatar name={r.label} avatarId={ru?.avatar} teamLogoUrl={ru?.teamLogoUrl} size="sm" isMe={rme} />}
                 title={r.label}
@@ -101,7 +99,7 @@ function AwardRow({ award, meRosterId, userOf }) {
   return (
     <li>
       <Sheet
-        triggerLabel={`${award.title}: ${w.label}, ${award.statLine}. Show details`}
+        triggerHint="Show details"
         title={award.title}
         subtitle={w.label}
         trigger={

@@ -56,7 +56,7 @@ export function WeekGrid({ grid, caption, single = false, triggers = false }) {
               {!single && (
                 <th scope="row" className="py-1 pr-1 text-left align-middle font-normal">
                   {triggers ? (
-                    <DeckTrigger playerId={r.playerId} label={`${r.name}. Show details`} className="min-h-11 rounded-control py-1 hover:text-accent-text">
+                    <DeckTrigger playerId={r.playerId} hint="Show details" className="min-h-11 rounded-control py-1 hover:text-accent-text">
                       <span className="block text-note font-semibold text-ink">{r.name}</span>
                       {r.slotLabel && <span className="text-meta text-secondary">{r.slotLabel}</span>}
                     </DeckTrigger>

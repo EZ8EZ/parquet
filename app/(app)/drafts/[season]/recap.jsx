@@ -55,7 +55,7 @@ export function DraftRecap({ recap, meRosterId }) {
           return (
             <li key={t.rosterId}>
               <Sheet
-                triggerLabel={`${t.name}: ${t.surplus > 0 ? "+" : ""}${t.surplus} over slot. Show details`}
+                triggerHint="Show details"
                 title={t.name}
                 subtitle={`${fmtValue(t.valueAdded)} value against ${fmtValue(t.cost)} slot cost`}
                 trigger={

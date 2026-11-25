@@ -5,7 +5,14 @@ import { cn } from "@/lib/ui";
 
 /**
  * Bottom sheet: detail on tap. The trigger is a full-width button around `trigger`
- * (pass a ListRow with as="span"). The panel is a native modal <dialog>, so the page
+ * (pass a ListRow with as="span"). The trigger's accessible name is its visible
+ * content, never an overriding aria-label (WCAG 2.5.3 Label in Name: a voice-control
+ * user says what they see). Words a listener needs that the face does not print go
+ * inside the face as `<span className="sr-only">`, and `triggerHint` appends one more
+ * (usually "Show details") after it. Decorative avatars beside a printed name stay
+ * out of the name (aria-hidden monograms, `decorative` photos).
+ *
+ * The panel is a native modal <dialog>, so the page
  * behind is inert, focus stays inside, Escape closes, and focus returns to the
  * trigger. Backdrop tap and the close button also dismiss. Children mount on first
  * open, so a list of sheets costs no DOM until used. Motion: globals.css `.sheet`.
@@ -21,7 +28,7 @@ import { cn } from "@/lib/ui";
  */
 export function Sheet({
   trigger,
-  triggerLabel,
+  triggerHint,
   triggerClassName,
   title,
   subtitle,
@@ -87,11 +94,11 @@ export function Sheet({
         <button
           type="button"
           aria-haspopup="dialog"
-          aria-label={triggerLabel}
           onClick={show}
           className={cn("block w-full text-left", triggerClassName)}
         >
           {trigger}
+          {triggerHint && <span className="sr-only">{triggerHint}</span>}
         </button>
       )}
       <dialog

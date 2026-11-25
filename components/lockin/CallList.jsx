@@ -123,7 +123,7 @@ export function CallList({ rows, extra = null }) {
     <ul className="divide-y divide-border overflow-hidden rounded-card bg-surface" aria-label="Your calls">
       {rows.map((r) => (
         <li key={`${r.kind ?? "call"}-${r.playerId}`} data-call={r.action ?? "hazard"}>
-          <DeckTrigger playerId={r.playerId} label={r.kind === "start" ? `${r.title}${r.when ? `, ${r.when}` : ""}${r.condition ? `, ${r.condition}` : ""}. Show details` : `${r.name}, ${r.xText} on the table: ${r.title}. Show details`} className="transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent">
+          <DeckTrigger playerId={r.playerId} hint="Show details" className="transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent">
             <CallBody r={r} />
           </DeckTrigger>
           {extra?.(r)}

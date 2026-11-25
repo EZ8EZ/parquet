@@ -57,7 +57,7 @@ function FirstUp({ fu, title, tappable = false, className, moreHref = null }) {
           const row = <ListRow as={tappable ? "span" : undefined} chevron={tappable} leading={p.slotLabel ?? "BN"} avatar={<PlayerAvatar name={p.name} team={p.team} playerId={p.playerId} size="sm" decorative />} title={p.name} meta={<Opp team={p.opponent} away={p.away} />} />;
           return tappable ? (
             <li key={p.playerId}>
-              <DeckTrigger playerId={p.playerId} label={`${p.name}. Show details`}>
+              <DeckTrigger playerId={p.playerId} hint="Show details">
                 {row}
               </DeckTrigger>
             </li>

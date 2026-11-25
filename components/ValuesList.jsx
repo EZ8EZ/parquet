@@ -372,7 +372,7 @@ export function ValuesList({ rows }) {
                 <Sheet
                   // A `?focus=` deep link (search) opens that player's sheet on load.
                   defaultOpen={r.id === focusId}
-                  triggerLabel={`${r.name}, value ${fmtValue(r.value)}. Show details`}
+                  triggerHint="Show details"
                   title={r.name}
                   subtitle={`${meta} · ${fmtValue(r.value)}${r.tier ? ` · ${r.tier}` : ""}`}
                   trigger={
@@ -382,7 +382,7 @@ export function ValuesList({ rows }) {
                       leading={i + 1}
                       avatar={
                         photosEnabled() ? (
-                          <PlayerAvatar name={r.name} team={r.team} playerId={r.id} size="sm" />
+                          <PlayerAvatar name={r.name} team={r.team} playerId={r.id} size="sm" decorative />
                         ) : null
                       }
                       title={r.name}
@@ -394,7 +394,12 @@ export function ValuesList({ rows }) {
                         ) : null
                       }
                       meta={meta}
-                      value={fmtValue(r.value)}
+                      value={
+                        <>
+                          <span className="sr-only">value </span>
+                          {fmtValue(r.value)}
+                        </>
+                      }
                       valueSub={r.tier ? <Chip size="sm">{r.tier}</Chip> : null}
                     />
                   }

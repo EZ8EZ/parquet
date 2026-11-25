@@ -55,7 +55,6 @@ export default async function ManagersPage() {
             <li key={key}>
               <ListRow
                 href={href}
-                aria-label={`Dossier: ${p.teamName ?? p.displayName}`}
                 highlight={mine}
                 avatar={
                   <TeamAvatar

@@ -8428,3 +8428,24 @@ score is the better of locking it now and holding. Projections only: the move is
 **Rejected for now.** A what-if token that subs a bench player in and re-runs the win chance: the engine's
 swap path (swapInto) exists, but every swap is another full simulation per slot and bench player; the list
 answers "who is better here" without it.
+
+## D144. ACCESSIBLE NAMES CONTAIN WHAT IS ON SCREEN (WCAG 2.5.3) - axe-core 4.14
+
+**Why.** axe-core 4.14 turned `label-content-name-mismatch` (WCAG 2.5.3 Label in Name) on by default, and
+with it the e2e scans failed on most routes, so `@axe-core/playwright` had been held at 4.13. The rule was
+right: dozens of controls carried an `aria-label` that replaced their visible text with a different sentence
+("Viewing as Parquet Kings. Switch team" over "PK Parquet Kings", "Dossier: Wire Warriors" over the whole row),
+so a voice-control user saying what they see could miss, and the decorative avatar monograms sat in the
+visible text the name was checked against.
+**What.** No control overrides its visible text any more. The visible content is the name; words a listener
+needs that the screen does not print are `sr-only` spans inside it ("Viewing as ", "value ", ", Avery Locke,
+Locked for certain"), and the trailing "Show details" / "What if" is the trigger's `triggerHint` (Sheet) or
+`hint` (DeckTrigger), which replace `triggerLabel` / `label`. Slot tiles print their label and score and read
+the rest from `slotTiles()`'s new `aside`. The status-bar scorebug's name is what it prints and its spoken
+sentence (`bug.label`) is its `aria-describedby`. Avatars beside a printed name are decorative (aria-hidden
+monograms, `decorative` photos), so a photo's alt does not repeat the name. Countdown pills inside a link are
+aria-hidden: a name that changes every second is noise. `@axe-core/playwright` is on 4.14.1 with the full
+ruleset; nothing is disabled. Pixels are unchanged on every route checked.
+**Rejected.** Disabling the rule or pinning 4.13 (hides a real failure). Prefixing each aria-label with the
+visible text (the monogram and the row's other text still break the match, and the label drifts from the
+face). Rendering monograms as CSS content to keep them out of axe's view (passes the scanner, fixes nothing).

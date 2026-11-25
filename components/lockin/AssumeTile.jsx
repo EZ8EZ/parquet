@@ -41,7 +41,7 @@ export function useAssumeNav() {
  * with the new ?assume= (a server round trip; marks are kept until changed, D141); the tile shows it is
  * pending meanwhile. Your own slots also offer the player's sheet.
  */
-export function AssumeTile({ tile, label, children, className, detailsId = null }) {
+export function AssumeTile({ tile, hint, children, className, detailsId = null }) {
   const [open, setOpen] = useState(false);
   const { go, pending, list } = useAssumeNav();
   const openDeck = useDeck();
@@ -66,7 +66,7 @@ export function AssumeTile({ tile, label, children, className, detailsId = null 
       open={open}
       onOpenChange={setOpen}
       trigger={<span className={cn("block", pending && "animate-pulse motion-reduce:animate-none")} data-pending={pending ? "" : undefined}>{children}</span>}
-      triggerLabel={label}
+      triggerHint={hint}
       triggerClassName={cn("block w-full rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent", className)}
       title={`${tile.side === "mine" ? "Your" : "Their"} ${tile.label}${tile.name ? ` · ${tile.name}` : ""}`}
       subtitle="What if? Locked and playing-on stay until you change them; typed scores are for this visit."

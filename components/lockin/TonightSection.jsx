@@ -75,7 +75,7 @@ function SwapBar({ a, v }) {
 function Action({ a, v, node }) {
   if (a.kind === "start") {
     return (
-      <DeckTrigger playerId={a.playerId} label={`Start ${nameOf(v, a.playerId)} in ${a.slotLabel}. Show details`} className="rounded-control">
+      <DeckTrigger playerId={a.playerId} hint="Show details" className="rounded-control">
         <span className="flex items-center gap-3 py-2">
           <Face id={a.playerId} v={v} />
           <span className="min-w-0 flex-1">
@@ -99,7 +99,7 @@ function Action({ a, v, node }) {
   if (a.kind === "swap") {
     return (
       <div className="py-2">
-        <DeckTrigger playerId={a.laterId} label={`Swap ${nameOf(v, a.laterId)} in for ${nameOf(v, a.earlyId)}. Show details`} className="rounded-control">
+        <DeckTrigger playerId={a.laterId} hint="Show details" className="rounded-control">
           <span className="flex items-center gap-2">
             <Face id={a.earlyId} v={v} />
             <ArrowRight size={14} aria-hidden="true" className="shrink-0 text-faint" />
@@ -138,11 +138,16 @@ function Starting({ node, v }) {
           const p = v.players[id];
           return (
             <li key={id}>
-              <DeckTrigger playerId={id} label={`${nameOf(v, id)}${p?.slotLabel ? ` in ${p.slotLabel}` : ""}. Show details`} className="rounded-full">
+              <DeckTrigger playerId={id} hint="Show details" className="rounded-full">
                 <span className="flex min-h-11 items-center gap-2 rounded-full bg-elevated py-1 pl-1 pr-3 text-note text-ink">
                   <Face id={id} v={v} />
                   <span className="font-semibold">{nameOf(v, id)}</span>
-                  {p?.slotLabel && <span className="text-meta text-secondary">{p.slotLabel}</span>}
+                  {p?.slotLabel && (
+                    <span className="text-meta text-secondary">
+                      <span className="sr-only">in </span>
+                      {p.slotLabel}
+                    </span>
+                  )}
                   <Listing p={p} />
                 </span>
               </DeckTrigger>
@@ -199,7 +204,17 @@ function NodeRow({ node, v }) {
       {id && <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-faint" />}
     </span>
   );
-  return <li>{id ? <DeckTrigger playerId={id} label={`${stripZone(node.atText)}: ${summary}. Show details`}>{face}</DeckTrigger> : face}</li>;
+  return (
+    <li>
+      {id ? (
+        <DeckTrigger playerId={id} hint="Show details">
+          {face}
+        </DeckTrigger>
+      ) : (
+        face
+      )}
+    </li>
+  );
 }
 
 function HowItWorks({ record }) {

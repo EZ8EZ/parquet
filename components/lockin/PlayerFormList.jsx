@@ -25,7 +25,7 @@ export function PlayerFormList({ desk }) {
           const f = playerFormRow(c);
           return (
             <li key={c.playerId}>
-              <DeckTrigger playerId={c.playerId} label={`${c.name}. Charts and past games`} className="px-3.5 py-3 transition-colors hover:bg-elevated">
+              <DeckTrigger playerId={c.playerId} hint="Charts and past games" className="px-3.5 py-3 transition-colors hover:bg-elevated">
                 <div className="flex items-center gap-3">
                   <span className="w-9 shrink-0 text-center text-micro font-semibold text-secondary">{slotOf.get(c.playerId) ?? "BN"}</span>
                   <PlayerAvatar name={c.name} team={c.team} playerId={c.playerId} size="sm" decorative />

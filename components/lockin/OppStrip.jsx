@@ -9,7 +9,7 @@ import { AssumeTile } from "./AssumeTile";
  * dot before his game, a dash for an empty slot. Spans only: it sits inside the
  * opponent sheet's trigger, which carries the spoken summary.
  */
-function Face({ s }) {
+function Face({ s, label = false }) {
   return (
     <span
       data-slot-state={s.key}
@@ -23,7 +23,13 @@ function Face({ s }) {
       {!s.assumed && s.key === "locked" && <Lock size={10} strokeWidth={2.5} aria-hidden="true" className="shrink-0" />}
       {s.key === "final" && <Check size={10} strokeWidth={3} aria-hidden="true" className="shrink-0" />}
       {s.key === "reset" && <RotateCcw size={10} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-faint" />}
+      {label && <span className="sr-only">Their {s.label} </span>}
       {s.assumedScore != null ? fmt(s.assumedScore) : s.key === "yet" ? "·" : s.key === "empty" ? "—" : s.banked == null ? "—" : fmt(s.banked)}
+      {label && (
+        <span className="sr-only">
+          : {s.name ?? "empty"}, {s.assumed ? `you assumed ${s.assumed === "locked" ? "locked" : "playing on"}` : s.stateLong ?? s.key}
+        </span>
+      )}
     </span>
   );
 }
@@ -39,8 +45,9 @@ export function OppStrip({ slots }) {
     <span className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${slots.length || 7}, minmax(0, 1fr))` }}>
       {slots.map((s) =>
         s.choices ? (
-          <AssumeTile key={s.index} tile={{ ...s, side: "theirs" }} label={`Their ${s.label} ${s.banked == null ? "" : fmt(s.banked)}: ${s.name ?? "empty"}, ${s.assumed ? `you assumed ${s.assumed === "locked" ? "locked" : "playing on"}` : s.stateLong ?? s.key}. What if`}>
-            <Face s={s} />
+          <AssumeTile key={s.index} tile={{ ...s, side: "theirs" }} hint="What if">
+            {/* the button's name is the score it prints, framed by sr-only words (WCAG 2.5.3) */}
+            <Face s={s} label />
           </AssumeTile>
         ) : (
           <Face key={s.index} s={s} />

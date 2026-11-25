@@ -281,7 +281,7 @@ export default async function RegretPage({ searchParams }) {
           return (
             <li key={w.week}>
               <Sheet
-                triggerLabel={`${name}: ${fmt(w.banked)} banked of ${fmt(w.best)} available. Show details`}
+                triggerHint="Show details"
                 title={name}
                 subtitle={`${fmt(w.banked)} banked of ${fmt(w.best)} available`}
                 trigger={
@@ -303,8 +303,18 @@ export default async function RegretPage({ searchParams }) {
                         )}
                       </>
                     }
-                    value={fmt(w.banked)}
-                    valueSub={`of ${fmt(w.best)}`}
+                    value={
+                      <>
+                        {fmt(w.banked)}
+                        <span className="sr-only"> banked</span>
+                      </>
+                    }
+                    valueSub={
+                      <>
+                        of {fmt(w.best)}
+                        <span className="sr-only"> available</span>
+                      </>
+                    }
                   >
                     <WeekBar banked={w.banked} best={w.best} max={max} />
                   </ListRow>

@@ -15,7 +15,7 @@ export function PlayerRow({ card }) {
   const state = key ? SLOT_STATES[key].label : "Bench";
   return (
     <li>
-      <DeckTrigger playerId={card.playerId} label={`${card.name}, ${state}${card.banked != null ? `, ${fmt(card.banked)}` : ""}. Show details`}>
+      <DeckTrigger playerId={card.playerId} hint="Show details">
         <ListRow
           as="span"
           chevron

@@ -142,9 +142,12 @@ export function DecisionHero({ card, row, winProb = null }) {
         <AvailabilityDots card={card} />
       </div>
 
-      <DeckTrigger playerId={card.playerId} label={`${card.name}: charts, record and method. Show details`} className="-mx-3.5 -mb-3.5 mt-3 rounded-b-card border-t border-border">
+      <DeckTrigger playerId={card.playerId} hint="Show details" className="-mx-3.5 -mb-3.5 mt-3 rounded-b-card border-t border-border">
         <span className="flex min-h-12 items-center justify-between px-3.5 text-note font-semibold text-accent-text">
-          Charts, record and method
+          <span>
+            <span className="sr-only">{card.name}: </span>
+            Charts, record and method
+          </span>
           <ChevronRight size={18} aria-hidden="true" />
         </span>
       </DeckTrigger>
