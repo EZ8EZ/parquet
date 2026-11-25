@@ -8205,7 +8205,8 @@ read cannot tell which is right.
 the history figure can still differ between processes; closing that needs more reads per week or a store shared
 across processes. The two reads are not simultaneous (the first may come from a cache up to a day old), so a
 week left out may be a genuine stat correction rather than a Sleeper inconsistency; the copy says "read in more
-than one version" for that reason.
+than one version" for that reason. Pinning means a tonight player continues only in his tonight slot, so a better
+after-tonight placement for him is not considered and the plan total can be slightly low.
 **Rejected.** Counting a live game at its current score (dropped his later games); a week-long plan that ignores
 tonight's displayed lineup; changing the hero copy instead of the simulation; trusting a single read of a past
 week.
