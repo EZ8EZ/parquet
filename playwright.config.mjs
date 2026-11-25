@@ -1,5 +1,19 @@
+import { existsSync } from "node:fs";
 import { defineConfig, devices } from "@playwright/test";
 import { BASE_URL, E2E_PORT } from "./e2e/constants.js";
+
+/**
+ * Optional local override for the Chromium binary. Some sandboxes ship a single
+ * pre-installed Chromium whose revision lags the one the pinned @playwright/test
+ * expects, and cannot download a new one. Setting PW_CHROMIUM_PATH to an existing
+ * binary launches that instead. Opt-in and ignored when unset or missing, so CI
+ * (which runs `playwright install`) is unaffected.
+ */
+const chromiumPath = process.env.PW_CHROMIUM_PATH;
+const launchOptions =
+  chromiumPath && existsSync(chromiumPath)
+    ? { executablePath: chromiumPath }
+    : undefined;
 /**
  * PLAYWRIGHT E2E CONFIG - mobile-first smoke coverage against the fixture provider.
  *
@@ -33,6 +47,7 @@ export default defineConfig({
   use: {
     baseURL: BASE_URL,
     trace: "retain-on-failure",
+    ...(launchOptions && { launchOptions }),
   },
   projects: [
     {
