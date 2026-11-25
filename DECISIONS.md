@@ -8233,6 +8233,26 @@ his held and final scores but not to a score still being made, so his total drop
 (r8 +12 above). Applying the share to live slots as well fixed that switch but moved the tip by 16.6 points
 for r8, because his ordinary pre-tip slots do not carry it either; making all three consistent means applying
 the share after every opponent game, a change to the opponent model that needs its own backtest first. r7's
--5.7 is partly Cade Cunningham, who had not played when the game was marked final, so his slot reads as open.
+-5.7 comes from Cade Cunningham: he had 0 seconds played when the game was marked final, so the play model
+counted a confirmed DNP and his later-game value fell from 24.2 to 12.5 (a real change of information, not
+the state switch). For the opponent-model backtest: the lock share is applied regardless of score, but it
+only changes the result below C, and managers rarely lock low scores, so 0.293 likely overstates it exactly
+where it bites; and a final score that stands on the opponent's side now carries the share and the shift, a
+state D132 did not measure.
+**Disclosure.** Every substitution a number assumes is named on screen (review4): whatIf.plan.actions lists a
+'then_start' for each slot whose continuation is another player ("Then start Kel'el Ware at PF from Wed 8:00 PM
+ET", with the condition on tonight's score when there is one); that bench player's card carries the same call
+(decision.text, decision.planStart) instead of "Move into a slot or leave on the bench"; the hold option names
+him; and the holder card's "expected if held" is the value of the hold branch the win chance uses (the slot's
+continuation, 19.0 for Graves on the 2026-11-24 recording, his own games 13.5 kept as expectedIfHeldOwn), so
+the two figures on the card agree. Pinning a holder to his slot also means that when Tonight gives his slot to an
+earlier-tip player and his score is let go, his own later games are not offered to another slot.
 **Rejected.** A holder walking only his own later games (the bench continuation vanished at the final
-buzzer); treating a final score that stands as fixed when a bench player could still be subbed in.
+buzzer); treating a final score that stands as fixed when a bench player could still be subbed in; a plan
+figure that counts moves no call names.
+**Follow-up (next engine task).** The lineup-aware points lean (D131) still values a holder's own games as if
+he plays every game, while every figure on screen now uses his per-game play chances; where they disagree
+(5 cards on the 2026-11-24 recording, 5 at tip8 01:18) the card says why, shows the lean as marginal and sets
+lean.basisDisagrees, but the call itself is unchanged. Next: give the D131 lean the same per-game play chances
+and re-run the 240 team-week backtest; with the opponent lock-share backtest above, that is the next engine
+task.

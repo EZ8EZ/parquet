@@ -3,6 +3,7 @@ import { Chip } from "@/components/ui";
 import { cn } from "@/lib/ui";
 import { decisionNumbers, distChart, fmt, pct, playerSubtitle } from "@/lib/lockin/view";
 import { Hazards, LeanChip } from "./Decision";
+import { heldNote } from "@/lib/lockin/matchupView";
 import { DeckTrigger } from "./PlayerDeck";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { NextGameChart } from "./NextGameChart";
@@ -91,6 +92,8 @@ export function DecisionHero({ card, row, winProb = null }) {
               <LeanChip lean={row.lean} hideConditional prefix={row.leanPrefix} />
             </p>
           )}
+          {/* when the points basis and win chance disagree the chip reads marginal; say why on the card */}
+          {row.leanWhy && <p className="mt-1.5 text-meta text-muted" data-lean-why>{row.leanWhy}</p>}
           {row.reason && <p className="mt-2 text-meta text-muted">Deadline: {row.reason}.</p>}
           {row.triggers.length > 0 && (
             <ul className="mt-2 space-y-2" aria-label="What would change the call">
@@ -123,7 +126,7 @@ export function DecisionHero({ card, row, winProb = null }) {
 
       {n && (
         <div className="mt-3 grid grid-cols-3 gap-2">
-          <Tile label="Expected if held" value={fmt(n.held)} sub={n.listedOut ? "listed out next game" : `${n.k} ${n.k === 1 ? "game" : "games"} left`} />
+          <Tile label="Expected if held" value={fmt(n.held)} sub={heldNote(card) ? `(${heldNote(card)})` : n.listedOut ? "listed out next game" : `${n.k} ${n.k === 1 ? "game" : "games"} left`} />
           <Tile label="Later game beats it" value={pct(n.pIfPlays)} sub="if he plays" />
           <Tile label="Next game, 8 in 10" value={n.range ? `${fmt(n.range.p10)}–${fmt(n.range.p90)}` : "unknown"} sub={`n=${n.n} games`} />
         </div>

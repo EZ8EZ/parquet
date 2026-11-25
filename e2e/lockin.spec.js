@@ -36,6 +36,7 @@ test.describe("lock-or-hold board", () => {
     await expect(tonight).toContainText("+0.88");
     await expect(tonight).toContainText("listed start time");
     await page.getByRole("tab", { name: /Calls/ }).click();
+    await expect(board.locator('li[data-call="then_start"]').first()).toContainText(/Then start Ike Novak at C/);
     const holden = board.locator("#lk-lk02");
     await expect(holden).toContainText("31.5");
     await expect(holden).toContainText("Expected if held");
@@ -91,6 +92,12 @@ test.describe("lock-or-hold board", () => {
       await expect(row).toContainText(/(Wait until .+, then (lock|hold) · (locks|(.+ )?tips) at \d{1,2}:\d{2}|Decide now)/);
       await expect(row).toContainText(/At the deadline: model leans/);
     }
+    // the bench move the hero's win chance assumes is a call too, with its decide-by time and condition
+    const move = calls.locator('li[data-call="then_start"]').first();
+    await expect(move).toContainText(/Then start Ike Novak at C from Fri 7:30 PM/);
+    await expect(move).toContainText(/by Fri 7:20 PM · tips 7:30/);
+    await expect(move).toContainText(/If Eli Brandt's score tonight is under 16\.9/);
+    await expect(board.getByRole("heading", { name: new RegExp(`^Your calls · ${await calls.locator("li").count()}$`) })).toBeVisible();
     await expect(board.getByRole("link", { name: /Lock history/ })).toHaveAttribute("href", "/lockin?tab=history");
     await expect(board.getByRole("link", { name: /Every night and player/ })).toHaveAttribute("href", "/lockin");
     await first.getByRole("button").first().click();

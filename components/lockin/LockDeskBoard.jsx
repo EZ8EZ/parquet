@@ -196,16 +196,25 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
   }
 
   // The lock board: the same scoreboard as Home (no Tonight footer: Tonight is a tab),
-  // then Tonight · Calls · Win % · Week · History.
-  const rowsById = new Map(callRows(desk).map((r) => [r.playerId, r]));
+  // then Tonight · Calls · Win % · Week · History. Calls holds the decisions and the bench
+  // moves the hero's win chance assumes (whatIf.plan "then_start"), in decide-by order.
+  const allRows = callRows(desk);
+  const rowsById = new Map(allRows.filter((r) => r.kind !== "start").map((r) => [r.playerId, r]));
+  const starts = allRows.filter((r) => r.kind === "start");
+  const heroById = new Map(heroes.map((c) => [c.playerId, c]));
+  const ordered = allRows.filter((r) => r.kind === "start" || heroById.has(r.playerId));
   const calls = (
     <div className="space-y-3 pt-3">
       <h2 className="sr-only">Calls to make</h2>
       {hazardOnly.length > 0 && <List>{hazardOnly.map((c) => <PlayerRow key={c.playerId} card={c} />)}</List>}
-      {heroes.map((c) => (
-        <DecisionHero key={c.playerId} card={c} row={rowsById.get(c.playerId)} winProb={winProb} />
-      ))}
-      {!groups.live.length && (fu ? <FirstUp fu={fu} tappable className="mt-2" /> : <EmptyState icon={<CalendarDays size={28} aria-hidden="true" />} title="Nothing to decide">No score is waiting on a lock-or-hold call.</EmptyState>)}
+      {ordered.map((r) =>
+        r.kind === "start" ? (
+          <CallList key={`start-${r.playerId}`} rows={[r]} />
+        ) : (
+          <DecisionHero key={r.playerId} card={heroById.get(r.playerId)} row={rowsById.get(r.playerId)} winProb={winProb} />
+        ),
+      )}
+      {!groups.live.length && !starts.length && (fu ? <FirstUp fu={fu} tappable className="mt-2" /> : <EmptyState icon={<CalendarDays size={28} aria-hidden="true" />} title="Nothing to decide">No score is waiting on a lock-or-hold call.</EmptyState>)}
     </div>
   );
   const week = (
@@ -246,7 +255,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
           defaultId={start}
           items={[
             ...(tv ? [{ id: "tonight", label: "Tonight", count: tv.toDecide || undefined, content: <div className="pt-1">{tonightFull}</div> }] : []),
-            { id: "calls", label: "Calls", count: groups.live.length, content: calls },
+            { id: "calls", label: "Calls", count: groups.live.length + starts.length, content: calls },
             ...(desk.whatIf ? [{ id: "options", label: "Win %", content: <WinTable desk={desk} /> }] : []),
             { id: "week", label: "Week", content: week },
             { id: "history", label: "History", content: <div className="pt-1"><LockHistory history={desk.history} season={desk.season} inTab /></div> },
