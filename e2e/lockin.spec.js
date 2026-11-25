@@ -169,8 +169,16 @@ test.describe("lock-or-hold board", () => {
     await expect(page.locator("dialog[open] [data-assume-sheet]").getByRole("button", { name: "Treat as playing on" })).toHaveCount(0);
     await page.keyboard.press("Escape");
     await expect(page.locator("dialog[open]")).toHaveCount(0);
-    // links to the lock board keep it
+    // links to the lock board keep it, and from the lock board This Week keeps it, badge hidden
     await expect(board.getByRole("link", { name: /Every night and player/ })).toHaveAttribute("href", /assume=t0O/);
+    await page.goto("/lockin?assume=t0O");
+    const weekTab = page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: /^This Week/ });
+    await expect(weekTab).toHaveAttribute("href", "/?assume=t0O");
+    await expect(weekTab).not.toContainText(/calls? open/);
+    // a hand-typed token the board cannot honour is dropped (their SG has no games left; leading zero)
+    await page.goto("/?assume=t1O,m01L");
+    await expect(board.locator("[data-whatif-bar]")).toHaveCount(0);
+    await page.goto("/?assume=t0O");
     await bar.getByRole("button", { name: "Reset" }).click();
     await page.waitForURL((u) => !u.search.includes("assume"), { waitUntil: "commit" });
     await expect(board.locator("[data-whatif-bar]")).toHaveCount(0);
