@@ -272,8 +272,9 @@ export function Desk({ data }) {
                     </span>
                     {data.bug.next?.text && (
                       <span aria-hidden="true" className="flex shrink-0 items-center gap-1.5">
-                        <span className="text-secondary">{data.bug.next.text}</span>
-                        <Countdown at={data.bug.next.at} pill compact />
+                        {/* under 380px the countdown pill carries the next move alone (the full time is in the label) */}
+                        <span className={data.bug.next.urgent ? "text-warn" : "text-secondary max-[380px]:hidden"}>{data.bug.next.text}</span>
+                        {data.bug.next.at && <Countdown at={data.bug.next.at} pill compact />}
                       </span>
                     )}
                     <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-faint" />
