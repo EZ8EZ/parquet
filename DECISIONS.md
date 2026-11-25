@@ -8250,3 +8250,9 @@ earlier-tip player and his score is let go, his own later games are not offered 
 **Rejected.** A holder walking only his own later games (the bench continuation vanished at the final
 buzzer); treating a final score that stands as fixed when a bench player could still be subbed in; a plan
 figure that counts moves no call names.
+**Follow-up (next engine task).** The lineup-aware points lean (D131) still values a holder's own games as if
+he plays every game, while every figure on screen now uses his per-game play chances; where they disagree
+(5 cards on the 2026-11-24 recording, 5 at tip8 01:18) the card says why, shows the lean as marginal and sets
+lean.basisDisagrees, but the call itself is unchanged. Next: give the D131 lean the same per-game play chances
+and re-run the 240 team-week backtest; with the opponent lock-share backtest above, that is the next engine
+task.
