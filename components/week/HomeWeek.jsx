@@ -29,7 +29,7 @@ function SoonDeadline({ d }) {
  * refresh button carrying the as-of time and the board's zone), the scoreboard with
  * Tonight in its footer, then Your calls. Streams in behind SlotPreview (app/page.jsx).
  */
-export async function HomeWeek({ h, rosterId, replay = null, record = null, assumeParam = null }) {
+export async function HomeWeek({ h, rosterId, replay = null, record = null, assumeParam = null, focusLocked = false }) {
   const week = await loadWeek(h, rosterId, { replay, assumeParam });
   const desk = week.desk;
   const bh = desk ? boardHeader(desk) : null;
@@ -53,7 +53,7 @@ export async function HomeWeek({ h, rosterId, replay = null, record = null, assu
       </div>
       {desk && <LockDeskBoard rosterId={rosterId} desk={desk} mode="compact" fullHref={fullHref} replay={replay} record={record} me={teamIdentity(h, rosterId)} them={desk.opponent ? teamIdentity(h, desk.opponent.rosterId) : null} />}
       <InjuredStarters injured={week.injured} />
-      <SoonDeadline d={soonDeadline(week.deadlines, week.window)} />
+      {!focusLocked && <SoonDeadline d={soonDeadline(week.deadlines, week.window)} />}
     </>
   );
 }

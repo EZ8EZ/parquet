@@ -8278,7 +8278,7 @@ occupied slot may carry one (even one not played yet or live). The simulation us
 both sides at once (model / locked, at the score it holds or a typed one / playing on); each tile's sheet also takes
 a typed score.
 **Past games vs every opponent left.** Cards carry `opponentsAhead` (one entry per game left, up to the last 5
-meetings each) and `seasonAverage`. The player sheet's last tab is "Vs opponents" (a block per game with the average
+meetings each) and `seasonAverage`. The player sheet's Week tab now also shows past games against each team left (a block per game with the average
 against that team beside his season average, and what was unusual about a meeting where the last-15 series has it).
 A new Players tab on the lock board lists every player with his last 10 games as bars, season average and each game
 left with his average against that team. History only, as D133 decided (partial correlation 0.026, n=18,812).
@@ -8312,3 +8312,18 @@ On the fixture the opponent's projected total falls from 198.1 to 192.7 and the 
 team-week over what managers banked (n=267), not LEAN_RECORD's +9.4 (n=240): Sleeper serves past weeks in more
 than one version (D134), and "what managers banked" moved with it. Paired comparisons, like both above, do not
 depend on it; LEAN_RECORD is left as published until its own study is rerun.
+
+## D138. FOCUS MODE - share the lock-or-hold helper behind a password for everything else
+
+**Why.** The lock-or-hold helper is going to friends for feedback; the rest of the app (trades, rosters,
+league pages) is noise for that and not theirs to browse. **What.** When the deployment sets
+`PARQUET_FULL_ACCESS_PASSWORD`, a visitor without the access cookie can open only `/` (This Week), `/lockin`
+(and its tabs), `/teams`, `/claim` and `/unlock`; every other page redirects to `/unlock?next=...`. The right
+password sets an httpOnly cookie (`parquet_full`, 180 days) holding HMAC-SHA256 of a fixed message under the
+password (Web Crypto, compared in constant time), so changing the password locks everyone out again. In focus
+mode the bottom bar shows This Week and Lock board only, and Home hides its links to other pages. Without the
+variable nothing changes. Not gated: `/api/*` (the proxy matcher excludes it, as before) - focus mode hides
+pages, it is not data security. (lib/auth/focus.js, proxy.js, app/(app)/unlock.)
+**Method note.** "How these numbers are made" is now one screen of formulas (forecast, play chance, the
+stopping recursion, the win-chance simulation, the rivals product) with the fitted figures beside them, in
+place of the longer prose.

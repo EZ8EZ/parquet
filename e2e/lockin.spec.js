@@ -47,9 +47,9 @@ test.describe("lock-or-hold board", () => {
     await holden.getByRole("button", { name: /charts, record and method/ }).click();
     const sheet = page.locator("dialog[open]");
     await expect(sheet.getByRole("heading", { name: "Bryce Holden" })).toBeVisible();
-    // the sheet is four short tabs: Call first, then Form, Week, Vs opponents
+    // the sheet is three short tabs: Call first, then Form, Week (with past games vs this week's opponents)
     await expect(sheet.getByText(/Filled dots beat 31\.5/)).toBeVisible();
-    await sheet.getByRole("tab", { name: "Vs opponents" }).click();
+    await sheet.getByRole("tab", { name: "Week" }).click();
     await expect(sheet.getByText("History only")).toBeVisible();
     await sheet.getByRole("tab", { name: "Form" }).click();
     await expect(sheet.getByText("Last 15 games")).toBeVisible();
@@ -221,7 +221,7 @@ test.describe("lock-or-hold board", () => {
     const first = page.locator('[aria-label$="Charts and past games"]').first();
     await expect(first).toBeVisible();
     await first.click();
-    await page.locator("dialog[open]").getByRole("tab", { name: "Vs opponents" }).click();
+    await page.locator("dialog[open]").getByRole("tab", { name: "Week" }).click();
     await expect(page.locator("dialog[open]")).toContainText("Past games vs this week's opponents");
     expectNoConsoleErrors(guard);
   });
