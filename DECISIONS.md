@@ -8210,3 +8210,29 @@ after-tonight placement for him is not considered and the plan total can be slig
 **Rejected.** Counting a live game at its current score (dropped his later games); a week-long plan that ignores
 tonight's displayed lineup; changing the hero copy instead of the simulation; trusting a single read of a past
 week.
+
+## D135. EVERY UNLOCKED SLOT IS A CHAIN - a live game, a held score and a final score that stands all yield to the slot's continuation
+**Decision.** Under the plan (lib/lockin/matchup.js teamSimInput), a slot whose score is not locked is one chain,
+whatever state it is in: its first part is tonight's game (a start or the lineup Tonight shows), the game in
+progress (in-game projection, or the pre-game forecast without a box score), or the score already banked (a
+held score, or a final score that stands, with no spread); the slot keeps that score when it reaches C, the
+value of the slot's continuation, and otherwise plays the continuation the policy assigns: his own later games
+or a bench player (players in tonight's lineup and holders pinned to their own slot, so nobody counts twice). A
+subbed-out score is lost (owner rule 1). The lock / hold / wait options and the card win chances use the same
+chain: lock keeps the score, hold lets it go and the slot plays its continuation, wait is the chain decided at
+the deadline. With a tonight lineup, starts are inside the continuations and are not applied again. The
+points-based lean is unchanged (it reads the card's stopping values, not these). 'Do nothing' is unchanged.
+**Evidence.** Reviewer synthetic (holder L, bench B at 40 a game x2): live near the end 44.2; after the final
+buzzer 30.0 (x=30) and 26.0 (x=20) before this decision, 44.2 / 44.2 / 45.0 after. QA tip8 01:18 capture,
+BOS@WAS tip vs the same capture with the game set back to pre_game, rosters 7/8/10/12: -0.9 / +1.4 / -0.1 /
+-0.1 points of win chance. DET@ORL marked final vs the same game still in progress at its end (projection =
+points so far, no spread), so that only the state changes: r7 -25.6 -> -5.7, r10 -7.3 -> 0.0, r12 +0.7 -> +1.2,
+r8 +10.7 -> +12.0.
+**Residual limit.** The opponent's unknown-lock share (league value 0.293, n=16,047 situations; D132) applies to
+his held and final scores but not to a score still being made, so his total drops when one of his games ends
+(r8 +12 above). Applying the share to live slots as well fixed that switch but moved the tip by 16.6 points
+for r8, because his ordinary pre-tip slots do not carry it either; making all three consistent means applying
+the share after every opponent game, a change to the opponent model that needs its own backtest first. r7's
+-5.7 is partly Cade Cunningham, who had not played when the game was marked final, so his slot reads as open.
+**Rejected.** A holder walking only his own later games (the bench continuation vanished at the final
+buzzer); treating a final score that stands as fixed when a bench player could still be subbed in.
