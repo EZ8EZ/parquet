@@ -16,20 +16,22 @@ import { RosterCrunchPanel } from "@/components/RosterCrunchPanel";
 import { HomeWeek } from "@/components/week/HomeWeek";
 import { SlotPreview } from "@/components/week/SlotPreview";
 import { isFocusLocked } from "@/lib/auth/focusServer";
+import { savedAssumeFor } from "@/lib/lockin/savedAssumeServer";
 
 export const dynamic = "force-dynamic";
 
 export default async function ThisWeekPage({ searchParams }) {
   const sp = await searchParams;
   const at = sp?.at;
-  // the viewer's what-if lock states (?assume=m3L,t5O): URL only, never stored; checked
-  // against the board in loadLockDesk
-  const assumeParam = typeof sp?.assume === "string" ? sp.assume : Array.isArray(sp?.assume) ? sp.assume.join(",") : null;
+  // the viewer's what-if lock states (?assume=m3L,t5O), checked against the board in
+  // loadLockDesk; without one in the URL, the marks they kept (D141, below)
+  const assumeInUrl = typeof sp?.assume === "string" ? sp.assume : Array.isArray(sp?.assume) ? sp.assume.join(",") : null;
   const replay = replayAllowed() && typeof at === "string" ? at : null;
   // focus mode (lib/auth/focus.js): a visitor without the password sees only the lock-in pages
   const focusLocked = await isFocusLocked();
   const h = await getLeagueHistory();
   const rosterId = h.me.rosterId;
+  const assumeParam = assumeInUrl ?? (await savedAssumeFor(rosterId));
   const ctx = weekContext(h);
   const [principals, forms, digest, preview] = await Promise.all([
     getPrincipals(h),

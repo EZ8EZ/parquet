@@ -8372,3 +8372,17 @@ and D140 on an unbiased P(win). (2) The behavioural opponent predicts totals low
 assumed lost to the slot's continuation; measure what real managers' slots end with after not locking before
 modelling it. (3) Re-read 2025 matchups twice and keep only weeks that agree (lib/lockin/consensus.js) before
 using them again.
+
+## D141. WHAT-IF LOCKS STAY UNTIL CHANGED; THE OWNER CAN START OVER AS A NEW VISITOR
+
+**Why.** A viewer who marks an opponent's slot as locked (seen in the Sleeper app) lost the mark on the next
+visit, since ?assume= lived in the URL only. **What.** Lock and playing-on marks, on either side, are kept in a
+plain cookie (`parquet_whatif`, "<roster>~<expires>~<tokens>", lib/lockin/savedAssume.js) written by the browser
+when the what-if changes and read by Home and the lock page when the URL carries no ?assume=. They last until
+changed, Reset, another team is picked (the cookie names its roster), or the next Monday 16:00 UTC, before any
+game of the next lock-in week, when slot numbers mean other players. Typed hypothetical scores are not kept.
+Every kept token is still checked against the live board (validAssume), so a mark that no longer fits drops.
+**Start over.** With focus mode on (D138) and the password entered, the Menu offers "See it as a new visitor":
+it deletes the access, team and what-if cookies (a claimed seat stays) and opens /teams directly, because a
+redirect from a server action renders its target without passing the proxy, so "/" would open on the default
+team instead of the front door.

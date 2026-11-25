@@ -7,6 +7,7 @@ import { isFixtureDesk, loadLockDesk, replayAllowed } from "@/lib/lockin/source"
 import { boardHeader, winPctOf } from "@/lib/lockin/view";
 import { teamIdentity } from "@/lib/lockin/matchupView";
 import { keepAssume } from "@/lib/lockin/assumeView";
+import { savedAssumeFor } from "@/lib/lockin/savedAssumeServer";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Lock or hold" };
@@ -32,8 +33,10 @@ export default async function LockInPage({ searchParams }) {
     );
   }
   const replay = replayAllowed() ? one(sp.at) : null;
-  // the viewer's what-if lock states (?assume=m3L,t5O): URL only, never stored
-  const assumeParam = typeof sp?.assume === "string" ? sp.assume : Array.isArray(sp?.assume) ? sp.assume.join(",") : null;
+  // the viewer's what-if lock states (?assume=m3L,t5O); without one in the URL, the marks
+  // they kept (D141)
+  const assumeInUrl = typeof sp?.assume === "string" ? sp.assume : Array.isArray(sp?.assume) ? sp.assume.join(",") : null;
+  const assumeParam = assumeInUrl ?? (await savedAssumeFor(rosterId));
   const desk = await loadLockDesk({ rosterId, replay, players: h.players, assumeParam });
   const hd = boardHeader(desk);
   const fullHref = keepAssume(replay ? `/lockin?at=${encodeURIComponent(replay)}` : "/lockin", desk.assumptions?.list ?? []);

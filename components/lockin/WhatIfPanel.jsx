@@ -18,7 +18,7 @@ function initial(t) {
 /**
  * Every slot on both sides in one list: leave it to the model, treat it as locked (at
  * the score it holds, or a score you type), or treat it as playing on. Apply re-renders
- * the page with the new ?assume= (nothing is stored; Reset or Refresh clears it). The
+ * the page with the new ?assume= (marks are kept until changed, D141; typed scores are not). The
  * same choices the slot tiles offer, gathered so several can be set at once.
  */
 export function WhatIfPanel({ mine, theirs, themName }) {
@@ -134,7 +134,7 @@ export function WhatIfPanel({ mine, theirs, themName }) {
       triggerLabel="What if: lock players or type scores, on either side"
       triggerClassName="block w-full rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       title="What if?"
-      subtitle="Set any slot, then apply. Nothing is saved; Reset or Refresh clears it."
+      subtitle="Set any slot, then apply. Locked and playing-on marks stay until you change them or press Reset; typed scores are for this visit only."
     >
       <div className="space-y-4" data-whatif-panel>
         {section("mine", "Your slots")}
