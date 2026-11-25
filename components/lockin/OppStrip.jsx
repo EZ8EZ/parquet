@@ -16,7 +16,7 @@ function Face({ s }) {
       data-assumed={s.assumed ?? undefined}
       className={cn(
         "flex h-7 min-w-0 items-center justify-center gap-px rounded-control figure text-meta font-semibold",
-        s.assumed ? "bg-surface-2 text-ink outline-1 -outline-offset-1 outline-dashed outline-secondary" : s.key === "locked" ? "bg-them-wash text-info" : s.key === "final" ? "bg-elevated text-ink" : s.key === "empty" ? "border border-dashed border-border-strong text-faint" : "text-muted",
+        s.assumed ? "bg-surface-2 text-ink outline-1 -outline-offset-1 outline-dashed outline-secondary" : s.key === "locked" ? "bg-them-wash text-info" : s.key === "final" ? "bg-elevated text-ink" : s.key === "empty" ? "bg-bg text-faint" : "text-muted",
       )}
     >
       {s.assumed && <PencilLine size={10} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-secondary" />}
@@ -39,7 +39,7 @@ export function OppStrip({ slots }) {
     <span className="grid gap-1.5" style={{ gridTemplateColumns: `repeat(${slots.length || 7}, minmax(0, 1fr))` }}>
       {slots.map((s) =>
         s.choices ? (
-          <AssumeTile key={s.index} tile={{ ...s, side: "theirs" }} label={`Their ${s.label} ${s.banked == null ? "" : fmt(s.banked)}: ${s.name ?? "empty"}, ${s.stateLong ?? s.key}${s.assumed ? `, you assumed ${s.assumed === "locked" ? "locked" : "playing on"}` : ""}. What if`}>
+          <AssumeTile key={s.index} tile={{ ...s, side: "theirs" }} label={`Their ${s.label} ${s.banked == null ? "" : fmt(s.banked)}: ${s.name ?? "empty"}, ${s.assumed ? `you assumed ${s.assumed === "locked" ? "locked" : "playing on"}` : s.stateLong ?? s.key}. What if`}>
             <Face s={s} />
           </AssumeTile>
         ) : (

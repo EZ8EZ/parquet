@@ -9,7 +9,8 @@ const FACE = {
   locked: "bg-accent-wash text-accent-text",
   final: "bg-elevated text-ink",
   yet: "bg-transparent text-muted ring-1 ring-inset ring-border-strong",
-  empty: "bg-transparent text-faint border border-dashed border-border-strong",
+  // sunken, no outline: the dashed outline belongs to assumed tiles alone
+  empty: "bg-bg text-faint",
 };
 
 /** The glyph that says the state in the tile itself (no legend needed). An assumption gets a pencil, never the real lock. */
@@ -58,7 +59,7 @@ export function SlotCells({ tiles, className }) {
         return (
           <li key={t.index} className="min-w-0" data-slot-call={t.call ? "" : undefined}>
             {t.choices ? (
-              <AssumeTile tile={t} label={`${t.spoken}${t.assumed ? `, you assumed ${t.assumed === "locked" ? "locked" : "playing on"}` : ""}. What if`} detailsId={t.playerId}>
+              <AssumeTile tile={t} label={`${t.assumed ? `${t.label} ${t.text}, ${t.name ?? "empty"}, you assumed ${t.assumed === "locked" ? "locked" : "playing on"}` : t.spoken}. What if`} detailsId={t.playerId}>
                 {face}
               </AssumeTile>
             ) : t.playerId ? (
