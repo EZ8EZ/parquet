@@ -26,12 +26,18 @@ week's first game. One dark design system throughout (`DESIGN.md`, `/design`).
   side by side, the chance a later game beats it if he plays, and the model's lean with
   its confidence. Below it, other live decisions, who plays first, injured starters,
   league deadlines and up to three to-dos.
-- **Lock or hold** (`/lockin`): the same slots, then Decide now, Nights (who plays which
-  night) and Players tabs.
-- **The player sheet**: tap a slot, card or row to open one player's numbers and charts
-  (last 15 games, next-game outcomes, his week, minutes, and past games against the next
-  opponent, marked as history), with previous and next to compare players without
-  closing it. "The lean's record" and "How these numbers are made" sit one tap away.
+- **Lock or hold** (`/lockin`): the win chance against this week's opponent (both
+  lineups, banked and projected), a **What if** panel (mark any slot, yours or theirs,
+  locked or open, or type a hypothetical score), then six tabs: **Tonight** (what to
+  start and what to lock before each tip), **Calls** (every open lock-or-hold call, with
+  win chance if locked vs held and who on the bench could still beat the score),
+  **Players** (form and past games against the opponents left), **Win %**, **Week**
+  (who plays which night) and **History** (past lock calls against the model's).
+- **The player sheet**: tap a slot, card or row to open one player's numbers in three
+  tabs: **Call**, **Form** (last 15 games, next-game outcomes, minutes) and **Week** (his
+  nights, plus past games against each opponent left, marked as history), with previous
+  and next to compare players without closing it. "The lean's record" and "How these
+  numbers are made" (the formulas, one screen) sit one tap away.
 - **Refresh**: one tap re-reads only what can have changed (this week's matchups, the
   NBA state, the schedule, and the game logs of players whose games have tipped), at
   most once per team per 20 seconds. While one of your games is in progress and the tab
@@ -50,6 +56,12 @@ of the week, which is 0 if he does not play. For each starter `lib/lockin` compu
   comes from a model of his next game (recent form, and the spread of his last 30 games).
 - **Chance a later game beats it**: the probability that a later game this week is played
   and scores more than the score he could lock now.
+- **Win chance**: a 4,000-draw simulation of both lineups to Sunday. Each open slot
+  keeps a score only if it beats what the slot is worth after it (which can be a bench
+  player); the opponent locks an unknown score with this league's share (0.293, n=16,047)
+  after each game. Brier 0.122 on 1,442 past decision points.
+- **Who could beat it**: for a score you might let go, each player who could still fill
+  the slot, his chance of beating it at least once, and the chance any of them does.
 - **The lean**: lock, hold or none, labelled as the model's. It weighs the whole lineup
   (open slots, who still plays tonight and later), not one player alone. Its record in a
   backtest against what managers actually banked: **+9.4 points per team-week, 95%
@@ -57,8 +69,11 @@ of the week, which is 0 if he does not play. For each starter `lib/lockin` compu
 
 What they are not:
 
-- Not a reading of lock state, which Sleeper does not expose. A lock is certain only when
-  the banked score differs from his latest completed game and matches an earlier one.
+- Not a reading of lock state, which Sleeper's API does not expose. A lock is certain only
+  when the banked score differs from his latest completed game and matches an earlier
+  one. Locks seen in the Sleeper app can be recorded by hand:
+  `node scripts/lockin/mark-locks.mjs --me <roster> <names>` (`--mine`, `--list`,
+  `--unmark`), then commit `lib/lockin/knownLocks.data.js` (D139).
 - Not free of assumptions. The backtest knew who would play his next game. Sleeper does
   not record mid-week lineup moves; under the most pessimistic reading of them the simpler
   per-player rule gains only +0.8 (+0.3 to +1.5) per team-week.
@@ -114,6 +129,7 @@ if that port is taken. `pnpm e2e` runs every spec. Environment variables, all op
 | `AUTH_SECRET` | unset | Unset is single-user mode. Set, ledger writes need a signed seat; `pnpm claim-links <origin>` prints one link per manager |
 | `NEXT_PUBLIC_USE_PLAYER_PHOTOS` | on | `false` turns Sleeper headshots off. A fork's Vercel deploy defaults to off (`lib/photos.js`) |
 | `PARQUET_DEBUG_TIMINGS` | unset | `1` logs load times of the two heaviest loaders |
+| `PARQUET_FULL_ACCESS_PASSWORD` | unset | Focus mode for sharing: without the password a visitor sees the team picker and the lock-or-hold page only, everything else asks for it (D138). Unset, everything is open |
 | `LOCKIN_REPLAY_DIR` | unset | Development only: `?at=<id>` replays a recorded set of Sleeper responses from this directory. Ignored in production builds |
 
 ## Deploy (Vercel)
@@ -121,6 +137,12 @@ if that port is taken. `pnpm e2e` runs every spec. Environment variables, all op
 Connect the repository to Vercel; no environment variables are needed. Vercel builds a
 preview for each pushed branch and production from the default branch (its standard
 behaviour for a Git-connected project). `pnpm build` runs `prisma generate` first.
+
+To share the lock-or-hold helper with people outside the project: set
+`PARQUET_FULL_ACCESS_PASSWORD` (a new value applies from the next deploy, and changing it
+signs everyone out) and turn off Vercel Deployment Protection, which otherwise asks every
+visitor for a Vercel login. Focus mode hides pages; it does not secure data, and `/api/*`
+stays open.
 
 All Sleeper reads go through one client (`lib/providers/sleeper/client.js`): 5 s timeout
 per attempt, and one table of cache lifetimes, from forever for completed seasons to
