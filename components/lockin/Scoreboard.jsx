@@ -62,11 +62,13 @@ export function TonightFoot({ line, tz, frozenAt = null, nowMs = null, href = "/
     );
   }
   const db = line.at ? decideBy(line.at, tz, { nowMs }) : null;
+  // tonight's starters are all in slots; or, with nobody left to start, the calls still to make
+  const what = line.count > 0 ? `${line.count} ${line.count === 1 ? "player" : "players"}, all in slots` : `${line.calls} ${line.calls === 1 ? "call" : "calls"} to make`;
   const when = db ? (db.passed ? `decide now · tips ${db.tipText}` : `by ${db.byClock} · tips ${db.tipText}`) : line.atText;
   return (
     <Link
       href={href}
-      aria-label={`Tonight: ${db ? `set by ${db.byClock}, first tip ${db.tipText}` : "first tip time unknown"}, ${line.count} ${line.count === 1 ? "player" : "players"}, all in slots. Open Tonight`}
+      aria-label={`Tonight: ${db ? `set by ${db.byClock}, first tip ${db.tipText}` : "first tip time unknown"}, ${what}. Open Tonight`}
       className="-mx-3.5 -mb-3.5 mt-3 flex min-h-[52px] items-center gap-2.5 border-t border-border px-3.5 py-2"
       data-tonight="set"
     >
@@ -79,7 +81,7 @@ export function TonightFoot({ line, tz, frozenAt = null, nowMs = null, href = "/
           {line.at && <Countdown at={line.at} frozenAt={frozenAt} pill bufferMin={DECIDE_BUFFER_MIN} />}
         </span>
         <span className="mt-0.5 block text-meta text-muted">
-          {line.count} {line.count === 1 ? "player" : "players"}, all in slots
+          {what}
         </span>
       </span>
       <span aria-hidden="true" className="flex shrink-0 -space-x-2.5">
