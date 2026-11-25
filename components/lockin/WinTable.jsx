@@ -67,12 +67,13 @@ export function WinTable({ desk }) {
             {t.rows.map((r) => (
               <tr key={r.playerId}>
                 <th scope="row" className="border-t border-border px-1 py-2 text-left font-normal">
-                  <DeckTrigger playerId={r.playerId} label={`${r.name}, ${r.xText} on the table. Show details`} className="flex min-h-11 items-center gap-2 rounded-control">
+                  <DeckTrigger playerId={r.playerId} hint="Show details" className="flex min-h-11 items-center gap-2 rounded-control">
                     <PlayerAvatar name={r.name} team={r.team} playerId={r.playerId} size="sm" decorative />
                     <span className="min-w-0">
                       <span className="block text-note font-semibold text-ink">{r.name}</span>
                       <span className="block figure text-micro text-secondary">
                         {r.slotLabel} · {r.xText}
+                        <span className="sr-only"> on the table</span>
                       </span>
                     </span>
                   </DeckTrigger>

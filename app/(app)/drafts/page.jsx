@@ -104,8 +104,12 @@ export default async function DraftsPage() {
               <li key={s.draftId}>
                 <ListRow
                   href={`/drafts/${s.season}`}
-                  aria-label={`${s.season} draft board`}
-                  title={<span className="figure">{s.season}</span>}
+                  title={
+                    <>
+                      <span className="figure">{s.season}</span>
+                      <span className="sr-only"> draft board</span>
+                    </>
+                  }
                   badge={
                     <>
                       {s.pickCount === 0 && <Chip size="sm">upcoming</Chip>}

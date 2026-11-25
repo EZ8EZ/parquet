@@ -42,7 +42,6 @@ export function PartnersRow({ partners }) {
           <li key={p.rosterId}>
             <Link
               href={`/managers/${p.rosterId}`}
-              aria-label={`${p.name}: dossier`}
               title={p.name}
               className="flex min-h-11 items-center justify-center rounded-full transition-colors hover:bg-surface-2"
             >
@@ -53,6 +52,9 @@ export function PartnersRow({ partners }) {
                 size="md"
                 className="rounded-full"
               />
+              {/* The avatar is the whole face of this link and is decorative (an
+                  aria-hidden monogram or an alt="" logo), so the name is this text. */}
+              <span className="sr-only">{p.name}: dossier</span>
             </Link>
           </li>
         ))}

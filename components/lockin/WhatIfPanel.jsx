@@ -128,10 +128,12 @@ export function WhatIfPanel({ mine, theirs, themName }) {
       trigger={
         <span className={cn("mt-2 flex min-h-11 items-center justify-center gap-1.5 rounded-control bg-surface-2 px-3 text-note font-semibold text-accent-text", pending && "animate-pulse motion-reduce:animate-none")}>
           <SlidersHorizontal size={15} aria-hidden="true" />
-          What if… lock players or type scores
+          <span>
+            What if… lock players or type scores
+            <span className="sr-only">, on either side</span>
+          </span>
         </span>
       }
-      triggerLabel="What if: lock players or type scores, on either side"
       triggerClassName="block w-full rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       title="What if?"
       subtitle="Set any slot, then apply. Locked and playing-on marks stay until you change them or press Reset; typed scores are for this visit only."

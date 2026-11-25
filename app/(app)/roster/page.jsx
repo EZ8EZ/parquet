@@ -252,14 +252,14 @@ export default async function RosterPage() {
               )}
               <li>
                 <Sheet
-                  triggerLabel={`${v.name}, value ${fmtValue(v.value)}. Show details`}
+                  triggerHint="Show details"
                   title={v.name}
                   subtitle={`${meta}${v.tier ? ` · ${v.tier}` : ""}`}
                   trigger={
                     <ListRow
                       as="span"
                       chevron
-                      avatar={<PlayerAvatar name={v.name} team={v.team} playerId={v.playerId} size="sm" />}
+                      avatar={<PlayerAvatar name={v.name} team={v.team} playerId={v.playerId} size="sm" decorative />}
                       title={v.name}
                       badge={
                         v.injury ? (
@@ -269,7 +269,12 @@ export default async function RosterPage() {
                         ) : null
                       }
                       meta={meta}
-                      value={fmtValue(v.value)}
+                      value={
+                        <>
+                          <span className="sr-only">value </span>
+                          {fmtValue(v.value)}
+                        </>
+                      }
                       valueSub={a.playerValue ? `${Math.round((v.value / a.playerValue) * 100)}% of team` : null}
                     />
                   }

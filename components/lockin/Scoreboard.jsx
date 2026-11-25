@@ -70,9 +70,10 @@ export function TonightFoot({ line, tz, frozenAt = null, nowMs = null, href = "/
   const what = line.count > 0 ? `${line.count} ${line.count === 1 ? "player" : "players"}, all in slots` : `${line.calls} ${line.calls === 1 ? "call" : "calls"} to make`;
   const when = db ? (db.passed ? `decide now · tips ${db.tipText}` : `by ${db.byClock} · tips ${db.tipText}`) : line.atText;
   return (
+    // The link's name is what it prints (WCAG 2.5.3) plus sr-only words; the countdown
+    // stays out of it (aria-hidden), or the name would change every second.
     <Link
       href={href}
-      aria-label={`Tonight: ${db ? `set by ${db.byClock}, first tip ${db.tipText}` : "first tip time unknown"}, ${what}. Open Tonight`}
       className="-mx-3.5 -mb-3.5 mt-3 flex min-h-[52px] items-center gap-2.5 border-t border-border px-3.5 py-2"
       data-tonight="set"
     >
@@ -81,11 +82,17 @@ export function TonightFoot({ line, tz, frozenAt = null, nowMs = null, href = "/
         <span className="flex flex-wrap items-center gap-x-2 gap-y-1">
           <span className={cn("text-note font-semibold", db?.passed ? "text-warn" : "text-ink")}>
             Tonight <span className="font-normal text-secondary">·</span> {when}
+            {!db && <span className="sr-only">, first tip time unknown</span>}
           </span>
-          {line.at && <Countdown at={line.at} frozenAt={frozenAt} pill bufferMin={DECIDE_BUFFER_MIN} />}
+          {line.at && (
+            <span aria-hidden="true" className="contents">
+              <Countdown at={line.at} frozenAt={frozenAt} pill bufferMin={DECIDE_BUFFER_MIN} />
+            </span>
+          )}
         </span>
         <span className="mt-0.5 block text-meta text-muted">
           {what}
+          <span className="sr-only">. Open Tonight</span>
         </span>
       </span>
       <span aria-hidden="true" className="flex shrink-0 -space-x-2.5">
@@ -110,7 +117,6 @@ export function Scoreboard({ v, desk, slots, record = null, footer = null }) {
   const them = v.them;
   const win = v.win;
   const pctNum = win == null ? null : Math.round(win * 100);
-  const oppLabel = `${them.name}: ${v.oppSummary || "no slots"}. Show details`;
   const bar = whatIfBar(desk);
   return (
     <section aria-label="This week's matchup" data-scoreboard data-matchup={v.state} className="rounded-card bg-surface p-3.5">
@@ -147,8 +153,12 @@ export function Scoreboard({ v, desk, slots, record = null, footer = null }) {
               <div className="mt-0.5 flex items-center justify-center gap-1 whitespace-nowrap text-note text-muted">
                 <span>to win ·</span>
                 <Sheet
-                  trigger={<span className="text-secondary underline decoration-dotted underline-offset-4">rough</span>}
-                  triggerLabel="Rough: what the win chance is and is not. Show details"
+                  trigger={
+                    <span className="text-secondary underline decoration-dotted underline-offset-4">
+                      rough<span className="sr-only">: what the win chance is and is not</span>
+                    </span>
+                  }
+                  triggerHint="Show details"
                   triggerClassName="inline-flex min-h-11 min-w-11 items-center justify-center rounded-control focus-visible:outline-2 focus-visible:outline-accent"
                   title="A rough win chance"
                   subtitle="If you follow the model's calls"
@@ -191,12 +201,12 @@ export function Scoreboard({ v, desk, slots, record = null, footer = null }) {
           <span className="mt-2 flex min-h-11 items-center gap-1.5 border-t border-border pt-1 text-meta">
             <span className="min-w-0 flex-1 font-semibold text-muted">
               {them.name}
-              {v.oppSummary && <span className="font-normal text-secondary"> · {v.oppSummary}</span>}
+              {v.oppSummary ? <span className="font-normal text-secondary"> · {v.oppSummary}</span> : <span className="sr-only">: no slots</span>}
             </span>
             <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-accent-text" />
           </span>
         }
-        triggerLabel={oppLabel}
+        triggerHint="Show details"
         triggerClassName="block w-full rounded-control text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         title={them.name}
         subtitle={[them.ownerName, them.record].filter(Boolean).join(" · ") || null}

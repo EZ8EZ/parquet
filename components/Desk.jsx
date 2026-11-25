@@ -112,6 +112,7 @@ export function Desk({ data }) {
   const drawerRef = useRef(null);
   const menuRef = useRef(null);
   const drawerId = useId();
+  const bugDescId = useId();
 
   const close = useCallback(() => {
     setExpanded(false);
@@ -275,42 +276,58 @@ export function Desk({ data }) {
             </div>
 
             <div className="bg-surface pb-[env(safe-area-inset-bottom)] shadow-[0_-1px_0_var(--color-border)]">
-              {/* The scorebug never truncates: lib/desk.js keeps it short enough to fit. */}
+              {/* The scorebug never truncates: lib/desk.js keeps it short enough to fit. Its
+                  accessible name is what it prints (WCAG 2.5.3: no aria-label over the
+                  visible text), and the spoken sentence (bug.label) is its description. */}
               <div className="desk-statusbar flex h-[var(--statusbar-h)] items-center gap-2 border-b border-border px-4">
                 {data?.seat ? (
-                  <Link
-                    href={data.bug.href}
-                    aria-label={data.bug.label}
-                    className="flex min-w-0 flex-1 items-center gap-2 self-stretch whitespace-nowrap figure text-meta font-semibold text-ink transition-colors hover:text-accent-text"
-                  >
-                    <TeamAvatar
-                      name={data.seat.label}
-                      avatarId={data.seat.avatarId}
-                      teamLogoUrl={data.seat.teamLogoUrl}
-                      size="xs"
-                      className="size-5 shrink-0 rounded-full"
-                    />
-                    <span className="min-w-0 flex-1">
-                      {data.bug.parts.map((part, i) => (
-                        <Fragment key={i}>
-                          {i > 0 && (
-                            <span aria-hidden="true" className="mx-1.5 text-faint">
-                              ·
+                  <>
+                    <Link
+                      href={data.bug.href}
+                      aria-describedby={bugDescId}
+                      className="flex min-w-0 flex-1 items-center gap-2 self-stretch whitespace-nowrap figure text-meta font-semibold text-ink transition-colors hover:text-accent-text"
+                    >
+                      <TeamAvatar
+                        name={data.seat.label}
+                        avatarId={data.seat.avatarId}
+                        teamLogoUrl={data.seat.teamLogoUrl}
+                        size="xs"
+                        className="size-5 shrink-0 rounded-full"
+                      />
+                      <span className="min-w-0 flex-1">
+                        {data.bug.parts.map((part, i) => (
+                          <Fragment key={i}>
+                            {i > 0 && (
+                              <>
+                                <span aria-hidden="true" className="mx-1.5 text-faint">
+                                  ·
+                                </span>
+                                {/* the parts are inline, so without this the name runs them together */}
+                                <span className="sr-only">, </span>
+                              </>
+                            )}
+                            <span className={i === 0 && !data.bug.next ? "text-secondary" : undefined}>{part}</span>
+                          </Fragment>
+                        ))}
+                      </span>
+                      {data.bug.next?.text && (
+                        <span className="flex shrink-0 items-center gap-1.5">
+                          {/* under 380px the countdown pill carries the next move alone (the full time is in the description) */}
+                          <span className={data.bug.next.urgent ? "text-warn" : "text-secondary max-[380px]:hidden"}>{data.bug.next.text}</span>
+                          {/* kept out of the name, which would otherwise change every second */}
+                          {data.bug.next.at && (
+                            <span aria-hidden="true" className="contents">
+                              <Countdown at={data.bug.next.at} pill compact />
                             </span>
                           )}
-                          <span className={i === 0 && !data.bug.next ? "text-secondary" : undefined}>{part}</span>
-                        </Fragment>
-                      ))}
+                        </span>
+                      )}
+                      <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-faint" />
+                    </Link>
+                    <span id={bugDescId} hidden>
+                      {data.bug.label}
                     </span>
-                    {data.bug.next?.text && (
-                      <span aria-hidden="true" className="flex shrink-0 items-center gap-1.5">
-                        {/* under 380px the countdown pill carries the next move alone (the full time is in the label) */}
-                        <span className={data.bug.next.urgent ? "text-warn" : "text-secondary max-[380px]:hidden"}>{data.bug.next.text}</span>
-                        {data.bug.next.at && <Countdown at={data.bug.next.at} pill compact />}
-                      </span>
-                    )}
-                    <ChevronRight size={14} aria-hidden="true" className="shrink-0 text-faint" />
-                  </Link>
+                  </>
                 ) : data ? (
                   <Link
                     href="/teams"

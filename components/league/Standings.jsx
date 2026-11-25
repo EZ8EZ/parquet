@@ -30,7 +30,7 @@ export function Standings({ standings, details = {} }) {
         return (
           <li key={r.rosterId}>
             <Sheet
-              triggerLabel={`${place}. ${r.name}${r.isMe ? " (you)" : ""}, record ${record}. Show details`}
+              triggerHint="Show details"
               title={r.name}
               subtitle={r.ownerName}
               trigger={
@@ -51,7 +51,12 @@ export function Standings({ standings, details = {} }) {
                   title={r.name}
                   badge={r.isMe ? <Chip tone="accent" size="sm">You</Chip> : null}
                   meta={`Value #${r.valueRank}`}
-                  value={record}
+                  value={
+                    <>
+                      <span className="sr-only">record </span>
+                      {record}
+                    </>
+                  }
                   valueSub={r.pointsFor != null ? `${r.pointsFor.toLocaleString("en-US", { maximumFractionDigits: 1 })} PF` : null}
                 />
               }

@@ -44,7 +44,7 @@ test.describe("lock-or-hold board", () => {
     await expect(holden).toContainText(/if not already locked/i);
     // a wait's lean is the call at the deadline
     await expect(holden).toContainText(/(At the deadline: m|M)odel leans (lock|hold) · (marginal|moderate|clear)/);
-    await holden.getByRole("button", { name: /charts, record and method/ }).click();
+    await holden.getByRole("button", { name: /Charts, record and method/ }).click();
     const sheet = page.locator("dialog[open]");
     await expect(sheet.getByRole("heading", { name: "Bryce Holden" })).toBeVisible();
     // the sheet is three short tabs: Call first, then Form, Week (with past games vs this week's opponents)
@@ -60,7 +60,7 @@ test.describe("lock-or-hold board", () => {
     await page.keyboard.press("Escape");
     await expect(page.locator("dialog[open]")).toHaveCount(0);
     // the back button closes an open sheet and stays on the page
-    await holden.getByRole("button", { name: /charts, record and method/ }).click();
+    await holden.getByRole("button", { name: /Charts, record and method/ }).click();
     await expect(page.locator("dialog[open]")).toBeVisible();
     await page.goBack();
     await expect(page.locator("dialog[open]")).toHaveCount(0);
@@ -93,7 +93,7 @@ test.describe("lock-or-hold board", () => {
     await expect(move).toContainText(/by Fri 7:20 PM · tips 7:30/);
     await expect(move).toContainText(/If Eli Brandt's score tonight is under 16\.9/);
     for (const name of ["Players", "Week", "History"]) await expect(page.getByRole("tab", { name: new RegExp(`^${name}`) })).toBeVisible();
-    await panel.getByRole("button", { name: /charts, record and method/ }).first().click();
+    await panel.getByRole("button", { name: /Charts, record and method/ }).first().click();
     await expect(page.locator("dialog[open]")).toContainText("Boom or bust");
     await page.keyboard.press("Escape");
     await board.locator('ol[aria-label="Your starting slots this week"] button').first().click();
@@ -118,13 +118,13 @@ test.describe("lock-or-hold board", () => {
     await expect(page.getByText(/^Week 4/).first()).toBeInViewport();
     await expect(matchup.locator("[data-win-prob]")).toBeInViewport();
     await expect(board.locator('ol[aria-label="Your starting slots this week"]')).toBeInViewport();
-    const oppTrigger = matchup.getByRole("button", { name: /Synthetic Sixers: .*Show details/ });
+    const oppTrigger = matchup.getByRole("button", { name: /^Synthetic Sixers · .*Show details$/ });
     await expect(oppTrigger).toBeInViewport();
     await expect(board.locator("[data-tonight]").first()).toBeVisible();
     // the scorebug steps aside on the scoreboard page
     await expect(page.locator(".desk-statusbar")).toBeHidden();
     // "rough" explains itself
-    await matchup.getByRole("button", { name: /^Rough:/ }).click();
+    await matchup.getByRole("button", { name: /^rough\s*: what the win chance is/ }).click();
     await expect(page.locator("dialog[open]")).toContainText("did not win more matchups");
     await page.keyboard.press("Escape");
     await expect(page.locator("dialog[open]")).toHaveCount(0);
@@ -214,7 +214,7 @@ test.describe("lock-or-hold board", () => {
     await primeLens(page);
     await page.goto("/");
     const before = await page.locator("[data-win-prob]").first().innerText();
-    await page.getByRole("button", { name: /What if: lock players or type scores/ }).click();
+    await page.getByRole("button", { name: /^What if… lock players or type scores/ }).click();
     const panel = page.locator("dialog[open] [data-whatif-panel]");
     const row = panel.locator("li").first();
     await row.getByRole("button", { name: "Locked" }).click();
@@ -233,7 +233,7 @@ test.describe("lock-or-hold board", () => {
     await expect(rivals).toContainText(/his own games/);
     await expect(rivals).toContainText(/At least one of them beats [\d.]+: \d+%/);
     await page.getByRole("tab", { name: "Players" }).click();
-    const first = page.locator('[aria-label$="Charts and past games"]').first();
+    const first = page.getByRole("button", { name: /Charts and past games$/ }).first();
     await expect(first).toBeVisible();
     await first.click();
     await page.locator("dialog[open]").getByRole("tab", { name: "Week" }).click();
@@ -272,7 +272,7 @@ test.describe("lock-or-hold board", () => {
     await expect(holden.locator("[data-win-compare]")).toContainText("Rough win chance");
     await expect(holden.locator("[data-win-compare]")).toContainText(/if lock\s*\d+%/);
     await expect(holden.locator("[data-win-compare]")).not.toContainText("model leans");
-    await holden.getByRole("button", { name: /charts, record and method/ }).click();
+    await holden.getByRole("button", { name: /Charts, record and method/ }).click();
     const sheet = page.locator("dialog[open]");
     await expect(sheet.getByRole("heading", { name: "Boom or bust" })).toBeVisible();
     await expect(sheet.locator("[data-profile]")).toContainText(/Boom \d+% · [\d.]+\+ pts/);
@@ -284,7 +284,7 @@ test.describe("lock-or-hold board", () => {
   test("no accessibility violations with the opponent sheet open", async ({ page }) => {
     await primeLens(page);
     await page.goto("/");
-    await page.locator("[data-matchup]").getByRole("button", { name: /^Synthetic Sixers: .*Show details/ }).click();
+    await page.locator("[data-matchup]").getByRole("button", { name: /^Synthetic Sixers · .*Show details$/ }).click();
     await expect(page.locator("dialog[open]")).toBeVisible();
     expect(axeList(await new AxeBuilder({ page }).analyze())).toEqual([]);
   });

@@ -7,6 +7,11 @@ import { TeamAvatar } from "@/components/TeamAvatar";
  * The app header: brand home link left, the team you are viewing as right: avatar,
  * team name and a chevron, so "whose team is this" is answered on every page (opens
  * the team switcher). Sticky, solid, clears the notch via safe-area-inset-top.
+ *
+ * The switcher's accessible name is its visible text with the context around it in
+ * sr-only spans ("Viewing as <team>. Switch team"), not an aria-label: an overriding
+ * label would leave out what is on screen (WCAG 2.5.3), and the avatar's monogram is
+ * decorative (aria-hidden), so it is not part of the name either.
  */
 export function AppHeader({ seat }) {
   return (
@@ -23,7 +28,6 @@ export function AppHeader({ seat }) {
         {seat ? (
           <Link
             href="/teams"
-            aria-label={`Viewing as ${seat.label}. Switch team`}
             className="-mr-1.5 flex min-h-11 max-w-[60%] items-center gap-2 rounded-full bg-surface py-1 pl-1 pr-2.5 transition-colors hover:bg-surface-2"
           >
             <TeamAvatar
@@ -36,7 +40,9 @@ export function AppHeader({ seat }) {
             {/* The name wraps to a second line rather than truncating (D111); the
                 header row is tall enough for two lines at this size. */}
             <span className="min-w-0 text-meta font-semibold leading-[14px] text-ink">
+              <span className="sr-only">Viewing as </span>
               {seat.label}
+              <span className="sr-only">. Switch team</span>
             </span>
             <ChevronDown size={16} aria-hidden="true" className="shrink-0 text-secondary" />
           </Link>

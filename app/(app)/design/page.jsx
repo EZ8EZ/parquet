@@ -74,7 +74,7 @@ const TYPE = [
 
 function Avatar({ initials }) {
   return (
-    <span className="flex size-9 items-center justify-center rounded-full bg-elevated text-meta font-bold text-muted">
+    <span aria-hidden="true" className="flex size-9 items-center justify-center rounded-full bg-elevated text-meta font-bold text-muted">
       {initials}
     </span>
   );
@@ -177,7 +177,7 @@ export default function DesignPage() {
         </li>
         <li>
           <Sheet
-            triggerLabel="Karl-Anthony Towns, value 4,120. Show details"
+            triggerHint="Show details"
             title="Karl-Anthony Towns"
             subtitle="C · NYK · 30"
             leading={<Avatar initials="KT" />}
@@ -187,7 +187,7 @@ export default function DesignPage() {
                 <ButtonLink href="/design" variant="secondary" className="flex-1">Values</ButtonLink>
               </>
             }
-            trigger={<ListRow as="span" chevron avatar={<Avatar initials="KT" />} title="Karl-Anthony Towns" meta="C · NYK · 30" value="4,120" valueSub="Starter" />}
+            trigger={<ListRow as="span" chevron avatar={<Avatar initials="KT" />} title="Karl-Anthony Towns" meta="C · NYK · 30" value={<><span className="sr-only">value </span>4,120</>} valueSub="Starter" />}
           >
             <div className="grid grid-cols-2 gap-2">
               <StatTile label="Value" value="4,120" className="bg-surface-2" />

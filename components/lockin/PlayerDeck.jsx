@@ -82,12 +82,18 @@ export function useDeck() {
   return useContext(Deck);
 }
 
-/** Opens one player's panel in the deck. Children are its visible face. */
-export function DeckTrigger({ playerId, label, className, children }) {
+/**
+ * Opens one player's panel in the deck. Children are its visible face, and they are
+ * also its accessible name (no aria-label override, WCAG 2.5.3): context a listener
+ * needs goes inside the face as sr-only text, and `hint` (usually "Show details") is
+ * appended after it.
+ */
+export function DeckTrigger({ playerId, hint, className, children }) {
   const open = useContext(Deck);
   return (
-    <button type="button" aria-haspopup="dialog" aria-label={label} onClick={() => open?.(playerId)} className={cn("block w-full text-left", className)}>
+    <button type="button" aria-haspopup="dialog" onClick={() => open?.(playerId)} className={cn("block w-full text-left", className)}>
       {children}
+      {hint && <span className="sr-only">{hint}</span>}
     </button>
   );
 }
