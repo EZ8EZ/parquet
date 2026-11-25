@@ -103,7 +103,7 @@ function panelsFor(desk, methodHref) {
 /**
  * The lock-or-hold board for one roster. mode "compact" is Home's week section: the
  * seven slots, the most urgent decision in full, the other live ones as rows. mode
- * "full" is /lockin: slots, three figures, then Decide now / Nights / Players tabs.
+ * "full" is /lockin: slots, three figures, then Tonight / Calls to make / Win % / Nights / Players tabs.
  * Every player opens in one sheet with previous / next.
  */
 export async function LockDeskBoard({ rosterId, mode = "full", players = null, open = null, replay = null, fullHref = "/lockin", desk: given = null, methodOpen = false, me = null, them = null, tab = null, record = null }) {
@@ -199,7 +199,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
   const rowsById = new Map(callRows(desk).map((r) => [r.playerId, r]));
   const calls = (
     <div className="space-y-3 pt-3">
-      <h2 className="sr-only">Calls</h2>
+      <h2 className="sr-only">Calls to make</h2>
       {hazardOnly.length > 0 && <List>{hazardOnly.map((c) => <PlayerRow key={c.playerId} card={c} />)}</List>}
       {heroes.map((c) => (
         <DecisionHero key={c.playerId} card={c} row={rowsById.get(c.playerId)} winProb={winProb} />

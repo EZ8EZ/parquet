@@ -88,7 +88,7 @@ test.describe("lock-or-hold board", () => {
     await expect(first.locator("[data-win-compare]")).toContainText(/if lock\s*\d+%/);
     // a wait headline names the call at the deadline, never a bare chip
     for (const row of await calls.locator('li[data-call="wait"]').all()) {
-      await expect(row).toContainText(/(Wait until .+, then (lock|hold) · (locks|tips) at \d{1,2}:\d{2}|Decide now)/);
+      await expect(row).toContainText(/(Wait until .+, then (lock|hold) · (locks|(.+ )?tips) at \d{1,2}:\d{2}|Decide now)/);
       await expect(row).toContainText(/At the deadline: model leans/);
     }
     await expect(board.getByRole("link", { name: /Lock history/ })).toHaveAttribute("href", "/lockin?tab=history");
