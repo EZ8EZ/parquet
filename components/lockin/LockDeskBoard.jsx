@@ -102,7 +102,7 @@ function panelsFor(desk, methodHref) {
 /**
  * The lock-or-hold board for one roster. mode "compact" is Home's week section: the
  * seven slots, the most urgent decision in full, the other live ones as rows. mode
- * "full" is /lockin: slots, three figures, then Decide now / Nights / Players tabs.
+ * "full" is /lockin: slots, three figures, then Tonight / Calls to make / Win % / Nights / Players tabs.
  * Every player opens in one sheet with previous / next.
  */
 export async function LockDeskBoard({ rosterId, mode = "full", players = null, open = null, replay = null, fullHref = "/lockin", desk: given = null, methodOpen = false, me = null, them = null, tab = null, record = null }) {
@@ -205,7 +205,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
 
   const decide = (
     <div className="space-y-3 pt-3">
-      <h2 className="sr-only">Decide now</h2>
+      <h2 className="sr-only">Calls to make</h2>
       {hazardOnly.length > 0 && <List>{hazardOnly.map((c) => <PlayerRow key={c.playerId} card={c} />)}</List>}
       {heroes.map((c) => (
         <DecisionHero key={c.playerId} card={c} winProb={winProb} tz={displayTz(desk)} today={desk.today} nowMs={Date.parse(desk.generatedAt)} />
@@ -246,7 +246,8 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
           defaultId={tab === "options" && desk.whatIf ? "options" : tv?.next ? "tonight" : "decide"}
           items={[
             ...(tv ? [{ id: "tonight", label: "Tonight", count: tv.toDecide || undefined, content: <div className="pt-1">{tonightFull}</div> }] : []),
-            { id: "decide", label: tv ? "Decide" : "Decide now", count: groups.live.length, content: decide },
+            // "Decide now" is the in-buffer call label, so the tab is named for what it holds
+            { id: "decide", label: "Calls to make", count: groups.live.length, content: decide },
             ...(desk.whatIf ? [{ id: "options", label: "Win %", content: <div className="pt-1"><WhatIf desk={desk} /></div> }] : []),
             { id: "nights", label: "Nights", content: nights },
             { id: "players", label: "Players", count: desk.whatIf ? undefined : desk.cards.length, content: everyone },

@@ -35,7 +35,7 @@ test.describe("lock-or-hold board", () => {
     await tonight.getByText("How tonight's order is worked out").click();
     await expect(tonight).toContainText("+0.88");
     await expect(tonight).toContainText("listed start time");
-    await page.getByRole("tab", { name: /Decide/ }).click();
+    await page.getByRole("tab", { name: /Calls to make/ }).click();
     const holden = board.locator("#lk-lk02");
     await expect(holden).toContainText("31.5");
     await expect(holden).toContainText("Expected if held");
@@ -163,7 +163,7 @@ test.describe("lock-or-hold board", () => {
     await expect(history).toContainText("Held past a bigger score");
     await expect(history).toContainText("How you play");
     await expect(history).not.toContainText(/mistake|too early|too long|should/i);
-    await page.getByRole("tab", { name: /Decide/ }).click();
+    await page.getByRole("tab", { name: /Calls to make/ }).click();
     const holden = board.locator("#lk-lk02");
     // win chances sit beside the lean (which rests on points) as information
     await expect(holden.locator("[data-win-compare]")).toContainText(/Rough win chance: if lock \d+% · if hold \d+%/);
