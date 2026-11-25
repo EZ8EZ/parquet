@@ -194,6 +194,27 @@ test.describe("lock-or-hold board", () => {
     expectNoConsoleErrors(guard);
   });
 
+  test("what-if marks stay until changed: a plain visit to Home or the lock board keeps them, Reset forgets them (D141)", async ({ page }) => {
+    const guard = watchConsole(page);
+    await primeLens(page);
+    await page.goto("/");
+    const board = page.locator('[data-lockin-board="compact"]');
+    await board.getByRole("button", { name: /^Their PG .*What if$/ }).click();
+    await page.locator("dialog[open] [data-assume-sheet]").getByRole("button", { name: "Treat as playing on" }).click();
+    await page.waitForURL(/assume=t0O/, { waitUntil: "commit" });
+    await expect(board.locator("[data-whatif-bar]")).toContainText("1 assumed");
+    // no ?assume= in the URL: the kept mark still applies, on Home and on the lock board
+    await page.goto("/");
+    await expect(board.locator("[data-whatif-bar]")).toContainText("1 assumed");
+    await page.goto("/lockin");
+    await expect(page.locator("[data-whatif-bar]").first()).toContainText("1 assumed");
+    await page.locator("[data-whatif-bar]").first().getByRole("button", { name: "Reset" }).click();
+    await page.waitForURL((u) => !u.search.includes("assume"), { waitUntil: "commit" });
+    await page.goto("/");
+    await expect(board.locator("[data-whatif-bar]")).toHaveCount(0);
+    expectNoConsoleErrors(guard);
+  });
+
   test("what-if panel: lock a slot at a typed score, see it on the tile and in the bar; Players tab and past games vs each opponent", async ({ page }) => {
     const guard = watchConsole(page);
     await primeLens(page);

@@ -6,21 +6,39 @@ import { Sheet } from "@/components/ui";
 import { cn } from "@/lib/ui";
 import { assumeFromSearch, assumeHref, parseTypedScore, withAssume } from "@/lib/lockin/assumeView";
 import { useDeck } from "./PlayerDeck";
+import { SAVED_ASSUME_COOKIE, encodeSaved, weekEndMs } from "@/lib/lockin/savedAssume";
 
 /** Replace the page's ?assume= in place (scroll kept), returning [go, pending]. */
+// D141: lock and play-on marks stay until changed (lib/lockin/savedAssume.js); the team is the
+// one the viewer picked (the parquet_roster cookie, readable by design)
+function rememberMarks(list) {
+  try {
+    const roster = /(?:^|;\s*)parquet_roster=(\d+)/.exec(document.cookie)?.[1];
+    const value = roster ? encodeSaved(roster, list) : null;
+    document.cookie = value
+      ? `${SAVED_ASSUME_COOKIE}=${encodeURIComponent(value)}; path=/; max-age=${Math.ceil((weekEndMs() - Date.now()) / 1000)}; samesite=lax`
+      : `${SAVED_ASSUME_COOKIE}=; path=/; max-age=0; samesite=lax`;
+  } catch {
+    // cookies blocked: the what-if still works for this visit
+  }
+}
+
 export function useAssumeNav() {
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
   const [pending, start] = useTransition();
-  const go = (list) => start(() => router.replace(assumeHref(pathname, search?.toString() ?? "", list), { scroll: false }));
+  const go = (list) => {
+    rememberMarks(list);
+    start(() => router.replace(assumeHref(pathname, search?.toString() ?? "", list), { scroll: false }));
+  };
   return { go, pending, list: assumeFromSearch(search?.toString() ?? "") };
 }
 
 /**
  * A slot tile that opens the what-if choice: "Treat as locked at 33.0" / "Treat as
  * playing on" / "Model's guess", the current one marked. Choosing re-renders the page
- * with the new ?assume= (a server round trip; nothing is stored); the tile shows it is
+ * with the new ?assume= (a server round trip; marks are kept until changed, D141); the tile shows it is
  * pending meanwhile. Your own slots also offer the player's sheet.
  */
 export function AssumeTile({ tile, label, children, className, detailsId = null }) {
@@ -51,7 +69,7 @@ export function AssumeTile({ tile, label, children, className, detailsId = null 
       triggerLabel={label}
       triggerClassName={cn("block w-full rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent", className)}
       title={`${tile.side === "mine" ? "Your" : "Their"} ${tile.label}${tile.name ? ` · ${tile.name}` : ""}`}
-      subtitle="What if? Nothing is saved; refresh clears it."
+      subtitle="What if? Locked and playing-on stay until you change them; typed scores are for this visit."
     >
       <div className="space-y-3" data-assume-sheet>
         {tile.contradiction && <p className="rounded-control bg-warn-wash px-3 py-2 text-note text-ink">{tile.contradiction}</p>}

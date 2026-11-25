@@ -15,7 +15,8 @@
 import { Fragment, Suspense, useCallback, useEffect, useId, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname, useSearchParams } from "next/navigation";
-import { ChevronRight, ExternalLink, KeyRound, Menu, X } from "lucide-react";
+import { ChevronRight, ExternalLink, KeyRound, Menu, UserRound, X } from "lucide-react";
+import { startOverAction } from "@/lib/auth/startOver";
 import { primarySurfaces, tabOf, utilitySurfaces } from "@/lib/nav";
 import { cn } from "@/lib/ui";
 import { iconForSurface } from "./nav-icons";
@@ -240,6 +241,22 @@ export function Desk({ data }) {
                       </li>
                     );
                   })}
+                  {data?.focusOn && !focus && (
+                    <li>
+                      <form action={startOverAction}>
+                        <button
+                          type="submit"
+                          className="flex min-h-14 w-full items-center gap-3 px-3.5 py-2 text-left transition-colors hover:bg-surface-2"
+                        >
+                          <UserRound size={18} aria-hidden="true" className="shrink-0 text-secondary" />
+                          <span className="min-w-0 flex-1">
+                            <span className="block text-body font-semibold text-ink">See it as a new visitor</span>
+                            <span className="block text-meta text-secondary">Signs this browser out: team picker first, password needed again</span>
+                          </span>
+                        </button>
+                      </form>
+                    </li>
+                  )}
                   {data?.seat?.sleeperHref && (
                     <li>
                       <a
