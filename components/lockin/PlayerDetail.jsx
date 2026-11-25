@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { Disclosure, Tabs } from "@/components/ui";
-import { basisText, distChart, minutesChart, opponentsAheadView, playerWeekGrid, stripChart } from "@/lib/lockin/view";
+import { basisText, distChart, minutesChart, opponentsAheadView, playerWeekGrid, signedPts, stripChart } from "@/lib/lockin/view";
 import { DecisionFigures, Hazards, LeanChip, WhenLine } from "./Decision";
 import { LastFifteenStrip } from "./LastFifteenStrip";
 import { NextGameChart } from "./NextGameChart";
@@ -29,24 +29,13 @@ function Block({ title, sub, children }) {
 const Missing = ({ text }) => <p className="text-note text-muted">{text}</p>;
 
 function Record({ record, methodHref }) {
-  const pessimistic = record.rotationCaveat?.match(/falls to (\+[\d.]+)/)?.[1];
-  const blind = record.availabilityCaveat?.match(/gain was (\+[\d.]+)/)?.[1];
   return (
     <Disclosure summary="The lean's record">
       <ul className="space-y-1.5">
         <li>
-          <span className="figure font-semibold text-ink">+{record.gainPerTeamWeek}</span> points per team-week over what managers banked (95% interval +{record.interval95[0]} to +{record.interval95[1]}, n={record.n} team-weeks), in a backtest that knew who would play his next game.
+          <span className="figure font-semibold text-ink">{signedPts(record.gainPerTeamWeek)}</span> points per team-week against what managers banked (95% interval {signedPts(record.interval95[0])} to {signedPts(record.interval95[1])}, n={record.n} team-weeks). {record.verdict}
         </li>
-        {blind && (
-          <li>
-            Without knowing who would play: <span className="figure font-semibold text-ink">{blind}</span> for the simpler per-player rule.
-          </li>
-        )}
-        {pessimistic && (
-          <li>
-            If managers could not have swapped starters mid-week: only <span className="figure font-semibold text-ink">{pessimistic}</span>.
-          </li>
-        )}
+        <li>{record.availabilityCaveat}</li>
       </ul>
       <Link href={methodHref} className="mt-2 inline-block font-semibold text-accent-text underline underline-offset-2">
         How these numbers are made

@@ -1,5 +1,6 @@
 import { Disclosure } from "@/components/ui";
 import { MATCHUP } from "@/lib/lockin/matchup";
+import { signedPts } from "@/lib/lockin/view";
 
 const pp = (x) => `${Math.round(x * 1000) / 10}%`;
 
@@ -9,7 +10,7 @@ function Eq({ children }) {
 
 /**
  * "How these numbers are made": short and mathematical, one screen. Figures come from
- * MODEL_INFO and LEAN_RECORD; the opponent and calibration figures are D132 and D137.
+ * MODEL_INFO and LEAN_RECORD; the opponent and calibration figures are D132, D137 and D142.
  */
 export function MethodNote({ model, record, open = false }) {
   const c = model.calibration;
@@ -44,7 +45,7 @@ export function MethodNote({ model, record, open = false }) {
           <p className="mt-1">S<sub>i</sub>(x) = share of his draws ≥ x; g = the beat-it recalibration (logistic, fitted on real lock situations).</p>
         </div>
         <p className="text-meta text-secondary">
-          Backtest: +{record.gainPerTeamWeek} pts/team-week vs {record.comparedWith} [{record.interval95[0]}, {record.interval95[1]}], n={record.n}. Opponent history, matchup and teammate effects stay out of every number (no measurable signal).
+          Backtest of the lean: {signedPts(record.gainPerTeamWeek)} pts/team-week vs {record.comparedWith} [{signedPts(record.interval95[0])}, {signedPts(record.interval95[1])}], n={record.n}: no measurable gain. Opponent history, matchup and teammate effects stay out of every number (no measurable signal).
         </p>
       </Disclosure>
     </div>

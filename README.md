@@ -64,8 +64,10 @@ of the week, which is 0 if he does not play. For each starter `lib/lockin` compu
   the slot, his chance of beating it at least once, and the chance any of them does.
 - **The lean**: lock, hold or none, labelled as the model's. It weighs the whole lineup
   (open slots, who still plays tonight and later), not one player alone. Its record in a
-  backtest against what managers actually banked: **+9.4 points per team-week, 95%
-  interval +5.5 to +14.7, n=240 active team-weeks** (2025 weeks 1-23, 2026 weeks 1-3).
+  backtest against what managers actually banked: **+0.7 points per team-week, 95%
+  interval -2.6 to +4.6, n=271 active team-weeks** (2025 weeks 1-23 re-read 2026-11-25,
+  2026 weeks 1-3): no measurable gain. The +9.4 published before came from a 2025 copy
+  Sleeper now serves differently and a replay that knew later availability (D142).
 
 What they are not:
 
@@ -74,9 +76,10 @@ What they are not:
   one. Locks seen in the Sleeper app can be recorded by hand:
   `node scripts/lockin/mark-locks.mjs --me <roster> <names>` (`--mine`, `--list`,
   `--unmark`), then commit `lib/lockin/knownLocks.data.js` (D139).
-- Not free of assumptions. The backtest knew who would play his next game. Sleeper does
-  not record mid-week lineup moves; under the most pessimistic reading of them the simpler
-  per-player rule gains only +0.8 (+0.3 to +1.5) per team-week.
+- Not free of assumptions. The backtest's replay knows only what a manager knew each
+  night; told in advance who would sit out a later game it gained +1.9 (-1.5 to +6.0).
+  Sleeper does not record mid-week lineup moves, so what managers banked is read from
+  their final lineups.
 - Not exact at the top: the chance a later game beats it overstates by up to 13 points
   in the 0.6-0.8 band (n=731 of 4,109 games).
 - Opponent history (noise: partial rho 0.026, n=18,812 games) and per-player teammate
