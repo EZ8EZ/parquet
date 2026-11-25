@@ -8256,3 +8256,31 @@ he plays every game, while every figure on screen now uses his per-game play cha
 lean.basisDisagrees, but the call itself is unchanged. Next: give the D131 lean the same per-game play chances
 and re-run the 240 team-week backtest; with the opponent lock-share backtest above, that is the next engine
 task.
+
+## D136. SHOW THE BENCH BEHIND A LOCK CALL - "who could beat this score", typed what-if scores, past games vs every opponent left
+**Owner ask (2026-11-25).** When deciding whether to lock Naz Reid's 24.5, a manager looks at his whole roster:
+who else could fill the slot, who is hurt, and how likely any of them is to reach 24.5 before the week ends. The
+plan behind the win chance already counts this (D135: an unlocked score yields to the slot's continuation, which
+can be a bench player; listed-out games count 0), but the screen did not show it.
+**What it shows.** Every lock-or-hold card carries `rivals` (lib/lockin/rivals.js): the holder's own games left and
+every bench player eligible for the slot with games left, each with his chance of playing each game and his chance
+of reaching the score at least once; who cannot help and why (no games left, ruled out); and the chance that at
+least one of them beats it. A player's chance in one game is the share of his next-game forecast outcomes at or
+above the score (the outcomes the "next game" chart draws) times his chance of playing; games are independent; the
+week figure goes through the same calibration as "later game beats it" (BEAT_RECAL) so the two agree. Bench players
+the plan starts in another slot are named as such and left out of the combined figure, which otherwise assumes each
+option is free for this slot. Home's call rows carry one line ("If you let 24.5 go: 67% chance someone beats it at C
+(3 options)"); the lock board card and the player sheet carry the full list.
+**Typed what-if scores.** `?assume=` accepts a score on a lock ("m4L30.5": treat the slot as locked at 30.5,
+whatever it holds), 0 to 150, one decimal. It is a hypothetical, so it never contradicts the inferred state and any
+occupied slot may carry one (even one not played yet or live). The simulation uses it in place of the slot's score
+(slot.assumedScore; slot.banked keeps what Sleeper holds). A "What if…" panel on the scoreboard sets every slot on
+both sides at once (model / locked, at the score it holds or a typed one / playing on); each tile's sheet also takes
+a typed score.
+**Past games vs every opponent left.** Cards carry `opponentsAhead` (one entry per game left, up to the last 5
+meetings each) and `seasonAverage`. The player sheet's last tab is "Vs opponents" (a block per game with the average
+against that team beside his season average, and what was unusual about a meeting where the last-15 series has it).
+A new Players tab on the lock board lists every player with his last 10 games as bars, season average and each game
+left with his average against that team. History only, as D133 decided (partial correlation 0.026, n=18,812).
+**Not changed.** No call, lean, plan or win-chance figure changes without assumptions (rivals and the history views
+are display only; the existing tests pin the desk's numbers).

@@ -23,6 +23,7 @@ import { displayTz } from "@/lib/lockin/time";
 import { Scoreboard, TonightFoot } from "./Scoreboard";
 import { withChoices } from "@/lib/lockin/assumeView";
 import { CallList } from "./CallList";
+import { PlayerFormList } from "./PlayerFormList";
 
 function Gaps({ desk }) {
   const lines = gapLines(desk);
@@ -104,7 +105,7 @@ function panelsFor(desk, methodHref) {
 /**
  * The lock-or-hold board for one roster. mode "compact" is Home's week section: the
  * seven slots, the most urgent decision in full, the other live ones as rows. mode
- * "full" is /lockin: slots, three figures, then Tonight / Calls to make / Win % / Nights / Players tabs.
+ * "full" is /lockin: the scoreboard, then Tonight / Calls / Players / Win % / Week / History tabs.
  * Every player opens in one sheet with previous / next.
  */
 export async function LockDeskBoard({ rosterId, mode = "full", players = null, open = null, replay = null, fullHref = "/lockin", desk: given = null, methodOpen = false, me = null, them = null, tab = null, record = null }) {
@@ -187,7 +188,10 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
               </li>
             )}
             <li>
-              <ListRow href={fullHref} title="Every night and player" meta={desk.slotPressure?.summary ? `${desk.slotPressure.summary.playersStillToPlay} players still to play, ${desk.slotPressure.summary.gamesRemaining} games left` : null} chevron />
+              <ListRow href={`${fullHref}${sep}tab=players`} title="Your players: form and opponents" meta="Last 10 games and past games vs each team left this week" chevron />
+            </li>
+            <li>
+              <ListRow href={`${fullHref}${sep}tab=week`} title="Every night" meta={desk.slotPressure?.summary ? `${desk.slotPressure.summary.playersStillToPlay} players still to play, ${desk.slotPressure.summary.gamesRemaining} games left` : null} chevron />
             </li>
           </List>
         </section>
@@ -231,7 +235,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
       {desk.excluded.length > 0 && <p className="mt-2 text-meta text-secondary">Not counted: {desk.excluded.map((e) => `${e.name} (${e.reason === "taxi" ? "taxi" : "IR"})`).join(", ")}.</p>}
     </div>
   );
-  const ids = ["tonight", "calls", "options", "week", "history"];
+  const ids = ["tonight", "calls", "players", "options", "week", "history"];
   const wanted = tab === "decide" ? "calls" : tab === "nights" ? "week" : tab;
   const start = ids.includes(wanted) && (wanted !== "tonight" || tv) && (wanted !== "options" || desk.whatIf) ? wanted : tv?.next ? "tonight" : "calls";
   const board =
@@ -256,6 +260,7 @@ export async function LockDeskBoard({ rosterId, mode = "full", players = null, o
           items={[
             ...(tv ? [{ id: "tonight", label: "Tonight", count: tv.toDecide || undefined, content: <div className="pt-1">{tonightFull}</div> }] : []),
             { id: "calls", label: "Calls", count: groups.live.length + starts.length, content: calls },
+            { id: "players", label: "Players", content: <PlayerFormList desk={desk} /> },
             ...(desk.whatIf ? [{ id: "options", label: "Win %", content: <WinTable desk={desk} /> }] : []),
             { id: "week", label: "Week", content: week },
             { id: "history", label: "History", content: <div className="pt-1"><LockHistory history={desk.history} season={desk.season} inTab /></div> },

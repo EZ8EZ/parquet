@@ -10,6 +10,8 @@ import { DECIDE_BUFFER_MIN, decideBy } from "@/lib/lockin/time";
 import { OpponentBody } from "./Matchup";
 import { OppStrip } from "./OppStrip";
 import { ResetAssume } from "./AssumeTile";
+import { WhatIfPanel } from "./WhatIfPanel";
+import { slotTiles } from "@/lib/lockin/view";
 import { whatIfBar, withChoices } from "@/lib/lockin/assumeView";
 import { Countdown } from "./TonightClock";
 
@@ -203,6 +205,7 @@ export function Scoreboard({ v, desk, slots, record = null, footer = null }) {
         <OpponentBody v={v} desk={desk} />
       </Sheet>
       <OppStrip slots={withChoices(v.oppSlots, desk, "theirs")} />
+      <WhatIfPanel mine={withChoices(slotTiles(desk), desk, "mine")} theirs={withChoices(v.oppSlots, desk, "theirs")} themName={them.name} />
       {footer}
     </section>
   );

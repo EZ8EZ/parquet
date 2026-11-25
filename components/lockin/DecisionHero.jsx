@@ -7,6 +7,7 @@ import { heldNote } from "@/lib/lockin/matchupView";
 import { DeckTrigger } from "./PlayerDeck";
 import { PlayerAvatar } from "@/components/PlayerAvatar";
 import { NextGameChart } from "./NextGameChart";
+import { SlotRivals } from "./SlotRivals";
 import { ProfileBar } from "./ProfileBar";
 import { AvailabilityDots } from "./AvailabilityDots";
 import { WinPair } from "./CallList";
@@ -131,6 +132,8 @@ export function DecisionHero({ card, row, winProb = null }) {
           <Tile label="Next game, 8 in 10" value={n.range ? `${fmt(n.range.p10)}–${fmt(n.range.p90)}` : "unknown"} sub={`n=${n.n} games`} />
         </div>
       )}
+
+      <SlotRivals card={card} className="mt-4 rounded-control bg-surface-2 p-3" />
 
       {row?.win && <WinPair win={row.win} className="mt-3" />}
 

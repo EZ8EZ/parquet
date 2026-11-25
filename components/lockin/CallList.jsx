@@ -93,6 +93,7 @@ function CallBody({ r }) {
         </span>
       )}
       {r.leanWhy && <span className="mt-1.5 block text-meta text-muted" data-lean-why>{r.leanWhy}</span>}
+      {r.rivals && <span className="mt-1.5 block text-meta text-secondary" data-rivals-line>{r.rivals}</span>}
       {r.triggers.length > 0 && (
         <span className="mt-2 block space-y-1">
           {r.triggers.map((t) => (

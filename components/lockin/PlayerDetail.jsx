@@ -1,11 +1,12 @@
 import Link from "next/link";
 import { Disclosure, Tabs } from "@/components/ui";
-import { basisText, distChart, minutesChart, opponentView, playerWeekGrid, stripChart } from "@/lib/lockin/view";
+import { basisText, distChart, minutesChart, opponentsAheadView, playerWeekGrid, stripChart } from "@/lib/lockin/view";
 import { DecisionFigures, Hazards, LeanChip, WhenLine } from "./Decision";
 import { LastFifteenStrip } from "./LastFifteenStrip";
 import { NextGameChart } from "./NextGameChart";
 import { MinutesChart } from "./MinutesChart";
 import { OpponentHistory } from "./OpponentHistory";
+import { SlotRivals } from "./SlotRivals";
 import { WeekGrid } from "./WeekGrid";
 import { ModelCall, WinFigures, leanPrefix } from "./WinCall";
 import { BEAT_NOTE, roughen } from "@/lib/lockin/matchupView";
@@ -58,7 +59,7 @@ function Record({ record, methodHref }) {
  * Everything about one player, for the sheet, in four short tabs instead of one long
  * scroll: Call (the decision, his next game against the score on the table, boom or
  * bust, chance to play, the lean's record), Form (last 15 games, minutes), Week (his
- * games this week), History (past games against this opponent, history only).
+ * games this week), Vs opponents (past games against every team he still faces this week, history only).
  */
 export function PlayerPanel({ card, today, record, methodHref, winProb = null, tz, nowMs, tipAt = null }) {
   const db = tipAt ? decideBy(tipAt, tz, { nowMs }) : null;
@@ -66,7 +67,7 @@ export function PlayerPanel({ card, today, record, methodHref, winProb = null, t
   const strip = stripChart(card);
   const dist = distChart(card);
   const mins = minutesChart(card);
-  const opp = opponentView(card);
+  const opp = opponentsAheadView(card);
   const fc = card.forecast;
   const call = (
     <div>
@@ -74,6 +75,7 @@ export function PlayerPanel({ card, today, record, methodHref, winProb = null, t
         <Hazards card={card} />
         <ModelCall card={card} tz={tz} today={today} nowMs={nowMs} />
         <DecisionFigures card={card} />
+        <SlotRivals card={card} headingLevel={3} className="rounded-control bg-surface-2 p-3" />
         <WhenLine card={card} tipAt={tipAt} tz={tz} nowMs={nowMs} />
         {card.lean.value !== "none" ? (
           <div className="space-y-1">
@@ -124,7 +126,7 @@ export function PlayerPanel({ card, today, record, methodHref, winProb = null, t
         { id: "call", label: "Call", content: call },
         { id: "form", label: "Form", content: form },
         { id: "week", label: "Week", content: week },
-        { id: "history", label: "History", content: <div className="pt-4"><OpponentHistory v={opp} /></div> },
+        { id: "history", label: "Vs opponents", content: <div className="pt-4"><OpponentHistory v={opp} /></div> },
       ]}
     />
   );

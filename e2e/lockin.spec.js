@@ -47,9 +47,9 @@ test.describe("lock-or-hold board", () => {
     await holden.getByRole("button", { name: /charts, record and method/ }).click();
     const sheet = page.locator("dialog[open]");
     await expect(sheet.getByRole("heading", { name: "Bryce Holden" })).toBeVisible();
-    // the sheet is four short tabs: Call first, then Form, Week, History
+    // the sheet is four short tabs: Call first, then Form, Week, Vs opponents
     await expect(sheet.getByText(/Filled dots beat 31\.5/)).toBeVisible();
-    await sheet.getByRole("tab", { name: "History" }).click();
+    await sheet.getByRole("tab", { name: "Vs opponents" }).click();
     await expect(sheet.getByText("History only")).toBeVisible();
     await sheet.getByRole("tab", { name: "Form" }).click();
     await expect(sheet.getByText("Last 15 games")).toBeVisible();
@@ -99,7 +99,8 @@ test.describe("lock-or-hold board", () => {
     await expect(move).toContainText(/If Eli Brandt's score tonight is under 16\.9/);
     await expect(board.getByRole("heading", { name: new RegExp(`^Your calls · ${await calls.locator("li").count()}$`) })).toBeVisible();
     await expect(board.getByRole("link", { name: /Lock history/ })).toHaveAttribute("href", "/lockin?tab=history");
-    await expect(board.getByRole("link", { name: /Every night and player/ })).toHaveAttribute("href", "/lockin");
+    await expect(board.getByRole("link", { name: /Your players: form and opponents/ })).toHaveAttribute("href", "/lockin?tab=players");
+    await expect(board.getByRole("link", { name: /^Every night/ })).toHaveAttribute("href", "/lockin?tab=week");
     await first.getByRole("button").first().click();
     await expect(page.locator("dialog[open]")).toContainText("Boom or bust");
     await page.keyboard.press("Escape");
@@ -177,7 +178,7 @@ test.describe("lock-or-hold board", () => {
     await page.keyboard.press("Escape");
     await expect(page.locator("dialog[open]")).toHaveCount(0);
     // links to the lock board keep it, and from the lock board This Week keeps it, badge hidden
-    await expect(board.getByRole("link", { name: /Every night and player/ })).toHaveAttribute("href", /assume=t0O/);
+    await expect(board.getByRole("link", { name: /Your players: form and opponents/ })).toHaveAttribute("href", /assume=t0O/);
     await page.goto("/lockin?assume=t0O");
     const weekTab = page.getByRole("navigation", { name: "Primary" }).getByRole("link", { name: /^This Week/ });
     await expect(weekTab).toHaveAttribute("href", "/?assume=t0O");
@@ -190,6 +191,37 @@ test.describe("lock-or-hold board", () => {
     await page.waitForURL((u) => !u.search.includes("assume"), { waitUntil: "commit" });
     await expect(board.locator("[data-whatif-bar]")).toHaveCount(0);
     await expect(board.locator("[data-win-prob]")).toHaveText(before);
+    expectNoConsoleErrors(guard);
+  });
+
+  test("what-if panel: lock a slot at a typed score, see it on the tile and in the bar; Players tab and past games vs each opponent", async ({ page }) => {
+    const guard = watchConsole(page);
+    await primeLens(page);
+    await page.goto("/");
+    const before = await page.locator("[data-win-prob]").first().innerText();
+    await page.getByRole("button", { name: /What if: lock players or type scores/ }).click();
+    const panel = page.locator("dialog[open] [data-whatif-panel]");
+    const row = panel.locator("li").first();
+    await row.getByRole("button", { name: "Locked" }).click();
+    await row.locator("input").fill("0");
+    await panel.getByRole("button", { name: "Apply" }).click();
+    await expect(page).toHaveURL(/assume=m0L0(?:&|$)/);
+    const bar = page.locator("[data-whatif-bar]");
+    await expect(bar).toContainText(/locked at 0\.0 \(typed\)/);
+    await expect(page.locator('[data-slot-state][data-assumed="locked"]').first()).toContainText("0.0");
+    await expect(bar.locator("[data-whatif-change]")).toContainText(new RegExp(`${before.replace(/\s+/g, "").replace("%", "")}%`));
+    // a bad score is refused in the tile sheet, a good one applies
+    await page.goto("/lockin?tab=calls");
+    const rivals = page.locator("[data-rivals]").first();
+    await expect(rivals).toContainText(/If you let [\d.]+ go, who could beat it at/);
+    await expect(rivals).toContainText(/his own games/);
+    await expect(rivals).toContainText(/At least one of them beats [\d.]+: \d+%/);
+    await page.getByRole("tab", { name: "Players" }).click();
+    const first = page.locator('[aria-label$="Charts and past games"]').first();
+    await expect(first).toBeVisible();
+    await first.click();
+    await page.locator("dialog[open]").getByRole("tab", { name: "Vs opponents" }).click();
+    await expect(page.locator("dialog[open]")).toContainText("Past games vs this week's opponents");
     expectNoConsoleErrors(guard);
   });
 
@@ -208,7 +240,7 @@ test.describe("lock-or-hold board", () => {
     await expect(table.locator('[data-whatif-row="noise"]').first()).toContainText("≈ same");
     await expect(table).toContainText("Rough win chance by call");
     await expect(table.getByText("How far to trust these")).toBeVisible();
-    await page.getByRole("tab", { name: /History/ }).click();
+    await page.getByRole("tab", { name: /^History/ }).click();
     const history = board.locator("[data-lock-history]");
     await expect(history.getByRole("heading", { name: "Your lock history" })).toBeVisible();
     await expect(history).toContainText("points a week");

@@ -4,11 +4,11 @@ import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { Check, ChevronRight, RotateCcw } from "lucide-react";
 import { Sheet } from "@/components/ui";
 import { cn } from "@/lib/ui";
-import { assumeFromSearch, assumeHref, withAssume } from "@/lib/lockin/assumeView";
+import { assumeFromSearch, assumeHref, parseTypedScore, withAssume } from "@/lib/lockin/assumeView";
 import { useDeck } from "./PlayerDeck";
 
 /** Replace the page's ?assume= in place (scroll kept), returning [go, pending]. */
-function useAssumeNav() {
+export function useAssumeNav() {
   const router = useRouter();
   const pathname = usePathname();
   const search = useSearchParams();
@@ -29,8 +29,10 @@ export function AssumeTile({ tile, label, children, className, detailsId = null 
   const openDeck = useDeck();
   // Closing the sheet pops the history entry it pushed (Sheet.jsx); navigate only after
   // that pop lands, or the back would undo the new ?assume=.
-  const choose = (state) => {
-    const next = withAssume(tile.applied ?? list, tile.side, tile.index, state);
+  const [typed, setTyped] = useState(tile.typedScore != null ? String(tile.typedScore) : "");
+  const typedScore = parseTypedScore(typed);
+  const choose = (state, score = null) => {
+    const next = withAssume(tile.applied ?? list, tile.side, tile.index, state, score);
     let done = false;
     const fire = () => {
       if (done) return;
@@ -53,21 +55,61 @@ export function AssumeTile({ tile, label, children, className, detailsId = null 
     >
       <div className="space-y-3" data-assume-sheet>
         {tile.contradiction && <p className="rounded-control bg-warn-wash px-3 py-2 text-note text-ink">{tile.contradiction}</p>}
-        <ul className="divide-y divide-border overflow-hidden rounded-card bg-surface-2" aria-label="Treat this slot as">
-          {tile.choices.options.map((o) => (
-            <li key={String(o.state)}>
-              <button type="button" onClick={() => choose(o.state)} aria-pressed={o.current} className="flex min-h-12 w-full items-center gap-3 px-3.5 text-left text-body font-semibold text-ink transition-colors hover:bg-elevated">
-                <span className="flex-1">{o.label}</span>
-                {o.current && (
-                  <span className="flex items-center gap-1 text-meta font-semibold text-accent-text">
-                    <Check size={16} aria-hidden="true" />
-                    Current
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
-        </ul>
+        {tile.choices.options.length > 0 && (
+          <ul className="divide-y divide-border overflow-hidden rounded-card bg-surface-2" aria-label="Treat this slot as">
+            {tile.choices.options.map((o) => {
+              // a typed score is its own choice: "locked at the current score" is not current then
+              const current = o.current && !(o.state === "locked" && tile.typedScore != null);
+              return (
+                <li key={String(o.state)}>
+                  <button type="button" onClick={() => choose(o.state)} aria-pressed={current} className="flex min-h-12 w-full items-center gap-3 px-3.5 text-left text-body font-semibold text-ink transition-colors hover:bg-elevated">
+                    <span className="flex-1">{o.label}</span>
+                    {current && (
+                      <span className="flex items-center gap-1 text-meta font-semibold text-accent-text">
+                        <Check size={16} aria-hidden="true" />
+                        Current
+                      </span>
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ul>
+        )}
+        <form
+          className="rounded-card bg-surface-2 p-3"
+          onSubmit={(e) => {
+            e.preventDefault();
+            if (typedScore != null) choose("locked", typedScore);
+          }}
+        >
+          <label htmlFor={`typed-${tile.side}-${tile.index}`} className="block text-note font-semibold text-ink">
+            Lock at a score you type
+          </label>
+          <p className="mt-0.5 text-meta text-secondary">What if he finishes on this score and you lock it? Any number from 0 to 150.</p>
+          <div className="mt-2 flex gap-2">
+            <input
+              id={`typed-${tile.side}-${tile.index}`}
+              type="text"
+              inputMode="decimal"
+              autoComplete="off"
+              value={typed}
+              onChange={(e) => setTyped(e.target.value)}
+              placeholder={tile.value != null ? String(tile.value) : "30"}
+              aria-invalid={typed !== "" && typedScore == null ? "true" : undefined}
+              className="figure min-h-11 w-24 rounded-control bg-bg px-3 text-body text-ink outline-1 outline-border-strong focus-visible:outline-2 focus-visible:outline-accent"
+            />
+            <button type="submit" disabled={typedScore == null} className="min-h-11 flex-1 rounded-control bg-accent px-3 text-note font-semibold text-accent-ink transition-opacity disabled:opacity-50">
+              {tile.typedScore != null ? "Update" : "Lock at this score"}
+            </button>
+          </div>
+          {typed !== "" && typedScore == null && <p className="mt-1 text-meta text-warn">Type a number from 0 to 150.</p>}
+          {tile.typedScore != null && (
+            <p className="mt-1.5 text-meta text-secondary">
+              Now: locked at <span className="figure font-semibold text-ink">{tile.typedScore}</span> (typed).
+            </p>
+          )}
+        </form>
         {tile.choices.note && <p className="text-meta text-secondary">{tile.choices.note}</p>}
         <p className="text-meta text-secondary">Every number on the page follows the assumption: win chance (rough), projections, the model&apos;s calls. Sleeper does not show lock states, so the app infers them; this lets you say what you know.</p>
         {detailsId && openDeck && (
