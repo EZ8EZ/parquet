@@ -8239,5 +8239,14 @@ the state switch). For the opponent-model backtest: the lock share is applied re
 only changes the result below C, and managers rarely lock low scores, so 0.293 likely overstates it exactly
 where it bites; and a final score that stands on the opponent's side now carries the share and the shift, a
 state D132 did not measure.
+**Disclosure.** Every substitution a number assumes is named on screen (review4): whatIf.plan.actions lists a
+'then_start' for each slot whose continuation is another player ("Then start Kel'el Ware at PF from Wed 8:00 PM
+ET", with the condition on tonight's score when there is one); that bench player's card carries the same call
+(decision.text, decision.planStart) instead of "Move into a slot or leave on the bench"; the hold option names
+him; and the holder card's "expected if held" is the value of the hold branch the win chance uses (the slot's
+continuation, 19.0 for Graves on the 2026-11-24 recording, his own games 13.5 kept as expectedIfHeldOwn), so
+the two figures on the card agree. Pinning a holder to his slot also means that when Tonight gives his slot to an
+earlier-tip player and his score is let go, his own later games are not offered to another slot.
 **Rejected.** A holder walking only his own later games (the bench continuation vanished at the final
-buzzer); treating a final score that stands as fixed when a bench player could still be subbed in.
+buzzer); treating a final score that stands as fixed when a bench player could still be subbed in; a plan
+figure that counts moves no call names.
