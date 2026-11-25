@@ -54,16 +54,33 @@ function CallBody({ r }) {
               </Chip>
             )}
           </span>
-          <span className="mt-0.5 block text-meta text-secondary">
-            {r.slotLabel ? `${r.slotLabel} · ` : ""}
-            <span className={cn("font-semibold", r.urgent ? "text-warn" : "text-ink")}>{r.title}</span>
+          {r.kind === "start" ? (
+            <>
+              <span className="mt-0.5 block text-meta font-semibold text-ink">{r.title}</span>
+              {r.when && <span className={cn("mt-0.5 block text-meta", r.urgent ? "font-semibold text-warn" : "text-secondary")}>{r.when}</span>}
+            </>
+          ) : (
+            <span className="mt-0.5 block text-meta text-secondary">
+              {r.slotLabel ? `${r.slotLabel} · ` : ""}
+              <span className={cn("font-semibold", r.urgent ? "text-warn" : "text-ink")}>{r.title}</span>
+            </span>
+          )}
+        </span>
+        {r.kind === "start" ? (
+          <span className="shrink-0 rounded-full bg-surface-2 px-2.5 py-1 text-micro font-semibold text-muted">Bench move</span>
+        ) : (
+          <span className="shrink-0 text-right">
+            <span className="block figure text-score font-bold text-ink">{r.xText}</span>
+            <span className="block text-micro text-secondary">on the table</span>
           </span>
-        </span>
-        <span className="shrink-0 text-right">
-          <span className="block figure text-score font-bold text-ink">{r.xText}</span>
-          <span className="block text-micro text-secondary">on the table</span>
-        </span>
+        )}
       </span>
+      {r.condition && (
+        <span className="mt-2 flex gap-1.5 text-meta text-muted">
+          <CornerDownRight size={14} aria-hidden="true" className="mt-px shrink-0 text-secondary" />
+          <span>{r.condition[0].toUpperCase() + r.condition.slice(1)}</span>
+        </span>
+      )}
       {r.hazard && (
         <span className="mt-2.5 flex gap-2 rounded-control bg-warn-wash px-3 py-2 text-meta text-ink">
           <AlertTriangle size={14} aria-hidden="true" className="mt-px shrink-0 text-warn" />
@@ -103,8 +120,8 @@ export function CallList({ rows, extra = null }) {
   return (
     <ul className="divide-y divide-border overflow-hidden rounded-card bg-surface" aria-label="Your calls">
       {rows.map((r) => (
-        <li key={r.playerId} data-call={r.action ?? "hazard"}>
-          <DeckTrigger playerId={r.playerId} label={`${r.name}, ${r.xText} on the table: ${r.title}. Show details`} className="transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent">
+        <li key={`${r.kind ?? "call"}-${r.playerId}`} data-call={r.action ?? "hazard"}>
+          <DeckTrigger playerId={r.playerId} label={r.kind === "start" ? `${r.title}${r.when ? `, ${r.when}` : ""}${r.condition ? `, ${r.condition}` : ""}. Show details` : `${r.name}, ${r.xText} on the table: ${r.title}. Show details`} className="transition-colors hover:bg-surface-2 focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-accent">
             <CallBody r={r} />
           </DeckTrigger>
           {extra?.(r)}
