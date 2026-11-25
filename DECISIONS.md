@@ -8342,3 +8342,33 @@ the recorded one, never over a certain reset, and the viewer's what-if assumptio
 from earlier weeks are pruned on each write. It reaches the deployed app on commit and push; the refresh button
 cannot learn locks. On the 2026-11-25 capture, recording two opponent scores (39.0 and 29.0) as locked moved
 the win chance from 56.6% to 52.5%.
+
+## D140. HOW MANAGERS REALLY LOCK - measured, and NOT adopted for the opponent's total (research)
+
+**Question.** The opponent model (D137) locks an unknown score with the league share 0.293 whatever it is, on
+top of the reservation rule shifted -1.55 a slot. Does a behavioural model of when managers lock make the win
+chance more accurate?
+**Lock decisions (strong, real).** Every "unknown until next tip" situation 2022-2026 (n=16,089;
+scripts/lockin/lock_propensity.mjs): real lock rates by z = (score - reservation value) / forecast sd run from
+5% (z < -1.5) through 26% (just under the bar) to about 60% well above it; the engine's implied probability is
+29% and 100% there. A piecewise-logistic fit in z and games left (lock_propensity_fit.mjs,
+lock_propensity_model.mjs), held out one season at a time on 2022-2024 + 2026 (n=12,131): Brier 0.143 against
+0.215 for a constant and 0.292 for the engine's implied rule; calibrated by decile within 0.04.
+**2025 data.** 2025's lock labels barely depend on the score (16% of z < -1 scores "locked", 2% in every other
+season; at z > 1, 31-37% against 55-79%) although its banked scores match game logs as often (0.2% unmatched).
+This fits Sleeper's re-served past-week versions (D134, D137) better than a one-season change of behaviour, so
+2025 is left out of the fit; it is also 1,281 of the backtest's 1,442 decision points, so every win-chance
+backtest here leans on it.
+**Win chance (not adopted).** In opponent_backtest_wp.mjs (CALIB=1, LOCKMODEL=1, SHIFT=0) the behavioural
+opponent lowers the P(win) Brier from 0.1223 to 0.1182 (paired diff -0.0041, cluster bootstrap 95% interval
+-0.0091 to +0.0009, 28 team-season clusters; better in 2025, 2026 and every nights-left band). But scored on
+the opponent's own total, the gain disappears: CRPS 11.54 (today) vs 11.61, mean predicted minus actual -0.5
+vs -4.1, 2026 CRPS 15.61 vs 16.46 (bias -7.0 vs -15.0); only the 10-90 coverage improves (0.632 -> 0.838). The
+backtest predicts my side 6.1 points low (its replay knows who played), so an opponent predicted low offsets
+that and scores better on P(win) for the wrong reason. Kept as research: the walkPlayer `lockModel` option
+(inert in the app), the scripts above, and CALIB_DUMP (per-point P(win), opponent CRPS, bias and range hit).
+**Next.** (1) Fix the backtest's my-side replay so it does not know future availability, then re-judge D137
+and D140 on an unbiased P(win). (2) The behavioural opponent predicts totals low because a score not locked is
+assumed lost to the slot's continuation; measure what real managers' slots end with after not locking before
+modelling it. (3) Re-read 2025 matchups twice and keep only weeks that agree (lib/lockin/consensus.js) before
+using them again.
