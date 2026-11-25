@@ -152,6 +152,19 @@ Disclosure or in the sheet behind the row. Name things as a fan would ("Points f
   countdown; it always opens This Week, and steps aside on This Week's scoreboard
   (`[data-scoreboard]` sets `--statusbar-h: 0`). The This Week tab carries a badge with the
   open-call count (spoken too).
+- **Decide-by time.** A move is asked for `DECIDE_BUFFER_MIN` (10) minutes before the listed
+  tip, with the tip kept visible: "Wait until 7:20 PM, then lock · locks at 7:30", "By 6:50
+  PM · tips 7:00"; inside the buffer "Decide now · locks at 7:30" in the warning tone. Display
+  only; the engine's deadlines stay at the tip. Under a wait headline the lean chip reads "At
+  the deadline: model leans lock".
+- **What-if (assumptions).** Any slot tile, either side, opens "Treat as locked at X / Treat
+  as playing on / Model's guess" (`AssumeTile`); the choice lives only in `?assume=` and is
+  kept on links between Home and the lock board. Assumed tiles: dashed outline and a pencil,
+  never the lock glyph. The scoreboard's What-if bar says what is assumed, "Rough win chance
+  54% → 66% with your assumptions", any contradiction in plain words, and Reset; a manual
+  refresh clears it too. Your own unknown slot does not offer "playing on" (no effect).
+- **Tabs.** Segmented for 2-4 views (Team, League, the player sheet); underline only for the
+  lock board's five (Tonight · Calls · Win % · Week · History).
 - **Refresh** is one round button with the as-of time; after a manual refresh a short note
   says what changed ("Updated 5:12 PM ET · win chance 27% → 31%"), announced politely.
 

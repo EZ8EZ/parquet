@@ -2,11 +2,11 @@ import Link from "next/link";
 import { Chip, PageHeader } from "@/components/ui";
 import { LockDeskBoard } from "@/components/lockin/LockDeskBoard";
 import { RefreshControl } from "@/components/lockin/RefreshControl";
-import { winPctOf } from "@/lib/lockin/view";
 import { getLeagueHistory } from "@/lib/history";
 import { isFixtureDesk, loadLockDesk, replayAllowed } from "@/lib/lockin/source";
-import { boardHeader } from "@/lib/lockin/view";
+import { boardHeader, winPctOf } from "@/lib/lockin/view";
 import { teamIdentity } from "@/lib/lockin/matchupView";
+import { keepAssume } from "@/lib/lockin/assumeView";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Lock or hold" };
@@ -32,17 +32,26 @@ export default async function LockInPage({ searchParams }) {
     );
   }
   const replay = replayAllowed() ? one(sp.at) : null;
-  const desk = await loadLockDesk({ rosterId, replay, players: h.players });
+  // the viewer's what-if lock states (?assume=m3L,t5O): URL only, never stored
+  const assumeParam = typeof sp?.assume === "string" ? sp.assume : Array.isArray(sp?.assume) ? sp.assume.join(",") : null;
+  const desk = await loadLockDesk({ rosterId, replay, players: h.players, assumeParam });
   const hd = boardHeader(desk);
-  const fullHref = replay ? `/lockin?at=${encodeURIComponent(replay)}` : "/lockin";
+  const fullHref = keepAssume(replay ? `/lockin?at=${encodeURIComponent(replay)}` : "/lockin", desk.assumptions?.list ?? []);
   return (
     <>
-      <PageHeader
-        kicker={hd.kicker}
-        title="Lock or hold"
-        aside={<RefreshControl asOf={desk.generatedAt} asOfText={hd.asOf} winPct={winPctOf(desk)} live={hd.live} updating={hd.updating} disabled={!!replay || isFixtureDesk(desk)} />}
-        below={isFixtureDesk(desk) ? <Chip className="mt-2">Sample week, invented players</Chip> : null}
-      />
+      {/* the same one-line bar as Home: the page as the heading, the week beside it, refresh with the zone */}
+      <div className="mb-3 flex min-h-11 items-center justify-between gap-3">
+        <div className="min-w-0">
+          <h1 className="text-lede font-bold text-ink">Lock or hold</h1>
+          {hd.kicker && <p className="text-meta text-secondary">{hd.kicker}</p>}
+          {isFixtureDesk(desk) && (
+            <Chip size="sm" className="mt-1">
+              Sample week, invented players
+            </Chip>
+          )}
+        </div>
+        <RefreshControl asOf={desk.generatedAt} asOfText={hd.asOf} winPct={winPctOf(desk)} live={hd.live} updating={hd.updating} disabled={!!replay || isFixtureDesk(desk)} />
+      </div>
       <LockDeskBoard
         rosterId={rosterId}
         desk={desk}

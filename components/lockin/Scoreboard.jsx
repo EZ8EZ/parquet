@@ -9,6 +9,8 @@ import { BEAT_NOTE, assumptionLines } from "@/lib/lockin/matchupView";
 import { DECIDE_BUFFER_MIN, decideBy } from "@/lib/lockin/time";
 import { OpponentBody } from "./Matchup";
 import { OppStrip } from "./OppStrip";
+import { ResetAssume } from "./AssumeTile";
+import { whatIfBar, withChoices } from "@/lib/lockin/assumeView";
 import { Countdown } from "./TonightClock";
 
 /** What "rough" means, one tap from the win chance: calibration, what it is not, what it assumes. */
@@ -107,8 +109,30 @@ export function Scoreboard({ v, desk, slots, record = null, footer = null }) {
   const win = v.win;
   const pctNum = win == null ? null : Math.round(win * 100);
   const oppLabel = `${them.name}: ${v.oppSummary || "no slots"}. Show details`;
+  const bar = whatIfBar(desk);
   return (
     <section aria-label="This week's matchup" data-scoreboard data-matchup={v.state} className="rounded-card bg-surface p-3.5">
+      {bar && (
+        <div role="status" className="-mx-3.5 -mt-3.5 mb-3 rounded-t-card border-b border-dashed border-border-strong bg-surface-2 px-3.5 py-2.5" data-whatif-bar>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="text-micro font-semibold text-accent-text">What-if · {bar.count} assumed</p>
+              <p className="mt-0.5 text-meta text-ink">{bar.text.replace(/^\d+ assumed: /, "")}</p>
+              {bar.fromPct && bar.toPct && (
+                <p className="mt-1 text-meta text-muted" data-whatif-change>
+                  Rough win chance <span className="figure font-semibold text-ink">{bar.fromPct}</span> → <span className="figure font-bold text-ink">{bar.toPct}</span> with your assumptions
+                </p>
+              )}
+              {bar.contradictions.map((c) => (
+                <p key={`${c.side}${c.slot}`} className="mt-1 text-meta text-warn">
+                  {c.text}
+                </p>
+              ))}
+            </div>
+            <ResetAssume />
+          </div>
+        </div>
+      )}
       <div className="grid grid-cols-[1fr_auto_1fr] items-start gap-2">
         <Side team={v.me} banked={v.me.banked} sub={record ? `banked · ${record}` : "banked"} isMe />
         <div className="pt-1 text-center">
@@ -162,25 +186,23 @@ export function Scoreboard({ v, desk, slots, record = null, footer = null }) {
 
       <Sheet
         trigger={
-          <span className="mt-2 block border-t border-border pt-2">
-            <span className="mb-1 flex items-center gap-1.5 text-meta">
-              <span className="min-w-0 flex-1 font-semibold text-muted">
-                {them.name}
-                {v.oppSummary && <span className="font-normal text-secondary"> · {v.oppSummary}</span>}
-              </span>
-              <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-accent-text" />
+          <span className="mt-2 flex min-h-11 items-center gap-1.5 border-t border-border pt-1 text-meta">
+            <span className="min-w-0 flex-1 font-semibold text-muted">
+              {them.name}
+              {v.oppSummary && <span className="font-normal text-secondary"> · {v.oppSummary}</span>}
             </span>
-            <OppStrip slots={v.oppSlots} />
+            <ChevronRight size={16} aria-hidden="true" className="shrink-0 text-accent-text" />
           </span>
         }
         triggerLabel={oppLabel}
-        triggerClassName="rounded-control focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
+        triggerClassName="block w-full rounded-control text-left focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
         title={them.name}
         subtitle={[them.ownerName, them.record].filter(Boolean).join(" · ") || null}
         leading={<TeamAvatar name={them.name} avatarId={them.avatarId} teamLogoUrl={them.teamLogoUrl} size="md" />}
       >
         <OpponentBody v={v} desk={desk} />
       </Sheet>
+      <OppStrip slots={withChoices(v.oppSlots, desk, "theirs")} />
       {footer}
     </section>
   );

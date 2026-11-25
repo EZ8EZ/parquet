@@ -206,8 +206,8 @@ export default async function FormerManagerDetailPage({ params }) {
         </p>
       </Disclosure>
 
-      <SectionHeader title="How to approach them" />
-      <List aria-label="How to approach them">
+      <SectionHeader title="From their trade record" />
+      <List aria-label="From their trade record">
         {d.approachTips.map((t, i) => (
           <li key={i} className="flex items-start gap-3 px-4 py-3">
             <Lightbulb size={16} aria-hidden="true" className="mt-0.5 shrink-0 text-accent-text" />
@@ -218,6 +218,7 @@ export default async function FormerManagerDetailPage({ params }) {
 
       <Tabs
         className="mt-6"
+        variant="segmented"
         label="Dossier sections"
         items={[
           { id: "trades", label: "Trades", content: tradesTab },

@@ -87,7 +87,7 @@ function dossierHref(d) {
  * side by side, which makes it the natural home for the single most emotionally
  * loaded number in a dynasty league (see DECISIONS.md D6: a thesis, not a grade -
  * this isn't a grade either, just a fact, and it earns its own line rather than
- * getting lost among "Pick hoarder" and "Deadline buyer").
+ * getting lost among "Adds picks on net" and "Buys at the deadline").
  */
 function Side({ d, principal, isMe, titles }) {
   const p = d.profile;

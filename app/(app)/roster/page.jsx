@@ -576,13 +576,6 @@ export default async function RosterPage() {
         }
       />
 
-      {(todo.length > 0 || deadlines.length > 0) && (
-        <div className="mb-4" data-team-week>
-          <ActionQueue items={todo} compact />
-          <DeadlineStrip deadlines={deadlines} window={null} />
-        </div>
-      )}
-
       <Card className="mb-3">
         <div className="flex items-end justify-between gap-3">
           <div className="min-w-0">
@@ -604,8 +597,17 @@ export default async function RosterPage() {
 
       <DirectionCard summary={direction} />
 
+      {/* the number leads (DESIGN.md principle 1): value and direction first, then what to do */}
+      {(todo.length > 0 || deadlines.length > 0) && (
+        <div className="mt-4" data-team-week>
+          <ActionQueue items={todo} compact />
+          <DeadlineStrip deadlines={deadlines} window={null} />
+        </div>
+      )}
+
       <Tabs
         className="mt-5"
+        variant="segmented"
         label="Team sections"
         items={[
           { id: "players", label: "Players", count: a.valued.length, content: players },
