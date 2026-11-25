@@ -248,7 +248,7 @@ export function TonightSection({ desk, compact = false, fullHref = "/lockin", fr
   const onTrack = [v.next, ...v.later].filter(Boolean).flatMap((n) => [...n.starting, ...n.actions.flatMap((a) => [a.playerId, a.earlyId, a.laterId])]);
   const uncertain = onTrack.some((id) => id && v.players[id]?.listing?.assumed === "listed_uncertain");
   return (
-    <section aria-labelledby="tonight-title" data-tonight={v.next ? "open" : "passed"}>
+    <section aria-labelledby="tonight-title" data-tonight={v.next ? "open" : v.afterAhead?.length ? "after" : "passed"}>
       {heading}
       {v.notes.length > 0 && (
         <div role="status" className="mb-2 flex gap-2 rounded-control bg-surface-2 px-3 py-2 text-note text-ink">
@@ -264,7 +264,21 @@ export function TonightSection({ desk, compact = false, fullHref = "/lockin", fr
       {v.next ? (
         <Hero node={v.next} v={v} frozenAt={frozenAt} />
       ) : (
-        <p className="rounded-card bg-surface px-4 py-3 text-body text-muted">Every decision point tonight has passed.</p>
+        v.afterAhead?.length ? (
+          // games are on: what to do after each one is still ahead, so tonight is not over
+          <Card pad="sm" className="space-y-2" data-tonight-after>
+            <p className="text-body font-semibold text-ink">Games on now: after-game calls below</p>
+            <ul className="space-y-1.5">
+              {v.afterAhead.map((g) => (
+                <li key={g.playerId} className="text-note text-muted">
+                  <span className="font-semibold text-ink">{nameOf(v, g.playerId)}:</span> {stripZone(g.text ?? "").replace(/^After his game:\s*/i, "") || `${fmt(g.expectedIfHeld)} expected if held, ${g.gamesAfter} ${g.gamesAfter === 1 ? "game" : "games"} left after tonight`}
+                </li>
+              ))}
+            </ul>
+          </Card>
+        ) : (
+          <p className="rounded-card bg-surface px-4 py-3 text-body text-muted">Every decision point tonight has passed.</p>
+        )
       )}
       {uncertain && <p className="mt-1.5 text-meta text-secondary">For players listed GTD or DTD, expected values assume he plays: the play rate for listed players is not measured yet.</p>}
       {/* Home: a later deadline with a move to make shows as a row; the rest are one link */}
