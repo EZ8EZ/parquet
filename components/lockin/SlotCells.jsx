@@ -15,7 +15,7 @@ const FACE = {
 
 /** The glyph that says the state in the tile itself (no legend needed). An assumption gets a pencil, never the real lock. */
 function Glyph({ k, assumed = null }) {
-  if (assumed) return <PencilLine size={11} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-secondary" />;
+  if (assumed) return <PencilLine size={10} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-secondary" />;
   if (k === "locked") return <Lock size={11} strokeWidth={2.5} aria-hidden="true" className="shrink-0" />;
   if (k === "final") return <Check size={11} strokeWidth={3} aria-hidden="true" className="shrink-0" />;
   if (k === "reset") return <RotateCcw size={11} strokeWidth={2.5} aria-hidden="true" className="shrink-0 text-faint" />;
@@ -48,7 +48,7 @@ export function SlotCells({ tiles, className }) {
                 </span>
               )}
               {t.playerId ? <PlayerAvatar name={t.name ?? t.playerId} team={t.team} playerId={t.playerId} size="xs" decorative className={t.key === "yet" ? "opacity-60" : undefined} /> : <span aria-hidden="true" className="size-6" />}
-              <span aria-hidden="true" className={cn("flex items-center gap-px figure font-bold leading-none", t.key === "yet" ? "text-micro" : "text-note", t.key === "reset" && "text-faint")}>
+              <span aria-hidden="true" className={cn("flex items-center gap-px figure font-bold leading-none", t.key === "yet" ? "text-micro" : t.assumed ? "text-meta tracking-tight" : "text-note", t.key === "reset" && "text-faint")}>
                 <Glyph k={t.key} assumed={t.assumed} />
                 {t.text}
               </span>
