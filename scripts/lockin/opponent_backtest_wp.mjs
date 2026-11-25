@@ -19,7 +19,9 @@ const D = loadStudyData();
 const SLOTS = ["PG", "SG", "SF", "PF", "C", "UTIL", "UTIL"];
 const SIMS = 600;
 const UNKNOWN_LOCKED = process.env.ULOCK != null ? Number(process.env.ULOCK) : 0.293; // ULOCK: test another opponent unknown-lock share (D136)
-const SHIFT = -1.55;
+const SHIFT = process.env.SHIFT != null ? Number(process.env.SHIFT) : -1.55;
+// LOCKMODEL=1: the opponent locks by the league's measured propensity (D140) instead of share + rule
+const LP = process.env.LOCKMODEL ? await import("./lock_propensity_model.mjs") : null;
 const EPS = 0.011;
 const fpos = (pid) => D.players[pid]?.fantasy_positions || [];
 const WIDEN = (process.env.WIDEN || "1,1").split(",").map(Number);
@@ -63,6 +65,12 @@ function opponentTotals(m, s, w, d, seed) {
     if (latest && shown != null && Math.abs(shown - latest.fp) > EPS) { fixed += shown; return; } // locked, certain
     // ULOCKALL=1: the share at every later deadline too, not only for the score held now (D137)
     const every = process.env.ULOCKALL ? { lockShare: UNKNOWN_LOCKED } : {};
+    if (LP) {
+      if (latest && latest.played) { const p = simP(pid, fut, latest.fp); if (p) riders.push({ ...p, wLocked: LP.lockProbability(latest.fp, fut.length, p), lockModel: LP.lockProbability, lockShareFrom: 1 }); return; }
+      const p = simP(pid, fut, null);
+      if (p) slots.push({ ...p, lockModel: LP.lockProbability });
+      return;
+    }
     if (latest && latest.played) { const p = simP(pid, fut, latest.fp); if (p) riders.push({ ...p, wLocked: UNKNOWN_LOCKED, ...every, lockShareFrom: 1 }); return; }
     const p = simP(pid, fut, null);
     if (p) slots.push({ ...p, ...every });
@@ -186,8 +194,16 @@ for (const s of ["2025", "2026"]) for (let w = 1; w <= (s === "2026" ? 3 : 23); 
   rows.push({ s, w, roster: m.roster_id, actual: m.points, oppActual: opp.points, points: pointsTotal, winprob: process.env.CALIB ? pointsTotal : lineupAware(pws, "winprob", ctx), wait: process.env.CALIB ? pointsTotal : lineupAware(pws, "wait", ctx) });
 }
 fs.writeFileSync(path.join(OUT, "backtest_wp_rows.json"), JSON.stringify(rows));
+// the opponent's predicted total on its own: mean, CRPS (lower is better) and the 10-90 range hit
+function oppScore(t, y) {
+  const a = Array.from(t).sort((u, v) => u - v), n = a.length;
+  let e1 = 0, e2 = 0;
+  for (let i = 0; i < n; i++) { e1 += Math.abs(a[i] - y); e2 += a[i] * (2 * i - n + 1); }
+  return { oppMean: a.reduce((s2, v) => s2 + v, 0) / n, oppFinal: y, oppCrps: e1 / n - e2 / (n * n), oppIn: y >= a[Math.floor(0.1 * (n - 1))] && y <= a[Math.ceil(0.9 * (n - 1))] ? 1 : 0 };
+}
 if (process.env.CALIB) {
   const { calibrationReport } = await import(path.join(OUT, "opponent_calib_report.mjs"));
+  if (process.env.CALIB_DUMP) fs.writeFileSync(process.env.CALIB_DUMP, JSON.stringify(calibAll.map((c) => ({ key: c.key, cluster: c.cluster, s: c.s, nightsLeft: c.nightsLeft, p: W.pWin(c.mine, c.theirs), y: c.myFinal > c.oppFinal ? 1 : c.myFinal === c.oppFinal ? 0.5 : 0, ...oppScore(c.theirs, c.oppFinal), myMean: c.mine.reduce((t, v) => t + v, 0) / c.mine.length, myFinal: c.myFinal }))));
   calibrationReport(calibAll, W, OUT);
   process.exit(0);
 }
